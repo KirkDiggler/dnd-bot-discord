@@ -1,26 +1,28 @@
 package repositories
 
 import (
-	"fmt"
 	"github.com/KirkDiggler/dnd-bot-discord/internal"
 )
 
+type RepositoryError string
+
+func (e RepositoryError) Error() string {
+	return string(e)
+}
+
+const (
+	ErrRecord RepositoryError = "record error"
+)
+
 type RecordError struct {
-	Err error
-	ID  string
-}
-
-func (e *RecordError) Error() string {
-	return fmt.Sprintf("record %s: %v", e.ID, e.Err)
-}
-
-func (e *RecordError) Unwrap() error {
-	return e.Err
+	internal.ErrorWrapper
 }
 
 func NewRecordNotFoundError(id string) error {
 	return &RecordError{
-		Err: internal.ErrNotFound,
-		ID:  id,
+		ErrorWrapper: internal.ErrorWrapper{
+			Err:     internal.ErrNotFound,
+			Message: string(ErrRecord) + ": " + id,
+		},
 	}
 }

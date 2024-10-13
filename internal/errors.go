@@ -1,5 +1,7 @@
 package internal
 
+import "fmt"
+
 type BaseError string
 
 func (e BaseError) Error() string {
@@ -12,38 +14,29 @@ const (
 	ErrNotFound     BaseError = "not found"
 )
 
-type MissingParamError struct {
-	param string
+type ErrorWrapper struct {
+	Err     error
+	Message string
 }
 
-func (e *MissingParamError) Error() string {
-	return string(ErrMissingParam) + ": " + e.param
+func (e *ErrorWrapper) Error() string {
+	return fmt.Sprintf("%v: %s", e.Err, e.Message)
 }
 
-func (e *MissingParamError) Unwrap() error {
-	return ErrMissingParam
+func (e *ErrorWrapper) Unwrap() error {
+	return e.Err
 }
 
 func NewMissingParamError(param string) error {
-	return &MissingParamError{
-		param: param,
+	return &ErrorWrapper{
+		Err:     ErrMissingParam,
+		Message: param,
 	}
 }
 
-type InvalidParamError struct {
-	msg string
-}
-
-func (e *InvalidParamError) Error() string {
-	return string(ErrInvalidParam) + ": " + e.msg
-}
-
-func (e *InvalidParamError) Unwrap() error {
-	return ErrInvalidParam
-}
-
 func NewInvalidParamError(msg string) error {
-	return &InvalidParamError{
-		msg: msg,
+	return &ErrorWrapper{
+		Err:     ErrInvalidParam,
+		Message: msg,
 	}
 }

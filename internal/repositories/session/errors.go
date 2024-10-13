@@ -1,24 +1,27 @@
 package session
 
 import (
-	"fmt"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories"
 )
 
-type SessionError struct {
-	Err error
+type SessionError string
+
+func (e SessionError) Error() string {
+	return string(e)
 }
 
-func (e *SessionError) Error() string {
-	return fmt.Sprintf("session %v", e.Err)
-}
+const (
+	ErrSessionRepo SessionError = "session repository error"
+)
 
-func (e *SessionError) Unwrap() error {
-	return e.Err
+type SessionRepositoryError struct {
+	repositories.RecordError
 }
 
 func NewSessionNotFoundError(id string) error {
-	return &SessionError{
-		Err: repositories.NewRecordNotFoundError(id),
+	return &SessionRepositoryError{
+		RecordError: repositories.RecordError{
+			ErrorWrapper: repositories.NewRecordNotFoundError(id).(*repositories.RecordError).ErrorWrapper,
+		},
 	}
 }

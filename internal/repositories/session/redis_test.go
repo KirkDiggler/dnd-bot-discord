@@ -77,7 +77,7 @@ func (s *RedisRepoTestSuite) TestGet_InputValidation() {
 	_, err := s.repo.Get(ctx, "")
 	s.Error(err)
 	s.True(errors.Is(err, internal.ErrMissingParam))
-	s.EqualError(err, "missing parameter: id")
+	s.EqualError(err, "session.Get missing parameter: id")
 }
 
 func (s *RedisRepoTestSuite) TestGet_DependencyError() {
@@ -100,7 +100,7 @@ func (s *RedisRepoTestSuite) TestGet_SessionNotFound() {
 	_, err := s.repo.Get(ctx, sessionID)
 	s.Error(err)
 	s.True(errors.Is(err, internal.ErrNotFound))
-	s.Equal("session.Get session record test-id: not found", err.Error())
+	s.Equal("session.Get not found: record error: test-id", err.Error())
 }
 
 func (s *RedisRepoTestSuite) TestSet_HappyPath() {
@@ -344,7 +344,7 @@ func (s *RedisRepoTestSuite) TestUpdate_SessionNotFound() {
 
 	s.True(errors.Is(err, internal.ErrNotFound))
 
-	s.EqualError(err, "session.Get session record test-id: not found")
+	s.EqualError(err, "session.Get not found: record error: test-id")
 }
 
 func (s *RedisRepoTestSuite) TestUpdate_InputValidation() {

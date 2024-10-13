@@ -10,9 +10,9 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/uuid"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/sync/errgroup"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/uuid"
 )
 
 type Data struct {
@@ -25,15 +25,15 @@ type Data struct {
 }
 
 type redisRepo struct {
-	client         redis.UniversalClient
-	timeProvider   TimeProvider
-	uuidGenerator  uuid.Generator
+	client        redis.UniversalClient
+	timeProvider  TimeProvider
+	uuidGenerator uuid.Generator
 }
 
 type RedisConfig struct {
-	Client         redis.UniversalClient
-	TimeProvider   TimeProvider
-	UUIDGenerator  uuid.Generator
+	Client        redis.UniversalClient
+	TimeProvider  TimeProvider
+	UUIDGenerator uuid.Generator
 }
 
 func NewRedis(cfg *RedisConfig) (*redisRepo, error) {
@@ -54,9 +54,9 @@ func NewRedis(cfg *RedisConfig) (*redisRepo, error) {
 	}
 
 	return &redisRepo{
-		client:         cfg.Client,
-		timeProvider:   cfg.TimeProvider,
-		uuidGenerator:  cfg.UUIDGenerator,
+		client:        cfg.Client,
+		timeProvider:  cfg.TimeProvider,
+		uuidGenerator: cfg.UUIDGenerator,
 	}, nil
 }
 
@@ -141,7 +141,7 @@ func (r *redisRepo) get(ctx context.Context, id string) (*entities.Session, erro
 
 func (r *redisRepo) Get(ctx context.Context, id string) (*entities.Session, error) {
 	if id == "" {
-		return nil, internal.NewMissingParamError("id")
+		return nil, fmt.Errorf("session.Get %w", internal.NewMissingParamError("id"))
 	}
 
 	session, err := r.get(ctx, id)
