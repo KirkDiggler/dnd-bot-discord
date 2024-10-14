@@ -10,7 +10,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	apiEntities "github.com/fadedpez/dnd5e-api/entities"
 
-	"github.com/KirkDiggler/dnd-bot-discord/dnderr"
+	internal "github.com/KirkDiggler/dnd-bot-discord/internal"
 	"github.com/fadedpez/dnd5e-api/clients/dnd5e"
 )
 
@@ -25,7 +25,7 @@ type Config struct {
 
 func New(cfg *Config) (Client, error) {
 	if cfg == nil {
-		return nil, dnderr.NewMissingParameterError("cfg")
+		return nil, internal.NewMissingParamError("cfg")
 	}
 
 	dndClient, err := dnd5e.NewDND5eAPI(&dnd5e.DND5eAPIConfig{
@@ -80,7 +80,7 @@ func (c *client) GetClass(key string) (*entities.Class, error) {
 
 func (c *client) GetProficiency(key string) (*entities.Proficiency, error) {
 	if key == "" {
-		return nil, dnderr.NewMissingParameterError("GetProficiency.key")
+		return nil, internal.NewMissingParamError("GetProficiency.key")
 	}
 
 	response, err := c.doGetProficiency(key)
@@ -93,7 +93,7 @@ func (c *client) GetProficiency(key string) (*entities.Proficiency, error) {
 
 func (c *client) GetEquipment(key string) (entities.Equipment, error) {
 	if key == "" {
-		return nil, dnderr.NewMissingParameterError("GetEquipment.key")
+		return nil, internal.NewMissingParamError("GetEquipment.key")
 	}
 
 	response, err := c.client.GetEquipment(key)
