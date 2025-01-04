@@ -35,6 +35,7 @@ type Character struct {
 	Speed              int
 	Race               *Race
 	Class              *Class
+	Background         *Background
 	Attributes         map[Attribute]*AbilityScore
 	Rolls              []*dice.RollResult
 	Proficiencies      map[ProficiencyType][]*Proficiency
@@ -410,3 +411,31 @@ func (c *Character) IsEquipped(e Equipment) bool {
 
 	return false
 }
+
+func (c *Character) resetRacialTraits() {
+	// Clear all downstream data
+	c.Proficiencies = make(map[ProficiencyType][]*Proficiency)
+	c.resetAbilityScores()
+}
+
+func (c *Character) resetClassFeatures() {
+	// Clear all downstream data
+	c.Proficiencies = make(map[ProficiencyType][]*Proficiency)
+	c.Inventory = make(map[EquipmentType][]Equipment)
+	c.EquippedSlots = make(map[Slot]Equipment)
+}
+
+func (c *Character) resetBackground() {
+	c.Background = nil
+	// Clear all downstream data
+	c.Proficiencies = make(map[ProficiencyType][]*Proficiency)
+	c.Inventory = make(map[EquipmentType][]Equipment)
+}
+
+func (c *Character) resetAbilityScores() {
+	c.Attributes = make(map[Attribute]*AbilityScore)
+}
+
+func (c *Character) resetProficienciesBySource(step CreateStep) {}
+func (c *Character) resetSkillsBySource(step CreateStep)        {}
+func (c *Character) resetEquipmentBySource(step CreateStep)     {}
