@@ -1,0 +1,83 @@
+graph TB
+    subgraph "Discord Users"
+        U1[Player 1]
+        U2[Player 2]
+        U3[DM]
+    end
+
+    subgraph "Discord Server"
+        DC[Discord Channel]
+        DM1[Ephemeral Message 1]
+        DM2[Ephemeral Message 2]
+        DM3[Ephemeral Message 3]
+    end
+
+    subgraph "Backend Services"
+        subgraph "Discord Bot Service"
+            BOT[Discord.js Bot]
+            CMD[Command Handler]
+            INT[Interaction Handler]
+        end
+
+        subgraph "Game Service"
+            GRPC[gRPC Server]
+            CHAR[Character Service]
+            COMBAT[Combat Engine]
+            RULES[D&D Rules Engine]
+        end
+
+        subgraph "Web Service"
+            WEB[React App]
+            WS[WebSocket Server]
+            MAP[Battle Map]
+        end
+    end
+
+    subgraph "Data Layer"
+        PG[(PostgreSQL)]
+        REDIS[(Redis)]
+    end
+
+    subgraph "External Services"
+        DND[D&D 5e API]
+        AUTH[Discord OAuth]
+    end
+
+    %% User interactions
+    U1 & U2 & U3 --> DC
+    DC --> BOT
+    BOT --> DM1 & DM2 & DM3
+
+    %% Bot to Game Service
+    BOT --> CMD --> INT
+    INT -.->|gRPC| GRPC
+
+    %% Game Service internals
+    GRPC --> CHAR & COMBAT
+    CHAR & COMBAT --> RULES
+    RULES -.->|API| DND
+
+    %% Data persistence
+    CHAR -->|Characters| PG
+    COMBAT -->|Sessions| REDIS
+
+    %% Web interface
+    WS -.->|gRPC| GRPC
+    U3 --> WEB
+    WEB <--> WS
+    WEB --> MAP
+    WEB -.->|OAuth| AUTH
+
+    %% Real-time updates
+    COMBAT -.->|Events| WS
+    COMBAT -.->|Updates| BOT
+
+    classDef service fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef storage fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef external fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef user fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+
+    class BOT,GRPC,WEB,WS service
+    class PG,REDIS storage
+    class DND,AUTH external
+    class U1,U2,U3 user

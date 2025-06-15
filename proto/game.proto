@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package dnd;
+
+option go_package = "github.com/yourusername/dnd-bot-discord/proto/dnd";
+
+import "common.proto";
+import "character.proto";
+import "combat.proto";
+
+// Main game service that orchestrates everything
+service GameService {
+  // Character operations
+  rpc CreateCharacter(CreateCharacterRequest) returns (Character);
+  rpc GetCharacter(GetCharacterRequest) returns (Character);
+  rpc UpdateCharacter(UpdateCharacterRequest) returns (Character);
+  rpc DeleteCharacter(DeleteCharacterRequest) returns (Empty);
+  rpc ListCharacters(ListCharactersRequest) returns (CharacterList);
+  
+  // Combat operations
+  rpc InitiateCombat(InitiateCombatRequest) returns (CombatSession);
+  rpc JoinCombat(JoinCombatRequest) returns (CombatSession);
+  rpc ExecuteAction(CombatActionRequest) returns (CombatActionResult);
+  rpc GetCombatState(GetCombatStateRequest) returns (CombatSession);
+  rpc EndCombat(EndCombatRequest) returns (CombatSummary);
+  
+  // Game data operations
+  rpc GetAvailableRaces(Empty) returns (RaceList);
+  rpc GetAvailableClasses(Empty) returns (ClassList);
+  rpc GetAvailableBackgrounds(Empty) returns (BackgroundList);
+  rpc GetSpellList(GetSpellListRequest) returns (SpellList);
+  rpc GetEquipmentList(GetEquipmentListRequest) returns (EquipmentList);
+}
+
+// Game data messages
+message RaceList {
+  repeated Race races = 1;
+}
+
+message ClassList {
+  repeated Class classes = 1;
+}
+
+message BackgroundList {
+  repeated Background backgrounds = 1;
+}
+
+message SpellList {
+  repeated Spell spells = 1;
+}
+
+message EquipmentList {
+  repeated Equipment equipment = 1;
+}
+
+message GetSpellListRequest {
+  string class_name = 1;
+  int32 max_level = 2;
+}
+
+message GetEquipmentListRequest {
+  EquipmentType type = 1;
+}

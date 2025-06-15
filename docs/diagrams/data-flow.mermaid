@@ -1,0 +1,45 @@
+flowchart LR
+    subgraph "Character Data Flow"
+        CC[Character Creation] --> PG1[(PostgreSQL)]
+        PG1 --> CR[Character Repository]
+        CR --> CS[Character Service]
+        CS --> CACHE1[(Redis Cache)]
+        CACHE1 --> API1[gRPC API]
+    end
+
+    subgraph "Combat Data Flow"
+        CI[Combat Initiation] --> REDIS1[(Redis)]
+        REDIS1 --> CBR[Combat Repository]
+        CBR --> CBS[Combat Service]
+        CBS --> EVENT[Event Emitter]
+        EVENT --> WS1[WebSocket]
+        EVENT --> DC1[Discord Updates]
+    end
+
+    subgraph "Equipment/Inventory Flow"
+        EQ[Equipment Change] --> PG2[(PostgreSQL)]
+        PG2 --> ER[Equipment Repository]
+        ER --> CS2[Character Service]
+        CS2 --> CALC[Stat Calculator]
+        CALC --> CACHE2[(Redis Cache)]
+    end
+
+    subgraph "Session Management"
+        DS[Discord Session] --> SID[Session ID]
+        SID --> REDIS2[(Redis)]
+        REDIS2 --> TTL[TTL: 4 hours]
+        TTL --> CLEAN[Auto Cleanup]
+    end
+
+    %% Cross-service data flow
+    CS --> CBS
+    CALC --> CBS
+    
+    %% Cache invalidation
+    EQ -.->|Invalidate| CACHE1
+    CC -.->|Invalidate| CACHE1
+
+    style CC fill:#e8f5e9
+    style CI fill:#e3f2fd
+    style EQ fill:#fff3e0
+    style DS fill:#f3e5f5

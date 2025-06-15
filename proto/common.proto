@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package dnd;
+
+// Common messages used across services
+message Empty {}
+
+message Error {
+  string code = 1;
+  string message = 2;
+  map<string, string> details = 3;
+}
+
+message Pagination {
+  int32 page = 1;
+  int32 page_size = 2;
+  int32 total_items = 3;
+  int32 total_pages = 4;
+}
+
+message Position {
+  int32 x = 1;
+  int32 y = 2;
+}
+
+message Dice {
+  int32 count = 1;
+  int32 sides = 2;
+  int32 modifier = 3;
+}
+
+message RollResult {
+  repeated int32 rolls = 1;
+  int32 total = 2;
+  bool critical_success = 3;
+  bool critical_failure = 4;
+  string expression = 5; // e.g., "2d6+3"
+}

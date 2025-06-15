@@ -1,0 +1,337 @@
+syntax = "proto3";
+
+package dnd;
+
+import "common.proto";
+import "character.proto";
+
+service CombatService {
+  rpc InitiateCombat(InitiateCombatRequest) returns (CombatSession);
+  rpc JoinCombat(JoinCombatRequest) returns (CombatSession);
+  rpc LeaveCombat(LeaveCombatRequest) returns (Empty);
+  rpc RollInitiative(RollInitiativeRequest) returns (InitiativeResult);
+  rpc ExecuteAction(CombatActionRequest) returns (CombatActionResult);
+  rpc EndTurn(EndTurnRequest) returns (CombatSession);
+  rpc GetCombatState(GetCombatStateRequest) returns (CombatSession);
+  rpc EndCombat(EndCombatRequest) returns (CombatSummary);
+  
+  // Streaming for real-time updates
+  rpc SubscribeToCombat(SubscribeToCombatRequest) returns (stream CombatUpdate);
+}
+
+message CombatSession {
+  string id = 1;
+  string channel_id = 2;
+  CombatState state = 3;
+  
+  repeated CombatParticipant participants = 4;
+  repeated string initiative_order = 5; // Participant IDs in turn order
+  
+  int32 current_turn_index = 6;
+  int32 round = 7;
+  
+  BattleMap map = 8;
+  repeated CombatLogEntry history = 9;
+  
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+message CombatParticipant {
+  string id = 1;
+  string character_id = 2;
+  string user_id = 3;
+  string name = 4;
+  
+  int32 initiative = 5;
+  int32 current_hp = 6;
+  int32 max_hp = 7;
+  int32 armor_class = 8;
+  
+  Position position = 9;
+  repeated Condition conditions = 10;
+  
+  bool is_npc = 11;
+  ParticipantType type = 12;
+}
+
+message BattleMap {
+  int32 width = 1;
+  int32 height = 2;
+  int32 grid_size = 3; // feet per square (usually 5)
+  
+  repeated MapObject objects = 4;
+  repeated MapEffect effects = 5;
+}
+
+message MapObject {
+  string id = 1;
+  Position position = 2;
+  ObjectType type = 3;
+  string name = 4;
+  bool blocks_movement = 5;
+  bool blocks_sight = 6;
+}
+
+message MapEffect {
+  string id = 1;
+  repeated Position affected_positions = 2;
+  string name = 3;
+  EffectType type = 4;
+  int32 remaining_rounds = 5;
+}
+
+message Condition {
+  ConditionType type = 1;
+  int32 remaining_rounds = 2;
+  string source = 3;
+}
+
+message CombatLogEntry {
+  string timestamp = 1;
+  string actor_id = 2;
+  CombatActionType action_type = 3;
+  string description = 4;
+  
+  oneof details {
+    AttackDetails attack = 5;
+    MovementDetails movement = 6;
+    SpellDetails spell = 7;
+  }
+}
+
+message AttackDetails {
+  string target_id = 1;
+  RollResult attack_roll = 2;
+  bool hit = 3;
+  RollResult damage_roll = 4;
+  DamageType damage_type = 5;
+  bool critical = 6;
+}
+
+message MovementDetails {
+  Position from = 1;
+  Position to = 2;
+  int32 distance = 3;
+}
+
+message SpellDetails {
+  string spell_name = 1;
+  int32 spell_level = 2;
+  repeated string target_ids = 3;
+  string effect_description = 4;
+}
+
+message CombatSummary {
+  string session_id = 1;
+  int32 total_rounds = 2;
+  string duration = 3;
+  
+  repeated ParticipantSummary participant_summaries = 4;
+  int32 total_experience = 5;
+  repeated LootItem loot = 6;
+}
+
+message ParticipantSummary {
+  string participant_id = 1;
+  string name = 2;
+  int32 damage_dealt = 3;
+  int32 damage_taken = 4;
+  int32 healing_done = 5;
+  int32 kills = 6;
+  bool survived = 7;
+}
+
+message LootItem {
+  string item_id = 1;
+  string name = 2;
+  int32 quantity = 3;
+}
+
+// Enums
+enum CombatState {
+  COMBAT_STATE_UNSPECIFIED = 0;
+  COMBAT_STATE_INITIATING = 1;
+  COMBAT_STATE_ROLLING_INITIATIVE = 2;
+  COMBAT_STATE_ACTIVE = 3;
+  COMBAT_STATE_PAUSED = 4;
+  COMBAT_STATE_COMPLETE = 5;
+}
+
+enum ParticipantType {
+  PARTICIPANT_TYPE_UNSPECIFIED = 0;
+  PARTICIPANT_TYPE_PLAYER = 1;
+  PARTICIPANT_TYPE_MONSTER = 2;
+  PARTICIPANT_TYPE_NPC = 3;
+}
+
+enum ObjectType {
+  OBJECT_TYPE_UNSPECIFIED = 0;
+  OBJECT_TYPE_WALL = 1;
+  OBJECT_TYPE_DOOR = 2;
+  OBJECT_TYPE_FURNITURE = 3;
+  OBJECT_TYPE_HAZARD = 4;
+}
+
+enum EffectType {
+  EFFECT_TYPE_UNSPECIFIED = 0;
+  EFFECT_TYPE_FIRE = 1;
+  EFFECT_TYPE_ICE = 2;
+  EFFECT_TYPE_POISON_CLOUD = 3;
+  EFFECT_TYPE_DARKNESS = 4;
+  EFFECT_TYPE_DIFFICULT_TERRAIN = 5;
+}
+
+enum ConditionType {
+  CONDITION_TYPE_UNSPECIFIED = 0;
+  CONDITION_TYPE_BLINDED = 1;
+  CONDITION_TYPE_CHARMED = 2;
+  CONDITION_TYPE_DEAFENED = 3;
+  CONDITION_TYPE_FRIGHTENED = 4;
+  CONDITION_TYPE_GRAPPLED = 5;
+  CONDITION_TYPE_INCAPACITATED = 6;
+  CONDITION_TYPE_INVISIBLE = 7;
+  CONDITION_TYPE_PARALYZED = 8;
+  CONDITION_TYPE_PETRIFIED = 9;
+  CONDITION_TYPE_POISONED = 10;
+  CONDITION_TYPE_PRONE = 11;
+  CONDITION_TYPE_RESTRAINED = 12;
+  CONDITION_TYPE_STUNNED = 13;
+  CONDITION_TYPE_UNCONSCIOUS = 14;
+}
+
+enum CombatActionType {
+  COMBAT_ACTION_TYPE_UNSPECIFIED = 0;
+  COMBAT_ACTION_TYPE_ATTACK = 1;
+  COMBAT_ACTION_TYPE_CAST_SPELL = 2;
+  COMBAT_ACTION_TYPE_MOVE = 3;
+  COMBAT_ACTION_TYPE_DASH = 4;
+  COMBAT_ACTION_TYPE_DODGE = 5;
+  COMBAT_ACTION_TYPE_HELP = 6;
+  COMBAT_ACTION_TYPE_HIDE = 7;
+  COMBAT_ACTION_TYPE_READY = 8;
+  COMBAT_ACTION_TYPE_USE_ITEM = 9;
+}
+
+// Request/Response messages
+message InitiateCombatRequest {
+  string channel_id = 1;
+  string initiator_id = 2;
+  BattleMap initial_map = 3;
+  repeated string monster_ids = 4; // Pre-populate with monsters
+}
+
+message JoinCombatRequest {
+  string session_id = 1;
+  string character_id = 2;
+  string user_id = 3;
+}
+
+message LeaveCombatRequest {
+  string session_id = 1;
+  string participant_id = 2;
+}
+
+message RollInitiativeRequest {
+  string session_id = 1;
+  string participant_id = 2;
+  int32 modifier = 3;
+}
+
+message InitiativeResult {
+  string participant_id = 1;
+  RollResult roll = 2;
+  int32 total = 3;
+}
+
+message CombatActionRequest {
+  string session_id = 1;
+  string actor_id = 2;
+  
+  oneof action {
+    AttackAction attack = 3;
+    MoveAction move = 4;
+    SpellAction spell = 5;
+    ItemAction item = 6;
+  }
+}
+
+message AttackAction {
+  string target_id = 1;
+  string weapon_id = 2;
+  bool advantage = 3;
+  bool disadvantage = 4;
+}
+
+message MoveAction {
+  Position to = 1;
+  bool dash = 2;
+}
+
+message SpellAction {
+  string spell_id = 1;
+  repeated string target_ids = 2;
+  int32 spell_slot_level = 3;
+}
+
+message ItemAction {
+  string item_id = 1;
+  string target_id = 2;
+}
+
+message CombatActionResult {
+  bool success = 1;
+  string description = 2;
+  
+  repeated StateChange state_changes = 3;
+  CombatLogEntry log_entry = 4;
+}
+
+message StateChange {
+  string entity_id = 1;
+  
+  oneof change {
+    int32 hp_change = 2;
+    Position position_change = 3;
+    Condition condition_added = 4;
+    string condition_removed = 5;
+  }
+}
+
+message EndTurnRequest {
+  string session_id = 1;
+  string participant_id = 2;
+}
+
+message GetCombatStateRequest {
+  string session_id = 1;
+}
+
+message EndCombatRequest {
+  string session_id = 1;
+  string ender_id = 2;
+}
+
+message SubscribeToCombatRequest {
+  string session_id = 1;
+  string subscriber_id = 2;
+}
+
+message CombatUpdate {
+  string session_id = 1;
+  
+  oneof update {
+    CombatSession full_state = 2;
+    StateChange state_change = 3;
+    CombatLogEntry log_entry = 4;
+    string participant_joined = 5;
+    string participant_left = 6;
+    TurnChange turn_change = 7;
+  }
+}
+
+message TurnChange {
+  string previous_participant_id = 1;
+  string current_participant_id = 2;
+  int32 new_round = 3;
+}
