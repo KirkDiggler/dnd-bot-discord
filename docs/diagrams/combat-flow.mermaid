@@ -1,0 +1,75 @@
+stateDiagram-v2
+    [*] --> Idle: No active combat
+
+    Idle --> Initiating: /combat start
+    
+    Initiating --> RollingInitiative: Players join
+    Initiating --> Cancelled: Timeout/Cancel
+    
+    RollingInitiative --> ActiveCombat: All initiatives rolled
+    RollingInitiative --> RollingInitiative: Player rolls initiative
+    
+    ActiveCombat --> PlayerTurn: Next turn
+    
+    PlayerTurn --> ActionSelection: Turn starts
+    
+    ActionSelection --> PerformingAction: Select action
+    ActionSelection --> EndingTurn: End turn
+    
+    PerformingAction --> RollingDice: Attack/Spell/Skill
+    PerformingAction --> Moving: Movement
+    
+    RollingDice --> ApplyingEffects: Roll complete
+    
+    ApplyingEffects --> ActionSelection: More actions
+    ApplyingEffects --> CheckingVictory: Enemy defeated
+    
+    Moving --> ActionSelection: Movement complete
+    
+    EndingTurn --> ActiveCombat: Next participant
+    EndingTurn --> NewRound: Last in order
+    
+    NewRound --> ActiveCombat: Round++
+    
+    CheckingVictory --> CombatComplete: All enemies defeated
+    CheckingVictory --> ActionSelection: Enemies remain
+    
+    ActiveCombat --> CombatComplete: /combat end
+    
+    CombatComplete --> CleaningUp: Generate summary
+    
+    CleaningUp --> [*]: Cleanup complete
+    
+    Cancelled --> [*]: Cleanup complete
+
+    note right of Idle
+        Redis Keys:
+        - None
+    end note
+
+    note right of ActiveCombat
+        Redis Keys:
+        - combat:{sessionId}
+        - turn:{sessionId}
+        - participants:{sessionId}
+    end note
+
+    note right of PlayerTurn
+        Ephemeral Update:
+        - Action buttons enabled
+        - Available actions shown
+    end note
+
+    note right of ApplyingEffects
+        Shared Message Update:
+        - HP changes
+        - Status effects
+        - Combat log
+    end note
+
+    note right of CombatComplete
+        Rewards:
+        - XP calculation
+        - Loot generation
+        - Save to PostgreSQL
+    end note

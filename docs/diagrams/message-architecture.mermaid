@@ -1,0 +1,79 @@
+sequenceDiagram
+    participant P as Player
+    participant D as Discord
+    participant B as Bot Service
+    participant G as Game Service
+    participant R as Redis
+    participant W as Web Interface
+
+    Note over D: Combat Channel (Shared)
+    
+    P->>D: /combat start
+    D->>B: Interaction Event
+    B->>G: InitiateCombat(channelId)
+    G->>R: Create combat session
+    G-->>B: CombatSession
+    B->>D: Send shared combat message
+    B->>D: Send ephemeral "Join Combat" button
+    
+    Note over D: Other players see join button
+    
+    P->>D: Click "Join Combat"
+    D->>B: Button Interaction
+    B->>G: JoinCombat(userId, sessionId)
+    G->>R: Add participant
+    G-->>B: Updated CombatSession
+    B->>D: Update shared message
+    B->>D: Send ephemeral character sheet
+    
+    Note over D: Initiative Phase
+    
+    B->>D: Ephemeral "Roll Initiative" prompt
+    P->>D: Click "Roll Initiative"
+    D->>B: Button Interaction
+    B->>G: RollInitiative(userId, sessionId)
+    G->>R: Store initiative
+    G-->>B: Initiative result
+    B->>D: Update shared message (order)
+    B->>D: Ephemeral roll result
+    
+    Note over D: Combat Turn
+    
+    G->>B: TurnStart event
+    B->>D: Update shared message (highlight turn)
+    B->>D: Enable action buttons (ephemeral)
+    
+    P->>D: Click "Attack"
+    D->>B: Button Interaction
+    B->>G: ExecuteAction(Attack, targetId)
+    G->>R: Update combat state
+    
+    par Notify Discord
+        G-->>B: ActionResult
+        B->>D: Update shared message
+        B->>D: Ephemeral roll details
+    and Notify Web
+        G-->>W: WebSocket event
+        W->>W: Update battle map
+    end
+    
+    Note over D: Perception Check (Private)
+    
+    G->>B: PerceptionCheck needed
+    B->>D: Ephemeral "Roll Perception"
+    P->>D: Click roll
+    D->>B: Button Interaction
+    B->>G: RollPerception(userId)
+    G-->>B: Success with info
+    B->>D: Ephemeral secret info
+    
+    Note over W: DM View (Web)
+    
+    W->>G: Subscribe to combat
+    G-->>W: Full combat state
+    W->>W: Render complete map
+    
+    loop Every action
+        G-->>W: State update
+        W->>W: Update visualization
+    end

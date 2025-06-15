@@ -1,0 +1,273 @@
+syntax = "proto3";
+
+package dnd;
+
+import "common.proto";
+
+service CharacterService {
+  rpc CreateCharacter(CreateCharacterRequest) returns (Character);
+  rpc GetCharacter(GetCharacterRequest) returns (Character);
+  rpc UpdateCharacter(UpdateCharacterRequest) returns (Character);
+  rpc DeleteCharacter(DeleteCharacterRequest) returns (Empty);
+  rpc ListCharacters(ListCharactersRequest) returns (CharacterList);
+  rpc GetCharacterSheet(GetCharacterSheetRequest) returns (CharacterSheet);
+}
+
+message Character {
+  string id = 1;
+  string user_id = 2;
+  string name = 3;
+  int32 level = 4;
+  int32 experience = 5;
+  
+  Race race = 6;
+  Class class = 7;
+  Background background = 8;
+  
+  Attributes attributes = 9;
+  
+  int32 max_hp = 10;
+  int32 current_hp = 11;
+  int32 temp_hp = 12;
+  int32 armor_class = 13;
+  int32 initiative_bonus = 14;
+  int32 speed = 15;
+  
+  repeated Equipment equipment = 16;
+  repeated Item inventory = 17;
+  repeated Proficiency proficiencies = 18;
+  repeated Spell spells = 19;
+  
+  CharacterStatus status = 20;
+  
+  string created_at = 21;
+  string updated_at = 22;
+}
+
+message CharacterSheet {
+  Character character = 1;
+  
+  // Calculated values
+  map<string, int32> skill_modifiers = 2;
+  map<string, int32> saving_throws = 3;
+  int32 proficiency_bonus = 4;
+  int32 passive_perception = 5;
+  
+  // Combat stats
+  repeated Attack attacks = 6;
+  int32 spell_save_dc = 7;
+  int32 spell_attack_bonus = 8;
+  
+  // Resources
+  map<int32, int32> spell_slots_remaining = 9;
+  map<int32, int32> spell_slots_max = 10;
+}
+
+message Attributes {
+  int32 strength = 1;
+  int32 dexterity = 2;
+  int32 constitution = 3;
+  int32 intelligence = 4;
+  int32 wisdom = 5;
+  int32 charisma = 6;
+}
+
+message Race {
+  string id = 1;
+  string name = 2;
+  string size = 3;
+  int32 speed = 4;
+  repeated string languages = 5;
+  repeated Trait traits = 6;
+  Attributes ability_bonuses = 7;
+}
+
+message Class {
+  string id = 1;
+  string name = 2;
+  int32 hit_die = 3;
+  repeated string proficiencies = 4;
+  repeated string saving_throws = 5;
+  int32 skill_choices = 6;
+  repeated string skill_options = 7;
+}
+
+message Background {
+  string id = 1;
+  string name = 2;
+  repeated string skill_proficiencies = 3;
+  repeated string languages = 4;
+  string feature = 5;
+}
+
+message Equipment {
+  string id = 1;
+  string name = 2;
+  EquipmentType type = 3;
+  bool equipped = 4;
+  
+  oneof details {
+    Weapon weapon = 5;
+    Armor armor = 6;
+  }
+}
+
+message Weapon {
+  string damage_dice = 1;
+  DamageType damage_type = 2;
+  repeated WeaponProperty properties = 3;
+  int32 range_normal = 4;
+  int32 range_long = 5;
+}
+
+message Armor {
+  int32 armor_class = 1;
+  int32 strength_requirement = 2;
+  bool stealth_disadvantage = 3;
+  int32 max_dex_bonus = 4;
+}
+
+message Item {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int32 quantity = 4;
+  double weight = 5;
+  int32 value = 6; // in copper pieces
+}
+
+message Proficiency {
+  string name = 1;
+  ProficiencyType type = 2;
+}
+
+message Spell {
+  string id = 1;
+  string name = 2;
+  int32 level = 3;
+  string school = 4;
+  string casting_time = 5;
+  string range = 6;
+  string duration = 7;
+  repeated string components = 8;
+  bool prepared = 9;
+}
+
+message Attack {
+  string name = 1;
+  int32 attack_bonus = 2;
+  string damage_dice = 3;
+  int32 damage_bonus = 4;
+  DamageType damage_type = 5;
+  int32 range = 6;
+}
+
+message Trait {
+  string name = 1;
+  string description = 2;
+}
+
+// Enums
+enum CharacterStatus {
+  CHARACTER_STATUS_UNSPECIFIED = 0;
+  CHARACTER_STATUS_DRAFT = 1;
+  CHARACTER_STATUS_ACTIVE = 2;
+  CHARACTER_STATUS_ARCHIVED = 3;
+}
+
+enum EquipmentType {
+  EQUIPMENT_TYPE_UNSPECIFIED = 0;
+  EQUIPMENT_TYPE_WEAPON = 1;
+  EQUIPMENT_TYPE_ARMOR = 2;
+  EQUIPMENT_TYPE_ADVENTURING_GEAR = 3;
+  EQUIPMENT_TYPE_TOOL = 4;
+  EQUIPMENT_TYPE_MAGIC_ITEM = 5;
+}
+
+enum DamageType {
+  DAMAGE_TYPE_UNSPECIFIED = 0;
+  DAMAGE_TYPE_ACID = 1;
+  DAMAGE_TYPE_BLUDGEONING = 2;
+  DAMAGE_TYPE_COLD = 3;
+  DAMAGE_TYPE_FIRE = 4;
+  DAMAGE_TYPE_FORCE = 5;
+  DAMAGE_TYPE_LIGHTNING = 6;
+  DAMAGE_TYPE_NECROTIC = 7;
+  DAMAGE_TYPE_PIERCING = 8;
+  DAMAGE_TYPE_POISON = 9;
+  DAMAGE_TYPE_PSYCHIC = 10;
+  DAMAGE_TYPE_RADIANT = 11;
+  DAMAGE_TYPE_SLASHING = 12;
+  DAMAGE_TYPE_THUNDER = 13;
+}
+
+enum WeaponProperty {
+  WEAPON_PROPERTY_UNSPECIFIED = 0;
+  WEAPON_PROPERTY_AMMUNITION = 1;
+  WEAPON_PROPERTY_FINESSE = 2;
+  WEAPON_PROPERTY_HEAVY = 3;
+  WEAPON_PROPERTY_LIGHT = 4;
+  WEAPON_PROPERTY_LOADING = 5;
+  WEAPON_PROPERTY_RANGE = 6;
+  WEAPON_PROPERTY_REACH = 7;
+  WEAPON_PROPERTY_THROWN = 8;
+  WEAPON_PROPERTY_TWO_HANDED = 9;
+  WEAPON_PROPERTY_VERSATILE = 10;
+}
+
+enum ProficiencyType {
+  PROFICIENCY_TYPE_UNSPECIFIED = 0;
+  PROFICIENCY_TYPE_ARMOR = 1;
+  PROFICIENCY_TYPE_WEAPON = 2;
+  PROFICIENCY_TYPE_TOOL = 3;
+  PROFICIENCY_TYPE_SKILL = 4;
+  PROFICIENCY_TYPE_LANGUAGE = 5;
+}
+
+// Request/Response messages
+message CreateCharacterRequest {
+  string user_id = 1;
+  string name = 2;
+  string race_id = 3;
+  string class_id = 4;
+  string background_id = 5;
+  Attributes attributes = 6;
+}
+
+message GetCharacterRequest {
+  string character_id = 1;
+  string user_id = 2; // for ownership validation
+}
+
+message UpdateCharacterRequest {
+  string character_id = 1;
+  string user_id = 2;
+  
+  // Fields that can be updated
+  optional string name = 3;
+  optional int32 experience = 4;
+  optional int32 current_hp = 5;
+  optional int32 temp_hp = 6;
+  repeated Equipment equipment = 7;
+  repeated Item inventory = 8;
+  repeated Spell spells = 9;
+}
+
+message DeleteCharacterRequest {
+  string character_id = 1;
+  string user_id = 2;
+}
+
+message ListCharactersRequest {
+  string user_id = 1;
+  bool include_archived = 2;
+}
+
+message CharacterList {
+  repeated Character characters = 1;
+}
+
+message GetCharacterSheetRequest {
+  string character_id = 1;
+  string user_id = 2;
+}
