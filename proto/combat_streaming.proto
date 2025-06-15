@@ -1,0 +1,203 @@
+syntax = "proto3";
+
+package dnd;
+
+option go_package = "github.com/yourusername/dnd-bot-discord/proto/dnd";
+
+import "common.proto";
+import "character.proto";
+
+service CombatStreamingService {
+  // Bidirectional streaming for real-time combat
+  rpc CombatStream(stream CombatRequest) returns (stream CombatEvent);
+  
+  // Server streaming for combat observers (web interface, spectators)
+  rpc ObserveCombat(ObserveCombatRequest) returns (stream CombatEvent);
+  
+  // Client streaming for batch actions (multiple moves, complex turns)
+  rpc ExecuteBatchActions(stream CombatAction) returns (BatchActionResult);
+}
+
+// Unified request message for combat stream
+message CombatRequest {
+  oneof request {
+    InitiateCombatReq initiate = 1;
+    JoinCombatReq join = 2;
+    RollInitiativeReq roll_initiative = 3;
+    ExecuteActionReq execute_action = 4;
+    EndTurnReq end_turn = 5;
+    LeaveCombatReq leave = 6;
+    EndCombatReq end_combat = 7;
+  }
+}
+
+// Event types streamed to clients
+message CombatEvent {
+  string session_id = 1;
+  string timestamp = 2;
+  
+  oneof event {
+    CombatInitiated initiated = 3;
+    ParticipantJoined joined = 4;
+    InitiativeRolled initiative = 5;
+    TurnStarted turn_started = 6;
+    ActionExecuted action = 7;
+    StateChanged state_change = 8;
+    CombatEnded ended = 9;
+    ErrorOccurred error = 10;
+  }
+}
+
+// Individual request types
+message InitiateCombatReq {
+  string channel_id = 1;
+  string initiator_id = 2;
+  BattleMapConfig map_config = 3;
+}
+
+message JoinCombatReq {
+  string session_id = 1;
+  string character_id = 2;
+  string user_id = 3;
+}
+
+message RollInitiativeReq {
+  string session_id = 1;
+  string participant_id = 2;
+}
+
+message ExecuteActionReq {
+  string session_id = 1;
+  string actor_id = 2;
+  CombatAction action = 3;
+}
+
+message EndTurnReq {
+  string session_id = 1;
+  string participant_id = 2;
+}
+
+message LeaveCombatReq {
+  string session_id = 1;
+  string participant_id = 2;
+}
+
+message EndCombatReq {
+  string session_id = 1;
+  string ender_id = 2;
+}
+
+// Event detail messages
+message CombatInitiated {
+  string session_id = 1;
+  string channel_id = 2;
+  BattleMap initial_map = 3;
+}
+
+message ParticipantJoined {
+  CombatParticipant participant = 1;
+  int32 total_participants = 2;
+}
+
+message InitiativeRolled {
+  string participant_id = 1;
+  RollResult roll = 2;
+  int32 total = 3;
+  repeated string initiative_order = 4; // Updated order if all rolled
+}
+
+message TurnStarted {
+  string participant_id = 1;
+  int32 round = 2;
+  int32 turn_number = 3;
+  repeated AvailableAction available_actions = 4;
+}
+
+message ActionExecuted {
+  string actor_id = 1;
+  string action_type = 2;
+  string description = 3;
+  repeated StateUpdate state_updates = 4;
+}
+
+message StateChanged {
+  oneof change {
+    MapUpdate map_update = 1;
+    ParticipantUpdate participant_update = 2;
+    RoundUpdate round_update = 3;
+  }
+}
+
+message CombatEnded {
+  CombatSummary summary = 1;
+}
+
+message ErrorOccurred {
+  string code = 1;
+  string message = 2;
+  string participant_id = 3;
+}
+
+// Supporting messages
+message BattleMapConfig {
+  int32 width = 1;
+  int32 height = 2;
+  MapTemplate template = 3;
+}
+
+message MapTemplate {
+  string name = 1;
+  repeated MapObject preset_objects = 2;
+}
+
+message AvailableAction {
+  string action_id = 1;
+  string name = 2;
+  string description = 3;
+  bool enabled = 4;
+  string disabled_reason = 5;
+}
+
+message StateUpdate {
+  string entity_id = 1;
+  string update_type = 2;
+  string old_value = 3;
+  string new_value = 4;
+}
+
+message MapUpdate {
+  repeated Position updated_positions = 1;
+  repeated MapObject added_objects = 2;
+  repeated string removed_object_ids = 3;
+}
+
+message ParticipantUpdate {
+  string participant_id = 1;
+  optional int32 hp_change = 2;
+  optional Position new_position = 3;
+  repeated Condition conditions_added = 4;
+  repeated string conditions_removed = 5;
+}
+
+message RoundUpdate {
+  int32 new_round = 1;
+  string active_participant_id = 2;
+}
+
+message ObserveCombatRequest {
+  string session_id = 1;
+  string observer_id = 2;
+  bool include_history = 3;
+}
+
+message BatchActionResult {
+  repeated ActionResult results = 1;
+  CombatState final_state = 2;
+}
+
+message ActionResult {
+  bool success = 1;
+  string action_id = 2;
+  string description = 3;
+  repeated StateUpdate updates = 4;
+}
