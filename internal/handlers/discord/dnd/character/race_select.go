@@ -47,6 +47,24 @@ func (h *RaceSelectHandler) Handle(req *RaceSelectRequest) error {
 		return fmt.Errorf("failed to acknowledge interaction: %w", err)
 	}
 
+	// Get the draft character for this user
+	draftChar, err := h.characterService.GetOrCreateDraftCharacter(
+		context.Background(),
+		req.Interaction.Member.User.ID,
+		req.Interaction.GuildID,
+	)
+	if err != nil {
+		return h.respondWithError(req, "Failed to get character draft. Please try again.")
+	}
+	
+	// Update the draft with the selected race
+	err = h.characterService.UpdateDraftCharacter(context.Background(), draftChar.ID, &characterService.UpdateDraftInput{
+		RaceKey: &req.RaceKey,
+	})
+	if err != nil {
+		return h.respondWithError(req, "Failed to update character race. Please try again.")
+	}
+	
 	// Fetch the selected race details
 	race, err := h.characterService.GetRace(context.Background(), req.RaceKey)
 	if err != nil {

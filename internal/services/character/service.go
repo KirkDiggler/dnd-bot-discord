@@ -43,6 +43,12 @@ type Service interface {
 	
 	// GetClasses retrieves all available classes
 	GetClasses(ctx context.Context) ([]*entities.Class, error)
+	
+	// GetOrCreateDraftCharacter gets an existing draft or creates a new one
+	GetOrCreateDraftCharacter(ctx context.Context, userID, realmID string) (*entities.Character, error)
+	
+	// UpdateDraftCharacter updates a draft character
+	UpdateDraftCharacter(ctx context.Context, characterID string, updates *UpdateDraftInput) error
 }
 
 // CreateCharacterInput contains all data needed to create a character
@@ -80,6 +86,16 @@ type ResolveChoicesInput struct {
 type ResolveChoicesOutput struct {
 	ProficiencyChoices []SimplifiedChoice
 	EquipmentChoices   []SimplifiedChoice
+}
+
+// UpdateDraftInput contains fields to update on a draft character
+type UpdateDraftInput struct {
+	RaceKey       *string
+	ClassKey      *string
+	AbilityScores map[string]int
+	Proficiencies []string
+	Equipment     []string
+	Name          *string
 }
 
 // SimplifiedChoice represents a choice in a UI-friendly format
@@ -379,6 +395,136 @@ func (s *service) GetClasses(ctx context.Context) ([]*entities.Class, error) {
 	}
 	
 	return classes, nil
+}
+
+// GetOrCreateDraftCharacter gets an existing draft or creates a new one
+func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID string) (*entities.Character, error) {
+	if strings.TrimSpace(userID) == "" {
+		return nil, dnderr.InvalidArgument("user ID is required")
+	}
+	if strings.TrimSpace(realmID) == "" {
+		return nil, dnderr.InvalidArgument("realm ID is required")
+	}
+	
+	// Look for existing draft characters
+	chars, err := s.repository.GetByOwnerAndRealm(ctx, userID, realmID)
+	if err != nil {
+		return nil, dnderr.Wrap(err, "failed to get existing characters").
+			WithMeta("user_id", userID).
+			WithMeta("realm_id", realmID)
+	}
+	
+	// Find a draft character
+	for _, char := range chars {
+		if char.Status == entities.CharacterStatusDraft {
+			return char, nil
+		}
+	}
+	
+	// No draft found, create a new one
+	character := &entities.Character{
+		ID:      generateID(),
+		OwnerID: userID,
+		RealmID: realmID,
+		Name:    "Draft Character",
+		Status:  entities.CharacterStatusDraft,
+		Level:   1,
+		// Initialize empty maps
+		Attributes:         make(map[entities.Attribute]*entities.AbilityScore),
+		Proficiencies:      make(map[entities.ProficiencyType][]*entities.Proficiency),
+		Inventory:          make(map[entities.EquipmentType][]entities.Equipment),
+		EquippedSlots:      make(map[entities.Slot]entities.Equipment),
+	}
+	
+	// Save to repository
+	if err := s.repository.Create(ctx, character); err != nil {
+		return nil, dnderr.Wrap(err, "failed to create draft character").
+			WithMeta("character_id", character.ID).
+			WithMeta("owner_id", userID)
+	}
+	
+	return character, nil
+}
+
+// UpdateDraftCharacter updates a draft character
+func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, updates *UpdateDraftInput) error {
+	if strings.TrimSpace(characterID) == "" {
+		return dnderr.InvalidArgument("character ID is required")
+	}
+	if updates == nil {
+		return dnderr.InvalidArgument("updates cannot be nil")
+	}
+	
+	// Get the character
+	char, err := s.repository.Get(ctx, characterID)
+	if err != nil {
+		return dnderr.Wrapf(err, "failed to get character '%s'", characterID).
+			WithMeta("character_id", characterID)
+	}
+	
+	// Verify it's a draft
+	if char.Status != entities.CharacterStatusDraft {
+		return dnderr.InvalidArgument("can only update draft characters").
+			WithMeta("character_id", characterID).
+			WithMeta("status", string(char.Status))
+	}
+	
+	// Update race if provided
+	if updates.RaceKey != nil {
+		race, err := s.dndClient.GetRace(*updates.RaceKey)
+		if err != nil {
+			return dnderr.Wrapf(err, "failed to get race '%s'", *updates.RaceKey).
+				WithMeta("race_key", *updates.RaceKey)
+		}
+		char.Race = race
+		char.Speed = race.Speed
+	}
+	
+	// Update class if provided
+	if updates.ClassKey != nil {
+		class, err := s.dndClient.GetClass(*updates.ClassKey)
+		if err != nil {
+			return dnderr.Wrapf(err, "failed to get class '%s'", *updates.ClassKey).
+				WithMeta("class_key", *updates.ClassKey)
+		}
+		char.Class = class
+		char.HitDie = class.HitDie
+	}
+	
+	// Update ability scores if provided
+	if len(updates.AbilityScores) > 0 {
+		// Clear existing scores
+		char.Attributes = make(map[entities.Attribute]*entities.AbilityScore)
+		
+		// Set new scores
+		for ability, score := range updates.AbilityScores {
+			attr := stringToAttribute(ability)
+			char.AddAttribute(attr, score)
+		}
+		
+		// Apply racial bonuses if race is set
+		if char.Race != nil {
+			for _, bonus := range char.Race.AbilityBonuses {
+				char.AddAbilityBonus(bonus)
+			}
+		}
+		
+		// Update hit points
+		char.SetHitpoints()
+	}
+	
+	// Update name if provided
+	if updates.Name != nil {
+		char.Name = *updates.Name
+	}
+	
+	// Save changes
+	if err := s.repository.Update(ctx, char); err != nil {
+		return dnderr.Wrap(err, "failed to update character").
+			WithMeta("character_id", characterID)
+	}
+	
+	return nil
 }
 
 // generateID generates a unique ID for a character

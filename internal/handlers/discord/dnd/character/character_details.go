@@ -57,6 +57,22 @@ func (h *CharacterDetailsHandler) Handle(req *CharacterDetailsRequest) error {
 		return h.respondWithError(req, "Failed to fetch class details.")
 	}
 
+	// Try to parse ability scores from the interaction message
+	// This is a temporary solution until we implement proper state management
+	abilityScoresSummary := "**Abilities:** Assigned"
+	if req.Interaction.Message != nil && len(req.Interaction.Message.Embeds) > 0 {
+		// Try to find ability scores from previous embeds
+		for _, embed := range req.Interaction.Message.Embeds {
+			for _, field := range embed.Fields {
+				if field.Name == "💪 Physical" || field.Name == "🧠 Mental" {
+					// Found ability scores, could parse them here
+					abilityScoresSummary = "**Abilities:** Assigned (STR/DEX/CON/INT/WIS/CHA)"
+					break
+				}
+			}
+		}
+	}
+	
 	// Create embed
 	embed := &discordgo.MessageEmbed{
 		Title:       "Character Details",
@@ -65,7 +81,7 @@ func (h *CharacterDetailsHandler) Handle(req *CharacterDetailsRequest) error {
 		Fields: []*discordgo.MessageEmbedField{
 			{
 				Name:   "📊 Summary",
-				Value:  "**Abilities:** Assigned\n**Proficiencies:** Selected\n**Equipment:** Standard starting gear",
+				Value:  fmt.Sprintf("%s\n**Proficiencies:** Selected\n**Equipment:** Standard starting gear", abilityScoresSummary),
 				Inline: false,
 			},
 			{
