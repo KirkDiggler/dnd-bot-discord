@@ -1,27 +1,28 @@
 package character
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
+	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 )
 
 // ProficiencyChoicesHandler handles proficiency selection
 type ProficiencyChoicesHandler struct {
-	dndClient dnd5e.Client
+	characterService characterService.Service
 }
 
 // ProficiencyChoicesHandlerConfig holds configuration
 type ProficiencyChoicesHandlerConfig struct {
-	DNDClient dnd5e.Client
+	CharacterService characterService.Service
 }
 
 // NewProficiencyChoicesHandler creates a new handler
 func NewProficiencyChoicesHandler(cfg *ProficiencyChoicesHandlerConfig) *ProficiencyChoicesHandler {
 	return &ProficiencyChoicesHandler{
-		dndClient: cfg.DNDClient,
+		characterService: cfg.CharacterService,
 	}
 }
 
@@ -45,14 +46,23 @@ func (h *ProficiencyChoicesHandler) Handle(req *ProficiencyChoicesRequest) error
 	if err != nil {
 		return fmt.Errorf("failed to acknowledge interaction: %w", err)
 	}
+	
+	// Use character service to resolve choices
+	choices, err := h.characterService.ResolveChoices(context.Background(), &characterService.ResolveChoicesInput{
+		RaceKey:  req.RaceKey,
+		ClassKey: req.ClassKey,
+	})
+	if err != nil {
+		return h.respondWithError(req, fmt.Sprintf("Failed to load proficiency choices: %v", err))
+	}
 
-	// Get race and class details
-	race, err := h.dndClient.GetRace(req.RaceKey)
+	// Get race and class details for display
+	race, err := h.characterService.GetRace(context.Background(), req.RaceKey)
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch race details.")
 	}
 
-	class, err := h.dndClient.GetClass(req.ClassKey)
+	class, err := h.characterService.GetClass(context.Background(), req.ClassKey)
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch class details.")
 	}
@@ -85,34 +95,28 @@ func (h *ProficiencyChoicesHandler) Handle(req *ProficiencyChoicesRequest) error
 		})
 	}
 
-	// Show proficiency choices from class
-	hasChoices := false
-	fmt.Printf("DEBUG: %s has %d proficiency choices\n", class.Name, len(class.ProficiencyChoices))
-	if len(class.ProficiencyChoices) > 0 {
-		for i, choice := range class.ProficiencyChoices {
-			if choice != nil && len(choice.Options) > 0 {
-				hasChoices = true
-				choiceDesc := fmt.Sprintf("Choose %d from %d options", choice.Count, len(choice.Options))
-				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-					Name:   fmt.Sprintf("🎯 %s", choice.Name),
-					Value:  choiceDesc,
-					Inline: false,
-				})
-				fmt.Printf("DEBUG: Choice %d: %s (%d options)\n", i, choice.Name, len(choice.Options))
-			}
+	// Show proficiency choices from service
+	hasChoices := len(choices.ProficiencyChoices) > 0
+	
+	for _, choice := range choices.ProficiencyChoices {
+		choiceDesc := fmt.Sprintf("Choose %d from %d options", choice.Choose, len(choice.Options))
+		if choice.Description != "" {
+			choiceDesc = choice.Description
 		}
-	} else {
-		fmt.Printf("DEBUG: No proficiency choices found for %s\n", class.Name)
-	}
-
-	// Show proficiency choices from race
-	if race.StartingProficiencyOptions != nil && len(race.StartingProficiencyOptions.Options) > 0 {
-		hasChoices = true
+		
+		// Show choice type icon
+		icon := "🎯"
+		if strings.Contains(choice.ID, "race") || strings.Contains(strings.ToLower(choice.Name), "racial") {
+			icon = "🏃"
+		}
+		
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:   fmt.Sprintf("🏃 %s Bonus", race.Name),
-			Value:  fmt.Sprintf("Choose %d proficiency", race.StartingProficiencyOptions.Count),
+			Name:   fmt.Sprintf("%s %s", icon, choice.Name),
+			Value:  choiceDesc,
 			Inline: false,
 		})
+		
+		fmt.Printf("DEBUG: Proficiency choice: %s (%d options)\n", choice.Name, len(choice.Options))
 	}
 
 	// Progress

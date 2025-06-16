@@ -1,26 +1,27 @@
 package character
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
+	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 )
 
 // CreateHandler handles the /dnd character create command
 type CreateHandler struct {
-	dndClient dnd5e.Client
+	characterService characterService.Service
 }
 
 // CreateHandlerConfig holds configuration for the create handler
 type CreateHandlerConfig struct {
-	DNDClient dnd5e.Client
+	CharacterService characterService.Service
 }
 
 // NewCreateHandler creates a new character creation handler
 func NewCreateHandler(cfg *CreateHandlerConfig) *CreateHandler {
 	return &CreateHandler{
-		dndClient: cfg.DNDClient,
+		characterService: cfg.CharacterService,
 	}
 }
 
@@ -60,7 +61,7 @@ func (h *CreateHandler) Handle(req *CreateRequest) error {
 	}
 
 	// Fetch available races from the API
-	races, err := h.dndClient.ListRaces()
+	races, err := h.characterService.GetRaces(context.Background())
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch races. Please try again.")
 	}

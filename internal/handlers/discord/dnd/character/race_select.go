@@ -1,28 +1,29 @@
 package character
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 )
 
 // RaceSelectHandler handles the race selection interaction
 type RaceSelectHandler struct {
-	dndClient dnd5e.Client
+	characterService characterService.Service
 }
 
 // RaceSelectHandlerConfig holds configuration for the race select handler
 type RaceSelectHandlerConfig struct {
-	DNDClient dnd5e.Client
+	CharacterService characterService.Service
 }
 
 // NewRaceSelectHandler creates a new race selection handler
 func NewRaceSelectHandler(cfg *RaceSelectHandlerConfig) *RaceSelectHandler {
 	return &RaceSelectHandler{
-		dndClient: cfg.DNDClient,
+		characterService: cfg.CharacterService,
 	}
 }
 
@@ -47,7 +48,7 @@ func (h *RaceSelectHandler) Handle(req *RaceSelectRequest) error {
 	}
 
 	// Fetch the selected race details
-	race, err := h.dndClient.GetRace(req.RaceKey)
+	race, err := h.characterService.GetRace(context.Background(), req.RaceKey)
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch race details. Please try again.")
 	}
@@ -56,7 +57,7 @@ func (h *RaceSelectHandler) Handle(req *RaceSelectRequest) error {
 	embed := h.buildRaceDetailsEmbed(race)
 
 	// Fetch all races to rebuild the dropdown
-	races, err := h.dndClient.ListRaces()
+	races, err := h.characterService.GetRaces(context.Background())
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch races. Please try again.")
 	}

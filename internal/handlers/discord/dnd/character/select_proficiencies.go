@@ -1,28 +1,29 @@
 package character
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 )
 
 // SelectProficienciesHandler handles the actual proficiency selection
 type SelectProficienciesHandler struct {
-	dndClient dnd5e.Client
+	characterService characterService.Service
 }
 
 // SelectProficienciesHandlerConfig holds configuration
 type SelectProficienciesHandlerConfig struct {
-	DNDClient dnd5e.Client
+	CharacterService characterService.Service
 }
 
 // NewSelectProficienciesHandler creates a new handler
 func NewSelectProficienciesHandler(cfg *SelectProficienciesHandlerConfig) *SelectProficienciesHandler {
 	return &SelectProficienciesHandler{
-		dndClient: cfg.DNDClient,
+		characterService: cfg.CharacterService,
 	}
 }
 
@@ -50,12 +51,12 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 	}
 
 	// Get race and class details
-	race, err := h.dndClient.GetRace(req.RaceKey)
+	race, err := h.characterService.GetRace(context.Background(), req.RaceKey)
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch race details.")
 	}
 
-	class, err := h.dndClient.GetClass(req.ClassKey)
+	class, err := h.characterService.GetClass(context.Background(), req.ClassKey)
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch class details.")
 	}

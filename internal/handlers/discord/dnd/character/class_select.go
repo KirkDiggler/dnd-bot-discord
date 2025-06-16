@@ -1,28 +1,29 @@
 package character
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 )
 
 // ClassSelectHandler handles the class selection interaction
 type ClassSelectHandler struct {
-	dndClient dnd5e.Client
+	characterService characterService.Service
 }
 
 // ClassSelectHandlerConfig holds configuration for the class select handler
 type ClassSelectHandlerConfig struct {
-	DNDClient dnd5e.Client
+	CharacterService characterService.Service
 }
 
 // NewClassSelectHandler creates a new class selection handler
 func NewClassSelectHandler(cfg *ClassSelectHandlerConfig) *ClassSelectHandler {
 	return &ClassSelectHandler{
-		dndClient: cfg.DNDClient,
+		characterService: cfg.CharacterService,
 	}
 }
 
@@ -48,12 +49,12 @@ func (h *ClassSelectHandler) Handle(req *ClassSelectRequest) error {
 	}
 
 	// Fetch race and class details
-	race, err := h.dndClient.GetRace(req.RaceKey)
+	race, err := h.characterService.GetRace(context.Background(), req.RaceKey)
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch race details. Please try again.")
 	}
 
-	class, err := h.dndClient.GetClass(req.ClassKey)
+	class, err := h.characterService.GetClass(context.Background(), req.ClassKey)
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch class details. Please try again.")
 	}
@@ -62,12 +63,12 @@ func (h *ClassSelectHandler) Handle(req *ClassSelectRequest) error {
 	embed := h.buildSummaryEmbed(race, class)
 
 	// Get all races and classes for the dropdowns
-	races, err := h.dndClient.ListRaces()
+	races, err := h.characterService.GetRaces(context.Background())
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch races. Please try again.")
 	}
 
-	classes, err := h.dndClient.ListClasses()
+	classes, err := h.characterService.GetClasses(context.Background())
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch classes. Please try again.")
 	}

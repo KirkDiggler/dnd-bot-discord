@@ -1,26 +1,27 @@
 package character
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
+	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 )
 
 // CharacterDetailsHandler handles character name and final details
 type CharacterDetailsHandler struct {
-	dndClient dnd5e.Client
+	characterService characterService.Service
 }
 
 // CharacterDetailsHandlerConfig holds configuration
 type CharacterDetailsHandlerConfig struct {
-	DNDClient dnd5e.Client
+	CharacterService characterService.Service
 }
 
 // NewCharacterDetailsHandler creates a new handler
 func NewCharacterDetailsHandler(cfg *CharacterDetailsHandlerConfig) *CharacterDetailsHandler {
 	return &CharacterDetailsHandler{
-		dndClient: cfg.DNDClient,
+		characterService: cfg.CharacterService,
 	}
 }
 
@@ -46,12 +47,12 @@ func (h *CharacterDetailsHandler) Handle(req *CharacterDetailsRequest) error {
 	}
 
 	// Get race and class for display
-	race, err := h.dndClient.GetRace(req.RaceKey)
+	race, err := h.characterService.GetRace(context.Background(), req.RaceKey)
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch race details.")
 	}
 
-	class, err := h.dndClient.GetClass(req.ClassKey)
+	class, err := h.characterService.GetClass(context.Background(), req.ClassKey)
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch class details.")
 	}

@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 )
 
 // Handler handles all Discord interactions
@@ -26,38 +26,38 @@ type Handler struct {
 
 // HandlerConfig holds configuration for the Discord handler
 type HandlerConfig struct {
-	DNDClient dnd5e.Client
+	ServiceProvider  *services.Provider
 }
 
 // NewHandler creates a new Discord handler
 func NewHandler(cfg *HandlerConfig) *Handler {
 	return &Handler{
 		characterCreateHandler: character.NewCreateHandler(&character.CreateHandlerConfig{
-			DNDClient: cfg.DNDClient,
+			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
 		characterRaceSelectHandler: character.NewRaceSelectHandler(&character.RaceSelectHandlerConfig{
-			DNDClient: cfg.DNDClient,
+			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
 		characterShowClassesHandler: character.NewShowClassesHandler(&character.ShowClassesHandlerConfig{
-			DNDClient: cfg.DNDClient,
+			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
 		characterClassSelectHandler: character.NewClassSelectHandler(&character.ClassSelectHandlerConfig{
-			DNDClient: cfg.DNDClient,
+			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
 		characterAbilityScoresHandler: character.NewAbilityScoresHandler(&character.AbilityScoresHandlerConfig{
-			DNDClient: cfg.DNDClient,
+			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
 		characterAssignAbilitiesHandler: character.NewAssignAbilitiesHandler(&character.AssignAbilitiesHandlerConfig{
-			DNDClient: cfg.DNDClient,
+			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
 		characterProficiencyChoicesHandler: character.NewProficiencyChoicesHandler(&character.ProficiencyChoicesHandlerConfig{
-			DNDClient: cfg.DNDClient,
+			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
 		characterSelectProficienciesHandler: character.NewSelectProficienciesHandler(&character.SelectProficienciesHandlerConfig{
-			DNDClient: cfg.DNDClient,
+			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
 		characterDetailsHandler: character.NewCharacterDetailsHandler(&character.CharacterDetailsHandlerConfig{
-			DNDClient: cfg.DNDClient,
+			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
 	}
 }

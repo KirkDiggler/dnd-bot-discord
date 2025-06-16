@@ -31,6 +31,18 @@ type Service interface {
 	
 	// ResolveChoices resolves proficiency/equipment choices for a class/race combo
 	ResolveChoices(ctx context.Context, input *ResolveChoicesInput) (*ResolveChoicesOutput, error)
+	
+	// GetRace retrieves race information
+	GetRace(ctx context.Context, raceKey string) (*entities.Race, error)
+	
+	// GetClass retrieves class information
+	GetClass(ctx context.Context, classKey string) (*entities.Class, error)
+	
+	// GetRaces retrieves all available races
+	GetRaces(ctx context.Context) ([]*entities.Race, error)
+	
+	// GetClasses retrieves all available classes
+	GetClasses(ctx context.Context) ([]*entities.Class, error)
 }
 
 // CreateCharacterInput contains all data needed to create a character
@@ -317,6 +329,56 @@ func (s *service) ResolveChoices(ctx context.Context, input *ResolveChoicesInput
 		ProficiencyChoices: proficiencyChoices,
 		EquipmentChoices:   equipmentChoices,
 	}, nil
+}
+
+// GetRace retrieves race information
+func (s *service) GetRace(ctx context.Context, raceKey string) (*entities.Race, error) {
+	if strings.TrimSpace(raceKey) == "" {
+		return nil, dnderr.InvalidArgument("race key is required")
+	}
+	
+	race, err := s.dndClient.GetRace(raceKey)
+	if err != nil {
+		return nil, dnderr.Wrapf(err, "failed to get race '%s'", raceKey).
+			WithMeta("race_key", raceKey)
+	}
+	
+	return race, nil
+}
+
+// GetClass retrieves class information
+func (s *service) GetClass(ctx context.Context, classKey string) (*entities.Class, error) {
+	if strings.TrimSpace(classKey) == "" {
+		return nil, dnderr.InvalidArgument("class key is required")
+	}
+	
+	class, err := s.dndClient.GetClass(classKey)
+	if err != nil {
+		return nil, dnderr.Wrapf(err, "failed to get class '%s'", classKey).
+			WithMeta("class_key", classKey)
+	}
+	
+	return class, nil
+}
+
+// GetRaces retrieves all available races
+func (s *service) GetRaces(ctx context.Context) ([]*entities.Race, error) {
+	races, err := s.dndClient.ListRaces()
+	if err != nil {
+		return nil, dnderr.Wrap(err, "failed to list races")
+	}
+	
+	return races, nil
+}
+
+// GetClasses retrieves all available classes
+func (s *service) GetClasses(ctx context.Context) ([]*entities.Class, error) {
+	classes, err := s.dndClient.ListClasses()
+	if err != nil {
+		return nil, dnderr.Wrap(err, "failed to list classes")
+	}
+	
+	return classes, nil
 }
 
 // generateID generates a unique ID for a character

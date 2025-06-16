@@ -15,6 +15,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/config"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 )
 
 func main() {
@@ -53,9 +54,15 @@ func main() {
 		log.Fatalf("Failed to create D&D 5e client: %v", err)
 	}
 
+	// Create service provider
+	serviceProvider := services.NewProvider(&services.ProviderConfig{
+		DNDClient: dndClient,
+		// Repository will default to in-memory
+	})
+
 	// Create Discord handler
 	handler := discord.NewHandler(&discord.HandlerConfig{
-		DNDClient: dndClient,
+		ServiceProvider: serviceProvider,
 	})
 
 	// Register interaction handler
