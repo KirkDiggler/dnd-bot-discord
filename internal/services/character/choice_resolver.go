@@ -1,5 +1,7 @@
 package character
 
+//go:generate mockgen -destination=mock/mock_choice_resolver.go -package=mockcharacter -source=choice_resolver.go
+
 import (
 	"context"
 	"fmt"

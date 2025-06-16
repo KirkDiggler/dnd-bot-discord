@@ -31,6 +31,7 @@ const (
 type Character struct {
 	ID                 string
 	OwnerID            string
+	RealmID            string
 	Name               string
 	Speed              int
 	Race               *Race
