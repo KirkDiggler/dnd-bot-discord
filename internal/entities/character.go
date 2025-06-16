@@ -28,6 +28,12 @@ const (
 	CharacterStatusArchived CharacterStatus = "archived"
 )
 
+// AbilityRoll represents a single ability score roll with a unique ID
+type AbilityRoll struct {
+	ID    string `json:"id"`
+	Value int    `json:"value"`
+}
+
 type Character struct {
 	ID                 string
 	OwnerID            string
@@ -39,6 +45,8 @@ type Character struct {
 	Background         *Background
 	Attributes         map[Attribute]*AbilityScore
 	Rolls              []*dice.RollResult
+	AbilityRolls       []AbilityRoll // New field for ability score rolls with IDs
+	AbilityAssignments map[string]string // Maps ability name (STR, DEX, etc.) to roll ID
 	Proficiencies      map[ProficiencyType][]*Proficiency
 	ProficiencyChoices []*Choice
 	Inventory          map[EquipmentType][]Equipment

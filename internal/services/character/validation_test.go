@@ -23,7 +23,7 @@ func (s *ValidationTestSuite) TestCreateCharacterInput_Validate_NilInput() {
 	err := character.ValidateInput(input)
 	
 	s.Error(err)
-	s.Contains(err.Error(), "input cannot be nil")
+	s.Contains(err.Error(), "CreateCharacterInput cannot be nil")
 }
 
 func (s *ValidationTestSuite) TestCreateCharacterInput_Validate_NilReceiver() {

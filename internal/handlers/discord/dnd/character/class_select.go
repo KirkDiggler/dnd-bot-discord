@@ -48,16 +48,27 @@ func (h *ClassSelectHandler) Handle(req *ClassSelectRequest) error {
 		return fmt.Errorf("failed to acknowledge interaction: %w", err)
 	}
 
-	// Fetch race and class details
-	race, err := h.characterService.GetRace(context.Background(), req.RaceKey)
+	// Get the draft character for this user
+	draftChar, err := h.characterService.GetOrCreateDraftCharacter(
+		context.Background(),
+		req.Interaction.Member.User.ID,
+		req.Interaction.GuildID,
+	)
 	if err != nil {
-		return h.respondWithError(req, "Failed to fetch race details. Please try again.")
+		return h.respondWithError(req, "Failed to get character draft. Please try again.")
 	}
-
-	class, err := h.characterService.GetClass(context.Background(), req.ClassKey)
+	
+	// Update the draft with the selected class
+	updatedChar, err := h.characterService.UpdateDraftCharacter(context.Background(), draftChar.ID, &characterService.UpdateDraftInput{
+		ClassKey: &req.ClassKey,
+	})
 	if err != nil {
-		return h.respondWithError(req, "Failed to fetch class details. Please try again.")
+		return h.respondWithError(req, "Failed to update character class. Please try again.")
 	}
+	
+	// Use the updated character for display
+	race := updatedChar.Race
+	class := updatedChar.Class
 
 	// Build the summary embed
 	embed := h.buildSummaryEmbed(race, class)

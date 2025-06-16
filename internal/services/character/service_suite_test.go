@@ -185,7 +185,7 @@ func (s *CharacterServiceTestSuite) TestValidateCharacterCreation_MissingRace() 
 	
 	// Assert
 	s.Error(err)
-	s.Equal("race is required", err.Error())
+	s.Contains(err.Error(), "race is required")
 }
 
 func (s *CharacterServiceTestSuite) TestValidateCharacterCreation_ScoreTooLow() {
@@ -353,7 +353,7 @@ func (s *CharacterServiceTestSuite) TestCreateCharacter_ValidationFailure() {
 	// Assert
 	s.Error(err)
 	s.Nil(output)
-	s.Contains(err.Error(), "validation failed")
+	s.Contains(err.Error(), "invalid character creation input")
 }
 
 func (s *CharacterServiceTestSuite) TestCreateCharacter_RepositoryError() {

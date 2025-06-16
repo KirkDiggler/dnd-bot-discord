@@ -66,8 +66,6 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 	var choiceSource string
 	totalClassChoices := len(class.ProficiencyChoices)
 	
-	fmt.Printf("DEBUG: Handling proficiency selection - Type: %s, Index: %d, Total class choices: %d\n", 
-		req.ChoiceType, req.ChoiceIndex, totalClassChoices)
 	
 	// First check class choices
 	if req.ChoiceType == "" || req.ChoiceType == "class" {
@@ -90,17 +88,13 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 	}
 
 	if currentChoice == nil {
-		fmt.Printf("DEBUG: No current choice found. Race has proficiency options: %v\n", 
-			race.StartingProficiencyOptions != nil)
 		return h.moveToNextStep(req, race, class, "All proficiency choices complete!")
 	}
 	
 	if len(currentChoice.Options) == 0 {
-		fmt.Printf("DEBUG: Current choice has 0 options. Type: %s, Index: %d\n", req.ChoiceType, req.ChoiceIndex)
 		return h.moveToNextStep(req, race, class, "All proficiency choices complete!")
 	}
 	
-	fmt.Printf("DEBUG: Current choice has %d options\n", len(currentChoice.Options))
 
 	// Create embed
 	embed := &discordgo.MessageEmbed{
@@ -143,18 +137,15 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 
 	// Show available options
 	optionStrings := []string{}
-	fmt.Printf("DEBUG: Processing %d options for display\n", len(currentChoice.Options))
 	for i, option := range currentChoice.Options {
 		if i >= 10 { // Limit display to first 10
 			optionStrings = append(optionStrings, fmt.Sprintf("_...and %d more_", len(currentChoice.Options)-10))
 			break
 		}
-		fmt.Printf("DEBUG: Option %d type: %T\n", i, option)
 		optionName := h.getOptionName(option)
 		if optionName != "" {
 			optionStrings = append(optionStrings, fmt.Sprintf("• %s", optionName))
 		} else {
-			fmt.Printf("DEBUG: Option %d returned empty name\n", i)
 		}
 	}
 	
@@ -178,7 +169,6 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 	
 	if hasNestedChoices {
 		// Show nested choices as buttons
-		fmt.Println("DEBUG: Detected nested choices, showing as buttons")
 		row := discordgo.ActionsRow{Components: []discordgo.MessageComponent{}}
 		
 		for i, option := range currentChoice.Options {
@@ -213,12 +203,9 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 			}
 		}
 		
-		// Debug: log the number of options
-		fmt.Printf("DEBUG: Found %d options for %s\n", len(selectOptions), choiceSource)
 		
 		// If no options were parsed, add a debug option
 		if len(selectOptions) == 0 {
-			fmt.Printf("DEBUG: No options parsed from %d raw options\n", len(currentChoice.Options))
 			selectOptions = append(selectOptions, discordgo.SelectMenuOption{
 				Label: "No options available",
 				Value: "none",
@@ -259,7 +246,6 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 // getOptionName extracts the display name from an option
 func (h *SelectProficienciesHandler) getOptionName(option entities.Option) string {
 	if option == nil {
-		fmt.Println("DEBUG: getOptionName received nil option")
 		return ""
 	}
 	
@@ -268,12 +254,10 @@ func (h *SelectProficienciesHandler) getOptionName(option entities.Option) strin
 		if opt.Reference != nil {
 			return opt.Reference.Name
 		}
-		fmt.Println("DEBUG: ReferenceOption has nil Reference")
 	case *entities.CountedReferenceOption:
 		if opt.Reference != nil {
 			return fmt.Sprintf("%s (×%d)", opt.Reference.Name, opt.Count)
 		}
-		fmt.Println("DEBUG: CountedReferenceOption has nil Reference")
 	case *entities.MultipleOption:
 		// For multiple options, show combined name
 		names := []string{}
@@ -290,7 +274,6 @@ func (h *SelectProficienciesHandler) getOptionName(option entities.Option) strin
 		}
 		return fmt.Sprintf("Choose %d items", opt.Count)
 	default:
-		fmt.Printf("DEBUG: Unknown option type: %T\n", option)
 	}
 	return ""
 }

@@ -3,6 +3,8 @@ package character
 import (
 	"fmt"
 	"strings"
+	
+	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 )
 
 // Validator interface for input validation
@@ -13,7 +15,7 @@ type Validator interface {
 // ValidateInput validates any input that implements Validator
 func ValidateInput(input Validator) error {
 	if input == nil {
-		return fmt.Errorf("input cannot be nil")
+		return dnderr.InvalidArgument("input cannot be nil")
 	}
 	return input.Validate()
 }
@@ -21,35 +23,35 @@ func ValidateInput(input Validator) error {
 // Validate checks CreateCharacterInput for validity
 func (i *CreateCharacterInput) Validate() error {
 	if i == nil {
-		return fmt.Errorf("CreateCharacterInput cannot be nil")
+		return dnderr.InvalidArgument("CreateCharacterInput cannot be nil")
 	}
 
 	if strings.TrimSpace(i.UserID) == "" {
-		return fmt.Errorf("user ID is required")
+		return dnderr.InvalidArgument("user ID is required")
 	}
 
 	if strings.TrimSpace(i.RealmID) == "" {
-		return fmt.Errorf("realm ID is required")
+		return dnderr.InvalidArgument("realm ID is required")
 	}
 
 	if strings.TrimSpace(i.Name) == "" {
-		return fmt.Errorf("character name is required")
+		return dnderr.InvalidArgument("character name is required")
 	}
 
 	if len(i.Name) > 50 {
-		return fmt.Errorf("character name cannot exceed 50 characters")
+		return dnderr.InvalidArgument("character name cannot exceed 50 characters")
 	}
 
 	if strings.TrimSpace(i.RaceKey) == "" {
-		return fmt.Errorf("race is required")
+		return dnderr.InvalidArgument("race is required")
 	}
 
 	if strings.TrimSpace(i.ClassKey) == "" {
-		return fmt.Errorf("class is required")
+		return dnderr.InvalidArgument("class is required")
 	}
 
 	if i.AbilityScores == nil || len(i.AbilityScores) == 0 {
-		return fmt.Errorf("ability scores are required")
+		return dnderr.InvalidArgument("ability scores are required")
 	}
 
 	// Validate ability scores
@@ -57,10 +59,10 @@ func (i *CreateCharacterInput) Validate() error {
 	for _, ability := range requiredAbilities {
 		score, ok := i.AbilityScores[ability]
 		if !ok {
-			return fmt.Errorf("missing ability score for %s", ability)
+			return dnderr.InvalidArgument(fmt.Sprintf("missing ability score for %s", ability))
 		}
 		if score < 3 || score > 18 {
-			return fmt.Errorf("ability score for %s must be between 3 and 18, got %d", ability, score)
+			return dnderr.InvalidArgument(fmt.Sprintf("ability score for %s must be between 3 and 18, got %d", ability, score))
 		}
 	}
 
@@ -70,15 +72,15 @@ func (i *CreateCharacterInput) Validate() error {
 // Validate checks ResolveChoicesInput for validity
 func (i *ResolveChoicesInput) Validate() error {
 	if i == nil {
-		return fmt.Errorf("ResolveChoicesInput cannot be nil")
+		return dnderr.InvalidArgument("ResolveChoicesInput cannot be nil")
 	}
 
 	if strings.TrimSpace(i.RaceKey) == "" {
-		return fmt.Errorf("race key is required")
+		return dnderr.InvalidArgument("race key is required")
 	}
 
 	if strings.TrimSpace(i.ClassKey) == "" {
-		return fmt.Errorf("class key is required")
+		return dnderr.InvalidArgument("class key is required")
 	}
 
 	return nil
@@ -87,19 +89,19 @@ func (i *ResolveChoicesInput) Validate() error {
 // Validate checks ValidateCharacterInput for validity
 func (i *ValidateCharacterInput) Validate() error {
 	if i == nil {
-		return fmt.Errorf("ValidateCharacterInput cannot be nil")
+		return dnderr.InvalidArgument("ValidateCharacterInput cannot be nil")
 	}
 
 	if strings.TrimSpace(i.RaceKey) == "" {
-		return fmt.Errorf("race is required")
+		return dnderr.InvalidArgument("race is required")
 	}
 
 	if strings.TrimSpace(i.ClassKey) == "" {
-		return fmt.Errorf("class is required")
+		return dnderr.InvalidArgument("class is required")
 	}
 
 	if i.AbilityScores == nil || len(i.AbilityScores) == 0 {
-		return fmt.Errorf("ability scores are required")
+		return dnderr.InvalidArgument("ability scores are required")
 	}
 
 	// Validate ability scores
@@ -107,10 +109,10 @@ func (i *ValidateCharacterInput) Validate() error {
 	for _, ability := range requiredAbilities {
 		score, ok := i.AbilityScores[ability]
 		if !ok {
-			return fmt.Errorf("missing ability score for %s", ability)
+			return dnderr.InvalidArgument(fmt.Sprintf("missing ability score for %s", ability))
 		}
 		if score < 3 || score > 18 {
-			return fmt.Errorf("ability score for %s must be between 3 and 18, got %d", ability, score)
+			return dnderr.InvalidArgument(fmt.Sprintf("ability score for %s must be between 3 and 18, got %d", ability, score))
 		}
 	}
 

@@ -58,18 +58,14 @@ func (h *RaceSelectHandler) Handle(req *RaceSelectRequest) error {
 	}
 	
 	// Update the draft with the selected race
-	err = h.characterService.UpdateDraftCharacter(context.Background(), draftChar.ID, &characterService.UpdateDraftInput{
+	updatedChar, err := h.characterService.UpdateDraftCharacter(context.Background(), draftChar.ID, &characterService.UpdateDraftInput{
 		RaceKey: &req.RaceKey,
 	})
 	if err != nil {
 		return h.respondWithError(req, "Failed to update character race. Please try again.")
 	}
-	
-	// Fetch the selected race details
-	race, err := h.characterService.GetRace(context.Background(), req.RaceKey)
-	if err != nil {
-		return h.respondWithError(req, "Failed to fetch race details. Please try again.")
-	}
+	// Use the updated character's race for display
+	race := updatedChar.Race
 
 	// Build the updated embed with race details
 	embed := h.buildRaceDetailsEmbed(race)

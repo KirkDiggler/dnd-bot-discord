@@ -1,7 +1,6 @@
 package dnd5e
 
 import (
-	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -313,9 +312,7 @@ func apiChoiceOptionToChoice(input *apiEntities.ChoiceOption) *entities.Choice {
 		output[i] = apiOptionToOption(apiProficiency)
 	}
 
-	// Debug: Log the choice being created
-	fmt.Printf("DEBUG apiChoiceOptionToChoice: Creating choice with %d options, name='%s', type='%s'\n", 
-		len(output), input.Description, input.ChoiceType)
+	// Choice created successfully
 
 	return &entities.Choice{
 		Count:   input.ChoiceCount,
