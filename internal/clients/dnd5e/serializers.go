@@ -121,7 +121,7 @@ func apiProficiencyTypeToProficiencyType(input apiEntities.ProficiencyType) enti
 	case apiEntities.ProficiencyTypeInstrument:
 		return entities.ProficiencyTypeInstrument
 	default:
-		log.Printf("Unknown proficiency type %s", input)
+		// Silently handle unknown proficiency types
 		return entities.ProficiencyTypeUnknown
 
 	}
@@ -158,7 +158,7 @@ func apiEquipmentInterfaceToEquipment(input dnd5e.EquipmentInterface) entities.E
 		return nil
 	}
 
-	switch t := input.(type) {
+	switch input.(type) {
 	case *apiEntities.Equipment:
 		return apiEquipmentToEquipment(input.(*apiEntities.Equipment))
 	case *apiEntities.Weapon:
@@ -166,8 +166,7 @@ func apiEquipmentInterfaceToEquipment(input dnd5e.EquipmentInterface) entities.E
 	case *apiEntities.Armor:
 		return apiArmorToArmor(input.(*apiEntities.Armor))
 	default:
-		log.Println("Unknown equipment type: ", t)
-
+		// Silently handle unknown equipment types
 		return nil
 	}
 }
@@ -251,7 +250,7 @@ func apiDamageTypeToDamageType(input *apiEntities.ReferenceItem) damage.Type {
 	case "thunder":
 		return damage.TypeThunder
 	default:
-		log.Printf("Unknown damage type %s", input.Key)
+		// Silently handle unknown damage types
 		return damage.TypeNone
 	}
 }
@@ -331,7 +330,7 @@ func apiChoiceTypeToChoiceType(input string) entities.ChoiceType {
 	case "languages":
 		return entities.ChoiceTypeLanguage
 	default:
-		log.Println("Unknown choice type: ", input)
+		// Silently handle unknown choice types
 		return entities.ChoiceTypeUnset
 	}
 }
@@ -376,7 +375,7 @@ func apiOptionToOption(input apiEntities.Option) entities.Option {
 			Items: options,
 		}
 	default:
-		log.Println("Unknown option type: ", input.GetOptionType())
+		// Silently handle unknown option types
 		return nil
 	}
 }
@@ -412,7 +411,10 @@ func typeStringToReferenceType(input string) entities.ReferenceType {
 	case "weapon-properties":
 		return entities.ReferenceTypeWeaponProperty
 	default:
-		log.Println("Unknown reference type: ", input)
+		// Don't log for known but unhandled types
+		if input != "2014" {
+			log.Println("Unknown reference type: ", input)
+		}
 		return entities.ReferenceTypeUnset
 	}
 }
