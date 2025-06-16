@@ -1,0 +1,91 @@
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/bwmarrin/discordgo"
+	"github.com/joho/godotenv"
+	
+	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/config"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord"
+)
+
+func main() {
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found")
+	} else {
+		log.Println("Loaded .env file")
+	}
+
+	// Load configuration
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+	
+	log.Printf("Bot Token: %s...%s", cfg.Discord.Token[:8], cfg.Discord.Token[len(cfg.Discord.Token)-4:])
+	log.Printf("Application ID: %s", cfg.Discord.AppID)
+	if cfg.Discord.GuildID != "" {
+		log.Printf("Guild ID: %s", cfg.Discord.GuildID)
+	}
+
+	// Create Discord session
+	dg, err := discordgo.New("Bot " + cfg.Discord.Token)
+	if err != nil {
+		log.Fatalf("Failed to create Discord session: %v", err)
+	}
+
+	// Create D&D 5e API client
+	dndClient, err := dnd5e.New(&dnd5e.Config{
+		HttpClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+	})
+	if err != nil {
+		log.Fatalf("Failed to create D&D 5e client: %v", err)
+	}
+
+	// Create Discord handler
+	handler := discord.NewHandler(&discord.HandlerConfig{
+		DNDClient: dndClient,
+	})
+
+	// Register interaction handler
+	dg.AddHandler(handler.HandleInteraction)
+
+	// Open connection to Discord
+	err = dg.Open()
+	if err != nil {
+		log.Fatalf("Failed to open Discord connection: %v", err)
+	}
+	defer dg.Close()
+
+	// Register commands
+	// Use empty string for global commands, or set a specific guild ID for testing
+	if err := handler.RegisterCommands(dg, cfg.Discord.GuildID); err != nil {
+		log.Fatalf("Failed to register commands: %v", err)
+	}
+	
+	if cfg.Discord.GuildID != "" {
+		log.Printf("Registered commands for guild: %s", cfg.Discord.GuildID)
+	} else {
+		log.Println("Registered global commands (may take up to 1 hour to propagate)")
+	}
+
+	fmt.Println("Bot is now running. Press CTRL-C to exit.")
+	
+	// Wait for interrupt signal
+	sc := make(chan os.Signal, 1)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
+	<-sc
+
+	fmt.Println("Shutting down...")
+}
