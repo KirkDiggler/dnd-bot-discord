@@ -12,6 +12,8 @@ github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/r
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
 github.com/fadedpez/dnd5e-api v0.0.0-20230905035343-beed9695e0e5 h1:yBe93mBmiu7W0I7xCIFhnLKvI+ByH9GOJij3qjmBV0M=
 github.com/fadedpez/dnd5e-api v0.0.0-20230905035343-beed9695e0e5/go.mod h1:7OpXfFTO5ZwD03Rh3MfR0sFIi6U1qJx71rkuGz9IPqw=
+github.com/fadedpez/dnd5e-api v0.0.0-20250616205936-da505a6be0dd h1:GHESFpfuV6RmHebsy/2SqawzjDzImbPS9kEtoqurewc=
+github.com/fadedpez/dnd5e-api v0.0.0-20250616205936-da505a6be0dd/go.mod h1:7OpXfFTO5ZwD03Rh3MfR0sFIi6U1qJx71rkuGz9IPqw=
 github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/go-redis/redismock/v9 v9.2.0 h1:ZrMYQeKPECZPjOj5u9eyOjg8Nnb0BS9lkVIZ6IpsKLw=

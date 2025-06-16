@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mock/mock.go -package=mockdnd5e -source=interface.go
 //
+
 // Package mockdnd5e is a generated GoMock package.
 package mockdnd5e
 
@@ -19,6 +20,7 @@ import (
 type MockClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockClientMockRecorder
+	isgomock struct{}
 }
 
 // MockClientMockRecorder is the mock recorder for MockClient.
@@ -66,6 +68,21 @@ func (m *MockClient) GetEquipment(key string) (entities.Equipment, error) {
 func (mr *MockClientMockRecorder) GetEquipment(key any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEquipment", reflect.TypeOf((*MockClient)(nil).GetEquipment), key)
+}
+
+// GetEquipmentByCategory mocks base method.
+func (m *MockClient) GetEquipmentByCategory(category string) ([]entities.Equipment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEquipmentByCategory", category)
+	ret0, _ := ret[0].([]entities.Equipment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEquipmentByCategory indicates an expected call of GetEquipmentByCategory.
+func (mr *MockClientMockRecorder) GetEquipmentByCategory(category any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEquipmentByCategory", reflect.TypeOf((*MockClient)(nil).GetEquipmentByCategory), category)
 }
 
 // GetMonster mocks base method.

@@ -1,30 +1,32 @@
 package character
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"sort"
-	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 )
 
 // AbilityScoresHandler handles the ability score generation
 type AbilityScoresHandler struct {
-	dndClient dnd5e.Client
+	characterService characterService.Service
 }
 
 // AbilityScoresHandlerConfig holds configuration
 type AbilityScoresHandlerConfig struct {
-	DNDClient dnd5e.Client
+	CharacterService characterService.Service
 }
 
 // NewAbilityScoresHandler creates a new handler
 func NewAbilityScoresHandler(cfg *AbilityScoresHandlerConfig) *AbilityScoresHandler {
 	return &AbilityScoresHandler{
-		dndClient: cfg.DNDClient,
+		characterService: cfg.CharacterService,
 	}
 }
 
@@ -50,18 +52,40 @@ func (h *AbilityScoresHandler) Handle(req *AbilityScoresRequest) error {
 	}
 
 	// Get race and class for context
-	race, err := h.dndClient.GetRace(req.RaceKey)
+	race, err := h.characterService.GetRace(context.Background(), req.RaceKey)
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch race details.")
 	}
 
-	class, err := h.dndClient.GetClass(req.ClassKey)
+	class, err := h.characterService.GetClass(context.Background(), req.ClassKey)
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch class details.")
 	}
 
+	// Get or create draft character to store rolls
+	draftChar, err := h.characterService.GetOrCreateDraftCharacter(
+		context.Background(),
+		req.Interaction.Member.User.ID,
+		req.Interaction.GuildID,
+	)
+	if err != nil {
+		return h.respondWithError(req, "Failed to get character draft.")
+	}
+
 	// Roll ability scores using 4d6 drop lowest
 	rolls := h.rollAbilityScores()
+
+	// Save rolls to draft character
+	_, err = h.characterService.UpdateDraftCharacter(
+		context.Background(),
+		draftChar.ID,
+		&characterService.UpdateDraftInput{
+			AbilityRolls: rolls,
+		},
+	)
+	if err != nil {
+		return h.respondWithError(req, "Failed to save ability rolls.")
+	}
 
 	// Create embed
 	embed := &discordgo.MessageEmbed{
@@ -74,7 +98,7 @@ func (h *AbilityScoresHandler) Handle(req *AbilityScoresRequest) error {
 	// Show rolled values
 	rollStrings := []string{}
 	for i, roll := range rolls {
-		rollStrings = append(rollStrings, fmt.Sprintf("**Roll %d:** %d", i+1, roll))
+		rollStrings = append(rollStrings, fmt.Sprintf("**Roll %d:** %d", i+1, roll.Value))
 	}
 	
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
@@ -119,20 +143,13 @@ func (h *AbilityScoresHandler) Handle(req *AbilityScoresRequest) error {
 		Text: "Click 'Assign to Abilities' to assign each roll to a specific ability",
 	}
 
-	// Store rolls in custom ID for the assign button
-	rollsStr := []string{}
-	for _, roll := range rolls {
-		rollsStr = append(rollsStr, strconv.Itoa(roll))
-	}
-	rollsData := strings.Join(rollsStr, ",")
-	
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.Button{
 					Label:    "Assign to Abilities",
 					Style:    discordgo.PrimaryButton,
-					CustomID: fmt.Sprintf("character_create:start_assign:%s:%s:%s", req.RaceKey, req.ClassKey, rollsData),
+					CustomID: fmt.Sprintf("character_create:start_assign:%s:%s", req.RaceKey, req.ClassKey),
 					Emoji: &discordgo.ComponentEmoji{
 						Name: "📊",
 					},
@@ -160,30 +177,35 @@ func (h *AbilityScoresHandler) Handle(req *AbilityScoresRequest) error {
 }
 
 // rollAbilityScores rolls 6 ability scores using 4d6 drop lowest
-func (h *AbilityScoresHandler) rollAbilityScores() []int {
-	scores := make([]int, 6)
+func (h *AbilityScoresHandler) rollAbilityScores() []entities.AbilityRoll {
+	rolls := make([]entities.AbilityRoll, 6)
 	
 	for i := 0; i < 6; i++ {
 		// Roll 4d6
-		rolls := make([]int, 4)
+		dice := make([]int, 4)
 		for j := 0; j < 4; j++ {
-			rolls[j] = rand.Intn(6) + 1
+			dice[j] = rand.Intn(6) + 1
 		}
 		
 		// Sort and drop lowest
-		sort.Ints(rolls)
+		sort.Ints(dice)
 		total := 0
 		for j := 1; j < 4; j++ { // Skip index 0 (lowest)
-			total += rolls[j]
+			total += dice[j]
 		}
 		
-		scores[i] = total
+		rolls[i] = entities.AbilityRoll{
+			ID:    fmt.Sprintf("roll_%d_%d", time.Now().UnixNano(), i),
+			Value: total,
+		}
 	}
 	
-	// Sort scores highest to lowest for display
-	sort.Sort(sort.Reverse(sort.IntSlice(scores)))
+	// Sort rolls by value (highest to lowest) for display
+	sort.Slice(rolls, func(i, j int) bool {
+		return rolls[i].Value > rolls[j].Value
+	})
 	
-	return scores
+	return rolls
 }
 
 // getClassRecommendations returns ability score recommendations for a class

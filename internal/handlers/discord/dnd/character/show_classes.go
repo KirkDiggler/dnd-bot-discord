@@ -1,26 +1,27 @@
 package character
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
+	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 )
 
 // ShowClassesHandler handles showing the class selection after race is chosen
 type ShowClassesHandler struct {
-	dndClient dnd5e.Client
+	characterService characterService.Service
 }
 
 // ShowClassesHandlerConfig holds configuration for the show classes handler
 type ShowClassesHandlerConfig struct {
-	DNDClient dnd5e.Client
+	CharacterService characterService.Service
 }
 
 // NewShowClassesHandler creates a new show classes handler
 func NewShowClassesHandler(cfg *ShowClassesHandlerConfig) *ShowClassesHandler {
 	return &ShowClassesHandler{
-		dndClient: cfg.DNDClient,
+		characterService: cfg.CharacterService,
 	}
 }
 
@@ -45,13 +46,13 @@ func (h *ShowClassesHandler) Handle(req *ShowClassesRequest) error {
 	}
 
 	// Fetch the race details again to show in the embed
-	race, err := h.dndClient.GetRace(req.RaceKey)
+	race, err := h.characterService.GetRace(context.Background(), req.RaceKey)
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch race details. Please try again.")
 	}
 
 	// Fetch available classes
-	classes, err := h.dndClient.ListClasses()
+	classes, err := h.characterService.GetClasses(context.Background())
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch classes. Please try again.")
 	}
@@ -66,7 +67,7 @@ func (h *ShowClassesHandler) Handle(req *ShowClassesRequest) error {
 	}
 
 	// Get all races for the race dropdown
-	races, err := h.dndClient.ListRaces()
+	races, err := h.characterService.GetRaces(context.Background())
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch races. Please try again.")
 	}

@@ -122,6 +122,29 @@ func (c *client) GetMonster(key string) (*entities.MonsterTemplate, error) {
 	return apiToMonsterTemplate(monsterTemplate), nil
 }
 
+func (c *client) GetEquipmentByCategory(category string) ([]entities.Equipment, error) {
+	// Get equipment category data
+	categoryData, err := c.client.GetEquipmentCategory(category)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch each piece of equipment
+	equipment := make([]entities.Equipment, 0, len(categoryData.Equipment))
+	for _, ref := range categoryData.Equipment {
+		if ref.Key != "" {
+			equip, err := c.GetEquipment(ref.Key)
+			if err != nil {
+				// Log error but continue with other equipment
+				continue
+			}
+			equipment = append(equipment, equip)
+		}
+	}
+
+	return equipment, nil
+}
+
 func apiToMonsterTemplate(input *apiEntities.Monster) *entities.MonsterTemplate {
 	if input == nil {
 		return nil

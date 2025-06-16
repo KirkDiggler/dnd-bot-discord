@@ -12,4 +12,5 @@ type Client interface {
 	GetProficiency(key string) (*entities.Proficiency, error)
 	GetMonster(key string) (*entities.MonsterTemplate, error)
 	GetEquipment(key string) (entities.Equipment, error)
+	GetEquipmentByCategory(category string) ([]entities.Equipment, error)
 }

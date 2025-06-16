@@ -1,26 +1,28 @@
 package character
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
+	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 )
 
 // CharacterDetailsHandler handles character name and final details
 type CharacterDetailsHandler struct {
-	dndClient dnd5e.Client
+	characterService characterService.Service
 }
 
 // CharacterDetailsHandlerConfig holds configuration
 type CharacterDetailsHandlerConfig struct {
-	DNDClient dnd5e.Client
+	CharacterService characterService.Service
 }
 
 // NewCharacterDetailsHandler creates a new handler
 func NewCharacterDetailsHandler(cfg *CharacterDetailsHandlerConfig) *CharacterDetailsHandler {
 	return &CharacterDetailsHandler{
-		dndClient: cfg.DNDClient,
+		characterService: cfg.CharacterService,
 	}
 }
 
@@ -34,28 +36,54 @@ type CharacterDetailsRequest struct {
 
 // Handle processes character details input
 func (h *CharacterDetailsHandler) Handle(req *CharacterDetailsRequest) error {
-	// Update the message
+	// For nested equipment flow, the interaction is already acknowledged
+	// Try to update first, if that fails then this is the initial interaction
+	content := "Loading character details..."
 	err := req.Session.InteractionRespond(req.Interaction.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseUpdateMessage,
 		Data: &discordgo.InteractionResponseData{
-			Content: "Loading character details...",
+			Content: content,
 		},
 	})
-	if err != nil {
+	if err != nil && strings.Contains(err.Error(), "already been acknowledged") {
+		// Interaction already acknowledged, just edit instead
+		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update interaction: %w", err)
+		}
+	} else if err != nil {
 		return fmt.Errorf("failed to acknowledge interaction: %w", err)
 	}
 
 	// Get race and class for display
-	race, err := h.dndClient.GetRace(req.RaceKey)
+	race, err := h.characterService.GetRace(context.Background(), req.RaceKey)
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch race details.")
 	}
 
-	class, err := h.dndClient.GetClass(req.ClassKey)
+	class, err := h.characterService.GetClass(context.Background(), req.ClassKey)
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch class details.")
 	}
 
+	// Try to parse ability scores from the interaction message
+	// This is a temporary solution until we implement proper state management
+	abilityScoresSummary := "**Abilities:** Assigned"
+	if req.Interaction.Message != nil && len(req.Interaction.Message.Embeds) > 0 {
+		// Try to find ability scores from previous embeds
+		for _, embed := range req.Interaction.Message.Embeds {
+			for _, field := range embed.Fields {
+				if field.Name == "💪 Physical" || field.Name == "🧠 Mental" {
+					// Found ability scores, could parse them here
+					abilityScoresSummary = "**Abilities:** Assigned (STR/DEX/CON/INT/WIS/CHA)"
+					break
+				}
+			}
+		}
+	}
+	
 	// Create embed
 	embed := &discordgo.MessageEmbed{
 		Title:       "Character Details",
@@ -64,12 +92,12 @@ func (h *CharacterDetailsHandler) Handle(req *CharacterDetailsRequest) error {
 		Fields: []*discordgo.MessageEmbedField{
 			{
 				Name:   "📊 Summary",
-				Value:  "**Abilities:** Assigned\n**Proficiencies:** Selected\n**Equipment:** Standard starting gear",
+				Value:  fmt.Sprintf("%s\n**Proficiencies:** Selected\n**Equipment:** Selected", abilityScoresSummary),
 				Inline: false,
 			},
 			{
 				Name:   "Progress",
-				Value:  "✅ Step 1: Race\n✅ Step 2: Class\n✅ Step 3: Abilities\n✅ Step 4: Proficiencies\n⏳ Step 5: Name",
+				Value:  "✅ Step 1: Race\n✅ Step 2: Class\n✅ Step 3: Abilities\n✅ Step 4: Proficiencies\n✅ Step 5: Equipment\n⏳ Step 6: Details",
 				Inline: false,
 			},
 		},

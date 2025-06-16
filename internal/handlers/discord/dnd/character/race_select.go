@@ -1,28 +1,29 @@
 package character
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 )
 
 // RaceSelectHandler handles the race selection interaction
 type RaceSelectHandler struct {
-	dndClient dnd5e.Client
+	characterService characterService.Service
 }
 
 // RaceSelectHandlerConfig holds configuration for the race select handler
 type RaceSelectHandlerConfig struct {
-	DNDClient dnd5e.Client
+	CharacterService characterService.Service
 }
 
 // NewRaceSelectHandler creates a new race selection handler
 func NewRaceSelectHandler(cfg *RaceSelectHandlerConfig) *RaceSelectHandler {
 	return &RaceSelectHandler{
-		dndClient: cfg.DNDClient,
+		characterService: cfg.CharacterService,
 	}
 }
 
@@ -46,17 +47,31 @@ func (h *RaceSelectHandler) Handle(req *RaceSelectRequest) error {
 		return fmt.Errorf("failed to acknowledge interaction: %w", err)
 	}
 
-	// Fetch the selected race details
-	race, err := h.dndClient.GetRace(req.RaceKey)
+	// Get the draft character for this user
+	draftChar, err := h.characterService.GetOrCreateDraftCharacter(
+		context.Background(),
+		req.Interaction.Member.User.ID,
+		req.Interaction.GuildID,
+	)
 	if err != nil {
-		return h.respondWithError(req, "Failed to fetch race details. Please try again.")
+		return h.respondWithError(req, "Failed to get character draft. Please try again.")
 	}
+	
+	// Update the draft with the selected race
+	updatedChar, err := h.characterService.UpdateDraftCharacter(context.Background(), draftChar.ID, &characterService.UpdateDraftInput{
+		RaceKey: &req.RaceKey,
+	})
+	if err != nil {
+		return h.respondWithError(req, "Failed to update character race. Please try again.")
+	}
+	// Use the updated character's race for display
+	race := updatedChar.Race
 
 	// Build the updated embed with race details
 	embed := h.buildRaceDetailsEmbed(race)
 
 	// Fetch all races to rebuild the dropdown
-	races, err := h.dndClient.ListRaces()
+	races, err := h.characterService.GetRaces(context.Background())
 	if err != nil {
 		return h.respondWithError(req, "Failed to fetch races. Please try again.")
 	}
