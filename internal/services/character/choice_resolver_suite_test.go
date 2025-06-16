@@ -271,7 +271,7 @@ func (s *ChoiceResolverTestSuite) TestResolveEquipmentChoices_FighterEquipment()
 	s.Equal("Choose weapon", choices[1].Name)
 	s.Len(choices[1].Options, 1)
 	s.Equal("shortsword", choices[1].Options[0].Key)
-	s.Equal("Shortsword (x2)", choices[1].Options[0].Name) // Should show count
+	s.Equal("2x Shortsword", choices[1].Options[0].Name) // Should show count
 }
 
 func (s *ChoiceResolverTestSuite) TestResolveEquipmentChoices_NoChoices() {

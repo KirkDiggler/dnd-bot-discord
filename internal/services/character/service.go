@@ -52,6 +52,9 @@ type Service interface {
 	
 	// FinalizeDraftCharacter marks a draft as active
 	FinalizeDraftCharacter(ctx context.Context, characterID string) (*entities.Character, error)
+	
+	// GetEquipmentByCategory retrieves equipment by category (e.g., "martial-weapons")
+	GetEquipmentByCategory(ctx context.Context, category string) ([]entities.Equipment, error)
 }
 
 // CreateCharacterInput contains all data needed to create a character
@@ -579,6 +582,22 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		}
 	}
 	
+	// Update equipment if provided
+	if len(updates.Equipment) > 0 {
+		// Initialize inventory if needed
+		if char.Inventory == nil {
+			char.Inventory = make(map[entities.EquipmentType][]entities.Equipment)
+		}
+		
+		// Add selected equipment
+		for _, equipKey := range updates.Equipment {
+			equipment, err := s.dndClient.GetEquipment(equipKey)
+			if err == nil && equipment != nil {
+				char.AddInventory(equipment)
+			}
+		}
+	}
+	
 	// Save changes
 	if err := s.repository.Update(ctx, char); err != nil {
 		return nil, dnderr.Wrap(err, "failed to update character").
@@ -618,6 +637,21 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 	}
 	
 	return char, nil
+}
+
+// GetEquipmentByCategory retrieves equipment by category
+func (s *service) GetEquipmentByCategory(ctx context.Context, category string) ([]entities.Equipment, error) {
+	if strings.TrimSpace(category) == "" {
+		return nil, dnderr.InvalidArgument("category is required")
+	}
+	
+	equipment, err := s.dndClient.GetEquipmentByCategory(category)
+	if err != nil {
+		return nil, dnderr.Wrapf(err, "failed to get equipment for category '%s'", category).
+			WithMeta("category", category)
+	}
+	
+	return equipment, nil
 }
 
 // generateID generates a unique ID for a character

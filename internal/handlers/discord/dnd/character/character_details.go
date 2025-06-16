@@ -3,6 +3,7 @@ package character
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
@@ -35,14 +36,24 @@ type CharacterDetailsRequest struct {
 
 // Handle processes character details input
 func (h *CharacterDetailsHandler) Handle(req *CharacterDetailsRequest) error {
-	// Update the message
+	// For nested equipment flow, the interaction is already acknowledged
+	// Try to update first, if that fails then this is the initial interaction
+	content := "Loading character details..."
 	err := req.Session.InteractionRespond(req.Interaction.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseUpdateMessage,
 		Data: &discordgo.InteractionResponseData{
-			Content: "Loading character details...",
+			Content: content,
 		},
 	})
-	if err != nil {
+	if err != nil && strings.Contains(err.Error(), "already been acknowledged") {
+		// Interaction already acknowledged, just edit instead
+		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update interaction: %w", err)
+		}
+	} else if err != nil {
 		return fmt.Errorf("failed to acknowledge interaction: %w", err)
 	}
 
@@ -81,12 +92,12 @@ func (h *CharacterDetailsHandler) Handle(req *CharacterDetailsRequest) error {
 		Fields: []*discordgo.MessageEmbedField{
 			{
 				Name:   "📊 Summary",
-				Value:  fmt.Sprintf("%s\n**Proficiencies:** Selected\n**Equipment:** Standard starting gear", abilityScoresSummary),
+				Value:  fmt.Sprintf("%s\n**Proficiencies:** Selected\n**Equipment:** Selected", abilityScoresSummary),
 				Inline: false,
 			},
 			{
 				Name:   "Progress",
-				Value:  "✅ Step 1: Race\n✅ Step 2: Class\n✅ Step 3: Abilities\n✅ Step 4: Proficiencies\n⏳ Step 5: Name",
+				Value:  "✅ Step 1: Race\n✅ Step 2: Class\n✅ Step 3: Abilities\n✅ Step 4: Proficiencies\n✅ Step 5: Equipment\n⏳ Step 6: Details",
 				Inline: false,
 			},
 		},

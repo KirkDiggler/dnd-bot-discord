@@ -25,6 +25,9 @@ type Handler struct {
 	characterAssignAbilitiesHandler    *character.AssignAbilitiesHandler
 	characterProficiencyChoicesHandler *character.ProficiencyChoicesHandler
 	characterSelectProficienciesHandler *character.SelectProficienciesHandler
+	characterEquipmentChoicesHandler   *character.EquipmentChoicesHandler
+	characterSelectEquipmentHandler    *character.SelectEquipmentHandler
+	characterSelectNestedEquipmentHandler *character.SelectNestedEquipmentHandler
 	characterDetailsHandler            *character.CharacterDetailsHandler
 }
 
@@ -59,6 +62,15 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
 		characterSelectProficienciesHandler: character.NewSelectProficienciesHandler(&character.SelectProficienciesHandlerConfig{
+			CharacterService: cfg.ServiceProvider.CharacterService,
+		}),
+		characterEquipmentChoicesHandler: character.NewEquipmentChoicesHandler(&character.EquipmentChoicesHandlerConfig{
+			CharacterService: cfg.ServiceProvider.CharacterService,
+		}),
+		characterSelectEquipmentHandler: character.NewSelectEquipmentHandler(&character.SelectEquipmentHandlerConfig{
+			CharacterService: cfg.ServiceProvider.CharacterService,
+		}),
+		characterSelectNestedEquipmentHandler: character.NewSelectNestedEquipmentHandler(&character.SelectNestedEquipmentHandlerConfig{
 			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
 		characterDetailsHandler: character.NewCharacterDetailsHandler(&character.CharacterDetailsHandlerConfig{
@@ -431,31 +443,31 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						log.Printf("Error handling next proficiency selection: %v", err)
 					}
 				} else {
-					// All proficiencies selected, move to character details
-					req := &character.CharacterDetailsRequest{
+					// All proficiencies selected, move to equipment choices
+					req := &character.EquipmentChoicesRequest{
 						Session:     s,
 						Interaction: i,
 						RaceKey:     parts[2],
 						ClassKey:    parts[3],
 					}
-					if err := h.characterDetailsHandler.Handle(req); err != nil {
-						log.Printf("Error handling character details: %v", err)
+					if err := h.characterEquipmentChoicesHandler.Handle(req); err != nil {
+						log.Printf("Error handling equipment choices: %v", err)
 					}
 				}
 			}
 		case "select_tool_type":
 			// Handle selection of tool/instrument category (nested choices)
 			// For now, since monk choices are already flattened by the choice resolver,
-			// we can proceed directly to character details
+			// we can proceed directly to equipment choices
 			if len(parts) >= 4 {
-				req := &character.CharacterDetailsRequest{
+				req := &character.EquipmentChoicesRequest{
 					Session:     s,
 					Interaction: i,
 					RaceKey:     parts[2],
 					ClassKey:    parts[3],
 				}
-				if err := h.characterDetailsHandler.Handle(req); err != nil {
-					log.Printf("Error handling character details: %v", err)
+				if err := h.characterEquipmentChoicesHandler.Handle(req); err != nil {
+					log.Printf("Error handling equipment choices: %v", err)
 				}
 			}
 		case "character_details":
@@ -469,6 +481,211 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 				if err := h.characterDetailsHandler.Handle(req); err != nil {
 					log.Printf("Error handling character details: %v", err)
+				}
+			}
+		case "select_equipment":
+			// Show equipment selection interface
+			if len(parts) >= 4 {
+				req := &character.SelectEquipmentRequest{
+					Session:     s,
+					Interaction: i,
+					RaceKey:     parts[2],
+					ClassKey:    parts[3],
+					ChoiceIndex: 0,
+				}
+				if err := h.characterSelectEquipmentHandler.Handle(req); err != nil {
+					log.Printf("Error handling select equipment: %v", err)
+				}
+			}
+		case "confirm_equipment":
+			// Handle equipment selection confirmation
+			if len(parts) >= 5 {
+				choiceIndex, _ := strconv.Atoi(parts[4])
+				
+				// Check if this is a nested choice selection
+				selectedValues := i.MessageComponentData().Values
+				if len(selectedValues) > 0 && strings.HasPrefix(selectedValues[0], "nested-") {
+					// This is a bundle with nested choices - need to expand
+					log.Printf("Nested choice selected: %v", selectedValues[0])
+					
+					// Get the equipment choices to find the actual selection details
+					choices, err := h.ServiceProvider.CharacterService.ResolveChoices(
+						context.Background(),
+						&characterService.ResolveChoicesInput{
+							RaceKey:  parts[2],
+							ClassKey: parts[3],
+						},
+					)
+					
+					selectionCount := 1
+					category := "martial-weapons"
+					
+					if err == nil && choiceIndex < len(choices.EquipmentChoices) {
+						// Find the selected option in the choice
+						choice := choices.EquipmentChoices[choiceIndex]
+						for _, opt := range choice.Options {
+							if opt.Key == selectedValues[0] {
+								// Parse the description to get the count
+								if strings.Contains(opt.Description, "Choose 2") || strings.Contains(opt.Name, "2") || strings.Contains(opt.Name, "two") {
+									selectionCount = 2
+								}
+								// Could also parse category from description if needed
+								break
+							}
+						}
+					}
+					
+					// Show martial weapon selection UI
+					req := &character.SelectNestedEquipmentRequest{
+						Session:        s,
+						Interaction:    i,
+						RaceKey:        parts[2],
+						ClassKey:       parts[3],
+						ChoiceIndex:    choiceIndex,
+						BundleKey:      selectedValues[0],
+						SelectionCount: selectionCount,
+						Category:       category,
+					}
+					if err := h.characterSelectNestedEquipmentHandler.Handle(req); err != nil {
+						log.Printf("Error handling nested equipment selection: %v", err)
+					}
+					return
+				}
+				
+				// Get the draft character and update with selected equipment
+				draftChar, err := h.ServiceProvider.CharacterService.GetOrCreateDraftCharacter(
+					context.Background(),
+					i.Member.User.ID,
+					i.GuildID,
+				)
+				if err == nil {
+					log.Printf("Selected equipment: %v", selectedValues)
+					
+					// Get existing equipment if any
+					existingEquipment := []string{}
+					// Note: We would need to track equipment selections in the draft character
+					// For now, just use the new selections
+					
+					// Update the draft with selected equipment
+					_, err = h.ServiceProvider.CharacterService.UpdateDraftCharacter(
+						context.Background(),
+						draftChar.ID,
+						&characterService.UpdateDraftInput{
+							Equipment: append(existingEquipment, selectedValues...),
+						},
+					)
+					if err != nil {
+						log.Printf("Error updating draft with equipment: %v", err)
+					} else {
+						log.Printf("Successfully updated draft with equipment")
+					}
+				} else {
+					log.Printf("Error getting draft character: %v", err)
+				}
+				
+				// Move to next equipment choice or character details
+				req := &character.SelectEquipmentRequest{
+					Session:     s,
+					Interaction: i,
+					RaceKey:     parts[2],
+					ClassKey:    parts[3],
+					ChoiceIndex: choiceIndex + 1,
+				}
+				if err := h.characterSelectEquipmentHandler.Handle(req); err != nil {
+					log.Printf("Error handling next equipment selection: %v", err)
+				}
+			}
+		case "confirm_nested_equipment":
+			// Handle nested equipment selection (e.g., selecting specific martial weapons)
+			if len(parts) >= 6 {
+				choiceIndex, _ := strconv.Atoi(parts[4])
+				bundleKey := parts[5]
+				
+				// Get selected weapons
+				selectedWeapons := i.MessageComponentData().Values
+				log.Printf("Selected weapons: %v for bundle: %s", selectedWeapons, bundleKey)
+				
+				// Check for duplicate selections
+				weaponMap := make(map[string]bool)
+				for _, weapon := range selectedWeapons {
+					if weaponMap[weapon] {
+						// Duplicate found - show error
+						content := "❌ You cannot select the same weapon twice. Please choose different weapons."
+						_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+							Content: &content,
+						})
+						if err != nil {
+							log.Printf("Error sending duplicate weapon error: %v", err)
+						}
+						return
+					}
+					weaponMap[weapon] = true
+				}
+				
+				// Get the draft character
+				draftChar, err := h.ServiceProvider.CharacterService.GetOrCreateDraftCharacter(
+					context.Background(),
+					i.Member.User.ID,
+					i.GuildID,
+				)
+				if err == nil {
+					// Get existing equipment
+					existingEquipment := []string{}
+					// TODO: Track equipment properly in draft
+					
+					// Add selected weapons
+					allEquipment := append(existingEquipment, selectedWeapons...)
+					
+					// If this was "weapon + shield" choice, add shield
+					if strings.Contains(strings.ToLower(bundleKey), "shield") && len(selectedWeapons) == 1 {
+						allEquipment = append(allEquipment, "shield")
+					}
+					
+					// Update draft with equipment
+					_, err = h.ServiceProvider.CharacterService.UpdateDraftCharacter(
+						context.Background(),
+						draftChar.ID,
+						&characterService.UpdateDraftInput{
+							Equipment: allEquipment,
+						},
+					)
+					if err != nil {
+						log.Printf("Error updating draft with nested equipment: %v", err)
+					}
+				}
+				
+				// Continue to next equipment choice or character details
+				// Since the interaction is already acknowledged, we need to check if there are more choices
+				choices, err := h.ServiceProvider.CharacterService.ResolveChoices(
+					context.Background(),
+					&characterService.ResolveChoicesInput{
+						RaceKey:  parts[2],
+						ClassKey: parts[3],
+					},
+				)
+				if err == nil && choiceIndex+1 < len(choices.EquipmentChoices) {
+					// More equipment choices available
+					req := &character.SelectEquipmentRequest{
+						Session:     s,
+						Interaction: i,
+						RaceKey:     parts[2],
+						ClassKey:    parts[3],
+						ChoiceIndex: choiceIndex + 1,
+					}
+					if err := h.characterSelectEquipmentHandler.Handle(req); err != nil {
+						log.Printf("Error handling next equipment selection: %v", err)
+					}
+				} else {
+					// No more equipment choices, go to character details
+					req := &character.CharacterDetailsRequest{
+						Session:     s,
+						Interaction: i,
+						RaceKey:     parts[2],
+						ClassKey:    parts[3],
+					}
+					if err := h.characterDetailsHandler.Handle(req); err != nil {
+						log.Printf("Error handling character details: %v", err)
+					}
 				}
 			}
 		case "name_modal":
