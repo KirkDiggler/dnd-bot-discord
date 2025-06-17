@@ -8,9 +8,7 @@ import (
 	"time"
 	
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
 	"github.com/bwmarrin/discordgo"
 )
@@ -62,8 +60,16 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 		return fmt.Errorf("failed to acknowledge interaction: %w", err)
 	}
 	
+	// Check if user is already in an active session
+	activeSessions, err := h.services.SessionService.ListActiveUserSessions(context.Background(), req.Interaction.Member.User.ID)
+	if err == nil && len(activeSessions) > 0 {
+		// Leave any existing sessions first
+		for _, activeSession := range activeSessions {
+			h.services.SessionService.LeaveSession(context.Background(), activeSession.ID, req.Interaction.Member.User.ID)
+		}
+	}
+	
 	// Create a cooperative session (no DM required)
-	botID := req.Session.State.User.ID
 	sessionInput := &session.CreateSessionInput{
 		Name:        "Dungeon Delve",
 		Description: "Cooperative dungeon exploration",
@@ -81,14 +87,10 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 		return err
 	}
 	
-	// Join the creator to the session
-	_, err = h.services.SessionService.JoinSession(context.Background(), sess.ID, req.Interaction.Member.User.ID)
-	if err != nil {
-		content := fmt.Sprintf("❌ Failed to join session: %v", err)
-		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
-			Content: &content,
-		})
-		return err
+	// Creator is automatically added as DM, but for dungeon mode we want them as a player
+	// Update their role to player
+	if member, exists := sess.Members[req.Interaction.Member.User.ID]; exists {
+		member.Role = entities.SessionRolePlayer
 	}
 	
 	// Generate first room

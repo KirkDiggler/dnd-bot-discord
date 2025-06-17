@@ -44,6 +44,7 @@ type Handler struct {
 	sessionStartHandler                *session.StartHandler
 	sessionEndHandler                  *session.EndHandler
 	sessionInfoHandler                 *session.InfoHandler
+	sessionLeaveHandler                *session.LeaveHandler
 	
 	// Encounter handlers
 	encounterAddMonsterHandler         *encounter.AddMonsterHandler
@@ -115,6 +116,7 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		sessionStartHandler:  session.NewStartHandler(cfg.ServiceProvider),
 		sessionEndHandler:    session.NewEndHandler(cfg.ServiceProvider),
 		sessionInfoHandler:   session.NewInfoHandler(cfg.ServiceProvider),
+		sessionLeaveHandler:  session.NewLeaveHandler(cfg.ServiceProvider),
 		
 		// Initialize encounter handlers
 		encounterAddMonsterHandler: encounter.NewAddMonsterHandler(cfg.ServiceProvider),
@@ -241,6 +243,11 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 									Required:    false,
 								},
 							},
+						},
+						{
+							Name:        "leave",
+							Description: "Leave all your active sessions",
+							Type:        discordgo.ApplicationCommandOptionSubCommand,
 						},
 					},
 				},
@@ -582,6 +589,14 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 			}
 			if err := h.sessionEndHandler.Handle(req); err != nil {
 				log.Printf("Error handling session end: %v", err)
+			}
+		case "leave":
+			req := &session.LeaveRequest{
+				Session:     s,
+				Interaction: i,
+			}
+			if err := h.sessionLeaveHandler.Handle(req); err != nil {
+				log.Printf("Error handling session leave: %v", err)
 			}
 		}
 	} else if subcommandGroup.Name == "encounter" && len(subcommandGroup.Options) > 0 {
