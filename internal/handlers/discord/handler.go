@@ -13,6 +13,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/encounter"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/help"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/session"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/testcombat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 )
@@ -45,6 +46,9 @@ type Handler struct {
 	
 	// Encounter handlers
 	encounterAddMonsterHandler         *encounter.AddMonsterHandler
+	
+	// Test combat handler
+	testCombatHandler                  *testcombat.TestCombatHandler
 	
 	// Help handler
 	helpHandler                        *help.HelpHandler
@@ -108,6 +112,9 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		
 		// Initialize encounter handlers
 		encounterAddMonsterHandler: encounter.NewAddMonsterHandler(cfg.ServiceProvider),
+		
+		// Initialize test combat handler
+		testCombatHandler: testcombat.NewTestCombatHandler(cfg.ServiceProvider),
 		
 		// Initialize help handler
 		helpHandler: help.NewHelpHandler(),
@@ -259,6 +266,19 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 						},
 					},
 				},
+				{
+					Name:        "testcombat",
+					Description: "Start a quick test combat session (bot as DM)",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "monster",
+							Description: "Monster to fight (default: goblin)",
+							Required:    false,
+						},
+					},
+				},
 			},
 		},
 	}
@@ -321,6 +341,23 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 			}
 			if err := h.helpHandler.Handle(req); err != nil {
 				log.Printf("Error handling help command: %v", err)
+			}
+		case "testcombat":
+			// Get monster from options if provided
+			var monster string
+			for _, opt := range subcommandGroup.Options {
+				if opt.Name == "monster" {
+					monster = opt.StringValue()
+					break
+				}
+			}
+			req := &testcombat.TestCombatRequest{
+				Session:     s,
+				Interaction: i,
+				MonsterName: monster,
+			}
+			if err := h.testCombatHandler.Handle(req); err != nil {
+				log.Printf("Error handling test combat: %v", err)
 			}
 		}
 		return
@@ -2048,6 +2085,98 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				if err != nil {
 					log.Printf("Error showing end combat: %v", err)
 				}
+			case "attack":
+				// Simple attack handler for testing
+				// Get encounter
+				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Get current combatant
+				current := encounter.GetCurrentCombatant()
+				if current == nil {
+					content := "❌ No active combatant!"
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Simple check: if it's a player's turn, they can attack
+				// if it's a monster's turn, only DM (bot) can attack
+				canAct := false
+				if current.Type == entities.CombatantTypePlayer && current.PlayerID == i.Member.User.ID {
+					canAct = true
+				} else if current.Type == entities.CombatantTypeMonster {
+					// In test mode, bot is DM, so skip this check
+					canAct = true
+				}
+				
+				if !canAct && encounter.CreatedBy != i.Member.User.ID {
+					content := "❌ It's not your turn!"
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// For testing, we'll just simulate a simple attack
+				// Show modal to select target
+				modal := discordgo.InteractionResponseData{
+					CustomID: fmt.Sprintf("encounter:execute_attack:%s", encounterID),
+					Title:    "Make an Attack",
+					Components: []discordgo.MessageComponent{
+						discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								discordgo.TextInput{
+									CustomID:    "target_name",
+									Label:       "Target Name",
+									Style:       discordgo.TextInputShort,
+									Placeholder: "Enter target name",
+									Required:    true,
+									MaxLength:   50,
+								},
+							},
+						},
+						discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								discordgo.TextInput{
+									CustomID:    "attack_roll",
+									Label:       "Attack Roll (d20)",
+									Style:       discordgo.TextInputShort,
+									Placeholder: "Enter your d20 roll (1-20)",
+									Required:    true,
+									MaxLength:   2,
+								},
+							},
+						},
+					},
+				}
+				
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseModal,
+					Data: &modal,
+				})
+				if err != nil {
+					log.Printf("Error showing attack modal: %v", err)
+				}
 			}
 		}
 	}
@@ -2442,6 +2571,186 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				})
 				if err != nil {
 					log.Printf("Error responding to heal: %v", err)
+				}
+			case "execute_attack":
+				// Extract values from modal
+				targetName := ""
+				attackRoll := 0
+				
+				for _, comp := range data.Components {
+					if row, ok := comp.(*discordgo.ActionsRow); ok {
+						for _, rowComp := range row.Components {
+							if input, ok := rowComp.(*discordgo.TextInput); ok {
+								switch input.CustomID {
+								case "target_name":
+									targetName = input.Value
+								case "attack_roll":
+									attackRoll, _ = strconv.Atoi(input.Value)
+								}
+							}
+						}
+					}
+				}
+				
+				// Validate attack roll
+				if attackRoll < 1 || attackRoll > 20 {
+					content := "❌ Invalid attack roll! Must be between 1-20."
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Get encounter
+				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Get attacker
+				attacker := encounter.GetCurrentCombatant()
+				if attacker == nil {
+					content := "❌ No active attacker!"
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Find target
+				var targetID string
+				var target *entities.Combatant
+				for id, combatant := range encounter.Combatants {
+					if strings.EqualFold(combatant.Name, targetName) {
+						targetID = id
+						target = combatant
+						break
+					}
+				}
+				
+				if target == nil {
+					content := fmt.Sprintf("❌ Target '%s' not found!", targetName)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Calculate attack bonus (simplified for testing)
+				attackBonus := 5 // Default
+				if attacker.Type == entities.CombatantTypeMonster && len(attacker.Actions) > 0 {
+					attackBonus = attacker.Actions[0].AttackBonus
+				}
+				
+				totalAttack := attackRoll + attackBonus
+				hit := totalAttack >= target.AC
+				
+				// Build result
+				embed := &discordgo.MessageEmbed{
+					Title: "⚔️ Attack Result",
+					Color: 0x3498db, // Blue
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:   "🎲 Attack Roll",
+							Value:  fmt.Sprintf("d20: %d + %d = **%d**", attackRoll, attackBonus, totalAttack),
+							Inline: true,
+						},
+						{
+							Name:   "🎯 Target AC",
+							Value:  fmt.Sprintf("%d", target.AC),
+							Inline: true,
+						},
+					},
+				}
+				
+				if hit {
+					// Roll damage (simplified - using 1d8+3 for all attacks)
+					damageRoll := 1 + (attackRoll % 8) // Simulate 1d8
+					damageMod := 3
+					totalDamage := damageRoll + damageMod
+					
+					embed.Description = fmt.Sprintf("**%s** hits **%s**!", attacker.Name, target.Name)
+					embed.Color = 0x2ecc71 // Green
+					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+						Name:   "💥 Damage",
+						Value:  fmt.Sprintf("1d8+3: %d + %d = **%d**", damageRoll, damageMod, totalDamage),
+						Inline: false,
+					})
+					
+					// Apply damage
+					h.ServiceProvider.EncounterService.ApplyDamage(context.Background(), encounterID, targetID, i.Member.User.ID, totalDamage)
+					
+					// Get updated target
+					encounter, _ = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+					updatedTarget := encounter.Combatants[targetID]
+					
+					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+						Name:   "❤️ Target HP",
+						Value:  fmt.Sprintf("%d / %d", updatedTarget.CurrentHP, updatedTarget.MaxHP),
+						Inline: true,
+					})
+					
+					if updatedTarget.CurrentHP <= 0 {
+						embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+							Name:   "💀 Status",
+							Value:  "**Target defeated!**",
+							Inline: true,
+						})
+					}
+				} else {
+					embed.Description = fmt.Sprintf("**%s** misses **%s**!", attacker.Name, target.Name)
+					embed.Color = 0xe74c3c // Red
+				}
+				
+				// Add next turn button
+				components := []discordgo.MessageComponent{
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label:    "Next Turn",
+								Style:    discordgo.PrimaryButton,
+								CustomID: fmt.Sprintf("encounter:next_turn:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
+							},
+							discordgo.Button{
+								Label:    "View Status",
+								Style:    discordgo.SecondaryButton,
+								CustomID: fmt.Sprintf("encounter:view:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
+							},
+						},
+					},
+				}
+				
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Embeds:     []*discordgo.MessageEmbed{embed},
+						Components: components,
+					},
+				})
+				if err != nil {
+					log.Printf("Error responding to attack: %v", err)
 				}
 			}
 		}
