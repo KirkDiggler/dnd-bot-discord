@@ -1,142 +1,63 @@
-# golangci-lint configuration
-# https://golangci-lint.run/usage/configuration/
-
+version: "2"
 run:
-  timeout: 5m
+  issues-exit-code: 1
   tests: true
+  timeout: 5m
   build-tags:
     - integration
-  skip-dirs:
-    - internal/mocks
-    - internal/clients/dnd5e/mock
-    - internal/repositories/characters/mock
-    - internal/services/character/mock
 
 linters:
+  default: none
   enable:
-    # Default linters
-    - errcheck
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - typecheck
-    - unused
-    
-    # Additional linters
-    - bodyclose      # Checks whether HTTP response body is closed
-    - dupl          # Code duplication detector
-    - exportloopref # Checks for pointers to enclosing loop variables
-    - goconst       # Finds repeated strings that could be constants
-    - gocyclo       # Cyclomatic complexity checker
-    - gofmt         # Checks formatting
-    - goimports     # Checks imports formatting
-    - gosec         # Security checker
-    - misspell      # Spell checker
-    - prealloc      # Finds slice declarations that could be preallocated
-    - revive        # Fast, configurable linter
-    - unconvert     # Unnecessary type conversions
-    - unparam       # Unused function parameters
-    
-  disable:
-    - depguard      # We manage dependencies via go.mod
-    - exhaustive    # Too strict for switch statements
-    - gochecknoglobals # We use some globals for configs
-    - gomnd         # Magic numbers are sometimes OK
-    - lll           # Line length limit is too strict
-    - wsl           # Whitespace linter is too opinionated
+    - copyloopvar    # Detects places where loop variables are copied
+    - errcheck       # Checks for unchecked errors
+    - gocritic       # Provides diagnostics for Go code
+    - govet          # Reports suspicious constructs
+    - ineffassign    # Detects when assignments to existing variables are not used
+    - revive         # Fast, configurable linter
+    - staticcheck    # Advanced static analysis
+    - unconvert      # Removes unnecessary type conversions
+    - unused         # Checks for unused code
+    - misspell       # Checks for misspelled words
+    - gosec          # Security oriented checks
 
-linters-settings:
-  dupl:
-    threshold: 100
-    
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-    
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-    
-  gocyclo:
-    min-complexity: 15
-    
-  goimports:
-    local-prefixes: github.com/KirkDiggler/dnd-bot-discord
-    
-  gosec:
-    excludes:
-      - G104  # Unhandled errors in defer statements
-      
-  govet:
-    check-shadowing: true
-    enable-all: true
-    
-  misspell:
-    locale: US
-    
-  revive:
-    rules:
-      - name: blank-imports
-      - name: context-as-argument
-      - name: context-keys-type
-      - name: dot-imports
-      - name: error-return
-      - name: error-strings
-      - name: error-naming
-      - name: if-return
-      - name: increment-decrement
-      - name: var-declaration
-      - name: package-comments
-      - name: range
-      - name: receiver-naming
-      - name: time-naming
-      - name: unexported-return
-      - name: indent-error-flow
-      - name: errorf
-      
-  unparam:
-    check-exported: false
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    gocritic:
+      disabled-checks:
+        - dupImport
+        - ifElseChain
+        - whyNoLint
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - performance
+        - style
+    govet:
+      enable:
+        - shadow
+    gosec:
+      excludes:
+        - G104  # Unhandled errors in defer statements
 
 issues:
+  exclude-dirs:
+    - internal/mocks
+    - "*/mock"
+  
   exclude-rules:
-    # Exclude some linters from running on tests files
+    # Exclude some linters from running on test files
     - path: _test\.go
       linters:
-        - dupl
         - gosec
-        - goconst
-        
+    
     # Exclude generated files
     - path: "mock"
       linters:
-        - dupl
+        - gocritic
         - gosec
-        - gocyclo
-        
-    # Allow unused parameters in interfaces
-    - path: "interface"
-      linters:
-        - unparam
-        
-    # Allow init functions
-    - path: "init"
-      linters:
-        - gochecknoinits
-        
-  # Maximum issues count per one linter
+  
   max-issues-per-linter: 50
-  
-  # Maximum count of issues with the same text
   max-same-issues: 10
-  
-  # Show only new issues on PRs
-  new: false
-
-# Output configuration
-output:
-  format: colored-line-number
-  print-issued-lines: true
-  print-linter-name: true
-  uniq-by-line: true
-  sort-results: true
