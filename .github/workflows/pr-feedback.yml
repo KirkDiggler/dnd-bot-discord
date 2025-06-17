@@ -76,7 +76,6 @@ jobs:
     name: Test Summary
     runs-on: ubuntu-latest
     if: always()
-    needs: [ci-success]  # Wait for main CI to complete
     
     steps:
     - uses: actions/checkout@v4
