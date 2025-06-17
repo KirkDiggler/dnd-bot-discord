@@ -29,6 +29,8 @@ type Handler struct {
 	characterSelectEquipmentHandler    *character.SelectEquipmentHandler
 	characterSelectNestedEquipmentHandler *character.SelectNestedEquipmentHandler
 	characterDetailsHandler            *character.CharacterDetailsHandler
+	characterListHandler               *character.ListHandler
+	characterShowHandler               *character.ShowHandler
 }
 
 // HandlerConfig holds configuration for the Discord handler
@@ -76,6 +78,8 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		characterDetailsHandler: character.NewCharacterDetailsHandler(&character.CharacterDetailsHandlerConfig{
 			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
+		characterListHandler: character.NewListHandler(cfg.ServiceProvider),
+		characterShowHandler: character.NewShowHandler(cfg.ServiceProvider),
 	}
 }
 
@@ -95,6 +99,24 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 							Name:        "create",
 							Description: "Create a new character",
 							Type:        discordgo.ApplicationCommandOptionSubCommand,
+						},
+						{
+							Name:        "list",
+							Description: "List all your characters",
+							Type:        discordgo.ApplicationCommandOptionSubCommand,
+						},
+						{
+							Name:        "show",
+							Description: "Show details of a character",
+							Type:        discordgo.ApplicationCommandOptionSubCommand,
+							Options: []*discordgo.ApplicationCommandOption{
+								{
+									Type:        discordgo.ApplicationCommandOptionString,
+									Name:        "id",
+									Description: "Character ID to show",
+									Required:    true,
+								},
+							},
 						},
 					},
 				},
@@ -151,6 +173,31 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 			}
 			if err := h.characterCreateHandler.Handle(req); err != nil {
 				log.Printf("Error handling character create: %v", err)
+			}
+		case "list":
+			req := &character.ListRequest{
+				Session:     s,
+				Interaction: i,
+			}
+			if err := h.characterListHandler.Handle(req); err != nil {
+				log.Printf("Error handling character list: %v", err)
+			}
+		case "show":
+			// Get character ID from options
+			var characterID string
+			for _, opt := range subcommand.Options {
+				if opt.Name == "id" {
+					characterID = opt.StringValue()
+					break
+				}
+			}
+			req := &character.ShowRequest{
+				Session:     s,
+				Interaction: i,
+				CharacterID: characterID,
+			}
+			if err := h.characterShowHandler.Handle(req); err != nil {
+				log.Printf("Error handling character show: %v", err)
 			}
 		}
 	}
@@ -717,6 +764,135 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				})
 				if err != nil {
 					log.Printf("Error showing name modal: %v", err)
+				}
+			}
+		}
+	} else if ctx == "character_manage" {
+		// Handle character management actions (edit, archive, delete, etc.)
+		if len(parts) >= 3 {
+			characterID := parts[2]
+			
+			switch action {
+			case "delete":
+				// Confirm deletion with a modal or direct action
+				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "⚠️ Are you sure you want to delete this character? This action cannot be undone!",
+						Flags:   discordgo.MessageFlagsEphemeral,
+						Components: []discordgo.MessageComponent{
+							discordgo.ActionsRow{
+								Components: []discordgo.MessageComponent{
+									discordgo.Button{
+										Label:    "Confirm Delete",
+										Style:    discordgo.DangerButton,
+										CustomID: fmt.Sprintf("character_manage:confirm_delete:%s", characterID),
+										Emoji: &discordgo.ComponentEmoji{
+											Name: "🗑️",
+										},
+									},
+									discordgo.Button{
+										Label:    "Cancel",
+										Style:    discordgo.SecondaryButton,
+										CustomID: "character_manage:cancel",
+										Emoji: &discordgo.ComponentEmoji{
+											Name: "❌",
+										},
+									},
+								},
+							},
+						},
+					},
+				})
+				if err != nil {
+					log.Printf("Error showing delete confirmation: %v", err)
+				}
+			case "confirm_delete":
+				// Actually delete the character
+				err := h.ServiceProvider.CharacterService.Delete(characterID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to delete character: %v", err)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseUpdateMessage,
+					Data: &discordgo.InteractionResponseData{
+						Content: "✅ Character successfully deleted.",
+						Components: []discordgo.MessageComponent{},
+					},
+				})
+				if err != nil {
+					log.Printf("Error confirming deletion: %v", err)
+				}
+			case "cancel":
+				// Cancel the action
+				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseUpdateMessage,
+					Data: &discordgo.InteractionResponseData{
+						Content: "❌ Action cancelled.",
+						Components: []discordgo.MessageComponent{},
+					},
+				})
+				if err != nil {
+					log.Printf("Error cancelling action: %v", err)
+				}
+			case "archive":
+				// Archive the character
+				err := h.ServiceProvider.CharacterService.UpdateStatus(characterID, entities.CharacterStatusArchived)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to archive character: %v", err)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "✅ Character archived successfully! Use `/dnd character list` to see all your characters.",
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				})
+				if err != nil {
+					log.Printf("Error archiving character: %v", err)
+				}
+			case "restore":
+				// Restore archived character to active
+				err := h.ServiceProvider.CharacterService.UpdateStatus(characterID, entities.CharacterStatusActive)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to restore character: %v", err)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "✅ Character restored to active status!",
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				})
+				if err != nil {
+					log.Printf("Error restoring character: %v", err)
 				}
 			}
 		}

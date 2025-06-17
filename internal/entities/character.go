@@ -192,8 +192,24 @@ func (c *Character) Equip(key string) bool {
 
 func (c *Character) calculateAC() {
 	c.AC = 10
-	for _, e := range c.EquippedSlots {
-		if e == nil {
+	
+	// First, check for body armor which sets the base AC
+	if bodyArmor := c.EquippedSlots[SlotBody]; bodyArmor != nil {
+		if bodyArmor.GetEquipmentType() == "Armor" {
+			armor := bodyArmor.(*Armor)
+			if armor.ArmorClass != nil {
+				c.AC = armor.ArmorClass.Base
+				if armor.ArmorClass.DexBonus {
+					// TODO: load max and bonus and limit id applicable
+					c.AC += c.Attributes[AttributeDexterity].Bonus
+				}
+			}
+		}
+	}
+	
+	// Then add bonuses from other armor pieces (like shields)
+	for slot, e := range c.EquippedSlots {
+		if e == nil || slot == SlotBody {
 			continue
 		}
 
@@ -202,15 +218,6 @@ func (c *Character) calculateAC() {
 			if armor.ArmorClass == nil {
 				continue
 			}
-			if e.GetSlot() == SlotBody {
-				c.AC = armor.ArmorClass.Base
-				if armor.ArmorClass.DexBonus {
-					// TODO: load max and bonus and limit id applicable
-					c.AC += c.Attributes[AttributeDexterity].Bonus
-				}
-				continue
-			}
-
 			c.AC += armor.ArmorClass.Base
 			if armor.ArmorClass.DexBonus {
 				c.AC += c.Attributes[AttributeDexterity].Bonus

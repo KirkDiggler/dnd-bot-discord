@@ -1,5 +1,7 @@
 package character
 
+//go:generate mockgen -destination=mock/mock_service.go -package=mockcharacters -source=service.go
+
 import (
 	"context"
 	"fmt"
@@ -9,7 +11,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
-	characterRepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character"
+	characterRepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 )
 
 // Repository is an alias for the character repository interface
@@ -55,6 +57,18 @@ type Service interface {
 	
 	// GetEquipmentByCategory retrieves equipment by category (e.g., "martial-weapons")
 	GetEquipmentByCategory(ctx context.Context, category string) ([]entities.Equipment, error)
+	
+	// UpdateStatus updates a character's status
+	UpdateStatus(characterID string, status entities.CharacterStatus) error
+	
+	// Delete deletes a character
+	Delete(characterID string) error
+	
+	// ListByOwner lists all characters for a specific owner
+	ListByOwner(ownerID string) ([]*entities.Character, error)
+	
+	// GetByID retrieves a character by ID
+	GetByID(characterID string) (*entities.Character, error)
 }
 
 // CreateCharacterInput contains all data needed to create a character
@@ -659,6 +673,84 @@ func generateID() string {
 	// TODO: Implement proper ID generation (e.g., UUID or snowflake)
 	// For now, use timestamp-based ID
 	return fmt.Sprintf("char_%d", time.Now().UnixNano())
+}
+
+// UpdateStatus updates a character's status
+func (s *service) UpdateStatus(characterID string, status entities.CharacterStatus) error {
+	if strings.TrimSpace(characterID) == "" {
+		return dnderr.InvalidArgument("character ID is required")
+	}
+	
+	ctx := context.Background()
+	
+	// Get the character
+	char, err := s.repository.Get(ctx, characterID)
+	if err != nil {
+		return dnderr.Wrapf(err, "failed to get character '%s'", characterID).
+			WithMeta("character_id", characterID)
+	}
+	
+	// Update status
+	char.Status = status
+	
+	// Save changes
+	if err := s.repository.Update(ctx, char); err != nil {
+		return dnderr.Wrap(err, "failed to update character status").
+			WithMeta("character_id", characterID).
+			WithMeta("status", string(status))
+	}
+	
+	return nil
+}
+
+// Delete deletes a character
+func (s *service) Delete(characterID string) error {
+	if strings.TrimSpace(characterID) == "" {
+		return dnderr.InvalidArgument("character ID is required")
+	}
+	
+	ctx := context.Background()
+	
+	if err := s.repository.Delete(ctx, characterID); err != nil {
+		return dnderr.Wrapf(err, "failed to delete character '%s'", characterID).
+			WithMeta("character_id", characterID)
+	}
+	
+	return nil
+}
+
+// ListByOwner lists all characters for a specific owner
+func (s *service) ListByOwner(ownerID string) ([]*entities.Character, error) {
+	if strings.TrimSpace(ownerID) == "" {
+		return nil, dnderr.InvalidArgument("owner ID is required")
+	}
+	
+	ctx := context.Background()
+	
+	chars, err := s.repository.GetByOwner(ctx, ownerID)
+	if err != nil {
+		return nil, dnderr.Wrapf(err, "failed to list characters for owner '%s'", ownerID).
+			WithMeta("owner_id", ownerID)
+	}
+	
+	return chars, nil
+}
+
+// GetByID retrieves a character by ID
+func (s *service) GetByID(characterID string) (*entities.Character, error) {
+	if strings.TrimSpace(characterID) == "" {
+		return nil, dnderr.InvalidArgument("character ID is required")
+	}
+	
+	ctx := context.Background()
+	
+	char, err := s.repository.Get(ctx, characterID)
+	if err != nil {
+		return nil, dnderr.Wrapf(err, "failed to get character '%s'", characterID).
+			WithMeta("character_id", characterID)
+	}
+	
+	return char, nil
 }
 
 // stringToAttribute converts a string to an Attribute

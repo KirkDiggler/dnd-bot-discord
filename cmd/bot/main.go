@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,10 +12,12 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
+	"github.com/redis/go-redis/v9"
 	
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/config"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 )
 
@@ -54,11 +57,47 @@ func main() {
 		log.Fatalf("Failed to create D&D 5e client: %v", err)
 	}
 
-	// Create service provider
-	serviceProvider := services.NewProvider(&services.ProviderConfig{
+	// Create service provider config
+	providerConfig := &services.ProviderConfig{
 		DNDClient: dndClient,
-		// Repository will default to in-memory
-	})
+	}
+
+	// Keep Redis client for cleanup
+	var redisClient *redis.Client
+
+	// Try to connect to Redis if URL is provided
+	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
+		log.Printf("Connecting to Redis at: %s", redisURL)
+		
+		opts, err := redis.ParseURL(redisURL)
+		if err != nil {
+			log.Printf("Failed to parse Redis URL: %v", err)
+			log.Println("Falling back to in-memory repositories")
+		} else {
+			redisClient = redis.NewClient(opts)
+			
+			// Test connection
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			
+			if err := redisClient.Ping(ctx).Err(); err != nil {
+				log.Printf("Failed to connect to Redis: %v", err)
+				log.Println("Falling back to in-memory repositories")
+			} else {
+				log.Println("Successfully connected to Redis")
+				
+				// Create Redis repositories using bounded context constructors
+				providerConfig.CharacterRepository = characters.NewRedis(redisClient)
+				
+				log.Println("Using Redis for persistence")
+			}
+		}
+	} else {
+		log.Println("No REDIS_URL found, using in-memory repositories")
+	}
+
+	// Create service provider
+	serviceProvider := services.NewProvider(providerConfig)
 
 	// Create Discord handler
 	handler := discord.NewHandler(&discord.HandlerConfig{
@@ -95,4 +134,13 @@ func main() {
 	<-sc
 
 	fmt.Println("Shutting down...")
+	
+	// Clean up Redis connection if we have one
+	if redisClient != nil {
+		if err := redisClient.Close(); err != nil {
+			log.Printf("Error closing Redis connection: %v", err)
+		} else {
+			log.Println("Closed Redis connection")
+		}
+	}
 }
