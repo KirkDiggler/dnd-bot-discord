@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
@@ -37,7 +37,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 	if err != nil {
 		return fmt.Errorf("failed to acknowledge interaction: %w", err)
 	}
-	
+
 	// Create a test session with bot as DM
 	botID := req.Session.State.User.ID
 	sessionInput := &session.CreateSessionInput{
@@ -47,7 +47,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 		RealmID:     req.Interaction.GuildID,
 		ChannelID:   req.Interaction.ChannelID,
 	}
-	
+
 	session, err := h.services.SessionService.CreateSession(context.Background(), sessionInput)
 	if err != nil {
 		content := fmt.Sprintf("❌ Failed to create test session: %v", err)
@@ -56,7 +56,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 		})
 		return err
 	}
-	
+
 	// Get user's active character
 	chars, err := h.services.CharacterService.ListByOwner(req.Interaction.Member.User.ID)
 	if err != nil || len(chars) == 0 {
@@ -66,7 +66,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 		})
 		return err
 	}
-	
+
 	// Find first active character
 	var playerChar *entities.Character
 	for _, char := range chars {
@@ -75,7 +75,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 			break
 		}
 	}
-	
+
 	if playerChar == nil {
 		content := "❌ No active character found! Activate a character first."
 		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
@@ -83,7 +83,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 		})
 		return err
 	}
-	
+
 	// Join the player to session automatically
 	_, err = h.services.SessionService.JoinSession(context.Background(), session.ID, req.Interaction.Member.User.ID)
 	if err != nil {
@@ -93,7 +93,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 		})
 		return err
 	}
-	
+
 	// Select character for the player
 	err = h.services.SessionService.SelectCharacter(context.Background(), session.ID, req.Interaction.Member.User.ID, playerChar.ID)
 	if err != nil {
@@ -103,7 +103,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 		})
 		return err
 	}
-	
+
 	// Start the session
 	err = h.services.SessionService.StartSession(context.Background(), session.ID, botID)
 	if err != nil {
@@ -113,7 +113,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 		})
 		return err
 	}
-	
+
 	// Create encounter
 	encounterInput := &encounter.CreateEncounterInput{
 		SessionID:   session.ID,
@@ -122,7 +122,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 		Description: "Testing combat mechanics",
 		UserID:      botID, // Bot is DM
 	}
-	
+
 	enc, err := h.services.EncounterService.CreateEncounter(context.Background(), encounterInput)
 	if err != nil {
 		content := fmt.Sprintf("❌ Failed to create encounter: %v", err)
@@ -131,7 +131,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 		})
 		return err
 	}
-	
+
 	// Add player character to encounter
 	_, err = h.services.EncounterService.AddPlayer(context.Background(), enc.ID, req.Interaction.Member.User.ID, playerChar.ID)
 	if err != nil {
@@ -141,13 +141,13 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 		})
 		return err
 	}
-	
+
 	// Add requested monster
 	monsterName := strings.TrimSpace(req.MonsterName)
 	if monsterName == "" {
 		monsterName = "goblin" // Default
 	}
-	
+
 	// Get monster from our predefined list
 	monster := h.getMonster(monsterName)
 	if monster == nil {
@@ -157,7 +157,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 		})
 		return err
 	}
-	
+
 	_, err = h.services.EncounterService.AddMonster(context.Background(), enc.ID, botID, monster)
 	if err != nil {
 		content := fmt.Sprintf("❌ Failed to add monster: %v", err)
@@ -166,7 +166,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 		})
 		return err
 	}
-	
+
 	// Roll initiative
 	err = h.services.EncounterService.RollInitiative(context.Background(), enc.ID, botID)
 	if err != nil {
@@ -176,7 +176,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 		})
 		return err
 	}
-	
+
 	// Start combat
 	err = h.services.EncounterService.StartEncounter(context.Background(), enc.ID, botID)
 	if err != nil {
@@ -186,10 +186,10 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 		})
 		return err
 	}
-	
+
 	// Get final encounter state
 	enc, _ = h.services.EncounterService.GetEncounter(context.Background(), enc.ID)
-	
+
 	// Build response
 	embed := &discordgo.MessageEmbed{
 		Title:       "⚔️ Test Combat Started!",
@@ -197,7 +197,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 		Color:       0xe74c3c, // Red
 		Fields:      []*discordgo.MessageEmbedField{},
 	}
-	
+
 	// Show turn order
 	var turnOrder strings.Builder
 	for i, combatantID := range enc.TurnOrder {
@@ -209,13 +209,13 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 			turnOrder.WriteString(fmt.Sprintf("%s %s (Initiative: %d)\n", prefix, combatant.Name, combatant.Initiative))
 		}
 	}
-	
+
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 		Name:   "📋 Turn Order",
 		Value:  turnOrder.String(),
 		Inline: false,
 	})
-	
+
 	// Show current turn
 	if current := enc.GetCurrentCombatant(); current != nil {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
@@ -224,7 +224,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 			Inline: false,
 		})
 	}
-	
+
 	// Add combat action buttons
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
@@ -250,11 +250,11 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 			},
 		},
 	}
-	
+
 	embed.Footer = &discordgo.MessageEmbedFooter{
 		Text: "Bot is acting as DM. Use Attack when it's your turn!",
 	}
-	
+
 	_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
 		Embeds:     &[]*discordgo.MessageEmbed{embed},
 		Components: &components,
@@ -265,7 +265,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 // getMonster returns a predefined monster by name
 func (h *TestCombatHandler) getMonster(name string) *encounter.AddMonsterInput {
 	name = strings.ToLower(name)
-	
+
 	monsters := map[string]*encounter.AddMonsterInput{
 		"goblin": {
 			Name:            "Goblin",
@@ -324,6 +324,6 @@ func (h *TestCombatHandler) getMonster(name string) *encounter.AddMonsterInput {
 			},
 		},
 	}
-	
+
 	return monsters[name]
 }

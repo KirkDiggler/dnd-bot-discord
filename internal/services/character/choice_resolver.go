@@ -15,10 +15,10 @@ import (
 type ChoiceResolver interface {
 	// ResolveProficiencyChoices returns simplified proficiency choices for a race/class
 	ResolveProficiencyChoices(ctx context.Context, race *entities.Race, class *entities.Class) ([]SimplifiedChoice, error)
-	
+
 	// ResolveEquipmentChoices returns simplified equipment choices for a class
 	ResolveEquipmentChoices(ctx context.Context, class *entities.Class) ([]SimplifiedChoice, error)
-	
+
 	// ValidateProficiencySelections validates that the selected proficiencies are valid
 	ValidateProficiencySelections(ctx context.Context, race *entities.Race, class *entities.Class, selections []string) error
 }
@@ -38,13 +38,13 @@ func NewChoiceResolver(dndClient dnd5e.Client) ChoiceResolver {
 // ResolveProficiencyChoices returns simplified proficiency choices
 func (r *choiceResolver) ResolveProficiencyChoices(ctx context.Context, race *entities.Race, class *entities.Class) ([]SimplifiedChoice, error) {
 	choices := []SimplifiedChoice{}
-	
+
 	// Process class proficiency choices
 	for i, choice := range class.ProficiencyChoices {
 		if choice == nil || len(choice.Options) == 0 {
 			continue
 		}
-		
+
 		simplified := SimplifiedChoice{
 			ID:          fmt.Sprintf("%s-prof-%d", class.Key, i),
 			Name:        choice.Name,
@@ -53,7 +53,7 @@ func (r *choiceResolver) ResolveProficiencyChoices(ctx context.Context, race *en
 			Choose:      choice.Count,
 			Options:     r.extractOptions(choice.Options),
 		}
-		
+
 		// Handle nested choices (like Monk's tools)
 		if r.hasNestedChoices(choice.Options) {
 			// Only flatten for specific known cases
@@ -63,10 +63,10 @@ func (r *choiceResolver) ResolveProficiencyChoices(ctx context.Context, race *en
 			// For other classes, skip nested choices for now
 			// TODO: Properly handle nested choices for all classes
 		}
-		
+
 		choices = append(choices, simplified)
 	}
-	
+
 	// Process racial proficiency choices
 	if race.StartingProficiencyOptions != nil && len(race.StartingProficiencyOptions.Options) > 0 {
 		simplified := SimplifiedChoice{
@@ -79,25 +79,25 @@ func (r *choiceResolver) ResolveProficiencyChoices(ctx context.Context, race *en
 		}
 		choices = append(choices, simplified)
 	}
-	
+
 	return choices, nil
 }
 
 // ResolveEquipmentChoices returns simplified equipment choices
 func (r *choiceResolver) ResolveEquipmentChoices(ctx context.Context, class *entities.Class) ([]SimplifiedChoice, error) {
 	choices := []SimplifiedChoice{}
-	
+
 	// Handle nil class
 	if class == nil {
 		return choices, nil
 	}
-	
+
 	// Process starting equipment choices
 	for i, choice := range class.StartingEquipmentChoices {
 		if choice == nil || len(choice.Options) == 0 {
 			continue
 		}
-		
+
 		simplified := SimplifiedChoice{
 			ID:          fmt.Sprintf("%s-equip-%d", class.Key, i),
 			Name:        choice.Name,
@@ -106,10 +106,10 @@ func (r *choiceResolver) ResolveEquipmentChoices(ctx context.Context, class *ent
 			Choose:      choice.Count,
 			Options:     r.extractEquipmentOptions(choice.Options),
 		}
-		
+
 		choices = append(choices, simplified)
 	}
-	
+
 	return choices, nil
 }
 
@@ -123,7 +123,7 @@ func (r *choiceResolver) ValidateProficiencySelections(ctx context.Context, race
 // extractOptions converts entity options to simple choice options
 func (r *choiceResolver) extractOptions(options []entities.Option) []ChoiceOption {
 	result := []ChoiceOption{}
-	
+
 	for _, opt := range options {
 		switch o := opt.(type) {
 		case *entities.ReferenceOption:
@@ -140,10 +140,10 @@ func (r *choiceResolver) extractOptions(options []entities.Option) []ChoiceOptio
 					Name: fmt.Sprintf("%s (x%d)", o.Reference.Name, o.Count),
 				})
 			}
-		// Skip nested choices for now
+			// Skip nested choices for now
 		}
 	}
-	
+
 	return result
 }
 
@@ -160,7 +160,7 @@ func (r *choiceResolver) hasNestedChoices(options []entities.Option) bool {
 // extractEquipmentOptions converts equipment options with descriptions
 func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []ChoiceOption {
 	result := []ChoiceOption{}
-	
+
 	for _, opt := range options {
 		if opt == nil {
 			continue
@@ -172,13 +172,13 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 					Key:  o.Reference.Key,
 					Name: o.Reference.Name,
 				}
-				
+
 				// Add equipment-specific descriptions
 				desc := r.getEquipmentDescription(o.Reference.Key, o.Reference.Name)
 				if desc != "" {
 					choiceOpt.Description = desc
 				}
-				
+
 				result = append(result, choiceOpt)
 			}
 		case *entities.CountedReferenceOption:
@@ -187,18 +187,18 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 				if o.Count > 1 {
 					name = fmt.Sprintf("%dx %s", o.Count, name)
 				}
-				
+
 				choiceOpt := ChoiceOption{
 					Key:  o.Reference.Key,
 					Name: name,
 				}
-				
+
 				// Add equipment-specific descriptions
 				desc := r.getEquipmentDescription(o.Reference.Key, o.Reference.Name)
 				if desc != "" {
 					choiceOpt.Description = desc
 				}
-				
+
 				result = append(result, choiceOpt)
 			}
 		case *entities.MultipleOption:
@@ -206,7 +206,7 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 			if o.Items == nil || len(o.Items) == 0 {
 				continue
 			}
-			
+
 			// Handle bundles like "weapon and shield" or "two weapons"
 			names := []string{}
 			descriptions := []string{}
@@ -216,7 +216,7 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 			}
 			hasNestedChoice := false
 			nestedChoiceDesc := ""
-			
+
 			for _, item := range o.Items {
 				if item == nil {
 					continue
@@ -229,7 +229,7 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 							itemName = fmt.Sprintf("%dx %s", itemRef.Count, itemName)
 						}
 						names = append(names, itemName)
-						
+
 						// Get description for this item
 						if desc := r.getEquipmentDescription(itemRef.Reference.Key, itemRef.Reference.Name); desc != "" {
 							descriptions = append(descriptions, fmt.Sprintf("%s (%s)", itemRef.Reference.Name, desc))
@@ -238,7 +238,7 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 				case *entities.ReferenceOption:
 					if itemRef.Reference != nil && itemRef.Reference.Key != "" && itemRef.Reference.Name != "" {
 						names = append(names, itemRef.Reference.Name)
-						
+
 						// Get description for this item
 						if desc := r.getEquipmentDescription(itemRef.Reference.Key, itemRef.Reference.Name); desc != "" {
 							descriptions = append(descriptions, fmt.Sprintf("%s (%s)", itemRef.Reference.Name, desc))
@@ -256,13 +256,13 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 					}
 				}
 			}
-			
+
 			if len(names) > 0 {
 				choiceOpt := ChoiceOption{
 					Key:  bundleKey,
 					Name: joinWithAnd(names),
 				}
-				
+
 				// If this bundle contains nested choices, mark it specially
 				if hasNestedChoice {
 					choiceOpt.Key = fmt.Sprintf("nested-%d", len(result))
@@ -272,7 +272,7 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 				} else if len(descriptions) > 0 {
 					choiceOpt.Description = strings.Join(descriptions, ", ")
 				}
-				
+
 				result = append(result, choiceOpt)
 			}
 		case *entities.Choice:
@@ -287,7 +287,7 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 			}
 		}
 	}
-	
+
 	return result
 }
 
@@ -319,51 +319,51 @@ func joinWithAnd(items []string) string {
 func (r *choiceResolver) getEquipmentDescription(key, name string) string {
 	// Common weapon descriptions
 	weaponDescs := map[string]string{
-		"longsword":       "1d8 slashing, versatile (1d10)",
-		"shortsword":      "1d6 piercing, finesse, light",
-		"battleaxe":       "1d8 slashing, versatile (1d10)",
-		"handaxe":         "1d6 slashing, light, thrown (20/60)",
-		"warhammer":       "1d8 bludgeoning, versatile (1d10)",
-		"mace":            "1d6 bludgeoning",
-		"greataxe":        "1d12 slashing, heavy, two-handed",
-		"greatsword":      "2d6 slashing, heavy, two-handed",
-		"rapier":          "1d8 piercing, finesse",
-		"scimitar":        "1d6 slashing, finesse, light",
-		"shortbow":        "1d6 piercing, range 80/320",
-		"longbow":         "1d8 piercing, range 150/600",
-		"light-crossbow":  "1d8 piercing, range 80/320",
-		"shield":          "+2 AC",
-		"dagger":          "1d4 piercing, finesse, light, thrown (20/60)",
-		"quarterstaff":    "1d6 bludgeoning, versatile (1d8)",
-		"spear":           "1d6 piercing, thrown (20/60), versatile (1d8)",
-		"javelin":         "1d6 piercing, thrown (30/120)",
-		"club":            "1d4 bludgeoning, light",
+		"longsword":      "1d8 slashing, versatile (1d10)",
+		"shortsword":     "1d6 piercing, finesse, light",
+		"battleaxe":      "1d8 slashing, versatile (1d10)",
+		"handaxe":        "1d6 slashing, light, thrown (20/60)",
+		"warhammer":      "1d8 bludgeoning, versatile (1d10)",
+		"mace":           "1d6 bludgeoning",
+		"greataxe":       "1d12 slashing, heavy, two-handed",
+		"greatsword":     "2d6 slashing, heavy, two-handed",
+		"rapier":         "1d8 piercing, finesse",
+		"scimitar":       "1d6 slashing, finesse, light",
+		"shortbow":       "1d6 piercing, range 80/320",
+		"longbow":        "1d8 piercing, range 150/600",
+		"light-crossbow": "1d8 piercing, range 80/320",
+		"shield":         "+2 AC",
+		"dagger":         "1d4 piercing, finesse, light, thrown (20/60)",
+		"quarterstaff":   "1d6 bludgeoning, versatile (1d8)",
+		"spear":          "1d6 piercing, thrown (20/60), versatile (1d8)",
+		"javelin":        "1d6 piercing, thrown (30/120)",
+		"club":           "1d4 bludgeoning, light",
 	}
-	
+
 	// Common armor descriptions
 	armorDescs := map[string]string{
-		"leather-armor":    "11 + Dex modifier",
-		"scale-mail":       "14 + Dex (max 2)",
-		"chain-mail":       "16 AC",
-		"chain-shirt":      "13 + Dex (max 2)",
-		"padded-armor":     "11 + Dex modifier",
-		"studded-leather":  "12 + Dex modifier",
-		"hide-armor":       "12 + Dex (max 2)",
-		"ring-mail":        "14 AC",
-		"splint-armor":     "17 AC",
-		"plate-armor":      "18 AC",
+		"leather-armor":   "11 + Dex modifier",
+		"scale-mail":      "14 + Dex (max 2)",
+		"chain-mail":      "16 AC",
+		"chain-shirt":     "13 + Dex (max 2)",
+		"padded-armor":    "11 + Dex modifier",
+		"studded-leather": "12 + Dex modifier",
+		"hide-armor":      "12 + Dex (max 2)",
+		"ring-mail":       "14 AC",
+		"splint-armor":    "17 AC",
+		"plate-armor":     "18 AC",
 	}
-	
+
 	// Check weapon descriptions
 	if desc, ok := weaponDescs[key]; ok {
 		return desc
 	}
-	
+
 	// Check armor descriptions
 	if desc, ok := armorDescs[key]; ok {
 		return desc
 	}
-	
+
 	// Check by name if key didn't match
 	lowerName := strings.ToLower(name)
 	for k, v := range weaponDescs {
@@ -376,7 +376,7 @@ func (r *choiceResolver) getEquipmentDescription(key, name string) string {
 			return v
 		}
 	}
-	
+
 	return ""
 }
 
@@ -404,7 +404,7 @@ func (r *choiceResolver) flattenNestedChoice(classKey string, index int, choice 
 			},
 		}
 	}
-	
+
 	// Default: return the original with empty options
 	return SimplifiedChoice{
 		ID:          fmt.Sprintf("%s-prof-%d", classKey, index),

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
@@ -33,7 +33,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 			},
 		})
 	}
-	
+
 	// Find first active character
 	var playerChar *entities.Character
 	for _, char := range chars {
@@ -42,7 +42,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 			break
 		}
 	}
-	
+
 	if playerChar == nil {
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -52,7 +52,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 			},
 		})
 	}
-	
+
 	// Check if character is complete
 	if !playerChar.IsComplete() {
 		missingInfo := []string{}
@@ -68,20 +68,20 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 		if len(playerChar.Attributes) == 0 {
 			missingInfo = append(missingInfo, "ability scores")
 		}
-		
-		log.Printf("Character %s (ID: %s) is incomplete. Missing: %v", 
+
+		log.Printf("Character %s (ID: %s) is incomplete. Missing: %v",
 			playerChar.Name, playerChar.ID, missingInfo)
-		
+
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Your character is incomplete! Missing: %s\n\nPlease create a new character or contact an admin if this is an error.", 
+				Content: fmt.Sprintf("❌ Your character is incomplete! Missing: %s\n\nPlease create a new character or contact an admin if this is an error.",
 					strings.Join(missingInfo, ", ")),
-				Flags:   discordgo.MessageFlagsEphemeral,
+				Flags: discordgo.MessageFlagsEphemeral,
 			},
 		})
 	}
-	
+
 	// Join the session
 	_, err = h.services.SessionService.JoinSession(context.Background(), sessionID, i.Member.User.ID)
 	if err != nil {
@@ -93,7 +93,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 			},
 		})
 	}
-	
+
 	// Select character
 	err = h.services.SessionService.SelectCharacter(context.Background(), sessionID, i.Member.User.ID, playerChar.ID)
 	if err != nil {
@@ -105,10 +105,10 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 			},
 		})
 	}
-	
+
 	// Build character info
 	charInfo := fmt.Sprintf("%s (Level %d)", playerChar.GetDisplayInfo(), playerChar.Level)
-	
+
 	// Success response
 	embed := &discordgo.MessageEmbed{
 		Title:       "🎉 Joined the Party!",
@@ -132,7 +132,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 			},
 		},
 	}
-	
+
 	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{

@@ -14,30 +14,30 @@ import (
 
 // CharacterData represents the serialized form of a character in Redis
 type CharacterData struct {
-	ID                 string                               `json:"id"`
-	OwnerID            string                               `json:"owner_id"`
-	RealmID            string                               `json:"realm_id"`
-	Name               string                               `json:"name"`
-	Speed              int                                  `json:"speed"`
-	Race               *entities.Race                       `json:"race"`
-	Class              *entities.Class                      `json:"class"`
-	Background         *entities.Background                 `json:"background"`
-	Attributes         map[entities.Attribute]*entities.AbilityScore `json:"attributes"`
-	AbilityRolls       []entities.AbilityRoll               `json:"ability_rolls"`
-	AbilityAssignments map[string]string                    `json:"ability_assignments"`
+	ID                 string                                               `json:"id"`
+	OwnerID            string                                               `json:"owner_id"`
+	RealmID            string                                               `json:"realm_id"`
+	Name               string                                               `json:"name"`
+	Speed              int                                                  `json:"speed"`
+	Race               *entities.Race                                       `json:"race"`
+	Class              *entities.Class                                      `json:"class"`
+	Background         *entities.Background                                 `json:"background"`
+	Attributes         map[entities.Attribute]*entities.AbilityScore        `json:"attributes"`
+	AbilityRolls       []entities.AbilityRoll                               `json:"ability_rolls"`
+	AbilityAssignments map[string]string                                    `json:"ability_assignments"`
 	Proficiencies      map[entities.ProficiencyType][]*entities.Proficiency `json:"proficiencies"`
-	HitDie             int                                  `json:"hit_die"`
-	AC                 int                                  `json:"ac"`
-	MaxHitPoints       int                                  `json:"max_hit_points"`
-	CurrentHitPoints   int                                  `json:"current_hit_points"`
-	Level              int                                  `json:"level"`
-	Experience         int                                  `json:"experience"`
-	Status             entities.CharacterStatus             `json:"status"`
-	Features           []*entities.CharacterFeature         `json:"features"`
-	Inventory          map[entities.EquipmentType][]entities.Equipment `json:"inventory"`
-	EquippedSlots      map[entities.Slot]entities.Equipment `json:"equipped_slots"`
-	CreatedAt          time.Time                            `json:"created_at"`
-	UpdatedAt          time.Time                            `json:"updated_at"`
+	HitDie             int                                                  `json:"hit_die"`
+	AC                 int                                                  `json:"ac"`
+	MaxHitPoints       int                                                  `json:"max_hit_points"`
+	CurrentHitPoints   int                                                  `json:"current_hit_points"`
+	Level              int                                                  `json:"level"`
+	Experience         int                                                  `json:"experience"`
+	Status             entities.CharacterStatus                             `json:"status"`
+	Features           []*entities.CharacterFeature                         `json:"features"`
+	Inventory          map[entities.EquipmentType][]entities.Equipment      `json:"inventory"`
+	EquippedSlots      map[entities.Slot]entities.Equipment                 `json:"equipped_slots"`
+	CreatedAt          time.Time                                            `json:"created_at"`
+	UpdatedAt          time.Time                                            `json:"updated_at"`
 }
 
 // redisRepo implements the Repository interface using Redis
@@ -136,15 +136,15 @@ func (r *redisRepo) Create(ctx context.Context, character *entities.Character) e
 
 	// Store in Redis using pipeline for atomicity
 	pipe := r.client.Pipeline()
-	
+
 	// Store character data
 	pipe.Set(ctx, r.key(character.ID), jsonData, 0) // No expiration for finalized characters
-	
+
 	// Add to various index sets
 	pipe.SAdd(ctx, r.ownerCharactersKey(character.OwnerID), character.ID)
 	pipe.SAdd(ctx, r.realmCharactersKey(character.RealmID), character.ID)
 	pipe.SAdd(ctx, r.ownerRealmCharactersKey(character.OwnerID, character.RealmID), character.ID)
-	
+
 	// Execute pipeline
 	_, err = pipe.Exec(ctx)
 	if err != nil {
@@ -280,17 +280,17 @@ func (r *redisRepo) Update(ctx context.Context, character *entities.Character) e
 	// If owner or realm changed, update indexes
 	if existing.OwnerID != character.OwnerID || existing.RealmID != character.RealmID {
 		pipe := r.client.Pipeline()
-		
+
 		// Remove from old indexes
 		pipe.SRem(ctx, r.ownerCharactersKey(existing.OwnerID), character.ID)
 		pipe.SRem(ctx, r.realmCharactersKey(existing.RealmID), character.ID)
 		pipe.SRem(ctx, r.ownerRealmCharactersKey(existing.OwnerID, existing.RealmID), character.ID)
-		
+
 		// Add to new indexes
 		pipe.SAdd(ctx, r.ownerCharactersKey(character.OwnerID), character.ID)
 		pipe.SAdd(ctx, r.realmCharactersKey(character.RealmID), character.ID)
 		pipe.SAdd(ctx, r.ownerRealmCharactersKey(character.OwnerID, character.RealmID), character.ID)
-		
+
 		_, err = pipe.Exec(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to update character indexes: %w", err)
@@ -314,15 +314,15 @@ func (r *redisRepo) Delete(ctx context.Context, id string) error {
 
 	// Remove using pipeline
 	pipe := r.client.Pipeline()
-	
+
 	// Remove character data
 	pipe.Del(ctx, r.key(id))
-	
+
 	// Remove from index sets
 	pipe.SRem(ctx, r.ownerCharactersKey(character.OwnerID), id)
 	pipe.SRem(ctx, r.realmCharactersKey(character.RealmID), id)
 	pipe.SRem(ctx, r.ownerRealmCharactersKey(character.OwnerID, character.RealmID), id)
-	
+
 	// Execute pipeline
 	_, err = pipe.Exec(ctx)
 	if err != nil {
@@ -387,4 +387,3 @@ func (r *redisRepo) fromCharacterData(data *CharacterData) *entities.Character {
 		EquippedSlots:      data.EquippedSlots,
 	}
 }
-

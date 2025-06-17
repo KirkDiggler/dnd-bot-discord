@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	"github.com/bwmarrin/discordgo"
 )
 
 // RaceSelectHandler handles the race selection interaction
@@ -56,7 +56,7 @@ func (h *RaceSelectHandler) Handle(req *RaceSelectRequest) error {
 	if err != nil {
 		return h.respondWithError(req, "Failed to get character draft. Please try again.")
 	}
-	
+
 	// Update the draft with the selected race
 	updatedChar, err := h.characterService.UpdateDraftCharacter(context.Background(), draftChar.ID, &characterService.UpdateDraftInput{
 		RaceKey: &req.RaceKey,
@@ -170,8 +170,8 @@ func (h *RaceSelectHandler) buildRaceDetailsEmbed(race *entities.Race) *discordg
 
 	// Add step indicator
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-		Name:  "Progress",
-		Value: "✅ Step 1: Race\n⏳ Step 2: Class\n⏳ Step 3: Abilities\n⏳ Step 4: Details",
+		Name:   "Progress",
+		Value:  "✅ Step 1: Race\n⏳ Step 2: Class\n⏳ Step 3: Abilities\n⏳ Step 4: Details",
 		Inline: false,
 	})
 

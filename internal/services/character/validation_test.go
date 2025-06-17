@@ -21,7 +21,7 @@ func TestValidationSuite(t *testing.T) {
 func (s *ValidationTestSuite) TestCreateCharacterInput_Validate_NilInput() {
 	var input *character.CreateCharacterInput
 	err := character.ValidateInput(input)
-	
+
 	s.Error(err)
 	s.Contains(err.Error(), "CreateCharacterInput cannot be nil")
 }
@@ -29,7 +29,7 @@ func (s *ValidationTestSuite) TestCreateCharacterInput_Validate_NilInput() {
 func (s *ValidationTestSuite) TestCreateCharacterInput_Validate_NilReceiver() {
 	var input *character.CreateCharacterInput
 	err := input.Validate()
-	
+
 	s.Error(err)
 	s.Contains(err.Error(), "CreateCharacterInput cannot be nil")
 }
@@ -45,7 +45,7 @@ func (s *ValidationTestSuite) TestCreateCharacterInput_Validate_MissingUserID() 
 			"INT": 12, "WIS": 10, "CHA": 8,
 		},
 	}
-	
+
 	err := input.Validate()
 	s.Error(err)
 	s.Contains(err.Error(), "user ID is required")
@@ -63,7 +63,7 @@ func (s *ValidationTestSuite) TestCreateCharacterInput_Validate_EmptyName() {
 			"INT": 12, "WIS": 10, "CHA": 8,
 		},
 	}
-	
+
 	err := input.Validate()
 	s.Error(err)
 	s.Contains(err.Error(), "character name is required")
@@ -81,7 +81,7 @@ func (s *ValidationTestSuite) TestCreateCharacterInput_Validate_NameTooLong() {
 			"INT": 12, "WIS": 10, "CHA": 8,
 		},
 	}
-	
+
 	err := input.Validate()
 	s.Error(err)
 	s.Contains(err.Error(), "character name cannot exceed 50 characters")
@@ -100,7 +100,7 @@ func (s *ValidationTestSuite) TestCreateCharacterInput_Validate_MissingAbilitySc
 			// Missing CHA
 		},
 	}
-	
+
 	err := input.Validate()
 	s.Error(err)
 	s.Contains(err.Error(), "missing ability score for CHA")
@@ -114,12 +114,12 @@ func (s *ValidationTestSuite) TestCreateCharacterInput_Validate_ScoreTooLow() {
 		RaceKey:  "dwarf",
 		ClassKey: "fighter",
 		AbilityScores: map[string]int{
-			"STR": 2,  // Too low!
+			"STR": 2, // Too low!
 			"DEX": 14, "CON": 13,
 			"INT": 12, "WIS": 10, "CHA": 8,
 		},
 	}
-	
+
 	err := input.Validate()
 	s.Error(err)
 	s.Contains(err.Error(), "ability score for STR must be between 3 and 18, got 2")
@@ -138,7 +138,7 @@ func (s *ValidationTestSuite) TestCreateCharacterInput_Validate_ScoreTooHigh() {
 			"INT": 12, "WIS": 10, "CHA": 8,
 		},
 	}
-	
+
 	err := input.Validate()
 	s.Error(err)
 	s.Contains(err.Error(), "ability score for STR must be between 3 and 18, got 19")
@@ -158,7 +158,7 @@ func (s *ValidationTestSuite) TestCreateCharacterInput_Validate_Success() {
 		Proficiencies: []string{"skill-athletics", "skill-intimidation"},
 		Equipment:     []string{"chain-mail", "longsword"},
 	}
-	
+
 	err := input.Validate()
 	s.NoError(err)
 }
@@ -168,7 +168,7 @@ func (s *ValidationTestSuite) TestCreateCharacterInput_Validate_Success() {
 func (s *ValidationTestSuite) TestResolveChoicesInput_Validate_NilReceiver() {
 	var input *character.ResolveChoicesInput
 	err := input.Validate()
-	
+
 	s.Error(err)
 	s.Contains(err.Error(), "ResolveChoicesInput cannot be nil")
 }
@@ -178,7 +178,7 @@ func (s *ValidationTestSuite) TestResolveChoicesInput_Validate_EmptyRaceKey() {
 		RaceKey:  "",
 		ClassKey: "fighter",
 	}
-	
+
 	err := input.Validate()
 	s.Error(err)
 	s.Contains(err.Error(), "race key is required")
@@ -189,7 +189,7 @@ func (s *ValidationTestSuite) TestResolveChoicesInput_Validate_EmptyClassKey() {
 		RaceKey:  "human",
 		ClassKey: "",
 	}
-	
+
 	err := input.Validate()
 	s.Error(err)
 	s.Contains(err.Error(), "class key is required")
@@ -200,7 +200,7 @@ func (s *ValidationTestSuite) TestResolveChoicesInput_Validate_Success() {
 		RaceKey:  "human",
 		ClassKey: "fighter",
 	}
-	
+
 	err := input.Validate()
 	s.NoError(err)
 }
@@ -213,7 +213,7 @@ func (s *ValidationTestSuite) TestValidateCharacterInput_Validate_NilAbilityScor
 		ClassKey:      "fighter",
 		AbilityScores: nil,
 	}
-	
+
 	err := input.Validate()
 	s.Error(err)
 	s.Contains(err.Error(), "ability scores are required")
@@ -225,7 +225,7 @@ func (s *ValidationTestSuite) TestValidateCharacterInput_Validate_EmptyAbilitySc
 		ClassKey:      "fighter",
 		AbilityScores: map[string]int{},
 	}
-	
+
 	err := input.Validate()
 	s.Error(err)
 	s.Contains(err.Error(), "ability scores are required")
@@ -241,7 +241,7 @@ func (s *ValidationTestSuite) TestValidateCharacterInput_Validate_Success() {
 		},
 		Proficiencies: []string{"skill-athletics"},
 	}
-	
+
 	err := input.Validate()
 	s.NoError(err)
 }

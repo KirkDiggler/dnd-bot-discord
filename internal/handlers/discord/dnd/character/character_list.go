@@ -81,7 +81,7 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 		var sb strings.Builder
 		for _, char := range activeChars {
 			// Debug logging
-			fmt.Printf("Character %s (ID: %s) - Race: %v, Class: %v\n", 
+			fmt.Printf("Character %s (ID: %s) - Race: %v, Class: %v\n",
 				char.Name, char.ID, char.Race != nil, char.Class != nil)
 			sb.WriteString(fmt.Sprintf("**%s** - %s (Level %d)\n",
 				char.Name,
@@ -143,7 +143,7 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 
 	// Add components for quick actions
 	components := []discordgo.MessageComponent{}
-	
+
 	// Add show/edit buttons for active characters
 	if len(activeChars) > 0 {
 		var buttons []discordgo.MessageComponent
@@ -166,7 +166,7 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 				Components: buttons,
 			})
 		}
-		
+
 		// Add second row for edit buttons if we have any characters
 		var editButtons []discordgo.MessageComponent
 		for i, char := range activeChars {

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bwmarrin/discordgo"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	"github.com/bwmarrin/discordgo"
 )
 
 // SelectEquipmentHandler handles individual equipment selection
@@ -110,7 +110,7 @@ func (h *SelectEquipmentHandler) Handle(req *SelectEquipmentRequest) error {
 			Label: opt.Name,
 			Value: opt.Key,
 		}
-		
+
 		// Add description based on equipment type
 		if strings.Contains(opt.Key, "weapon") || strings.Contains(opt.Name, "sword") || strings.Contains(opt.Name, "axe") {
 			option.Description = h.getWeaponDescription(opt.Key)
@@ -163,22 +163,22 @@ func (h *SelectEquipmentHandler) Handle(req *SelectEquipmentRequest) error {
 func (h *SelectEquipmentHandler) getWeaponDescription(key string) string {
 	// Common weapon descriptions - in a real implementation, fetch from API
 	weaponDescriptions := map[string]string{
-		"longsword":       "1d8 slashing, versatile (1d10)",
-		"shortsword":      "1d6 piercing, finesse, light",
-		"battleaxe":       "1d8 slashing, versatile (1d10)",
-		"handaxe":         "1d6 slashing, light, thrown (20/60)",
-		"warhammer":       "1d8 bludgeoning, versatile (1d10)",
-		"mace":            "1d6 bludgeoning",
-		"greataxe":        "1d12 slashing, heavy, two-handed",
-		"greatsword":      "2d6 slashing, heavy, two-handed",
-		"rapier":          "1d8 piercing, finesse",
-		"scimitar":        "1d6 slashing, finesse, light",
-		"shortbow":        "1d6 piercing, range 80/320",
-		"longbow":         "1d8 piercing, range 150/600",
-		"light-crossbow":  "1d8 piercing, range 80/320",
-		"shield":          "+2 AC",
+		"longsword":      "1d8 slashing, versatile (1d10)",
+		"shortsword":     "1d6 piercing, finesse, light",
+		"battleaxe":      "1d8 slashing, versatile (1d10)",
+		"handaxe":        "1d6 slashing, light, thrown (20/60)",
+		"warhammer":      "1d8 bludgeoning, versatile (1d10)",
+		"mace":           "1d6 bludgeoning",
+		"greataxe":       "1d12 slashing, heavy, two-handed",
+		"greatsword":     "2d6 slashing, heavy, two-handed",
+		"rapier":         "1d8 piercing, finesse",
+		"scimitar":       "1d6 slashing, finesse, light",
+		"shortbow":       "1d6 piercing, range 80/320",
+		"longbow":        "1d8 piercing, range 150/600",
+		"light-crossbow": "1d8 piercing, range 80/320",
+		"shield":         "+2 AC",
 	}
-	
+
 	if desc, ok := weaponDescriptions[key]; ok {
 		return desc
 	}
@@ -189,18 +189,18 @@ func (h *SelectEquipmentHandler) getWeaponDescription(key string) string {
 func (h *SelectEquipmentHandler) getArmorDescription(key string) string {
 	// Common armor descriptions
 	armorDescriptions := map[string]string{
-		"leather-armor":    "11 + Dex modifier",
-		"scale-mail":       "14 + Dex (max 2)",
-		"chain-mail":       "16 AC",
-		"chain-shirt":      "13 + Dex (max 2)",
-		"padded-armor":     "11 + Dex modifier",
-		"studded-leather":  "12 + Dex modifier",
-		"hide-armor":       "12 + Dex (max 2)",
-		"ring-mail":        "14 AC",
-		"splint-armor":     "17 AC",
-		"plate-armor":      "18 AC",
+		"leather-armor":   "11 + Dex modifier",
+		"scale-mail":      "14 + Dex (max 2)",
+		"chain-mail":      "16 AC",
+		"chain-shirt":     "13 + Dex (max 2)",
+		"padded-armor":    "11 + Dex modifier",
+		"studded-leather": "12 + Dex modifier",
+		"hide-armor":      "12 + Dex (max 2)",
+		"ring-mail":       "14 AC",
+		"splint-armor":    "17 AC",
+		"plate-armor":     "18 AC",
 	}
-	
+
 	if desc, ok := armorDescriptions[key]; ok {
 		return desc
 	}
@@ -215,12 +215,12 @@ func (h *SelectEquipmentHandler) continueToCharacterDetails(req *SelectEquipment
 		RaceKey:     req.RaceKey,
 		ClassKey:    req.ClassKey,
 	}
-	
+
 	// Get the handler and call it
 	handler := NewCharacterDetailsHandler(&CharacterDetailsHandlerConfig{
 		CharacterService: h.characterService,
 	})
-	
+
 	return handler.Handle(detailsReq)
 }
 

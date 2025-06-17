@@ -21,7 +21,7 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 	// Setup mocks
 	mockRepo := mockcharrepo.NewMockRepository(ctrl)
 	mockClient := mockdnd5e.NewMockClient(ctrl)
-	
+
 	// Create service
 	svc := character.NewService(&character.ServiceConfig{
 		DNDClient:  mockClient,
@@ -46,11 +46,11 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 			Inventory:     make(map[entities.EquipmentType][]entities.Equipment),
 			EquippedSlots: make(map[entities.Slot]entities.Equipment),
 		}
-		
+
 		mockRepo.EXPECT().
 			GetByOwnerAndRealm(ctx, userID, realmID).
 			Return([]*entities.Character{}, nil)
-		
+
 		mockRepo.EXPECT().
 			Create(ctx, gomock.Any()).
 			DoAndReturn(func(ctx context.Context, char *entities.Character) error {
@@ -60,24 +60,24 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 				*draftChar = *char
 				return nil
 			})
-		
+
 		draft, err := svc.GetOrCreateDraftCharacter(ctx, userID, realmID)
 		require.NoError(t, err)
 		assert.NotNil(t, draft)
-		
+
 		// Step 2: Update with race and class
 		race := testutils.CreateTestRace("human", "Human")
 		class := testutils.CreateTestClass("fighter", "Fighter", 10)
-		
+
 		mockClient.EXPECT().GetRace("human").Return(race, nil)
 		mockClient.EXPECT().GetClass("fighter").Return(class, nil)
-		
+
 		// Mock the repository Get and Update calls
 		mockRepo.EXPECT().
 			Get(ctx, draft.ID).
 			Return(draftChar, nil).
 			Times(2) // Called twice: once for race/class update, once for ability scores
-		
+
 		mockRepo.EXPECT().
 			Update(ctx, gomock.Any()).
 			DoAndReturn(func(ctx context.Context, char *entities.Character) error {
@@ -90,7 +90,7 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 				return nil
 			}).
 			Times(2) // Called twice: once for race/class, once for abilities
-		
+
 		// Update race and class
 		raceKey := "human"
 		classKey := "fighter"
@@ -99,7 +99,7 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 			ClassKey: &classKey,
 		})
 		require.NoError(t, err)
-		
+
 		// Step 3: Set ability scores
 		abilityScores := map[string]int{
 			"STR": 15,
@@ -109,17 +109,17 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 			"WIS": 10,
 			"CHA": 8,
 		}
-		
+
 		_, err = svc.UpdateDraftCharacter(ctx, draft.ID, &character.UpdateDraftInput{
 			AbilityScores: abilityScores,
 		})
 		require.NoError(t, err)
-		
+
 		// Step 4: Add proficiencies
 		mockRepo.EXPECT().
 			Get(ctx, draft.ID).
 			Return(draftChar, nil)
-		
+
 		mockClient.EXPECT().
 			GetProficiency("skill-athletics").
 			Return(&entities.Proficiency{
@@ -127,7 +127,7 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 				Name: "Athletics",
 				Type: entities.ProficiencyTypeSkill,
 			}, nil)
-		
+
 		mockClient.EXPECT().
 			GetProficiency("skill-intimidation").
 			Return(&entities.Proficiency{
@@ -135,7 +135,7 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 				Name: "Intimidation",
 				Type: entities.ProficiencyTypeSkill,
 			}, nil)
-		
+
 		mockRepo.EXPECT().
 			Update(ctx, gomock.Any()).
 			DoAndReturn(func(ctx context.Context, char *entities.Character) error {
@@ -144,17 +144,17 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 				*draftChar = *char
 				return nil
 			})
-		
+
 		_, err = svc.UpdateDraftCharacter(ctx, draft.ID, &character.UpdateDraftInput{
 			Proficiencies: []string{"skill-athletics", "skill-intimidation"},
 		})
 		require.NoError(t, err)
-		
+
 		// Step 5: Add equipment
 		mockRepo.EXPECT().
 			Get(ctx, draft.ID).
 			Return(draftChar, nil)
-		
+
 		mockClient.EXPECT().
 			GetEquipment("longsword").
 			Return(&entities.Weapon{
@@ -165,7 +165,7 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
 			}, nil)
-		
+
 		mockClient.EXPECT().
 			GetEquipment("chain-mail").
 			Return(&entities.Armor{
@@ -178,7 +178,7 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 					Base: 16,
 				},
 			}, nil)
-		
+
 		mockRepo.EXPECT().
 			Update(ctx, gomock.Any()).
 			DoAndReturn(func(ctx context.Context, char *entities.Character) error {
@@ -187,19 +187,19 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 				*draftChar = *char
 				return nil
 			})
-		
+
 		_, err = svc.UpdateDraftCharacter(ctx, draft.ID, &character.UpdateDraftInput{
 			Equipment: []string{"longsword", "chain-mail"},
 		})
 		require.NoError(t, err)
-		
+
 		// Step 6: Set name and finalize
 		charName := "Thorin Ironforge"
 		mockRepo.EXPECT().
 			Get(ctx, draft.ID).
 			Return(draftChar, nil).
 			Times(2) // Once for name update, once for finalize
-		
+
 		mockRepo.EXPECT().
 			Update(ctx, gomock.Any()).
 			DoAndReturn(func(ctx context.Context, char *entities.Character) error {
@@ -214,12 +214,12 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 				return nil
 			}).
 			Times(2) // Once for name, once for status
-		
+
 		_, err = svc.UpdateDraftCharacter(ctx, draft.ID, &character.UpdateDraftInput{
 			Name: &charName,
 		})
 		require.NoError(t, err)
-		
+
 		// Finalize the character
 		finalChar, err := svc.FinalizeDraftCharacter(ctx, draft.ID)
 		require.NoError(t, err)
@@ -240,7 +240,7 @@ func TestCharacterValidation_Integration(t *testing.T) {
 		missing   []string
 	}{
 		{
-			name: "complete character",
+			name:      "complete character",
 			character: testutils.CreateTestCharacter("char1", "user1", "realm1", "Test Character"),
 			wantValid: true,
 			missing:   []string{},
@@ -290,7 +290,7 @@ func TestCharacterValidation_Integration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			isComplete := tt.character.IsComplete()
 			assert.Equal(t, tt.wantValid, isComplete)
-			
+
 			// Verify the character can provide display info even if incomplete
 			displayInfo := tt.character.GetDisplayInfo()
 			assert.NotEmpty(t, displayInfo)

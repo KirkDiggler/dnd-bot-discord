@@ -80,13 +80,13 @@ func WaitForRedis(addr string, timeout time.Duration) error {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		err := client.Ping(ctx).Err()
 		cancel()
-		
+
 		if err == nil {
 			return nil
 		}
-		
+
 		time.Sleep(100 * time.Millisecond)
 	}
-	
+
 	return fmt.Errorf("redis not ready after %v", timeout)
 }

@@ -3,7 +3,7 @@ package session
 import (
 	"context"
 	"fmt"
-	
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
 )
@@ -37,7 +37,7 @@ func (h *LeaveHandler) Handle(req *LeaveRequest) error {
 				},
 			})
 		}
-		
+
 		// Leave all sessions
 		leftCount := 0
 		for _, sess := range activeSessions {
@@ -46,7 +46,7 @@ func (h *LeaveHandler) Handle(req *LeaveRequest) error {
 				leftCount++
 			}
 		}
-		
+
 		return req.Session.InteractionRespond(req.Interaction.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -55,7 +55,7 @@ func (h *LeaveHandler) Handle(req *LeaveRequest) error {
 			},
 		})
 	}
-	
+
 	// Leave specific session
 	err := h.services.SessionService.LeaveSession(context.Background(), req.SessionID, req.Interaction.Member.User.ID)
 	if err != nil {
@@ -67,7 +67,7 @@ func (h *LeaveHandler) Handle(req *LeaveRequest) error {
 			},
 		})
 	}
-	
+
 	return req.Session.InteractionRespond(req.Interaction.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{

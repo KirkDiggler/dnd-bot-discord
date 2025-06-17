@@ -1,3 +1,4 @@
+//go:build skip
 // +build skip
 
 package character_test
@@ -12,29 +13,29 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
-	mockcharacters "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	mockcharacters "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
 )
 
 // EquipmentHandlersTestSuite tests the Discord equipment handlers
 type EquipmentHandlersTestSuite struct {
 	suite.Suite
-	ctrl                *gomock.Controller
+	ctrl                 *gomock.Controller
 	mockCharacterService *mockcharacters.MockService
-	mockSession         *discordgo.Session
-	mockInteraction     *discordgo.InteractionCreate
+	mockSession          *discordgo.Session
+	mockInteraction      *discordgo.InteractionCreate
 }
 
 // SetupTest runs before each test
 func (s *EquipmentHandlersTestSuite) SetupTest() {
 	s.ctrl = gomock.NewController(s.T())
 	s.mockCharacterService = mockcharacters.NewMockService(s.ctrl)
-	
+
 	// Setup mock Discord session
 	s.mockSession = &discordgo.Session{
 		State: &discordgo.State{},
 	}
-	
+
 	// Setup mock interaction
 	s.mockInteraction = &discordgo.InteractionCreate{
 		Interaction: &discordgo.Interaction{
@@ -72,20 +73,20 @@ func (s *EquipmentHandlersTestSuite) TestEquipmentChoicesHandler_WithChoices() {
 	handler := character.NewEquipmentChoicesHandler(&character.EquipmentChoicesHandlerConfig{
 		CharacterService: s.mockCharacterService,
 	})
-	
+
 	req := &character.EquipmentChoicesRequest{
 		Session:     s.mockSession,
 		Interaction: s.mockInteraction,
 		RaceKey:     "human",
 		ClassKey:    "fighter",
 	}
-	
+
 	// Mock expectations
 	mockRace := &entities.Race{
 		Key:  "human",
 		Name: "Human",
 	}
-	
+
 	mockClass := &entities.Class{
 		Key:  "fighter",
 		Name: "Fighter",
@@ -99,7 +100,7 @@ func (s *EquipmentHandlersTestSuite) TestEquipmentChoicesHandler_WithChoices() {
 			},
 		},
 	}
-	
+
 	mockChoices := &characterService.ResolveChoicesOutput{
 		EquipmentChoices: []characterService.SimplifiedChoice{
 			{
@@ -122,18 +123,18 @@ func (s *EquipmentHandlersTestSuite) TestEquipmentChoicesHandler_WithChoices() {
 			},
 		},
 	}
-	
+
 	s.mockCharacterService.EXPECT().GetRace(gomock.Any(), "human").Return(mockRace, nil)
 	s.mockCharacterService.EXPECT().GetClass(gomock.Any(), "fighter").Return(mockClass, nil)
 	s.mockCharacterService.EXPECT().ResolveChoices(gomock.Any(), &characterService.ResolveChoicesInput{
 		RaceKey:  "human",
 		ClassKey: "fighter",
 	}).Return(mockChoices, nil)
-	
+
 	// Mock Discord API calls - we can't easily mock these, so we'll check the error
 	// In a real test environment, you'd mock the Discord API client
 	err := handler.Handle(req)
-	
+
 	// The error would be from Discord API, which we're not mocking
 	s.Error(err) // Expected since we're not mocking Discord API responses
 }
@@ -144,20 +145,20 @@ func (s *EquipmentHandlersTestSuite) TestEquipmentChoicesHandler_NoChoices() {
 	handler := character.NewEquipmentChoicesHandler(&character.EquipmentChoicesHandlerConfig{
 		CharacterService: s.mockCharacterService,
 	})
-	
+
 	req := &character.EquipmentChoicesRequest{
 		Session:     s.mockSession,
 		Interaction: s.mockInteraction,
 		RaceKey:     "human",
 		ClassKey:    "monk",
 	}
-	
+
 	// Mock expectations
 	mockRace := &entities.Race{
 		Key:  "human",
 		Name: "Human",
 	}
-	
+
 	mockClass := &entities.Class{
 		Key:  "monk",
 		Name: "Monk",
@@ -171,21 +172,21 @@ func (s *EquipmentHandlersTestSuite) TestEquipmentChoicesHandler_NoChoices() {
 			},
 		},
 	}
-	
+
 	mockChoices := &characterService.ResolveChoicesOutput{
 		EquipmentChoices: []characterService.SimplifiedChoice{}, // No choices
 	}
-	
+
 	s.mockCharacterService.EXPECT().GetRace(gomock.Any(), "human").Return(mockRace, nil)
 	s.mockCharacterService.EXPECT().GetClass(gomock.Any(), "monk").Return(mockClass, nil)
 	s.mockCharacterService.EXPECT().ResolveChoices(gomock.Any(), &characterService.ResolveChoicesInput{
 		RaceKey:  "human",
 		ClassKey: "monk",
 	}).Return(mockChoices, nil)
-	
+
 	// Execute
 	err := handler.Handle(req)
-	
+
 	// The error would be from Discord API, which we're not mocking
 	s.Error(err) // Expected since we're not mocking Discord API responses
 }
@@ -196,20 +197,20 @@ func (s *EquipmentHandlersTestSuite) TestEquipmentChoicesHandler_ServiceErrors()
 	handler := character.NewEquipmentChoicesHandler(&character.EquipmentChoicesHandlerConfig{
 		CharacterService: s.mockCharacterService,
 	})
-	
+
 	req := &character.EquipmentChoicesRequest{
 		Session:     s.mockSession,
 		Interaction: s.mockInteraction,
 		RaceKey:     "invalid",
 		ClassKey:    "fighter",
 	}
-	
+
 	// Mock race fetch error
 	s.mockCharacterService.EXPECT().GetRace(gomock.Any(), "invalid").Return(nil, fmt.Errorf("race not found"))
-	
+
 	// Execute
 	err := handler.Handle(req)
-	
+
 	// The error would be from Discord API, which we're not mocking
 	s.Error(err) // Expected since we're not mocking Discord API responses
 }

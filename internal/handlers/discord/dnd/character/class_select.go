@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	"github.com/bwmarrin/discordgo"
 )
 
 // ClassSelectHandler handles the class selection interaction
@@ -57,7 +57,7 @@ func (h *ClassSelectHandler) Handle(req *ClassSelectRequest) error {
 	if err != nil {
 		return h.respondWithError(req, "Failed to get character draft. Please try again.")
 	}
-	
+
 	// Update the draft with the selected class
 	updatedChar, err := h.characterService.UpdateDraftCharacter(context.Background(), draftChar.ID, &characterService.UpdateDraftInput{
 		ClassKey: &req.ClassKey,
@@ -65,7 +65,7 @@ func (h *ClassSelectHandler) Handle(req *ClassSelectRequest) error {
 	if err != nil {
 		return h.respondWithError(req, "Failed to update character class. Please try again.")
 	}
-	
+
 	// Use the updated character for display
 	race := updatedChar.Race
 	class := updatedChar.Class
@@ -162,7 +162,7 @@ func (h *ClassSelectHandler) buildSummaryEmbed(race *entities.Race, class *entit
 	// Race details
 	raceDetails := []string{}
 	raceDetails = append(raceDetails, fmt.Sprintf("Speed: %d feet", race.Speed))
-	
+
 	if len(race.AbilityBonuses) > 0 {
 		bonuses := []string{}
 		for _, bonus := range race.AbilityBonuses {

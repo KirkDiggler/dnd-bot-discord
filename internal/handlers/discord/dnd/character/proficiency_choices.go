@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bwmarrin/discordgo"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	"github.com/bwmarrin/discordgo"
 )
 
 // ProficiencyChoicesHandler handles proficiency selection
@@ -46,7 +46,7 @@ func (h *ProficiencyChoicesHandler) Handle(req *ProficiencyChoicesRequest) error
 	if err != nil {
 		return fmt.Errorf("failed to acknowledge interaction: %w", err)
 	}
-	
+
 	// Use character service to resolve choices
 	choices, err := h.characterService.ResolveChoices(context.Background(), &characterService.ResolveChoicesInput{
 		RaceKey:  req.RaceKey,
@@ -97,25 +97,25 @@ func (h *ProficiencyChoicesHandler) Handle(req *ProficiencyChoicesRequest) error
 
 	// Show proficiency choices from service
 	hasChoices := len(choices.ProficiencyChoices) > 0
-	
+
 	for _, choice := range choices.ProficiencyChoices {
 		choiceDesc := fmt.Sprintf("Choose %d from %d options", choice.Choose, len(choice.Options))
 		if choice.Description != "" {
 			choiceDesc = choice.Description
 		}
-		
+
 		// Show choice type icon
 		icon := "🎯"
 		if strings.Contains(choice.ID, "race") || strings.Contains(strings.ToLower(choice.Name), "racial") {
 			icon = "🏃"
 		}
-		
+
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   fmt.Sprintf("%s %s", icon, choice.Name),
 			Value:  choiceDesc,
 			Inline: false,
 		})
-		
+
 		fmt.Printf("DEBUG: Proficiency choice: %s (%d options)\n", choice.Name, len(choice.Options))
 	}
 

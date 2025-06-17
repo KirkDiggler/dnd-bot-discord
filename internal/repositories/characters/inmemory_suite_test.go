@@ -46,7 +46,7 @@ func (s *InMemoryRepositoryTestSuite) TestCreate_Success() {
 
 	// Assert
 	s.NoError(err)
-	
+
 	// Verify by getting the character
 	gotChar, err := s.repo.Get(s.ctx, "char_123")
 	s.NoError(err)
@@ -144,7 +144,7 @@ func (s *InMemoryRepositoryTestSuite) TestGet_ReturnsCopy() {
 	// Get character twice
 	gotChar1, err := s.repo.Get(s.ctx, "char_123")
 	s.NoError(err)
-	
+
 	gotChar2, err := s.repo.Get(s.ctx, "char_123")
 	s.NoError(err)
 
@@ -190,7 +190,7 @@ func (s *InMemoryRepositoryTestSuite) TestGetByOwner_Success() {
 	// Assert
 	s.NoError(err)
 	s.Len(results, 2)
-	
+
 	// Check names
 	names := []string{results[0].Name, results[1].Name}
 	s.Contains(names, "Thorin")
@@ -241,7 +241,7 @@ func (s *InMemoryRepositoryTestSuite) TestGetByOwnerAndRealm_Success() {
 	// Assert
 	s.NoError(err)
 	s.Len(results, 2)
-	
+
 	// Check names
 	names := []string{results[0].Name, results[1].Name}
 	s.Contains(names, "Thorin")
@@ -266,7 +266,7 @@ func (s *InMemoryRepositoryTestSuite) TestUpdate_Success() {
 
 	// Assert
 	s.NoError(err)
-	
+
 	// Verify update
 	gotChar, err := s.repo.Get(s.ctx, "char_123")
 	s.NoError(err)
@@ -307,7 +307,7 @@ func (s *InMemoryRepositoryTestSuite) TestDelete_Success() {
 
 	// Assert
 	s.NoError(err)
-	
+
 	// Verify deletion
 	_, err = s.repo.Get(s.ctx, "char_123")
 	s.Error(err)

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
@@ -49,7 +49,7 @@ func (h *AddMonsterHandler) Handle(req *AddMonsterRequest) error {
 
 	// For now, use the first active session
 	session := sessions[0]
-	
+
 	// Check if user is DM
 	member, exists := session.Members[req.Interaction.Member.User.ID]
 	if !exists || member.Role != entities.SessionRoleDM {
@@ -71,7 +71,7 @@ func (h *AddMonsterHandler) Handle(req *AddMonsterRequest) error {
 			Description: "Combat encounter",
 			UserID:      req.Interaction.Member.User.ID,
 		}
-		
+
 		activeEncounter, err = h.services.EncounterService.CreateEncounter(context.Background(), encounterInput)
 		if err != nil {
 			content := fmt.Sprintf("❌ Failed to create encounter: %v", err)
@@ -95,7 +95,7 @@ func (h *AddMonsterHandler) Handle(req *AddMonsterRequest) error {
 	// For now, we'll use some common monsters as examples
 	// In a real implementation, this would search the D&D API
 	monsterOptions := h.getCommonMonsters(searchQuery)
-	
+
 	if len(monsterOptions) == 0 {
 		content := fmt.Sprintf("❌ No monsters found matching '%s'", req.Query)
 		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
@@ -191,7 +191,7 @@ func (h *AddMonsterHandler) Handle(req *AddMonsterRequest) error {
 
 	// Store monster options in session state for later retrieval
 	// For now, we'll encode them in the interaction response
-	
+
 	_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
 		Content:    &content,
 		Components: &components,

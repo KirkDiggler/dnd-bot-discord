@@ -45,7 +45,7 @@ type Character struct {
 	Background         *Background
 	Attributes         map[Attribute]*AbilityScore
 	Rolls              []*dice.RollResult
-	AbilityRolls       []AbilityRoll // New field for ability score rolls with IDs
+	AbilityRolls       []AbilityRoll     // New field for ability score rolls with IDs
 	AbilityAssignments map[string]string // Maps ability name (STR, DEX, etc.) to roll ID
 	Proficiencies      map[ProficiencyType][]*Proficiency
 	ProficiencyChoices []*Choice
@@ -195,7 +195,7 @@ func (c *Character) calculateAC() {
 	// This will be called from the service layer which has access to features package
 	// For now, keep the basic calculation
 	c.AC = 10
-	
+
 	// First, check for body armor which sets the base AC
 	if bodyArmor := c.EquippedSlots[SlotBody]; bodyArmor != nil {
 		if bodyArmor.GetEquipmentType() == "Armor" {
@@ -209,7 +209,7 @@ func (c *Character) calculateAC() {
 			}
 		}
 	}
-	
+
 	// Then add bonuses from other armor pieces (like shields)
 	for slot, e := range c.EquippedSlots {
 		if e == nil || slot == SlotBody {
@@ -364,7 +364,7 @@ func (c *Character) GetDisplayInfo() string {
 	if c == nil {
 		return "Unknown Character"
 	}
-	
+
 	if c.Race != nil && c.Class != nil {
 		return fmt.Sprintf("%s %s", c.Race.Name, c.Class.Name)
 	} else if c.Race != nil {

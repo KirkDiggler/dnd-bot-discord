@@ -30,11 +30,11 @@ func DecodeCharacterCreationState(encoded string) (*CharacterCreationState, erro
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode base64: %w", err)
 	}
-	
+
 	var state CharacterCreationState
 	if err := json.Unmarshal(data, &state); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal state: %w", err)
 	}
-	
+
 	return &state, nil
 }

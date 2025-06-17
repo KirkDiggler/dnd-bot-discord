@@ -6,7 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"strings"
-	
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
@@ -36,7 +36,7 @@ func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 			},
 		})
 	}
-	
+
 	// Check if user is in the session
 	if !sess.IsUserInSession(i.Member.User.ID) {
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -47,7 +47,7 @@ func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 			},
 		})
 	}
-	
+
 	// Handle based on room type
 	switch RoomType(roomType) {
 	case RoomTypeCombat:
@@ -87,20 +87,20 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		}
 	}
 	fmt.Printf("Combat room - Difficulty: %s, Room Number: %d\n", difficulty, roomNumber)
-	
+
 	// Generate a combat room
 	room := h.generateCombatRoom(difficulty, roomNumber)
-	
+
 	// Create encounter
 	botID := s.State.User.ID
 	log.Printf("Creating encounter - Bot ID: %s, Session ID: %s", botID, sess.ID)
-	
+
 	// Log session members
 	log.Printf("Current session members:")
 	for userID, member := range sess.Members {
 		log.Printf("  - User %s: Role=%s", userID, member.Role)
 	}
-	
+
 	encounterInput := &encounter.CreateEncounterInput{
 		SessionID:   sess.ID,
 		ChannelID:   i.ChannelID,
@@ -108,7 +108,7 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		Description: room.Description,
 		UserID:      botID, // Bot manages the encounter
 	}
-	
+
 	enc, err := h.services.EncounterService.CreateEncounter(context.Background(), encounterInput)
 	if err != nil {
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -119,7 +119,7 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 			},
 		})
 	}
-	
+
 	// Add all party members to encounter
 	for userID, member := range sess.Members {
 		if member.CharacterID != "" {
@@ -130,7 +130,7 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 			}
 		}
 	}
-	
+
 	// Add monsters from room
 	for _, monsterName := range room.Monsters {
 		if monster := h.getMonster(monsterName); monster != nil {
@@ -140,7 +140,7 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 			}
 		}
 	}
-	
+
 	// Roll initiative
 	err = h.services.EncounterService.RollInitiative(context.Background(), enc.ID, botID)
 	if err != nil {
@@ -152,7 +152,7 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 			},
 		})
 	}
-	
+
 	// Start combat
 	err = h.services.EncounterService.StartEncounter(context.Background(), enc.ID, botID)
 	if err != nil {
@@ -164,10 +164,10 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 			},
 		})
 	}
-	
+
 	// Get updated encounter
 	enc, _ = h.services.EncounterService.GetEncounter(context.Background(), enc.ID)
-	
+
 	// Build combat display
 	embed := &discordgo.MessageEmbed{
 		Title:       fmt.Sprintf("⚔️ Combat: %s", room.Name),
@@ -175,7 +175,7 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		Color:       0xe74c3c, // Red
 		Fields:      []*discordgo.MessageEmbedField{},
 	}
-	
+
 	// Show enemies
 	var enemyList strings.Builder
 	for _, combatant := range enc.Combatants {
@@ -188,7 +188,7 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		Value:  enemyList.String(),
 		Inline: false,
 	})
-	
+
 	// Show turn order
 	var turnOrder strings.Builder
 	for i, combatantID := range enc.TurnOrder {
@@ -205,7 +205,7 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		Value:  turnOrder.String(),
 		Inline: false,
 	})
-	
+
 	// Combat buttons
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
@@ -231,7 +231,7 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 			},
 		},
 	}
-	
+
 	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
@@ -255,7 +255,7 @@ func (h *EnterRoomHandler) handlePuzzleRoom(s *discordgo.Session, i *discordgo.I
 			},
 		},
 	}
-	
+
 	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
@@ -278,7 +278,7 @@ func (h *EnterRoomHandler) handleTrapRoom(s *discordgo.Session, i *discordgo.Int
 			},
 		},
 	}
-	
+
 	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
@@ -301,7 +301,7 @@ func (h *EnterRoomHandler) handleTreasureRoom(s *discordgo.Session, i *discordgo
 			},
 		},
 	}
-	
+
 	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
@@ -324,7 +324,7 @@ func (h *EnterRoomHandler) handleRestRoom(s *discordgo.Session, i *discordgo.Int
 			},
 		},
 	}
-	
+
 	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
@@ -336,7 +336,7 @@ func (h *EnterRoomHandler) handleRestRoom(s *discordgo.Session, i *discordgo.Int
 // getMonster returns a predefined monster by name
 func (h *EnterRoomHandler) getMonster(name string) *encounter.AddMonsterInput {
 	name = strings.ToLower(name)
-	
+
 	monsters := map[string]*encounter.AddMonsterInput{
 		"goblin": {
 			Name:            "Goblin",
@@ -451,7 +451,7 @@ func (h *EnterRoomHandler) getMonster(name string) *encounter.AddMonsterInput {
 			},
 		},
 	}
-	
+
 	return monsters[name]
 }
 
@@ -466,9 +466,9 @@ func (h *EnterRoomHandler) generateCombatRoom(difficulty string, roomNumber int)
 		{"Goblin Warren", "The stench is overwhelming. Crude weapons and bones litter the floor."},
 		{"Spider's Den", "Thick webs cover every surface. Multiple eyes gleam from the shadows."},
 	}
-	
+
 	selected := rooms[rand.Intn(len(rooms))]
-	
+
 	// Determine monsters based on difficulty
 	var monsters []string
 	switch difficulty {
@@ -481,13 +481,13 @@ func (h *EnterRoomHandler) generateCombatRoom(difficulty string, roomNumber int)
 	default:
 		monsters = []string{"goblin"}
 	}
-	
+
 	// Scale with room number
 	extraMonsters := roomNumber / 3
 	for i := 0; i < extraMonsters; i++ {
 		monsters = append(monsters, monsters[rand.Intn(len(monsters))])
 	}
-	
+
 	return &Room{
 		Type:        RoomTypeCombat,
 		Name:        selected.name,

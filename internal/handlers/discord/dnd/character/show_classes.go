@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/bwmarrin/discordgo"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	"github.com/bwmarrin/discordgo"
 )
 
 // ShowClassesHandler handles showing the class selection after race is chosen
@@ -94,8 +94,8 @@ func (h *ShowClassesHandler) Handle(req *ShowClassesRequest) error {
 				Value: "Select your character's class from the dropdown below.",
 			},
 			{
-				Name:  "Progress",
-				Value: "✅ Step 1: Race\n⏳ Step 2: Class\n⏳ Step 3: Abilities\n⏳ Step 4: Details",
+				Name:   "Progress",
+				Value:  "✅ Step 1: Race\n⏳ Step 2: Class\n⏳ Step 3: Abilities\n⏳ Step 4: Details",
 				Inline: false,
 			},
 		},

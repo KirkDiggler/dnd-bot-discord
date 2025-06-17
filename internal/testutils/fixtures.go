@@ -49,16 +49,16 @@ func CreateTestClass(key, name string, hitDie int) *entities.Class {
 // CreateTestCharacter creates a fully formed test character
 func CreateTestCharacter(id, ownerID, realmID, name string) *entities.Character {
 	char := &entities.Character{
-		ID:       id,
-		OwnerID:  ownerID,
-		RealmID:  realmID,
-		Name:     name,
-		Race:     CreateTestRace("human", "Human"),
-		Class:    CreateTestClass("fighter", "Fighter", 10),
-		Level:    1,
-		Status:   entities.CharacterStatusActive,
-		HitDie:   10,
-		Speed:    30,
+		ID:      id,
+		OwnerID: ownerID,
+		RealmID: realmID,
+		Name:    name,
+		Race:    CreateTestRace("human", "Human"),
+		Class:   CreateTestClass("fighter", "Fighter", 10),
+		Level:   1,
+		Status:  entities.CharacterStatusActive,
+		HitDie:  10,
+		Speed:   30,
 		Attributes: map[entities.Attribute]*entities.AbilityScore{
 			entities.AttributeStrength:     {Score: 16, Bonus: 3},
 			entities.AttributeDexterity:    {Score: 14, Bonus: 2},
@@ -75,10 +75,10 @@ func CreateTestCharacter(id, ownerID, realmID, name string) *entities.Character 
 		EquippedSlots:    make(map[entities.Slot]entities.Equipment),
 		Features:         []*entities.CharacterFeature{},
 	}
-	
+
 	// Set hit points based on constitution
 	char.SetHitpoints()
-	
+
 	return char
 }
 
@@ -91,7 +91,7 @@ func CreateTestProficiencyChoice(name string, count int, options []string) *enti
 		Count:   count,
 		Options: make([]entities.Option, len(options)),
 	}
-	
+
 	for i, opt := range options {
 		choice.Options[i] = &entities.ReferenceOption{
 			Reference: &entities.ReferenceItem{
@@ -100,7 +100,7 @@ func CreateTestProficiencyChoice(name string, count int, options []string) *enti
 			},
 		}
 	}
-	
+
 	return choice
 }
 
@@ -113,7 +113,7 @@ func CreateTestEquipmentChoice(name string, count int, options []string) *entiti
 		Count:   count,
 		Options: make([]entities.Option, len(options)),
 	}
-	
+
 	for i, opt := range options {
 		choice.Options[i] = &entities.CountedReferenceOption{
 			Count: 1,
@@ -123,7 +123,7 @@ func CreateTestEquipmentChoice(name string, count int, options []string) *entiti
 			},
 		}
 	}
-	
+
 	return choice
 }
 

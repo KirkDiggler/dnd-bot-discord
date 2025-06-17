@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
+	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
-	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 )

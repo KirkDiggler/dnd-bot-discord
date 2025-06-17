@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/bwmarrin/discordgo"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	"github.com/bwmarrin/discordgo"
 )
 
 // SelectNestedEquipmentHandler handles nested equipment selection (e.g., choosing martial weapons)
@@ -88,12 +88,12 @@ func (h *SelectNestedEquipmentHandler) Handle(req *SelectNestedEquipmentRequest)
 		if equip == nil {
 			continue
 		}
-		
+
 		option := discordgo.SelectMenuOption{
 			Label: equip.GetName(),
 			Value: equip.GetKey(),
 		}
-		
+
 		// Add description based on equipment type
 		desc := h.getWeaponDescription(equip)
 		if desc != "" {

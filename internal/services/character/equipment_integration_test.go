@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 
+	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
-	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
 )
 
 // EquipmentIntegrationTestSuite tests the full equipment choice flow
@@ -43,39 +43,39 @@ func TestEquipmentIntegrationSuite(t *testing.T) {
 
 func (s *EquipmentIntegrationTestSuite) TestFullEquipmentSelectionFlow_Fighter() {
 	// This test simulates the complete flow of equipment selection for a Fighter
-	
+
 	// Step 1: Get equipment choices
 	fighterClass := createFullFighterClass()
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, fighterClass)
 	s.NoError(err)
 	s.Len(choices, 4)
-	
+
 	// Step 2: Verify first choice (armor)
 	armorChoice := choices[0]
 	s.Equal("fighter-equip-0", armorChoice.ID)
 	s.Len(armorChoice.Options, 2)
-	
+
 	// Step 3: Simulate selecting chain mail
 	selectedArmor := armorChoice.Options[0]
 	s.Equal("chain-mail", selectedArmor.Key)
 	s.Equal("Chain Mail", selectedArmor.Name)
 	s.Contains(selectedArmor.Description, "16 AC")
-	
+
 	// Step 4: Verify second choice (weapons) has nested options
 	weaponChoice := choices[1]
 	s.Equal("fighter-equip-1", weaponChoice.ID)
 	s.Len(weaponChoice.Options, 2)
-	
+
 	// Option 1 should be nested (martial weapon + shield)
 	weaponShieldOption := weaponChoice.Options[0]
 	s.Contains(weaponShieldOption.Key, "nested")
 	s.Contains(weaponShieldOption.Description, "Choose")
-	
+
 	// Option 2 should also be nested (two martial weapons)
 	twoWeaponsOption := weaponChoice.Options[1]
 	s.Contains(twoWeaponsOption.Key, "nested")
 	s.Contains(twoWeaponsOption.Description, "Choose 2")
-	
+
 	// Step 5: Verify the nested choice would trigger weapon selection UI
 	s.NotEmpty(weaponShieldOption.Description)
 	s.NotEmpty(twoWeaponsOption.Description)
@@ -83,29 +83,29 @@ func (s *EquipmentIntegrationTestSuite) TestFullEquipmentSelectionFlow_Fighter()
 
 func (s *EquipmentIntegrationTestSuite) TestFullEquipmentSelectionFlow_Wizard() {
 	// This test simulates the complete flow for a Wizard with focus selection
-	
+
 	// Step 1: Get equipment choices
 	wizardClass := createFullWizardClass()
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, wizardClass)
 	s.NoError(err)
 	s.Len(choices, 3)
-	
+
 	// Step 2: Verify weapon choice
 	weaponChoice := choices[0]
 	s.Equal("wizard-equip-0", weaponChoice.ID)
 	s.Len(weaponChoice.Options, 2)
 	s.Equal("quarterstaff", weaponChoice.Options[0].Key)
 	s.Equal("dagger", weaponChoice.Options[1].Key)
-	
+
 	// Step 3: Verify focus choice has nested selection
 	focusChoice := choices[1]
 	s.Equal("wizard-equip-1", focusChoice.ID)
 	s.Len(focusChoice.Options, 2)
-	
+
 	// Component pouch is a direct selection
 	componentPouch := focusChoice.Options[0]
 	s.Equal("component-pouch", componentPouch.Key)
-	
+
 	// Arcane focus should trigger nested selection
 	arcaneFocus := focusChoice.Options[1]
 	s.Contains(arcaneFocus.Key, "nested")
@@ -115,7 +115,7 @@ func (s *EquipmentIntegrationTestSuite) TestFullEquipmentSelectionFlow_Wizard() 
 
 func (s *EquipmentIntegrationTestSuite) TestEquipmentBundleHandling() {
 	// Test that equipment bundles are properly formatted
-	
+
 	class := &entities.Class{
 		Key:  "ranger",
 		Name: "Ranger",
@@ -167,11 +167,11 @@ func (s *EquipmentIntegrationTestSuite) TestEquipmentBundleHandling() {
 			},
 		},
 	}
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
 	s.NoError(err)
 	s.Len(choices, 1)
-	
+
 	// Check bundle formatting
 	s.Len(choices[0].Options, 2)
 	s.Equal("longbow-bundle", choices[0].Options[0].Key)
@@ -246,9 +246,9 @@ func createFullFighterClass() *entities.Class {
 						Name: "a martial weapon and a shield",
 						Items: []entities.Option{
 							&entities.Choice{
-								Name:  "martial weapon",
-								Count: 1,
-								Type:  entities.ChoiceTypeEquipment,
+								Name:    "martial weapon",
+								Count:   1,
+								Type:    entities.ChoiceTypeEquipment,
 								Options: createMartialWeaponOptions(),
 							},
 							&entities.ReferenceOption{
@@ -260,9 +260,9 @@ func createFullFighterClass() *entities.Class {
 						},
 					},
 					&entities.Choice{
-						Name:  "two martial weapons",
-						Count: 2,
-						Type:  entities.ChoiceTypeEquipment,
+						Name:    "two martial weapons",
+						Count:   2,
+						Type:    entities.ChoiceTypeEquipment,
 						Options: createMartialWeaponOptions(),
 					},
 				},

@@ -66,7 +66,7 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 		character.Experience,
 		character.Speed,
 	)
-	
+
 	// Add race and class info
 	if character.Race != nil {
 		basicInfo = fmt.Sprintf("**Race:** %s\n%s", character.Race.Name, basicInfo)
@@ -74,7 +74,7 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 	if character.Class != nil {
 		basicInfo = fmt.Sprintf("**Class:** %s\n%s", character.Class.Name, basicInfo)
 	}
-	
+
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 		Name:   "📋 Basic Info",
 		Value:  basicInfo,

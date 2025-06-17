@@ -9,10 +9,10 @@ import (
 type EncounterStatus string
 
 const (
-	EncounterStatusSetup     EncounterStatus = "setup"      // Setting up the encounter
-	EncounterStatusRolling   EncounterStatus = "rolling"    // Rolling initiative
-	EncounterStatusActive    EncounterStatus = "active"     // Combat in progress
-	EncounterStatusCompleted EncounterStatus = "completed"  // Encounter finished
+	EncounterStatusSetup     EncounterStatus = "setup"     // Setting up the encounter
+	EncounterStatusRolling   EncounterStatus = "rolling"   // Rolling initiative
+	EncounterStatusActive    EncounterStatus = "active"    // Combat in progress
+	EncounterStatusCompleted EncounterStatus = "completed" // Encounter finished
 )
 
 // CombatantType represents the type of combatant
@@ -26,65 +26,65 @@ const (
 
 // Encounter represents a combat encounter in a session
 type Encounter struct {
-	ID          string                    `json:"id"`
-	SessionID   string                    `json:"session_id"`
-	MessageID   string                    `json:"message_id"`    // Discord message ID for the encounter
-	ChannelID   string                    `json:"channel_id"`    // Discord channel ID
-	Name        string                    `json:"name"`
-	Description string                    `json:"description"`
-	Status      EncounterStatus           `json:"status"`
-	Round       int                       `json:"round"`         // Current round number
-	Turn        int                       `json:"turn"`          // Current turn index
-	Combatants  map[string]*Combatant     `json:"combatants"`    // ID -> Combatant
-	TurnOrder   []string                  `json:"turn_order"`    // Ordered list of combatant IDs
-	CreatedAt   time.Time                 `json:"created_at"`
-	StartedAt   *time.Time                `json:"started_at"`
-	EndedAt     *time.Time                `json:"ended_at"`
-	CreatedBy   string                    `json:"created_by"`    // User ID who created the encounter
+	ID          string                `json:"id"`
+	SessionID   string                `json:"session_id"`
+	MessageID   string                `json:"message_id"` // Discord message ID for the encounter
+	ChannelID   string                `json:"channel_id"` // Discord channel ID
+	Name        string                `json:"name"`
+	Description string                `json:"description"`
+	Status      EncounterStatus       `json:"status"`
+	Round       int                   `json:"round"`      // Current round number
+	Turn        int                   `json:"turn"`       // Current turn index
+	Combatants  map[string]*Combatant `json:"combatants"` // ID -> Combatant
+	TurnOrder   []string              `json:"turn_order"` // Ordered list of combatant IDs
+	CreatedAt   time.Time             `json:"created_at"`
+	StartedAt   *time.Time            `json:"started_at"`
+	EndedAt     *time.Time            `json:"ended_at"`
+	CreatedBy   string                `json:"created_by"` // User ID who created the encounter
 }
 
 // Combatant represents a participant in combat
 type Combatant struct {
-	ID              string                 `json:"id"`
-	Name            string                 `json:"name"`
-	Type            CombatantType          `json:"type"`
-	Initiative      int                    `json:"initiative"`
-	InitiativeBonus int                    `json:"initiative_bonus"`
-	CurrentHP       int                    `json:"current_hp"`
-	MaxHP           int                    `json:"max_hp"`
-	TempHP          int                    `json:"temp_hp"`
-	AC              int                    `json:"ac"`
-	Speed           int                    `json:"speed"`
-	Conditions      []string               `json:"conditions"`      // Poisoned, Stunned, etc.
-	IsActive        bool                   `json:"is_active"`       // Still in combat
-	HasActed        bool                   `json:"has_acted"`       // Has taken turn this round
-	
+	ID              string        `json:"id"`
+	Name            string        `json:"name"`
+	Type            CombatantType `json:"type"`
+	Initiative      int           `json:"initiative"`
+	InitiativeBonus int           `json:"initiative_bonus"`
+	CurrentHP       int           `json:"current_hp"`
+	MaxHP           int           `json:"max_hp"`
+	TempHP          int           `json:"temp_hp"`
+	AC              int           `json:"ac"`
+	Speed           int           `json:"speed"`
+	Conditions      []string      `json:"conditions"` // Poisoned, Stunned, etc.
+	IsActive        bool          `json:"is_active"`  // Still in combat
+	HasActed        bool          `json:"has_acted"`  // Has taken turn this round
+
 	// For players
-	PlayerID        string                 `json:"player_id,omitempty"`
-	CharacterID     string                 `json:"character_id,omitempty"`
-	
+	PlayerID    string `json:"player_id,omitempty"`
+	CharacterID string `json:"character_id,omitempty"`
+
 	// For monsters
-	MonsterRef      string                 `json:"monster_ref,omitempty"`     // D&D API reference
-	CR              float64                `json:"cr,omitempty"`              // Challenge Rating
-	XP              int                    `json:"xp,omitempty"`              // Experience Points
-	Abilities       map[string]int         `json:"abilities,omitempty"`       // STR, DEX, etc.
-	Actions         []*MonsterAction       `json:"actions,omitempty"`         // Available actions
+	MonsterRef string           `json:"monster_ref,omitempty"` // D&D API reference
+	CR         float64          `json:"cr,omitempty"`          // Challenge Rating
+	XP         int              `json:"xp,omitempty"`          // Experience Points
+	Abilities  map[string]int   `json:"abilities,omitempty"`   // STR, DEX, etc.
+	Actions    []*MonsterAction `json:"actions,omitempty"`     // Available actions
 }
 
 // NewEncounter creates a new encounter
 func NewEncounter(id, sessionID, channelID, name, createdBy string) *Encounter {
 	return &Encounter{
-		ID:          id,
-		SessionID:   sessionID,
-		ChannelID:   channelID,
-		Name:        name,
-		Status:      EncounterStatusSetup,
-		Round:       0,
-		Turn:        0,
-		Combatants:  make(map[string]*Combatant),
-		TurnOrder:   []string{},
-		CreatedAt:   time.Now(),
-		CreatedBy:   createdBy,
+		ID:         id,
+		SessionID:  sessionID,
+		ChannelID:  channelID,
+		Name:       name,
+		Status:     EncounterStatusSetup,
+		Round:      0,
+		Turn:       0,
+		Combatants: make(map[string]*Combatant),
+		TurnOrder:  []string{},
+		CreatedAt:  time.Now(),
+		CreatedBy:  createdBy,
 	}
 }
 
@@ -111,7 +111,7 @@ func (e *Encounter) Start() bool {
 	if e.Status != EncounterStatusRolling || len(e.TurnOrder) == 0 {
 		return false
 	}
-	
+
 	now := time.Now()
 	e.Status = EncounterStatusActive
 	e.StartedAt = &now
@@ -125,16 +125,16 @@ func (e *Encounter) NextTurn() {
 	if e.Status != EncounterStatusActive {
 		return
 	}
-	
+
 	// Mark current combatant as having acted
 	if e.Turn < len(e.TurnOrder) {
 		if combatant, exists := e.Combatants[e.TurnOrder[e.Turn]]; exists {
 			combatant.HasActed = true
 		}
 	}
-	
+
 	e.Turn++
-	
+
 	// Check if round is complete
 	if e.Turn >= len(e.TurnOrder) {
 		e.NextRound()
@@ -145,7 +145,7 @@ func (e *Encounter) NextTurn() {
 func (e *Encounter) NextRound() {
 	e.Round++
 	e.Turn = 0
-	
+
 	// Reset all combatants' HasActed flag
 	for _, combatant := range e.Combatants {
 		combatant.HasActed = false
@@ -179,7 +179,7 @@ func (e *Encounter) CanPlayerAct(playerID string) bool {
 	if playerID == e.CreatedBy {
 		return true
 	}
-	
+
 	// Players can act on their turn
 	return e.IsPlayerTurn(playerID)
 }
@@ -195,7 +195,7 @@ func (c *Combatant) ApplyDamage(damage int) {
 		damage -= c.TempHP
 		c.TempHP = 0
 	}
-	
+
 	// Then reduce current HP
 	c.CurrentHP -= damage
 	if c.CurrentHP < 0 {
@@ -210,7 +210,7 @@ func (c *Combatant) Heal(amount int) {
 	if c.CurrentHP > c.MaxHP {
 		c.CurrentHP = c.MaxHP
 	}
-	
+
 	// If they were at 0, they're back in the fight
 	if c.CurrentHP > 0 && !c.IsActive {
 		c.IsActive = true

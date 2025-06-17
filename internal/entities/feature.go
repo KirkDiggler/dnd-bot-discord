@@ -16,6 +16,6 @@ type CharacterFeature struct {
 	Name        string      `json:"name"`
 	Description string      `json:"description"`
 	Type        FeatureType `json:"type"`
-	Level       int         `json:"level"` // Level when gained (0 for racial)
+	Level       int         `json:"level"`  // Level when gained (0 for racial)
 	Source      string      `json:"source"` // Race/Class/Subclass name
 }

@@ -42,7 +42,7 @@ func TestChoice_UnmarshalJSON(t *testing.T) {
 				assert.Equal(t, ChoiceTypeProficiency, c.Type)
 				assert.Equal(t, 2, c.Count)
 				assert.Len(t, c.Options, 2)
-				
+
 				// Check first option
 				opt1, ok := c.Options[0].(*ReferenceOption)
 				require.True(t, ok, "First option should be ReferenceOption")
@@ -78,7 +78,7 @@ func TestChoice_UnmarshalJSON(t *testing.T) {
 				assert.Equal(t, "Starting Equipment", c.Name)
 				assert.Equal(t, ChoiceTypeEquipment, c.Type)
 				assert.Len(t, c.Options, 2)
-				
+
 				// Check counted reference
 				opt1, ok := c.Options[0].(*CountedReferenceOption)
 				require.True(t, ok, "First option should be CountedReferenceOption")
@@ -136,7 +136,7 @@ func TestChoice_UnmarshalJSON(t *testing.T) {
 			validate: func(t *testing.T, c *Choice) {
 				assert.Equal(t, "Complex Choice", c.Name)
 				assert.Len(t, c.Options, 1)
-				
+
 				// Check nested choice
 				opt1, ok := c.Options[0].(*Choice)
 				require.True(t, ok, "First option should be Choice")
@@ -175,7 +175,7 @@ func TestChoice_UnmarshalJSON(t *testing.T) {
 			validate: func(t *testing.T, c *Choice) {
 				assert.Equal(t, "Multiple Choice", c.Name)
 				assert.Len(t, c.Options, 1)
-				
+
 				// Check multiple option
 				opt1, ok := c.Options[0].(*MultipleOption)
 				require.True(t, ok, "First option should be MultipleOption")
@@ -189,12 +189,12 @@ func TestChoice_UnmarshalJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var c Choice
 			err := json.Unmarshal([]byte(tt.json), &c)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
 			}
-			
+
 			require.NoError(t, err)
 			tt.validate(t, &c)
 		})
@@ -237,12 +237,12 @@ func TestClass_UnmarshalJSON_WithProficiencyChoices(t *testing.T) {
 	var class Class
 	err := json.Unmarshal([]byte(classJSON), &class)
 	require.NoError(t, err)
-	
+
 	assert.Equal(t, "fighter", class.Key)
 	assert.Equal(t, "Fighter", class.Name)
 	assert.Equal(t, 10, class.HitDie)
 	assert.Len(t, class.ProficiencyChoices, 1)
-	
+
 	// Verify the proficiency choice
 	choice := class.ProficiencyChoices[0]
 	assert.Equal(t, "Skill Proficiencies", choice.Name)
@@ -270,20 +270,20 @@ func TestMultipleOption_UnmarshalJSON(t *testing.T) {
 			}
 		]
 	}`
-	
+
 	var multi MultipleOption
 	err := json.Unmarshal([]byte(multiJSON), &multi)
 	require.NoError(t, err)
-	
+
 	assert.Equal(t, "pack", multi.Key)
 	assert.Equal(t, "Equipment Pack", multi.Name)
 	assert.Len(t, multi.Items, 2)
-	
+
 	// Check first item (reference)
 	item1, ok := multi.Items[0].(*ReferenceOption)
 	require.True(t, ok, "First item should be ReferenceOption")
 	assert.Equal(t, "rope", item1.GetKey())
-	
+
 	// Check second item (counted reference)
 	item2, ok := multi.Items[1].(*CountedReferenceOption)
 	require.True(t, ok, "Second item should be CountedReferenceOption")

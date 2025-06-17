@@ -13,7 +13,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
-	
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/config"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord"
@@ -35,7 +35,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
-	
+
 	log.Printf("Bot Token: %s...%s", cfg.Discord.Token[:8], cfg.Discord.Token[len(cfg.Discord.Token)-4:])
 	log.Printf("Application ID: %s", cfg.Discord.AppID)
 	if cfg.Discord.GuildID != "" {
@@ -69,28 +69,28 @@ func main() {
 	// Try to connect to Redis if URL is provided
 	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
 		log.Printf("Connecting to Redis at: %s", redisURL)
-		
+
 		opts, err := redis.ParseURL(redisURL)
 		if err != nil {
 			log.Printf("Failed to parse Redis URL: %v", err)
 			log.Println("Falling back to in-memory repositories")
 		} else {
 			redisClient = redis.NewClient(opts)
-			
+
 			// Test connection
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			
+
 			if err := redisClient.Ping(ctx).Err(); err != nil {
 				log.Printf("Failed to connect to Redis: %v", err)
 				log.Println("Falling back to in-memory repositories")
 			} else {
 				log.Println("Successfully connected to Redis")
-				
+
 				// Create Redis repositories using bounded context constructors
 				providerConfig.CharacterRepository = characters.NewRedis(redisClient)
 				providerConfig.SessionRepository = gamesessions.NewRedis(redisClient)
-				
+
 				log.Println("Using Redis for persistence")
 			}
 		}
@@ -121,7 +121,7 @@ func main() {
 	if err := handler.RegisterCommands(dg, cfg.Discord.GuildID); err != nil {
 		log.Fatalf("Failed to register commands: %v", err)
 	}
-	
+
 	if cfg.Discord.GuildID != "" {
 		log.Printf("Registered commands for guild: %s", cfg.Discord.GuildID)
 	} else {
@@ -129,14 +129,14 @@ func main() {
 	}
 
 	fmt.Println("Bot is now running. Press CTRL-C to exit.")
-	
+
 	// Wait for interrupt signal
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
 
 	fmt.Println("Shutting down...")
-	
+
 	// Clean up Redis connection if we have one
 	if redisClient != nil {
 		if err := redisClient.Close(); err != nil {
