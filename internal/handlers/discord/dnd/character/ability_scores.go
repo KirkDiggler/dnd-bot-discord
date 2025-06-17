@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	"github.com/bwmarrin/discordgo"
 )
 
 // AbilityScoresHandler handles the ability score generation
@@ -100,7 +100,7 @@ func (h *AbilityScoresHandler) Handle(req *AbilityScoresRequest) error {
 	for i, roll := range rolls {
 		rollStrings = append(rollStrings, fmt.Sprintf("**Roll %d:** %d", i+1, roll.Value))
 	}
-	
+
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 		Name:   "🎲 Rolled Values",
 		Value:  strings.Join(rollStrings, "\n"),
@@ -179,32 +179,32 @@ func (h *AbilityScoresHandler) Handle(req *AbilityScoresRequest) error {
 // rollAbilityScores rolls 6 ability scores using 4d6 drop lowest
 func (h *AbilityScoresHandler) rollAbilityScores() []entities.AbilityRoll {
 	rolls := make([]entities.AbilityRoll, 6)
-	
+
 	for i := 0; i < 6; i++ {
 		// Roll 4d6
 		dice := make([]int, 4)
 		for j := 0; j < 4; j++ {
 			dice[j] = rand.Intn(6) + 1
 		}
-		
+
 		// Sort and drop lowest
 		sort.Ints(dice)
 		total := 0
 		for j := 1; j < 4; j++ { // Skip index 0 (lowest)
 			total += dice[j]
 		}
-		
+
 		rolls[i] = entities.AbilityRoll{
 			ID:    fmt.Sprintf("roll_%d_%d", time.Now().UnixNano(), i),
 			Value: total,
 		}
 	}
-	
+
 	// Sort rolls by value (highest to lowest) for display
 	sort.Slice(rolls, func(i, j int) bool {
 		return rolls[i].Value > rolls[j].Value
 	})
-	
+
 	return rolls
 }
 
@@ -224,11 +224,11 @@ func (h *AbilityScoresHandler) getClassRecommendations(className string) string 
 		"Sorcerer":  "Prioritize **Charisma** for spellcasting, then **Constitution** for survivability.",
 		"Warlock":   "Prioritize **Charisma** for spellcasting, then **Constitution** for survivability.",
 	}
-	
+
 	if rec, ok := recommendations[className]; ok {
 		return rec
 	}
-	
+
 	return "Assign your highest scores to your primary abilities."
 }
 

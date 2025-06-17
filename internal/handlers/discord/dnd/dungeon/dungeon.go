@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"strings"
 	"time"
-	
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
@@ -60,7 +60,7 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 	if err != nil {
 		return fmt.Errorf("failed to acknowledge interaction: %w", err)
 	}
-	
+
 	// Check if user is already in an active session
 	activeSessions, err := h.services.SessionService.ListActiveUserSessions(context.Background(), req.Interaction.Member.User.ID)
 	if err == nil && len(activeSessions) > 0 {
@@ -69,7 +69,7 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 			h.services.SessionService.LeaveSession(context.Background(), activeSession.ID, req.Interaction.Member.User.ID)
 		}
 	}
-	
+
 	// Create a cooperative session (no DM required)
 	sessionInput := &session.CreateSessionInput{
 		Name:        "Dungeon Delve",
@@ -78,7 +78,7 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 		RealmID:     req.Interaction.GuildID,
 		ChannelID:   req.Interaction.ChannelID,
 	}
-	
+
 	sess, err := h.services.SessionService.CreateSession(context.Background(), sessionInput)
 	if err != nil {
 		content := fmt.Sprintf("❌ Failed to create dungeon session: %v", err)
@@ -87,25 +87,25 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 		})
 		return err
 	}
-	
+
 	// Add the bot as DM for dungeon mode
 	botID := req.Session.State.User.ID
 	log.Printf("Adding bot %s as DM to session %s", botID, sess.ID)
 	sess.AddMember(botID, entities.SessionRoleDM)
 	sess.DMID = botID // Set bot as the DM
-	
+
 	// Creator is automatically added as DM, but for dungeon mode we want them as a player
 	// Update their role to player
 	if member, exists := sess.Members[req.Interaction.Member.User.ID]; exists {
 		member.Role = entities.SessionRolePlayer
 	}
-	
+
 	// Log session members
 	log.Printf("Session members after modification:")
 	for userID, member := range sess.Members {
 		log.Printf("  - User %s: Role=%s", userID, member.Role)
 	}
-	
+
 	// Get user's active character and select it
 	var characterName string
 	chars, err := h.services.CharacterService.ListByOwner(req.Interaction.Member.User.ID)
@@ -124,10 +124,10 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 			}
 		}
 	}
-	
+
 	// Generate first room
 	room := h.generateRoom(req.Difficulty, 1)
-	
+
 	// Build the dungeon entrance message
 	embed := &discordgo.MessageEmbed{
 		Title:       "🏰 Dungeon Delve Started!",
@@ -159,7 +159,7 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 			Text: "Other players can join with the buttons below!",
 		},
 	}
-	
+
 	// Add action buttons based on room type
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
@@ -185,16 +185,16 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 			},
 		},
 	}
-	
+
 	// Store room data in session metadata
 	sess.Metadata = map[string]interface{}{
 		"currentRoom": room,
 		"roomNumber":  1,
 		"difficulty":  req.Difficulty,
 	}
-	
+
 	log.Printf("Dungeon started with difficulty: %s, bot ID: %s as DM", req.Difficulty, botID)
-	
+
 	// We need to update the session to save the metadata and bot as DM
 	updateInput := &session.UpdateSessionInput{
 		Name: &sess.Name, // Just update with same name to trigger save
@@ -203,7 +203,7 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 	if err != nil {
 		log.Printf("Warning: Failed to save session updates: %v", err)
 	}
-	
+
 	_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
 		Embeds:     &[]*discordgo.MessageEmbed{embed},
 		Components: &components,
@@ -214,12 +214,12 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 // generateRoom creates a random room based on difficulty and room number
 func (h *StartDungeonHandler) generateRoom(difficulty string, roomNumber int) *Room {
 	rand.Seed(time.Now().UnixNano())
-	
+
 	// First room is always combat to start the adventure
 	if roomNumber == 1 {
 		return h.generateCombatRoom(difficulty, roomNumber)
 	}
-	
+
 	// Room type probabilities
 	roomTypes := []RoomType{
 		RoomTypeCombat,
@@ -229,14 +229,14 @@ func (h *StartDungeonHandler) generateRoom(difficulty string, roomNumber int) *R
 		RoomTypeTrap,
 		RoomTypeRest,
 	}
-	
+
 	// Special rooms every 5 rooms
 	if roomNumber%5 == 0 {
 		roomTypes = append(roomTypes, RoomTypeTreasure, RoomTypeTreasure)
 	}
-	
+
 	roomType := roomTypes[rand.Intn(len(roomTypes))]
-	
+
 	switch roomType {
 	case RoomTypeCombat:
 		return h.generateCombatRoom(difficulty, roomNumber)
@@ -264,9 +264,9 @@ func (h *StartDungeonHandler) generateCombatRoom(difficulty string, roomNumber i
 		{"Goblin Warren", "The stench is overwhelming. Crude weapons and bones litter the floor."},
 		{"Spider's Den", "Thick webs cover every surface. Multiple eyes gleam from the shadows."},
 	}
-	
+
 	selected := rooms[rand.Intn(len(rooms))]
-	
+
 	// Determine monsters based on difficulty
 	var monsters []string
 	switch difficulty {
@@ -279,13 +279,13 @@ func (h *StartDungeonHandler) generateCombatRoom(difficulty string, roomNumber i
 	default:
 		monsters = []string{"goblin"}
 	}
-	
+
 	// Scale with room number
 	extraMonsters := roomNumber / 3
 	for i := 0; i < extraMonsters; i++ {
 		monsters = append(monsters, monsters[rand.Intn(len(monsters))])
 	}
-	
+
 	return &Room{
 		Type:        RoomTypeCombat,
 		Name:        selected.name,
@@ -318,9 +318,9 @@ func (h *StartDungeonHandler) generatePuzzleRoom(difficulty string, roomNumber i
 			"Find the one mirror that shows the truth to reveal the exit.",
 		},
 	}
-	
+
 	selected := puzzles[rand.Intn(len(puzzles))]
-	
+
 	return &Room{
 		Type:        RoomTypePuzzle,
 		Name:        selected.name,
@@ -352,9 +352,9 @@ func (h *StartDungeonHandler) generateTrapRoom(difficulty string, roomNumber int
 			"Find the lever to stop the walls before it's too late!",
 		},
 	}
-	
+
 	selected := traps[rand.Intn(len(traps))]
-	
+
 	return &Room{
 		Type:        RoomTypeTrap,
 		Name:        selected.name,

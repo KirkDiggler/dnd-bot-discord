@@ -156,7 +156,7 @@ func (h *InfoHandler) Handle(req *InfoRequest) error {
 	if session.Settings.AutoEndAfterHours > 0 {
 		settingsInfo = append(settingsInfo, fmt.Sprintf("⏰ Auto-end after %d hours", session.Settings.AutoEndAfterHours))
 	}
-	
+
 	if len(settingsInfo) > 0 {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   "⚙️ Settings",
@@ -262,7 +262,7 @@ func (h *InfoHandler) getActionButtons(session *entities.Session, member *entiti
 				Emoji:    &discordgo.ComponentEmoji{Name: "🏁"},
 			})
 		}
-		
+
 		// Session settings button (always available for DM)
 		if session.Status != entities.SessionStatusEnded {
 			buttons = append(buttons, discordgo.Button{
@@ -284,7 +284,7 @@ func (h *InfoHandler) getActionButtons(session *entities.Session, member *entiti
 				Emoji:    &discordgo.ComponentEmoji{Name: "🎭"},
 			})
 		}
-		
+
 		buttons = append(buttons, discordgo.Button{
 			Label:    "Leave Session",
 			Style:    discordgo.DangerButton,

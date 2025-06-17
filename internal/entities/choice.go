@@ -295,19 +295,19 @@ func (c *Choice) UnmarshalJSON(data []byte) error {
 		Count    int             `json:"count"`
 		Options  json.RawMessage `json:"options"`
 	}
-	
+
 	var aux Aux
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	
+
 	c.Name = aux.Name
 	c.Type = aux.Type
 	c.Key = aux.Key
 	c.Status = aux.Status
 	c.Selected = aux.Selected
 	c.Count = aux.Count
-	
+
 	// Handle options which could be an array or object
 	if len(aux.Options) > 0 {
 		// First try to unmarshal as an array of options
@@ -330,7 +330,7 @@ func (c *Choice) UnmarshalJSON(data []byte) error {
 			c.Options = []Option{}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -343,11 +343,11 @@ func unmarshalOption(data []byte) (Option, error) {
 		Count     *int            `json:"count"`
 		Items     json.RawMessage `json:"items"`
 	}
-	
+
 	if err := json.Unmarshal(data, &typeCheck); err != nil {
 		return nil, err
 	}
-	
+
 	// Check if it has a reference field
 	if len(typeCheck.Reference) > 0 {
 		if typeCheck.Count != nil {
@@ -366,7 +366,7 @@ func unmarshalOption(data []byte) (Option, error) {
 			return &opt, nil
 		}
 	}
-	
+
 	// Check if it has items field (MultipleOption)
 	if len(typeCheck.Items) > 0 {
 		var opt MultipleOption
@@ -375,7 +375,7 @@ func unmarshalOption(data []byte) (Option, error) {
 		}
 		return &opt, nil
 	}
-	
+
 	// Check if it's a Choice based on type field
 	if typeCheck.Type != "" {
 		var opt Choice
@@ -384,7 +384,7 @@ func unmarshalOption(data []byte) (Option, error) {
 		}
 		return &opt, nil
 	}
-	
+
 	// If we can't determine the type, return nil
 	return nil, nil
 }
@@ -398,23 +398,23 @@ func (m *MultipleOption) UnmarshalJSON(data []byte) error {
 		Name   string          `json:"name"`
 		Items  json.RawMessage `json:"items"`
 	}
-	
+
 	var aux Aux
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	
+
 	m.Status = aux.Status
 	m.Key = aux.Key
 	m.Name = aux.Name
-	
+
 	// Handle items which should be an array of options
 	if len(aux.Items) > 0 {
 		var itemsArray []json.RawMessage
 		if err := json.Unmarshal(aux.Items, &itemsArray); err != nil {
 			return fmt.Errorf("failed to unmarshal items array: %w", err)
 		}
-		
+
 		m.Items = make([]Option, 0, len(itemsArray))
 		for _, itemData := range itemsArray {
 			item, err := unmarshalOption(itemData)
@@ -426,6 +426,6 @@ func (m *MultipleOption) UnmarshalJSON(data []byte) error {
 			}
 		}
 	}
-	
+
 	return nil
 }

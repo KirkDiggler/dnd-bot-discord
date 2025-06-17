@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	"github.com/bwmarrin/discordgo"
 )
 
 // SelectProficienciesHandler handles the actual proficiency selection
@@ -65,8 +65,7 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 	var currentChoice *entities.Choice
 	var choiceSource string
 	totalClassChoices := len(class.ProficiencyChoices)
-	
-	
+
 	// First check class choices
 	if req.ChoiceType == "" || req.ChoiceType == "class" {
 		if len(class.ProficiencyChoices) > req.ChoiceIndex {
@@ -80,7 +79,7 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 			req.ChoiceIndex = 0
 		}
 	}
-	
+
 	// If specifically looking for race choice
 	if req.ChoiceType == "race" && req.ChoiceIndex == 0 && race.StartingProficiencyOptions != nil {
 		currentChoice = race.StartingProficiencyOptions
@@ -90,11 +89,10 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 	if currentChoice == nil {
 		return h.moveToNextStep(req, race, class, "All proficiency choices complete!")
 	}
-	
+
 	if len(currentChoice.Options) == 0 {
 		return h.moveToNextStep(req, race, class, "All proficiency choices complete!")
 	}
-	
 
 	// Create embed
 	embed := &discordgo.MessageEmbed{
@@ -103,11 +101,11 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 		Color:       0x5865F2,
 		Fields:      []*discordgo.MessageEmbedField{},
 	}
-	
+
 	// Add progress if there are multiple choices
 	if totalClassChoices > 1 || race.StartingProficiencyOptions != nil {
 		progressParts := []string{}
-		
+
 		// Show class choice progress
 		for i := 0; i < totalClassChoices; i++ {
 			if i < req.ChoiceIndex && req.ChoiceType == "class" {
@@ -118,7 +116,7 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 				progressParts = append(progressParts, "⭕")
 			}
 		}
-		
+
 		// Show race choice progress
 		if race.StartingProficiencyOptions != nil {
 			if req.ChoiceType == "race" {
@@ -127,7 +125,7 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 				progressParts = append(progressParts, "| 🏃 ⭕")
 			}
 		}
-		
+
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   "Progress",
 			Value:  strings.Join(progressParts, " "),
@@ -148,7 +146,7 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 		} else {
 		}
 	}
-	
+
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 		Name:   "Available Options",
 		Value:  strings.Join(optionStrings, "\n"),
@@ -163,14 +161,14 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 			break
 		}
 	}
-	
+
 	// Create components based on option types
 	components := []discordgo.MessageComponent{}
-	
+
 	if hasNestedChoices {
 		// Show nested choices as buttons
 		row := discordgo.ActionsRow{Components: []discordgo.MessageComponent{}}
-		
+
 		for i, option := range currentChoice.Options {
 			if _, ok := option.(*entities.Choice); ok {
 				button := discordgo.Button{
@@ -181,11 +179,11 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 				row.Components = append(row.Components, button)
 			}
 		}
-		
+
 		if len(row.Components) > 0 {
 			components = append(components, row)
 		}
-		
+
 		embed.Footer = &discordgo.MessageEmbedFooter{
 			Text: "Select which type of proficiency you want",
 		}
@@ -202,8 +200,7 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 				})
 			}
 		}
-		
-		
+
 		// If no options were parsed, add a debug option
 		if len(selectOptions) == 0 {
 			selectOptions = append(selectOptions, discordgo.SelectMenuOption{
@@ -211,7 +208,7 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 				Value: "none",
 			})
 		}
-		
+
 		// Limit to 25 options (Discord limit)
 		if len(selectOptions) > 25 {
 			selectOptions = selectOptions[:25]
@@ -219,7 +216,7 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 				Text: fmt.Sprintf("Showing first 25 of %d options", len(currentChoice.Options)),
 			}
 		}
-		
+
 		components = append(components, discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.SelectMenu{
@@ -248,7 +245,7 @@ func (h *SelectProficienciesHandler) getOptionName(option entities.Option) strin
 	if option == nil {
 		return ""
 	}
-	
+
 	switch opt := option.(type) {
 	case *entities.ReferenceOption:
 		if opt.Reference != nil {

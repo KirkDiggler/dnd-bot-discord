@@ -5,11 +5,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	mockcharacters "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	mockrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	mockcharacters "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 )
@@ -32,7 +32,7 @@ func (s *CharacterServiceTestSuite) SetupTest() {
 	s.mockResolver = mockcharacters.NewMockChoiceResolver(s.ctrl)
 	s.mockRepository = mockrepo.NewMockRepository(s.ctrl)
 	s.ctx = context.Background()
-	
+
 	s.service = character.NewService(&character.ServiceConfig{
 		DNDClient:      s.mockDNDClient,
 		ChoiceResolver: s.mockResolver,
@@ -58,17 +58,17 @@ func (s *CharacterServiceTestSuite) TestResolveChoices_Success() {
 		RaceKey:  "human",
 		ClassKey: "fighter",
 	}
-	
+
 	humanRace := &entities.Race{
 		Key:  "human",
 		Name: "Human",
 	}
-	
+
 	fighterClass := &entities.Class{
 		Key:  "fighter",
 		Name: "Fighter",
 	}
-	
+
 	profChoices := []character.SimplifiedChoice{
 		{
 			ID:     "fighter-prof-0",
@@ -76,7 +76,7 @@ func (s *CharacterServiceTestSuite) TestResolveChoices_Success() {
 			Choose: 2,
 		},
 	}
-	
+
 	equipChoices := []character.SimplifiedChoice{
 		{
 			ID:     "fighter-equip-0",
@@ -84,16 +84,16 @@ func (s *CharacterServiceTestSuite) TestResolveChoices_Success() {
 			Choose: 1,
 		},
 	}
-	
+
 	// Expectations
 	s.mockDNDClient.EXPECT().GetRace("human").Return(humanRace, nil)
 	s.mockDNDClient.EXPECT().GetClass("fighter").Return(fighterClass, nil)
 	s.mockResolver.EXPECT().ResolveProficiencyChoices(s.ctx, humanRace, fighterClass).Return(profChoices, nil)
 	s.mockResolver.EXPECT().ResolveEquipmentChoices(s.ctx, fighterClass).Return(equipChoices, nil)
-	
+
 	// Execute
 	output, err := s.service.ResolveChoices(s.ctx, input)
-	
+
 	// Assert
 	s.NoError(err)
 	s.NotNil(output)
@@ -109,13 +109,13 @@ func (s *CharacterServiceTestSuite) TestResolveChoices_RaceNotFound() {
 		RaceKey:  "invalid-race",
 		ClassKey: "fighter",
 	}
-	
+
 	// Expectations
 	s.mockDNDClient.EXPECT().GetRace("invalid-race").Return(nil, errors.New("race not found"))
-	
+
 	// Execute
 	output, err := s.service.ResolveChoices(s.ctx, input)
-	
+
 	// Assert
 	s.Error(err)
 	s.Nil(output)
@@ -128,14 +128,14 @@ func (s *CharacterServiceTestSuite) TestResolveChoices_ClassNotFound() {
 		RaceKey:  "human",
 		ClassKey: "invalid-class",
 	}
-	
+
 	// Expectations
 	s.mockDNDClient.EXPECT().GetRace("human").Return(&entities.Race{Key: "human", Name: "Human"}, nil)
 	s.mockDNDClient.EXPECT().GetClass("invalid-class").Return(nil, errors.New("class not found"))
-	
+
 	// Execute
 	output, err := s.service.ResolveChoices(s.ctx, input)
-	
+
 	// Assert
 	s.Error(err)
 	s.Nil(output)
@@ -158,10 +158,10 @@ func (s *CharacterServiceTestSuite) TestValidateCharacterCreation_ValidInput() {
 			"CHA": 8,
 		},
 	}
-	
+
 	// Execute
 	err := s.service.ValidateCharacterCreation(s.ctx, input)
-	
+
 	// Assert
 	s.NoError(err)
 }
@@ -179,10 +179,10 @@ func (s *CharacterServiceTestSuite) TestValidateCharacterCreation_MissingRace() 
 			"CHA": 8,
 		},
 	}
-	
+
 	// Execute
 	err := s.service.ValidateCharacterCreation(s.ctx, input)
-	
+
 	// Assert
 	s.Error(err)
 	s.Contains(err.Error(), "race is required")
@@ -202,10 +202,10 @@ func (s *CharacterServiceTestSuite) TestValidateCharacterCreation_ScoreTooLow() 
 			"CHA": 8,
 		},
 	}
-	
+
 	// Execute
 	err := s.service.ValidateCharacterCreation(s.ctx, input)
-	
+
 	// Assert
 	s.Error(err)
 	s.Contains(err.Error(), "ability score for STR must be between 3 and 18")
@@ -225,10 +225,10 @@ func (s *CharacterServiceTestSuite) TestValidateCharacterCreation_MissingAbility
 			// Missing CHA!
 		},
 	}
-	
+
 	// Execute
 	err := s.service.ValidateCharacterCreation(s.ctx, input)
-	
+
 	// Assert
 	s.Error(err)
 	s.Contains(err.Error(), "missing ability score for CHA")
@@ -255,7 +255,7 @@ func (s *CharacterServiceTestSuite) TestCreateCharacter_Success() {
 		Proficiencies: []string{"skill-athletics", "skill-intimidation"},
 		Equipment:     []string{"chain-mail", "longsword", "shield"},
 	}
-	
+
 	dwarfRace := &entities.Race{
 		Key:   "dwarf",
 		Name:  "Dwarf",
@@ -264,7 +264,7 @@ func (s *CharacterServiceTestSuite) TestCreateCharacter_Success() {
 			{Attribute: entities.AttributeConstitution, Bonus: 2},
 		},
 	}
-	
+
 	fighterClass := &entities.Class{
 		Key:    "fighter",
 		Name:   "Fighter",
@@ -273,11 +273,11 @@ func (s *CharacterServiceTestSuite) TestCreateCharacter_Success() {
 			{Quantity: 1, Equipment: &entities.ReferenceItem{Key: "chain-shirt"}},
 		},
 	}
-	
+
 	// Expectations
 	s.mockDNDClient.EXPECT().GetRace("dwarf").Return(dwarfRace, nil)
 	s.mockDNDClient.EXPECT().GetClass("fighter").Return(fighterClass, nil)
-	
+
 	// Proficiency expectations
 	s.mockDNDClient.EXPECT().GetProficiency("skill-athletics").Return(&entities.Proficiency{
 		Key:  "skill-athletics",
@@ -289,7 +289,7 @@ func (s *CharacterServiceTestSuite) TestCreateCharacter_Success() {
 		Name: "Intimidation",
 		Type: entities.ProficiencyTypeSkill,
 	}, nil)
-	
+
 	// Equipment expectations
 	s.mockDNDClient.EXPECT().GetEquipment("chain-shirt").Return(&entities.BasicEquipment{
 		Key:  "chain-shirt",
@@ -305,7 +305,7 @@ func (s *CharacterServiceTestSuite) TestCreateCharacter_Success() {
 		Key:  "shield",
 		Name: "Shield",
 	}, nil)
-	
+
 	// Repository expectation
 	s.mockRepository.EXPECT().Create(s.ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *entities.Character) error {
 		// Validate the character being saved
@@ -318,10 +318,10 @@ func (s *CharacterServiceTestSuite) TestCreateCharacter_Success() {
 		s.NotEmpty(char.ID)
 		return nil
 	})
-	
+
 	// Execute
 	output, err := s.service.CreateCharacter(s.ctx, input)
-	
+
 	// Assert
 	s.NoError(err)
 	s.NotNil(output)
@@ -346,10 +346,10 @@ func (s *CharacterServiceTestSuite) TestCreateCharacter_ValidationFailure() {
 			// Missing other abilities
 		},
 	}
-	
+
 	// Execute
 	output, err := s.service.CreateCharacter(s.ctx, input)
-	
+
 	// Assert
 	s.Error(err)
 	s.Nil(output)
@@ -373,7 +373,7 @@ func (s *CharacterServiceTestSuite) TestCreateCharacter_RepositoryError() {
 			"CHA": 8,
 		},
 	}
-	
+
 	// Expectations
 	s.mockDNDClient.EXPECT().GetRace("dwarf").Return(&entities.Race{
 		Key:   "dwarf",
@@ -386,10 +386,10 @@ func (s *CharacterServiceTestSuite) TestCreateCharacter_RepositoryError() {
 		HitDie: 10,
 	}, nil)
 	s.mockRepository.EXPECT().Create(s.ctx, gomock.Any()).Return(errors.New("database error"))
-	
+
 	// Execute
 	output, err := s.service.CreateCharacter(s.ctx, input)
-	
+
 	// Assert
 	s.Error(err)
 	s.Nil(output)
@@ -405,13 +405,13 @@ func (s *CharacterServiceTestSuite) TestGetCharacter_Success() {
 		Name:    "Thorin",
 		OwnerID: "user_123",
 	}
-	
+
 	// Expectations
 	s.mockRepository.EXPECT().Get(s.ctx, "char_123").Return(expectedChar, nil)
-	
+
 	// Execute
 	char, err := s.service.GetCharacter(s.ctx, "char_123")
-	
+
 	// Assert
 	s.NoError(err)
 	s.NotNil(char)
@@ -421,10 +421,10 @@ func (s *CharacterServiceTestSuite) TestGetCharacter_Success() {
 func (s *CharacterServiceTestSuite) TestGetCharacter_NotFound() {
 	// Expectations
 	s.mockRepository.EXPECT().Get(s.ctx, "nonexistent").Return(nil, errors.New("not found"))
-	
+
 	// Execute
 	char, err := s.service.GetCharacter(s.ctx, "nonexistent")
-	
+
 	// Assert
 	s.Error(err)
 	s.Nil(char)
@@ -438,13 +438,13 @@ func (s *CharacterServiceTestSuite) TestListCharacters_Success() {
 		{ID: "char_1", Name: "Thorin", OwnerID: "user_123"},
 		{ID: "char_2", Name: "Gandalf", OwnerID: "user_123"},
 	}
-	
+
 	// Expectations
 	s.mockRepository.EXPECT().GetByOwner(s.ctx, "user_123").Return(expectedChars, nil)
-	
+
 	// Execute
 	chars, err := s.service.ListCharacters(s.ctx, "user_123")
-	
+
 	// Assert
 	s.NoError(err)
 	s.Len(chars, 2)
@@ -455,10 +455,10 @@ func (s *CharacterServiceTestSuite) TestListCharacters_Success() {
 func (s *CharacterServiceTestSuite) TestListCharacters_Empty() {
 	// Expectations
 	s.mockRepository.EXPECT().GetByOwner(s.ctx, "user_123").Return([]*entities.Character{}, nil)
-	
+
 	// Execute
 	chars, err := s.service.ListCharacters(s.ctx, "user_123")
-	
+
 	// Assert
 	s.NoError(err)
 	s.Empty(chars)

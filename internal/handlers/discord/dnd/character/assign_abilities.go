@@ -6,9 +6,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	"github.com/bwmarrin/discordgo"
 )
 
 // AssignAbilitiesHandler handles assigning rolled scores to abilities
@@ -70,7 +70,7 @@ func (h *AssignAbilitiesHandler) Handle(req *AssignAbilitiesRequest) error {
 		class, err := h.characterService.GetClass(context.Background(), req.ClassKey)
 		if err == nil {
 			assignments := h.autoAssignAbilitiesWithIDs(class.Name, draftChar.AbilityRolls)
-			
+
 			// Save auto-assigned scores immediately
 			_, err = h.characterService.UpdateDraftCharacter(
 				context.Background(),
@@ -82,7 +82,7 @@ func (h *AssignAbilitiesHandler) Handle(req *AssignAbilitiesRequest) error {
 			if err != nil {
 				return h.respondWithError(req, "Failed to save auto-assignments.")
 			}
-			
+
 			// Reload character to get updated state
 			draftChar, _ = h.characterService.GetCharacter(context.Background(), draftChar.ID)
 		}
@@ -96,12 +96,12 @@ func (h *AssignAbilitiesHandler) Handle(req *AssignAbilitiesRequest) error {
 			if len(parts) >= 5 && len(data.Values) > 0 {
 				ability := parts[4]
 				rollID := data.Values[0]
-				
+
 				// Initialize assignments if nil
 				if draftChar.AbilityAssignments == nil {
 					draftChar.AbilityAssignments = make(map[string]string)
 				}
-				
+
 				// If rollID is "0", remove the assignment
 				if rollID == "0" {
 					delete(draftChar.AbilityAssignments, ability)
@@ -115,7 +115,7 @@ func (h *AssignAbilitiesHandler) Handle(req *AssignAbilitiesRequest) error {
 					// Assign the roll to this ability
 					draftChar.AbilityAssignments[ability] = rollID
 				}
-				
+
 				// Save the assignment
 				_, err = h.characterService.UpdateDraftCharacter(
 					context.Background(),
@@ -127,7 +127,7 @@ func (h *AssignAbilitiesHandler) Handle(req *AssignAbilitiesRequest) error {
 				if err != nil {
 					return h.respondWithError(req, "Failed to save assignment.")
 				}
-				
+
 				// Reload character to get updated state
 				draftChar, _ = h.characterService.GetCharacter(context.Background(), draftChar.ID)
 			}
@@ -177,7 +177,7 @@ func (h *AssignAbilitiesHandler) getRacialBonus(race *entities.Race, ability str
 	case "CHA":
 		attr = entities.AttributeCharisma
 	}
-	
+
 	for _, bonus := range race.AbilityBonuses {
 		if bonus.Attribute == attr {
 			return bonus.Bonus
@@ -196,11 +196,11 @@ func (h *AssignAbilitiesHandler) getAbilityDescription(ability string) string {
 		"WIS": "Perception and insight",
 		"CHA": "Force of personality",
 	}
-	
+
 	if desc, ok := descriptions[ability]; ok {
 		return desc
 	}
-	
+
 	return ""
 }
 
@@ -220,11 +220,11 @@ func (h *AssignAbilitiesHandler) getClassRecommendations(className string) strin
 		"Sorcerer":  "High CHA, then CON",
 		"Warlock":   "High CHA, then CON",
 	}
-	
+
 	if rec, ok := recommendations[className]; ok {
 		return rec
 	}
-	
+
 	return "Assign highest to primary ability"
 }
 
@@ -246,7 +246,7 @@ func (h *AssignAbilitiesHandler) autoAssignAbilitiesWithIDs(className string, ro
 	sort.Slice(sortedRolls, func(i, j int) bool {
 		return sortedRolls[i].Value > sortedRolls[j].Value
 	})
-	
+
 	// Define priority order for each class
 	classPriorities := map[string][]string{
 		"Fighter":   {"STR", "CON", "DEX", "WIS", "CHA", "INT"},
@@ -262,13 +262,13 @@ func (h *AssignAbilitiesHandler) autoAssignAbilitiesWithIDs(className string, ro
 		"Sorcerer":  {"CHA", "CON", "DEX", "WIS", "INT", "STR"},
 		"Warlock":   {"CHA", "CON", "DEX", "WIS", "INT", "STR"},
 	}
-	
+
 	// Get priority order for the class (default to balanced if not found)
 	priorities, ok := classPriorities[className]
 	if !ok {
 		priorities = []string{"STR", "DEX", "CON", "INT", "WIS", "CHA"}
 	}
-	
+
 	// Assign roll IDs to abilities based on priority
 	assignments := make(map[string]string)
 	for i, ability := range priorities {
@@ -276,7 +276,7 @@ func (h *AssignAbilitiesHandler) autoAssignAbilitiesWithIDs(className string, ro
 			assignments[ability] = sortedRolls[i].ID
 		}
 	}
-	
+
 	return assignments
 }
 
@@ -287,7 +287,7 @@ func (h *AssignAbilitiesHandler) buildAssignmentUI(req *AssignAbilitiesRequest, 
 	for _, roll := range char.AbilityRolls {
 		rollValues[roll.ID] = roll.Value
 	}
-	
+
 	// Create embed
 	embed := &discordgo.MessageEmbed{
 		Title:       "Create New Character - Assign Abilities",
@@ -304,7 +304,7 @@ func (h *AssignAbilitiesHandler) buildAssignmentUI(req *AssignAbilitiesRequest, 
 			usedRolls[rollID] = true
 		}
 	}
-	
+
 	for _, roll := range char.AbilityRolls {
 		status := ""
 		if usedRolls[roll.ID] {
@@ -312,7 +312,7 @@ func (h *AssignAbilitiesHandler) buildAssignmentUI(req *AssignAbilitiesRequest, 
 		}
 		rollStrings = append(rollStrings, fmt.Sprintf("**%d**%s", roll.Value, status))
 	}
-	
+
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 		Name:   "🎲 Your Rolls",
 		Value:  strings.Join(rollStrings, " • "),
@@ -323,7 +323,7 @@ func (h *AssignAbilitiesHandler) buildAssignmentUI(req *AssignAbilitiesRequest, 
 	abilities := []string{"STR", "DEX", "CON", "INT", "WIS", "CHA"}
 	physicalStrings := []string{}
 	mentalStrings := []string{}
-	
+
 	for i, ability := range abilities {
 		var line string
 		if char.AbilityAssignments != nil {
@@ -333,7 +333,7 @@ func (h *AssignAbilitiesHandler) buildAssignmentUI(req *AssignAbilitiesRequest, 
 					total := score + racialBonus
 					modifier := (total - 10) / 2
 					modStr := fmt.Sprintf("%+d", modifier)
-					
+
 					line = fmt.Sprintf("**%s:** %d", ability, score)
 					if racialBonus > 0 {
 						line += fmt.Sprintf(" (+%d) = %d [%s]", racialBonus, total, modStr)
@@ -357,7 +357,7 @@ func (h *AssignAbilitiesHandler) buildAssignmentUI(req *AssignAbilitiesRequest, 
 				line += fmt.Sprintf(" (+%d racial)", racialBonus)
 			}
 		}
-		
+
 		// Split into physical (STR, DEX, CON) and mental (INT, WIS, CHA)
 		if i < 3 {
 			physicalStrings = append(physicalStrings, line)
@@ -365,13 +365,13 @@ func (h *AssignAbilitiesHandler) buildAssignmentUI(req *AssignAbilitiesRequest, 
 			mentalStrings = append(mentalStrings, line)
 		}
 	}
-	
+
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 		Name:   "💪 Physical",
 		Value:  strings.Join(physicalStrings, "\n"),
 		Inline: true,
 	})
-	
+
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 		Name:   "🧠 Mental",
 		Value:  strings.Join(mentalStrings, "\n"),
@@ -413,7 +413,7 @@ func (h *AssignAbilitiesHandler) buildAssignmentUI(req *AssignAbilitiesRequest, 
 // buildComponents creates the UI components for assignment
 func (h *AssignAbilitiesHandler) buildComponents(req *AssignAbilitiesRequest, char *entities.Character, abilities []string) []discordgo.MessageComponent {
 	components := []discordgo.MessageComponent{}
-	
+
 	// Check if we're showing a dropdown for a specific ability
 	showDropdownFor := ""
 	if req.Interaction.Type == discordgo.InteractionMessageComponent {
@@ -425,23 +425,23 @@ func (h *AssignAbilitiesHandler) buildComponents(req *AssignAbilitiesRequest, ch
 			}
 		}
 	}
-	
+
 	// If showing dropdown for a specific ability
 	if showDropdownFor != "" {
 		var scoreOptions []discordgo.SelectMenuOption
-		
+
 		// Add unassign option
 		currentRollID := ""
 		if char.AbilityAssignments != nil {
 			currentRollID = char.AbilityAssignments[showDropdownFor]
 		}
-		
+
 		scoreOptions = append(scoreOptions, discordgo.SelectMenuOption{
 			Label:   "Not assigned",
 			Value:   "0",
 			Default: currentRollID == "",
 		})
-		
+
 		// Track which rolls are used elsewhere
 		usedBy := make(map[string]string) // rollID -> ability
 		if char.AbilityAssignments != nil {
@@ -451,7 +451,7 @@ func (h *AssignAbilitiesHandler) buildComponents(req *AssignAbilitiesRequest, ch
 				}
 			}
 		}
-		
+
 		// Add each roll as an option
 		for _, roll := range char.AbilityRolls {
 			option := discordgo.SelectMenuOption{
@@ -459,15 +459,15 @@ func (h *AssignAbilitiesHandler) buildComponents(req *AssignAbilitiesRequest, ch
 				Value:   roll.ID,
 				Default: currentRollID == roll.ID,
 			}
-			
+
 			// Show if this roll is used elsewhere
 			if usedAbility, exists := usedBy[roll.ID]; exists {
 				option.Description = fmt.Sprintf("Currently assigned to %s", usedAbility)
 			}
-			
+
 			scoreOptions = append(scoreOptions, option)
 		}
-		
+
 		components = append(components, discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.SelectMenu{
@@ -478,20 +478,20 @@ func (h *AssignAbilitiesHandler) buildComponents(req *AssignAbilitiesRequest, ch
 			},
 		})
 	}
-	
+
 	// Always show ability buttons (3 per row)
 	row1 := discordgo.ActionsRow{Components: []discordgo.MessageComponent{}}
 	row2 := discordgo.ActionsRow{Components: []discordgo.MessageComponent{}}
-	
+
 	rollValues := make(map[string]int)
 	for _, roll := range char.AbilityRolls {
 		rollValues[roll.ID] = roll.Value
 	}
-	
+
 	for i, ability := range abilities {
 		label := ability
 		style := discordgo.SecondaryButton
-		
+
 		if char.AbilityAssignments != nil {
 			if rollID, assigned := char.AbilityAssignments[ability]; assigned {
 				if score, exists := rollValues[rollID]; exists {
@@ -500,20 +500,20 @@ func (h *AssignAbilitiesHandler) buildComponents(req *AssignAbilitiesRequest, ch
 				}
 			}
 		}
-		
+
 		button := discordgo.Button{
 			Label:    label,
 			Style:    style,
 			CustomID: fmt.Sprintf("character_create:show_assign:%s:%s:%s", req.RaceKey, req.ClassKey, ability),
 		}
-		
+
 		if i < 3 {
 			row1.Components = append(row1.Components, button)
 		} else {
 			row2.Components = append(row2.Components, button)
 		}
 	}
-	
+
 	components = append(components, row1, row2)
 
 	// Add action buttons

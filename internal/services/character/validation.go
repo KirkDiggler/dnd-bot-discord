@@ -3,7 +3,7 @@ package character
 import (
 	"fmt"
 	"strings"
-	
+
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 )
 

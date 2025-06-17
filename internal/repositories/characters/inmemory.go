@@ -27,23 +27,22 @@ func (r *InMemoryRepository) Create(ctx context.Context, character *entities.Cha
 	if character == nil {
 		return dnderr.InvalidArgument("character cannot be nil")
 	}
-	
+
 	if character.ID == "" {
 		return dnderr.InvalidArgument("character ID is required")
 	}
-	
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	if _, exists := r.characters[character.ID]; exists {
 		return dnderr.AlreadyExistsf("character with ID '%s' already exists", character.ID).
 			WithMeta("character_id", character.ID)
 	}
-	
+
 	// Create a copy to avoid external modifications
-	charCopy := *character
-	r.characters[character.ID] = &charCopy
-	
+	r.characters[character.ID] = character.Clone()
+
 	return nil
 }
 
@@ -52,19 +51,18 @@ func (r *InMemoryRepository) Get(ctx context.Context, id string) (*entities.Char
 	if id == "" {
 		return nil, dnderr.InvalidArgument("character ID is required")
 	}
-	
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	character, exists := r.characters[id]
 	if !exists {
 		return nil, dnderr.NotFoundf("character with ID '%s' not found", id).
 			WithMeta("character_id", id)
 	}
-	
+
 	// Return a copy to avoid external modifications
-	charCopy := *character
-	return &charCopy, nil
+	return character.Clone(), nil
 }
 
 // GetByOwner retrieves all characters for a specific owner
@@ -72,19 +70,18 @@ func (r *InMemoryRepository) GetByOwner(ctx context.Context, ownerID string) ([]
 	if ownerID == "" {
 		return nil, dnderr.InvalidArgument("owner ID is required")
 	}
-	
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	var result []*entities.Character
 	for _, char := range r.characters {
 		if char.OwnerID == ownerID {
 			// Create a copy
-			charCopy := *char
-			result = append(result, &charCopy)
+			result = append(result, char.Clone())
 		}
 	}
-	
+
 	return result, nil
 }
 
@@ -93,23 +90,22 @@ func (r *InMemoryRepository) GetByOwnerAndRealm(ctx context.Context, ownerID, re
 	if ownerID == "" {
 		return nil, dnderr.InvalidArgument("owner ID is required")
 	}
-	
+
 	if realmID == "" {
 		return nil, dnderr.InvalidArgument("realm ID is required")
 	}
-	
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	
+
 	var result []*entities.Character
 	for _, char := range r.characters {
 		if char.OwnerID == ownerID && char.RealmID == realmID {
 			// Create a copy
-			charCopy := *char
-			result = append(result, &charCopy)
+			result = append(result, char.Clone())
 		}
 	}
-	
+
 	return result, nil
 }
 
@@ -118,23 +114,22 @@ func (r *InMemoryRepository) Update(ctx context.Context, character *entities.Cha
 	if character == nil {
 		return dnderr.InvalidArgument("character cannot be nil")
 	}
-	
+
 	if character.ID == "" {
 		return dnderr.InvalidArgument("character ID is required")
 	}
-	
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	if _, exists := r.characters[character.ID]; !exists {
 		return dnderr.NotFoundf("character with ID '%s' not found", character.ID).
 			WithMeta("character_id", character.ID)
 	}
-	
+
 	// Create a copy to avoid external modifications
-	charCopy := *character
-	r.characters[character.ID] = &charCopy
-	
+	r.characters[character.ID] = character.Clone()
+
 	return nil
 }
 
@@ -143,15 +138,15 @@ func (r *InMemoryRepository) Delete(ctx context.Context, id string) error {
 	if id == "" {
 		return dnderr.InvalidArgument("character ID is required")
 	}
-	
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	
+
 	if _, exists := r.characters[id]; !exists {
 		return dnderr.NotFoundf("character with ID '%s' not found", id).
 			WithMeta("character_id", id)
 	}
-	
+
 	delete(r.characters, id)
 	return nil
 }

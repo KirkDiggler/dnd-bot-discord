@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/bwmarrin/discordgo"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	"github.com/bwmarrin/discordgo"
 )
 
 // CreateHandler handles the /dnd character create command
@@ -35,7 +35,7 @@ type CreateRequest struct {
 func (h *CreateHandler) Handle(req *CreateRequest) error {
 	// Check if this is a button interaction (going back) or a command
 	isUpdate := req.Interaction.Type == discordgo.InteractionMessageComponent
-	
+
 	if isUpdate {
 		// This is a button click, update the message
 		err := req.Session.InteractionRespond(req.Interaction.Interaction, &discordgo.InteractionResponse{

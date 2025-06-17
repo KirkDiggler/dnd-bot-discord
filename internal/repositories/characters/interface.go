@@ -13,19 +13,19 @@ import (
 type Repository interface {
 	// Create stores a new character
 	Create(ctx context.Context, character *entities.Character) error
-	
+
 	// Get retrieves a character by ID
 	Get(ctx context.Context, id string) (*entities.Character, error)
-	
+
 	// GetByOwner retrieves all characters for a specific owner
 	GetByOwner(ctx context.Context, ownerID string) ([]*entities.Character, error)
-	
+
 	// GetByOwnerAndRealm retrieves all characters for a specific owner in a realm
 	GetByOwnerAndRealm(ctx context.Context, ownerID, realmID string) ([]*entities.Character, error)
-	
+
 	// Update updates an existing character
 	Update(ctx context.Context, character *entities.Character) error
-	
+
 	// Delete removes a character
 	Delete(ctx context.Context, id string) error
 }

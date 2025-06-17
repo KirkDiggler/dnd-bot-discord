@@ -258,7 +258,7 @@ func copyMeta(meta map[string]any) map[string]any {
 	if meta == nil {
 		return nil
 	}
-	
+
 	copied := make(map[string]any, len(meta))
 	for k, v := range meta {
 		copied[k] = v

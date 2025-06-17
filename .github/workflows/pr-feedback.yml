@@ -1,0 +1,266 @@
+name: PR Feedback
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  size-check:
+    name: PR Size Check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check PR size
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { data: pr } = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number
+          });
+          
+          const additions = pr.additions;
+          const deletions = pr.deletions;
+          const total = additions + deletions;
+          
+          let message = '';
+          let label = '';
+          
+          if (total < 10) {
+            label = 'size/XS';
+            message = '✅ Tiny PR - Quick review expected';
+          } else if (total < 100) {
+            label = 'size/S';
+            message = '✅ Small PR - Easy to review';
+          } else if (total < 500) {
+            label = 'size/M';
+            message = '👍 Medium PR - Standard review time';
+          } else if (total < 1000) {
+            label = 'size/L';
+            message = '⚠️ Large PR - Consider splitting if possible';
+          } else {
+            label = 'size/XL';
+            message = '❌ Very large PR - Should be split into smaller PRs';
+          }
+          
+          // Add label
+          try {
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: [label]
+            });
+          } catch (e) {
+            console.log('Could not add label:', e.message);
+          }
+          
+          // Add comment if PR is large
+          if (total > 500) {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## PR Size Analysis\n\n${message}\n\n- Lines added: ${additions}\n- Lines removed: ${deletions}\n- Total changes: ${total}\n\nLarge PRs are harder to review and more likely to introduce bugs. Consider breaking this into smaller, focused PRs.`
+            });
+          }
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download test results
+      uses: actions/download-artifact@v4
+      with:
+        name: test-results
+        path: test-results
+      continue-on-error: true
+    
+    - name: Comment test results
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Read workflow run results
+          const { data: runs } = await github.rest.actions.listWorkflowRunsForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            event: 'pull_request',
+            head_sha: context.payload.pull_request.head.sha,
+            per_page: 1
+          });
+          
+          if (runs.workflow_runs.length === 0) {
+            console.log('No workflow runs found');
+            return;
+          }
+          
+          const run = runs.workflow_runs[0];
+          const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            run_id: run.id
+          });
+          
+          // Build status table
+          let statusTable = '| Check | Status | Duration |\n|-------|--------|----------|\n';
+          
+          for (const job of jobs.jobs) {
+            if (job.name === 'CI Success') continue;
+            
+            const status = job.status === 'completed' 
+              ? (job.conclusion === 'success' ? '✅' : '❌')
+              : '⏳';
+            
+            const duration = job.completed_at && job.started_at
+              ? `${Math.round((new Date(job.completed_at) - new Date(job.started_at)) / 1000)}s`
+              : '-';
+              
+            statusTable += `| ${job.name} | ${status} | ${duration} |\n`;
+          }
+          
+          const body = `## CI Results\n\n${statusTable}\n\n[View full CI logs](${run.html_url})`;
+          
+          // Find existing comment
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number
+          });
+          
+          const botComment = comments.find(comment => 
+            comment.user.type === 'Bot' && comment.body.includes('## CI Results')
+          );
+          
+          if (botComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: body
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+          }
+
+  files-changed:
+    name: Files Changed Analysis
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Analyze changed files
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { data: files } = await github.rest.pulls.listFiles({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number
+          });
+          
+          // Categorize files
+          const categories = {
+            'entities': [],
+            'services': [],
+            'handlers': [],
+            'repositories': [],
+            'tests': [],
+            'docs': [],
+            'config': [],
+            'other': []
+          };
+          
+          for (const file of files) {
+            if (file.filename.endsWith('_test.go')) {
+              categories.tests.push(file.filename);
+            } else if (file.filename.includes('/entities/')) {
+              categories.entities.push(file.filename);
+            } else if (file.filename.includes('/services/')) {
+              categories.services.push(file.filename);
+            } else if (file.filename.includes('/handlers/')) {
+              categories.handlers.push(file.filename);
+            } else if (file.filename.includes('/repositories/')) {
+              categories.repositories.push(file.filename);
+            } else if (file.filename.endsWith('.md')) {
+              categories.docs.push(file.filename);
+            } else if (file.filename.includes('.yml') || file.filename.includes('.yaml') || 
+                       file.filename.includes('.env') || file.filename === 'go.mod') {
+              categories.config.push(file.filename);
+            } else {
+              categories.other.push(file.filename);
+            }
+          }
+          
+          // Check if tests were added for new code
+          const codeFiles = files.filter(f => 
+            f.filename.endsWith('.go') && 
+            !f.filename.endsWith('_test.go') &&
+            f.status === 'added'
+          );
+          
+          const testFiles = files.filter(f => 
+            f.filename.endsWith('_test.go')
+          );
+          
+          let testWarning = '';
+          if (codeFiles.length > 0 && testFiles.length === 0) {
+            testWarning = '\n\n⚠️ **Warning**: New Go files added without tests. Please consider adding tests.';
+          }
+          
+          // Build summary
+          let summary = '## Changed Files Summary\n\n';
+          
+          for (const [category, fileList] of Object.entries(categories)) {
+            if (fileList.length > 0) {
+              summary += `### ${category.charAt(0).toUpperCase() + category.slice(1)} (${fileList.length})\n`;
+              if (fileList.length <= 10) {
+                fileList.forEach(f => summary += `- ${f}\n`);
+              } else {
+                summary += `<details><summary>Click to expand</summary>\n\n`;
+                fileList.forEach(f => summary += `- ${f}\n`);
+                summary += `</details>\n`;
+              }
+              summary += '\n';
+            }
+          }
+          
+          summary += testWarning;
+          
+          // Add review suggestions based on what changed
+          summary += '\n\n## Review Focus Areas\n\n';
+          
+          if (categories.entities.length > 0) {
+            summary += '- **Data Model Changes**: Review entity modifications carefully\n';
+          }
+          if (categories.repositories.length > 0) {
+            summary += '- **Persistence Layer**: Check Redis operations and data consistency\n';
+          }
+          if (categories.handlers.length > 0) {
+            summary += '- **Discord Integration**: Verify command handling and user interactions\n';
+          }
+          if (categories.config.length > 0) {
+            summary += '- **Configuration**: Ensure no sensitive data is exposed\n';
+          }
+          
+          core.summary
+            .addHeading('PR Analysis', 2)
+            .addRaw(summary)
+            .write();

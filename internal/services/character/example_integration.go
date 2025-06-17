@@ -20,7 +20,7 @@ type CharacterCreationState struct {
 func handleCharacterNameSubmit(s *discordgo.Session, i *discordgo.InteractionCreate, state *CharacterCreationState) error {
     // Extract character name from modal
     characterName := i.ModalSubmitData().Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
-    
+
     // Create the character using the service
     input := &character.CreateCharacterInput{
         UserID:        state.UserID,
@@ -32,13 +32,13 @@ func handleCharacterNameSubmit(s *discordgo.Session, i *discordgo.InteractionCre
         Proficiencies: state.Proficiencies,
         Equipment:     state.Equipment,
     }
-    
+
     output, err := characterService.CreateCharacter(context.Background(), input)
     if err != nil {
         // Handle error - show to user
         return respondWithError(s, i, "Failed to create character: " + err.Error())
     }
-    
+
     // Show success message
     embed := &discordgo.MessageEmbed{
         Title:       "Character Created!",
@@ -62,7 +62,7 @@ func handleCharacterNameSubmit(s *discordgo.Session, i *discordgo.InteractionCre
             },
         },
     }
-    
+
     return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
         Type: discordgo.InteractionResponseUpdateMessage,
         Data: &discordgo.InteractionResponseData{
@@ -78,15 +78,15 @@ func handleShowProficiencyChoices(s *discordgo.Session, i *discordgo.Interaction
         RaceKey:  raceKey,
         ClassKey: classKey,
     }
-    
+
     output, err := characterService.ResolveChoices(context.Background(), input)
     if err != nil {
         return respondWithError(s, i, "Failed to get choices: " + err.Error())
     }
-    
+
     // Convert service output to Discord components
     var components []discordgo.MessageComponent
-    
+
     for _, choice := range output.ProficiencyChoices {
         if len(choice.Options) <= 25 { // Discord limit
             // Create dropdown
@@ -97,7 +97,7 @@ func handleShowProficiencyChoices(s *discordgo.Session, i *discordgo.Interaction
                     Value: opt.Key,
                 }
             }
-            
+
             components = append(components, discordgo.ActionsRow{
                 Components: []discordgo.MessageComponent{
                     discordgo.SelectMenu{
@@ -114,7 +114,7 @@ func handleShowProficiencyChoices(s *discordgo.Session, i *discordgo.Interaction
             // Implementation details...
         }
     }
-    
+
     // Show the choices to the user
     return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
         Type: discordgo.InteractionResponseUpdateMessage,

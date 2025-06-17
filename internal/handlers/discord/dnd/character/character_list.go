@@ -70,7 +70,10 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 		case entities.CharacterStatusActive:
 			activeChars = append(activeChars, char)
 		case entities.CharacterStatusDraft:
-			draftChars = append(draftChars, char)
+			// Only show drafts that have meaningful progress (name or race/class selected)
+			if char.Name != "" || char.Race != nil || char.Class != nil {
+				draftChars = append(draftChars, char)
+			}
 		case entities.CharacterStatusArchived:
 			archivedChars = append(archivedChars, char)
 		}
@@ -81,7 +84,7 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 		var sb strings.Builder
 		for _, char := range activeChars {
 			// Debug logging
-			fmt.Printf("Character %s (ID: %s) - Race: %v, Class: %v\n", 
+			fmt.Printf("Character %s (ID: %s) - Race: %v, Class: %v\n",
 				char.Name, char.ID, char.Race != nil, char.Class != nil)
 			sb.WriteString(fmt.Sprintf("**%s** - %s (Level %d)\n",
 				char.Name,
@@ -109,8 +112,32 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 			status := "Creating..."
 			if char.Name != "" {
 				status = char.Name
+			} else if char.Race != nil && char.Class != nil {
+				status = fmt.Sprintf("%s %s (unnamed)", char.Race.Name, char.Class.Name)
+			} else if char.Race != nil {
+				status = fmt.Sprintf("%s (selecting class)", char.Race.Name)
 			}
-			sb.WriteString(fmt.Sprintf("**%s** - ID: `%s`\n", status, char.ID))
+
+			// Add progress indicator
+			progress := ""
+			if char.Race != nil {
+				progress += "✓ Race "
+			}
+			if char.Class != nil {
+				progress += "✓ Class "
+			}
+			if len(char.Attributes) > 0 {
+				progress += "✓ Abilities "
+			}
+			if char.Name != "" {
+				progress += "✓ Name"
+			}
+
+			sb.WriteString(fmt.Sprintf("**%s**\n", status))
+			if progress != "" {
+				sb.WriteString(fmt.Sprintf("  Progress: %s\n", progress))
+			}
+			sb.WriteString(fmt.Sprintf("  ID: `%s`\n\n", char.ID))
 		}
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   "📝 Draft Characters",
@@ -143,7 +170,7 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 
 	// Add components for quick actions
 	components := []discordgo.MessageComponent{}
-	
+
 	// Add show/edit buttons for active characters
 	if len(activeChars) > 0 {
 		var buttons []discordgo.MessageComponent
@@ -166,7 +193,7 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 				Components: buttons,
 			})
 		}
-		
+
 		// Add second row for edit buttons if we have any characters
 		var editButtons []discordgo.MessageComponent
 		for i, char := range activeChars {

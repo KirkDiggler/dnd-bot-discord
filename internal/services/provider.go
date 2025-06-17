@@ -19,10 +19,10 @@ type Provider struct {
 
 // ProviderConfig holds configuration for creating services
 type ProviderConfig struct {
-	DNDClient            dnd5e.Client
-	CharacterRepository  characters.Repository
-	SessionRepository    gamesessions.Repository
-	EncounterRepository  encounters.Repository
+	DNDClient           dnd5e.Client
+	CharacterRepository characters.Repository
+	SessionRepository   gamesessions.Repository
+	EncounterRepository encounters.Repository
 }
 
 // NewProvider creates a new service provider with all services initialized
@@ -32,12 +32,12 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 	if charRepo == nil {
 		charRepo = characters.NewInMemoryRepository()
 	}
-	
+
 	sessionRepo := cfg.SessionRepository
 	if sessionRepo == nil {
 		sessionRepo = gamesessions.NewInMemoryRepository()
 	}
-	
+
 	encounterRepo := cfg.EncounterRepository
 	if encounterRepo == nil {
 		encounterRepo = encounters.NewInMemoryRepository()
@@ -48,13 +48,13 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 		DNDClient:  cfg.DNDClient,
 		Repository: charRepo,
 	})
-	
+
 	// Create session service
 	sessService := sessionService.NewService(&sessionService.ServiceConfig{
 		Repository:       sessionRepo,
 		CharacterService: charService,
 	})
-	
+
 	// Create encounter service
 	encService := encounterService.NewService(&encounterService.ServiceConfig{
 		Repository:       encounterRepo,

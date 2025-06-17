@@ -9,12 +9,12 @@ func CalculateAC(character *entities.Character) int {
 	if character == nil {
 		return 10
 	}
-	
+
 	// Get ability modifiers
 	dexMod := 0
 	wisMod := 0
 	conMod := 0
-	
+
 	if dexScore, exists := character.Attributes[entities.AttributeDexterity]; exists && dexScore != nil {
 		dexMod = dexScore.Bonus
 	}
@@ -24,11 +24,11 @@ func CalculateAC(character *entities.Character) int {
 	if conScore, exists := character.Attributes[entities.AttributeConstitution]; exists && conScore != nil {
 		conMod = conScore.Bonus
 	}
-	
+
 	// Check for armor
 	hasArmor := false
 	baseAC := 10
-	
+
 	// Check equipped slots for armor
 	if character.EquippedSlots != nil {
 		for slot, item := range character.EquippedSlots {
@@ -81,29 +81,29 @@ func CalculateAC(character *entities.Character) int {
 			}
 		}
 	}
-	
+
 	// Get class features
 	classFeatures := []entities.CharacterFeature{}
 	if character.Class != nil {
 		classFeatures = GetClassFeatures(character.Class.Key, character.Level)
 	}
-	
+
 	// Check for Unarmored Defense
 	if !hasArmor {
 		// Monk Unarmored Defense
 		if HasFeature(classFeatures, "unarmored_defense_monk") {
 			return 10 + dexMod + wisMod
 		}
-		
+
 		// Barbarian Unarmored Defense
 		if HasFeature(classFeatures, "unarmored_defense_barbarian") {
 			return 10 + dexMod + conMod
 		}
 	}
-	
+
 	// Standard AC calculation
 	ac := baseAC + dexMod
-	
+
 	// Check for shield
 	hasShield := false
 	if character.EquippedSlots != nil {
@@ -114,11 +114,11 @@ func CalculateAC(character *entities.Character) int {
 			}
 		}
 	}
-	
+
 	if hasShield {
 		ac += 2
 	}
-	
+
 	return ac
 }
 
@@ -127,22 +127,22 @@ func CalculateInitiativeBonus(character *entities.Character) int {
 	if character == nil {
 		return 0
 	}
-	
+
 	dexMod := 0
 	if dexScore, exists := character.Attributes[entities.AttributeDexterity]; exists && dexScore != nil {
 		dexMod = dexScore.Bonus
 	}
-	
+
 	// Could add features that modify initiative here
 	// For example, Alert feat adds +5
-	
+
 	return dexMod
 }
 
 // CalculateSpeed calculates movement speed including racial modifiers
 func CalculateSpeed(character *entities.Character) int {
 	baseSpeed := 30 // Default for most races
-	
+
 	if character.Race != nil {
 		switch character.Race.Key {
 		case "dwarf":
@@ -155,9 +155,9 @@ func CalculateSpeed(character *entities.Character) int {
 			baseSpeed = 35
 		}
 	}
-	
+
 	// Could add features that modify speed here
 	// For example, Monk's Unarmored Movement
-	
+
 	return baseSpeed
 }

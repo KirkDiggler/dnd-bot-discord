@@ -73,14 +73,14 @@ func (h *EndHandler) Handle(req *EndRequest) error {
 		duration := session.EndedAt.Sub(*session.StartedAt)
 		hours := int(duration.Hours())
 		minutes := int(duration.Minutes()) % 60
-		
+
 		durationStr := ""
 		if hours > 0 {
 			durationStr = fmt.Sprintf("%d hours, %d minutes", hours, minutes)
 		} else {
 			durationStr = fmt.Sprintf("%d minutes", minutes)
 		}
-		
+
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   "⏱️ Duration",
 			Value:  durationStr,

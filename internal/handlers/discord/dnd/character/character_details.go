@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bwmarrin/discordgo"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	"github.com/bwmarrin/discordgo"
 )
 
 // CharacterDetailsHandler handles character name and final details
@@ -83,7 +83,7 @@ func (h *CharacterDetailsHandler) Handle(req *CharacterDetailsRequest) error {
 			}
 		}
 	}
-	
+
 	// Create embed
 	embed := &discordgo.MessageEmbed{
 		Title:       "Character Details",

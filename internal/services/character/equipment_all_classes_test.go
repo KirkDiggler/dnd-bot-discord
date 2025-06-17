@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 
+	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
-	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
 )
 
 // AllClassesEquipmentTestSuite tests equipment choices for all D&D classes
@@ -58,9 +58,9 @@ func (s *AllClassesEquipmentTestSuite) TestBarbarianEquipmentChoices() {
 						},
 					},
 					&entities.Choice{
-						Name:  "any martial melee weapon",
-						Count: 1,
-						Type:  entities.ChoiceTypeEquipment,
+						Name:    "any martial melee weapon",
+						Count:   1,
+						Type:    entities.ChoiceTypeEquipment,
 						Options: createMartialMeleeWeaponOptions(),
 					},
 				},
@@ -78,26 +78,26 @@ func (s *AllClassesEquipmentTestSuite) TestBarbarianEquipmentChoices() {
 						},
 					},
 					&entities.Choice{
-						Name:  "any simple weapon",
-						Count: 1,
-						Type:  entities.ChoiceTypeEquipment,
+						Name:    "any simple weapon",
+						Count:   1,
+						Type:    entities.ChoiceTypeEquipment,
 						Options: createSimpleWeaponOptions(),
 					},
 				},
 			},
 		},
 	}
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
 	s.NoError(err)
 	s.Len(choices, 2)
-	
+
 	// First choice - weapon
 	s.Equal("barbarian-equip-0", choices[0].ID)
 	s.Equal("greataxe", choices[0].Options[0].Key)
 	s.Contains(choices[0].Options[0].Description, "1d12 slashing")
 	s.Contains(choices[0].Options[1].Key, "nested") // Martial weapon choice
-	
+
 	// Second choice - secondary weapon
 	s.Equal("barbarian-equip-1", choices[1].ID)
 	s.Equal("2x Handaxe", choices[1].Options[0].Name)
@@ -129,9 +129,9 @@ func (s *AllClassesEquipmentTestSuite) TestBardEquipmentChoices() {
 						},
 					},
 					&entities.Choice{
-						Name:  "any simple weapon",
-						Count: 1,
-						Type:  entities.ChoiceTypeEquipment,
+						Name:    "any simple weapon",
+						Count:   1,
+						Type:    entities.ChoiceTypeEquipment,
 						Options: createSimpleWeaponOptions(),
 					},
 				},
@@ -167,29 +167,29 @@ func (s *AllClassesEquipmentTestSuite) TestBardEquipmentChoices() {
 						},
 					},
 					&entities.Choice{
-						Name:  "any other musical instrument",
-						Count: 1,
-						Type:  entities.ChoiceTypeEquipment,
+						Name:    "any other musical instrument",
+						Count:   1,
+						Type:    entities.ChoiceTypeEquipment,
 						Options: createMusicalInstrumentOptions(),
 					},
 				},
 			},
 		},
 	}
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
 	s.NoError(err)
 	s.Len(choices, 3)
-	
+
 	// Weapon choice
 	s.Len(choices[0].Options, 3)
 	s.Equal("rapier", choices[0].Options[0].Key)
 	s.Equal("longsword", choices[0].Options[1].Key)
 	s.Contains(choices[0].Options[2].Key, "nested")
-	
+
 	// Pack choice
 	s.Len(choices[1].Options, 2)
-	
+
 	// Instrument choice
 	s.Equal("lute", choices[2].Options[0].Key)
 	s.Contains(choices[2].Options[1].Key, "nested")
@@ -214,9 +214,9 @@ func (s *AllClassesEquipmentTestSuite) TestDruidEquipmentChoices() {
 						},
 					},
 					&entities.Choice{
-						Name:  "any simple weapon",
-						Count: 1,
-						Type:  entities.ChoiceTypeEquipment,
+						Name:    "any simple weapon",
+						Count:   1,
+						Type:    entities.ChoiceTypeEquipment,
 						Options: createSimpleWeaponOptions(),
 					},
 				},
@@ -233,25 +233,25 @@ func (s *AllClassesEquipmentTestSuite) TestDruidEquipmentChoices() {
 						},
 					},
 					&entities.Choice{
-						Name:  "any simple melee weapon",
-						Count: 1,
-						Type:  entities.ChoiceTypeEquipment,
+						Name:    "any simple melee weapon",
+						Count:   1,
+						Type:    entities.ChoiceTypeEquipment,
 						Options: createSimpleMeleeWeaponOptions(),
 					},
 				},
 			},
 		},
 	}
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
 	s.NoError(err)
 	s.Len(choices, 2)
-	
+
 	// Shield/weapon choice
 	s.Equal("shield", choices[0].Options[0].Key)
 	s.Contains(choices[0].Options[0].Description, "+2 AC")
 	s.Contains(choices[0].Options[1].Key, "nested")
-	
+
 	// Weapon choice
 	s.Equal("scimitar", choices[1].Options[0].Key)
 	s.Contains(choices[1].Options[0].Description, "1d6 slashing")
@@ -275,9 +275,9 @@ func (s *AllClassesEquipmentTestSuite) TestPaladinEquipmentChoices() {
 						Name: "a martial weapon and a shield",
 						Items: []entities.Option{
 							&entities.Choice{
-								Name:  "martial weapon",
-								Count: 1,
-								Type:  entities.ChoiceTypeEquipment,
+								Name:    "martial weapon",
+								Count:   1,
+								Type:    entities.ChoiceTypeEquipment,
 								Options: createMartialWeaponOptions(),
 							},
 							&entities.ReferenceOption{
@@ -289,9 +289,9 @@ func (s *AllClassesEquipmentTestSuite) TestPaladinEquipmentChoices() {
 						},
 					},
 					&entities.Choice{
-						Name:  "two martial weapons",
-						Count: 2,
-						Type:  entities.ChoiceTypeEquipment,
+						Name:    "two martial weapons",
+						Count:   2,
+						Type:    entities.ChoiceTypeEquipment,
 						Options: createMartialWeaponOptions(),
 					},
 				},
@@ -309,9 +309,9 @@ func (s *AllClassesEquipmentTestSuite) TestPaladinEquipmentChoices() {
 						},
 					},
 					&entities.Choice{
-						Name:  "any simple melee weapon",
-						Count: 1,
-						Type:  entities.ChoiceTypeEquipment,
+						Name:    "any simple melee weapon",
+						Count:   1,
+						Type:    entities.ChoiceTypeEquipment,
 						Options: createSimpleMeleeWeaponOptions(),
 					},
 				},
@@ -337,15 +337,15 @@ func (s *AllClassesEquipmentTestSuite) TestPaladinEquipmentChoices() {
 			},
 		},
 	}
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
 	s.NoError(err)
 	s.Len(choices, 3)
-	
+
 	// Weapon choice - both options are nested
 	s.Contains(choices[0].Options[0].Key, "nested")
 	s.Contains(choices[0].Options[1].Key, "nested")
-	
+
 	// Javelin/weapon choice
 	s.Equal("5x Javelin", choices[1].Options[0].Name)
 	s.Contains(choices[1].Options[1].Key, "nested")
@@ -383,9 +383,9 @@ func (s *AllClassesEquipmentTestSuite) TestSorcererEquipmentChoices() {
 						},
 					},
 					&entities.Choice{
-						Name:  "any simple weapon",
-						Count: 1,
-						Type:  entities.ChoiceTypeEquipment,
+						Name:    "any simple weapon",
+						Count:   1,
+						Type:    entities.ChoiceTypeEquipment,
 						Options: createSimpleWeaponOptions(),
 					},
 				},
@@ -402,24 +402,24 @@ func (s *AllClassesEquipmentTestSuite) TestSorcererEquipmentChoices() {
 						},
 					},
 					&entities.Choice{
-						Name:  "arcane focus",
-						Count: 1,
-						Type:  entities.ChoiceTypeEquipment,
+						Name:    "arcane focus",
+						Count:   1,
+						Type:    entities.ChoiceTypeEquipment,
 						Options: createArcaneFocusOptions(),
 					},
 				},
 			},
 		},
 	}
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
 	s.NoError(err)
 	s.Len(choices, 2)
-	
+
 	// Weapon choice
 	s.Contains(choices[0].Options[0].Name, "Light Crossbow and 20x Crossbow Bolt")
 	s.Contains(choices[0].Options[1].Key, "nested")
-	
+
 	// Focus choice
 	s.Equal("component-pouch", choices[1].Options[0].Key)
 	s.Contains(choices[1].Options[1].Key, "nested")
@@ -457,9 +457,9 @@ func (s *AllClassesEquipmentTestSuite) TestWarlockEquipmentChoices() {
 						},
 					},
 					&entities.Choice{
-						Name:  "any simple weapon",
-						Count: 1,
-						Type:  entities.ChoiceTypeEquipment,
+						Name:    "any simple weapon",
+						Count:   1,
+						Type:    entities.ChoiceTypeEquipment,
 						Options: createSimpleWeaponOptions(),
 					},
 				},
@@ -476,9 +476,9 @@ func (s *AllClassesEquipmentTestSuite) TestWarlockEquipmentChoices() {
 						},
 					},
 					&entities.Choice{
-						Name:  "arcane focus",
-						Count: 1,
-						Type:  entities.ChoiceTypeEquipment,
+						Name:    "arcane focus",
+						Count:   1,
+						Type:    entities.ChoiceTypeEquipment,
 						Options: createArcaneFocusOptions(),
 					},
 				},
@@ -504,7 +504,7 @@ func (s *AllClassesEquipmentTestSuite) TestWarlockEquipmentChoices() {
 			},
 		},
 	}
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
 	s.NoError(err)
 	s.Len(choices, 3)
@@ -519,7 +519,7 @@ func createMartialMeleeWeaponOptions() []entities.Option {
 		"pike", "rapier", "scimitar", "shortsword", "trident",
 		"war-pick", "warhammer", "whip",
 	}
-	
+
 	options := []entities.Option{}
 	for _, weapon := range weapons {
 		options = append(options, &entities.ReferenceOption{
@@ -538,7 +538,7 @@ func createSimpleWeaponOptions() []entities.Option {
 		"light-hammer", "mace", "quarterstaff", "sickle", "spear",
 		"light-crossbow", "dart", "shortbow", "sling",
 	}
-	
+
 	options := []entities.Option{}
 	for _, weapon := range weapons {
 		options = append(options, &entities.ReferenceOption{
@@ -556,7 +556,7 @@ func createSimpleMeleeWeaponOptions() []entities.Option {
 		"club", "dagger", "greatclub", "handaxe", "javelin",
 		"light-hammer", "mace", "quarterstaff", "sickle", "spear",
 	}
-	
+
 	options := []entities.Option{}
 	for _, weapon := range weapons {
 		options = append(options, &entities.ReferenceOption{
@@ -574,7 +574,7 @@ func createMusicalInstrumentOptions() []entities.Option {
 		"bagpipes", "drum", "dulcimer", "flute", "horn",
 		"lyre", "pan-flute", "shawm", "viol",
 	}
-	
+
 	options := []entities.Option{}
 	for _, instrument := range instruments {
 		options = append(options, &entities.ReferenceOption{
@@ -591,7 +591,7 @@ func createArcaneFocusOptions() []entities.Option {
 	focuses := []string{
 		"crystal", "orb", "rod", "staff", "wand",
 	}
-	
+
 	options := []entities.Option{}
 	for _, focus := range focuses {
 		options = append(options, &entities.ReferenceOption{

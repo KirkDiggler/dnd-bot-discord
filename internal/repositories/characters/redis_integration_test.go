@@ -1,222 +1,167 @@
 //go:build integration
 // +build integration
 
-package characters
+package characters_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
-	"time"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/uuid"
-	"github.com/redis/go-redis/v9"
-	"github.com/stretchr/testify/suite"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/testutils"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-type RedisIntegrationTestSuite struct {
-	suite.Suite
-	redisContainer testcontainers.Container
-	redisClient    *redis.Client
-	repo           Repository
-	ctx            context.Context
-}
+func TestRedisRepository_Integration(t *testing.T) {
+	// This test requires Redis to be running
+	client := testutils.CreateTestRedisClientOrSkip(t)
 
-func (s *RedisIntegrationTestSuite) SetupSuite() {
-	s.ctx = context.Background()
-
-	// Start Redis container
-	req := testcontainers.ContainerRequest{
-		Image:        "redis:7-alpine",
-		ExposedPorts: []string{"6379/tcp"},
-		WaitingFor:   wait.ForLog("Ready to accept connections"),
-	}
-
-	container, err := testcontainers.GenericContainer(s.ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	s.Require().NoError(err)
-	s.redisContainer = container
-
-	// Get Redis connection details
-	host, err := container.Host(s.ctx)
-	s.Require().NoError(err)
-
-	port, err := container.MappedPort(s.ctx, "6379")
-	s.Require().NoError(err)
-
-	// Create Redis client
-	s.redisClient = redis.NewClient(&redis.Options{
-		Addr: fmt.Sprintf("%s:%s", host, port.Port()),
+	repo := characters.NewRedisRepository(&characters.RedisRepoConfig{
+		Client: client,
 	})
 
-	// Wait for Redis to be ready
-	err = s.redisClient.Ping(s.ctx).Err()
-	s.Require().NoError(err)
+	ctx := context.Background()
 
-	// Create repository
-	s.repo = NewRedisRepository(&RedisRepoConfig{
-		Client:        s.redisClient,
-		UUIDGenerator: uuid.NewGoogleUUIDGenerator(),
-		DraftTTL:      24 * time.Hour,
+	t.Run("create and retrieve character", func(t *testing.T) {
+		// Create a test character
+		char := testutils.CreateTestCharacter("test-char-1", "user-123", "realm-456", "Aragorn")
+
+		// Create the character
+		err := repo.Create(ctx, char)
+		require.NoError(t, err)
+
+		// Retrieve the character
+		retrieved, err := repo.Get(ctx, char.ID)
+		require.NoError(t, err)
+		assert.NotNil(t, retrieved)
+
+		// Verify all fields are preserved
+		assert.Equal(t, char.ID, retrieved.ID)
+		assert.Equal(t, char.Name, retrieved.Name)
+		assert.Equal(t, char.OwnerID, retrieved.OwnerID)
+		assert.Equal(t, char.RealmID, retrieved.RealmID)
+		assert.NotNil(t, retrieved.Race)
+		assert.Equal(t, char.Race.Key, retrieved.Race.Key)
+		assert.NotNil(t, retrieved.Class)
+		assert.Equal(t, char.Class.Key, retrieved.Class.Key)
+		assert.Len(t, retrieved.Attributes, 6)
+		assert.Equal(t, char.MaxHitPoints, retrieved.MaxHitPoints)
+		assert.Equal(t, char.AC, retrieved.AC)
 	})
-}
 
-func (s *RedisIntegrationTestSuite) TearDownSuite() {
-	if s.redisClient != nil {
-		s.redisClient.Close()
-	}
-	if s.redisContainer != nil {
-		s.redisContainer.Terminate(s.ctx)
-	}
-}
+	t.Run("create duplicate character fails", func(t *testing.T) {
+		char := testutils.CreateTestCharacter("test-char-2", "user-123", "realm-456", "Legolas")
 
-func (s *RedisIntegrationTestSuite) SetupTest() {
-	// Clear Redis before each test
-	err := s.redisClient.FlushDB(s.ctx).Err()
-	s.Require().NoError(err)
-}
+		// Create the character
+		err := repo.Create(ctx, char)
+		require.NoError(t, err)
 
-func (s *RedisIntegrationTestSuite) createTestCharacter(id string) *entities.Character {
-	return &entities.Character{
-		ID:       id,
-		OwnerID:  "owner-" + id,
-		RealmID:  "realm-1",
-		Name:     "Test Character " + id,
-		Level:    1,
-		Race:     &entities.Race{Key: "human", Name: "Human"},
-		Class:    &entities.Class{Key: "fighter", Name: "Fighter"},
-		HitDie:   10,
-		MaxHitPoints: 10,
-		CurrentHitPoints: 10,
-		Attributes: map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeStrength:     {Score: 16, Bonus: 3},
-			entities.AttributeDexterity:    {Score: 14, Bonus: 2},
-			entities.AttributeConstitution: {Score: 15, Bonus: 2},
-			entities.AttributeIntelligence: {Score: 10, Bonus: 0},
-			entities.AttributeWisdom:       {Score: 12, Bonus: 1},
-			entities.AttributeCharisma:     {Score: 8, Bonus: -1},
-		},
-		Status: entities.CharacterStatusActive,
-	}
-}
+		// Try to create again
+		err = repo.Create(ctx, char)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "already exists")
+	})
 
-func (s *RedisIntegrationTestSuite) TestCreateAndGet() {
-	// Create character
-	char := s.createTestCharacter("test-1")
-	err := s.repo.Create(s.ctx, char)
-	s.NoError(err)
+	t.Run("update character", func(t *testing.T) {
+		char := testutils.CreateTestCharacter("test-char-3", "user-123", "realm-456", "Gimli")
 
-	// Get character
-	retrieved, err := s.repo.Get(s.ctx, "test-1")
-	s.NoError(err)
-	s.Equal(char.Name, retrieved.Name)
-	s.Equal(char.OwnerID, retrieved.OwnerID)
-}
+		// Create the character
+		err := repo.Create(ctx, char)
+		require.NoError(t, err)
 
-func (s *RedisIntegrationTestSuite) TestGetByOwner() {
-	// Create multiple characters for same owner
-	owner := "owner-123"
-	for i := 1; i <= 3; i++ {
-		char := s.createTestCharacter(fmt.Sprintf("char-%d", i))
-		char.OwnerID = owner
-		err := s.repo.Create(s.ctx, char)
-		s.NoError(err)
-	}
+		// Update the character
+		char.Name = "Gimli Son of Gloin"
+		char.Level = 5
+		char.CurrentHitPoints = 20
+		char.MaxHitPoints = 45
 
-	// Get by owner
-	chars, err := s.repo.GetByOwner(s.ctx, owner)
-	s.NoError(err)
-	s.Len(chars, 3)
-}
+		err = repo.Update(ctx, char)
+		require.NoError(t, err)
 
-func (s *RedisIntegrationTestSuite) TestUpdate() {
-	// Create character
-	char := s.createTestCharacter("update-test")
-	err := s.repo.Create(s.ctx, char)
-	s.NoError(err)
+		// Retrieve and verify
+		updated, err := repo.Get(ctx, char.ID)
+		require.NoError(t, err)
+		assert.Equal(t, "Gimli Son of Gloin", updated.Name)
+		assert.Equal(t, 5, updated.Level)
+		assert.Equal(t, 20, updated.CurrentHitPoints)
+		assert.Equal(t, 45, updated.MaxHitPoints)
+	})
 
-	// Update character
-	char.Name = "Updated Name"
-	char.Level = 5
-	err = s.repo.Update(s.ctx, char)
-	s.NoError(err)
+	t.Run("get by owner", func(t *testing.T) {
+		ownerID := "owner-test-1"
 
-	// Verify update
-	retrieved, err := s.repo.Get(s.ctx, "update-test")
-	s.NoError(err)
-	s.Equal("Updated Name", retrieved.Name)
-	s.Equal(5, retrieved.Level)
-}
+		// Create multiple characters for the owner
+		char1 := testutils.CreateTestCharacter("owner-char-1", ownerID, "realm-456", "Frodo")
+		char2 := testutils.CreateTestCharacter("owner-char-2", ownerID, "realm-456", "Sam")
+		char3 := testutils.CreateTestCharacter("owner-char-3", "other-owner", "realm-456", "Merry")
 
-func (s *RedisIntegrationTestSuite) TestDelete() {
-	// Create character
-	char := s.createTestCharacter("delete-test")
-	err := s.repo.Create(s.ctx, char)
-	s.NoError(err)
+		require.NoError(t, repo.Create(ctx, char1))
+		require.NoError(t, repo.Create(ctx, char2))
+		require.NoError(t, repo.Create(ctx, char3))
 
-	// Delete character
-	err = s.repo.Delete(s.ctx, "delete-test")
-	s.NoError(err)
+		// Get characters by owner
+		chars, err := repo.GetByOwner(ctx, ownerID)
+		require.NoError(t, err)
+		assert.Len(t, chars, 2)
 
-	// Verify deletion
-	_, err = s.repo.Get(s.ctx, "delete-test")
-	s.Error(err)
-}
+		// Verify we got the right characters
+		names := []string{chars[0].Name, chars[1].Name}
+		assert.Contains(t, names, "Frodo")
+		assert.Contains(t, names, "Sam")
+	})
 
-func (s *RedisIntegrationTestSuite) TestConcurrentOperations() {
-	// Test concurrent creates
-	done := make(chan bool, 10)
-	for i := 0; i < 10; i++ {
-		go func(id int) {
-			char := s.createTestCharacter(fmt.Sprintf("concurrent-%d", id))
-			err := s.repo.Create(s.ctx, char)
-			s.NoError(err)
-			done <- true
-		}(i)
-	}
+	t.Run("get by owner and realm", func(t *testing.T) {
+		ownerID := "owner-test-2"
+		realm1 := "realm-1"
+		realm2 := "realm-2"
 
-	// Wait for all creates
-	for i := 0; i < 10; i++ {
-		<-done
-	}
+		// Create characters in different realms
+		char1 := testutils.CreateTestCharacter("realm-char-1", ownerID, realm1, "Gandalf")
+		char2 := testutils.CreateTestCharacter("realm-char-2", ownerID, realm1, "Saruman")
+		char3 := testutils.CreateTestCharacter("realm-char-3", ownerID, realm2, "Radagast")
 
-	// Verify all were created
-	for i := 0; i < 10; i++ {
-		_, err := s.repo.Get(s.ctx, fmt.Sprintf("concurrent-%d", i))
-		s.NoError(err)
-	}
-}
+		require.NoError(t, repo.Create(ctx, char1))
+		require.NoError(t, repo.Create(ctx, char2))
+		require.NoError(t, repo.Create(ctx, char3))
 
-func (s *RedisIntegrationTestSuite) TestPipelineAtomicity() {
-	// Create a character
-	char := s.createTestCharacter("pipeline-test")
-	err := s.repo.Create(s.ctx, char)
-	s.NoError(err)
+		// Get characters in realm1
+		chars, err := repo.GetByOwnerAndRealm(ctx, ownerID, realm1)
+		require.NoError(t, err)
+		assert.Len(t, chars, 2)
 
-	// Verify all indexes were created atomically
-	// Check character data exists
-	exists := s.redisClient.Exists(s.ctx, "character:pipeline-test").Val()
-	s.Equal(int64(1), exists)
+		// Verify we got the right characters
+		for _, char := range chars {
+			assert.Equal(t, realm1, char.RealmID)
+		}
+	})
 
-	// Check all indexes
-	isMember := s.redisClient.SIsMember(s.ctx, "owner:owner-pipeline-test:characters", "pipeline-test").Val()
-	s.True(isMember)
+	t.Run("delete character", func(t *testing.T) {
+		char := testutils.CreateTestCharacter("test-char-delete", "user-123", "realm-456", "Boromir")
 
-	isMember = s.redisClient.SIsMember(s.ctx, "realm:realm-1:characters", "pipeline-test").Val()
-	s.True(isMember)
+		// Create the character
+		err := repo.Create(ctx, char)
+		require.NoError(t, err)
 
-	isMember = s.redisClient.SIsMember(s.ctx, "owner:owner-pipeline-test:realm:realm-1:characters", "pipeline-test").Val()
-	s.True(isMember)
-}
+		// Verify it exists
+		retrieved, err := repo.Get(ctx, char.ID)
+		require.NoError(t, err)
+		assert.NotNil(t, retrieved)
 
-func TestRedisIntegrationTestSuite(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration tests in short mode")
-	}
-	suite.Run(t, new(RedisIntegrationTestSuite))
+		// Delete the character
+		err = repo.Delete(ctx, char.ID)
+		require.NoError(t, err)
+
+		// Verify it's gone
+		_, err = repo.Get(ctx, char.ID)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+
+		// Verify it's removed from owner index
+		chars, err := repo.GetByOwner(ctx, char.OwnerID)
+		require.NoError(t, err)
+		for _, c := range chars {
+			assert.NotEqual(t, char.ID, c.ID)
+		}
+	})
 }

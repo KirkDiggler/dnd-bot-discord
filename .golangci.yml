@@ -1,0 +1,63 @@
+version: "2"
+run:
+  issues-exit-code: 1
+  tests: true
+  timeout: 5m
+  build-tags:
+    - integration
+
+linters:
+  default: none
+  enable:
+    - copyloopvar    # Detects places where loop variables are copied
+    - errcheck       # Checks for unchecked errors
+    - gocritic       # Provides diagnostics for Go code
+    - govet          # Reports suspicious constructs
+    - ineffassign    # Detects when assignments to existing variables are not used
+    - revive         # Fast, configurable linter
+    - staticcheck    # Advanced static analysis
+    - unconvert      # Removes unnecessary type conversions
+    - unused         # Checks for unused code
+    - misspell       # Checks for misspelled words
+    - gosec          # Security oriented checks
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    gocritic:
+      disabled-checks:
+        - dupImport
+        - ifElseChain
+        - whyNoLint
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - performance
+        - style
+    govet:
+      enable:
+        - shadow
+    gosec:
+      excludes:
+        - G104  # Unhandled errors in defer statements
+
+issues:
+  exclude-dirs:
+    - internal/mocks
+    - "*/mock"
+  
+  exclude-rules:
+    # Exclude some linters from running on test files
+    - path: _test\.go
+      linters:
+        - gosec
+    
+    # Exclude generated files
+    - path: "mock"
+      linters:
+        - gocritic
+        - gosec
+  
+  max-issues-per-linter: 50
+  max-same-issues: 10

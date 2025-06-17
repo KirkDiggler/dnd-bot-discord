@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 
+	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
-	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
 )
 
 // EquipmentEdgeCasesTestSuite tests edge cases and error scenarios
@@ -51,7 +51,7 @@ func (s *EquipmentEdgeCasesTestSuite) TestNilClass() {
 			s.Fail("ResolveEquipmentChoices should not panic on nil class")
 		}
 	}()
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, nil)
 	// Either error or empty choices would be acceptable
 	if err == nil {
@@ -81,7 +81,7 @@ func (s *EquipmentEdgeCasesTestSuite) TestEmptyOptions() {
 			},
 		},
 	}
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
 	s.NoError(err)
 	s.Empty(choices) // All invalid choices should be filtered out
@@ -106,14 +106,14 @@ func (s *EquipmentEdgeCasesTestSuite) TestNilReferences() {
 					},
 					&entities.ReferenceOption{
 						Reference: &entities.ReferenceItem{
-							Key:  "",    // Empty key
+							Key:  "", // Empty key
 							Name: "Test",
 						},
 					},
 					&entities.ReferenceOption{
 						Reference: &entities.ReferenceItem{
 							Key:  "test",
-							Name: "",    // Empty name
+							Name: "", // Empty name
 						},
 					},
 					&entities.ReferenceOption{
@@ -126,7 +126,7 @@ func (s *EquipmentEdgeCasesTestSuite) TestNilReferences() {
 			},
 		},
 	}
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
 	s.NoError(err)
 	s.Len(choices, 1)
@@ -177,7 +177,7 @@ func (s *EquipmentEdgeCasesTestSuite) TestDeeplyNestedChoices() {
 			},
 		},
 	}
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
 	s.NoError(err)
 	s.Len(choices, 1)
@@ -237,7 +237,7 @@ func (s *EquipmentEdgeCasesTestSuite) TestMixedValidInvalidOptions() {
 			},
 		},
 	}
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
 	s.NoError(err)
 	s.Len(choices, 1)
@@ -281,7 +281,7 @@ func (s *EquipmentEdgeCasesTestSuite) TestSpecialCharactersInNames() {
 			},
 		},
 	}
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
 	s.NoError(err)
 	s.Len(choices, 1)
@@ -354,7 +354,7 @@ func (s *EquipmentEdgeCasesTestSuite) TestZeroAndNegativeCounts() {
 			},
 		},
 	}
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
 	s.NoError(err)
 	// Implementation should handle these gracefully
@@ -380,7 +380,7 @@ func (s *EquipmentEdgeCasesTestSuite) TestLargeNumberOfOptions() {
 			},
 		})
 	}
-	
+
 	class := &entities.Class{
 		Key:  "test",
 		Name: "Test",
@@ -393,7 +393,7 @@ func (s *EquipmentEdgeCasesTestSuite) TestLargeNumberOfOptions() {
 			},
 		},
 	}
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
 	s.NoError(err)
 	s.Len(choices, 1)
@@ -443,7 +443,7 @@ func (s *EquipmentEdgeCasesTestSuite) TestEmptyBundles() {
 			},
 		},
 	}
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
 	s.NoError(err)
 	// Only bundles with valid items should be included
@@ -508,7 +508,7 @@ func (s *EquipmentEdgeCasesTestSuite) TestWrongChoiceTypes() {
 			},
 		},
 	}
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
 	s.NoError(err)
 	// Should only include equipment type choices
@@ -520,7 +520,7 @@ func (s *EquipmentEdgeCasesTestSuite) TestWrongChoiceTypes() {
 func (s *EquipmentEdgeCasesTestSuite) TestSelfReferencingChoices() {
 	// Note: This tests a theoretical case where a choice might reference itself
 	// The current data model might not allow this, but it's good to test
-	
+
 	class := &entities.Class{
 		Key:  "test",
 		Name: "Test",
@@ -542,7 +542,7 @@ func (s *EquipmentEdgeCasesTestSuite) TestSelfReferencingChoices() {
 			},
 		},
 	}
-	
+
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
 	s.NoError(err)
 	// Should handle without infinite recursion

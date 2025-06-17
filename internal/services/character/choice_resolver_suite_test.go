@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
+	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
-	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 )
@@ -46,7 +46,7 @@ func (s *ChoiceResolverTestSuite) TestResolveProficiencyChoices_FighterWithSkill
 		Key:  "human",
 		Name: "Human",
 	}
-	
+
 	class := &entities.Class{
 		Key:  "fighter",
 		Name: "Fighter",
@@ -72,10 +72,10 @@ func (s *ChoiceResolverTestSuite) TestResolveProficiencyChoices_FighterWithSkill
 			},
 		},
 	}
-	
+
 	// Execute
 	choices, err := s.resolver.ResolveProficiencyChoices(s.ctx, race, class)
-	
+
 	// Assert
 	s.NoError(err)
 	s.Len(choices, 1)
@@ -93,7 +93,7 @@ func (s *ChoiceResolverTestSuite) TestResolveProficiencyChoices_MonkWithNestedTo
 		Key:  "human",
 		Name: "Human",
 	}
-	
+
 	class := &entities.Class{
 		Key:  "monk",
 		Name: "Monk",
@@ -125,18 +125,18 @@ func (s *ChoiceResolverTestSuite) TestResolveProficiencyChoices_MonkWithNestedTo
 			},
 		},
 	}
-	
+
 	// Execute
 	choices, err := s.resolver.ResolveProficiencyChoices(s.ctx, race, class)
-	
+
 	// Assert
 	s.NoError(err)
 	s.Len(choices, 2)
-	
+
 	// First choice should be normal
 	s.Equal("monk-prof-0", choices[0].ID)
 	s.Equal("Choose 2 skills", choices[0].Name)
-	
+
 	// Second choice should be flattened
 	s.Equal("monk-prof-1", choices[1].ID)
 	s.Equal("Tools or Instrument", choices[1].Name)
@@ -169,16 +169,16 @@ func (s *ChoiceResolverTestSuite) TestResolveProficiencyChoices_RaceWithProficie
 			},
 		},
 	}
-	
+
 	class := &entities.Class{
 		Key:  "fighter",
 		Name: "Fighter",
 		// No proficiency choices
 	}
-	
+
 	// Execute
 	choices, err := s.resolver.ResolveProficiencyChoices(s.ctx, race, class)
-	
+
 	// Assert
 	s.NoError(err)
 	s.Len(choices, 1)
@@ -194,16 +194,16 @@ func (s *ChoiceResolverTestSuite) TestResolveProficiencyChoices_EmptyChoices() {
 		Key:  "human",
 		Name: "Human",
 	}
-	
+
 	class := &entities.Class{
 		Key:  "fighter",
 		Name: "Fighter",
 		// No proficiency choices
 	}
-	
+
 	// Execute
 	choices, err := s.resolver.ResolveProficiencyChoices(s.ctx, race, class)
-	
+
 	// Assert
 	s.NoError(err)
 	s.Empty(choices)
@@ -250,14 +250,14 @@ func (s *ChoiceResolverTestSuite) TestResolveEquipmentChoices_FighterEquipment()
 			},
 		},
 	}
-	
+
 	// Execute
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
-	
+
 	// Assert
 	s.NoError(err)
 	s.Len(choices, 2)
-	
+
 	// First choice - armor
 	s.Equal("fighter-equip-0", choices[0].ID)
 	s.Equal("Choose armor", choices[0].Name)
@@ -265,7 +265,7 @@ func (s *ChoiceResolverTestSuite) TestResolveEquipmentChoices_FighterEquipment()
 	s.Len(choices[0].Options, 2)
 	s.Equal("chain-mail", choices[0].Options[0].Key)
 	s.Equal("Chain Mail", choices[0].Options[0].Name)
-	
+
 	// Second choice - weapon with count
 	s.Equal("fighter-equip-1", choices[1].ID)
 	s.Equal("Choose weapon", choices[1].Name)
@@ -281,10 +281,10 @@ func (s *ChoiceResolverTestSuite) TestResolveEquipmentChoices_NoChoices() {
 		Name: "Monk",
 		// No equipment choices
 	}
-	
+
 	// Execute
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
-	
+
 	// Assert
 	s.NoError(err)
 	s.Empty(choices)
@@ -308,10 +308,10 @@ func (s *ChoiceResolverTestSuite) TestResolveEquipmentChoices_NilOptions() {
 			},
 		},
 	}
-	
+
 	// Execute
 	choices, err := s.resolver.ResolveEquipmentChoices(s.ctx, class)
-	
+
 	// Assert
 	s.NoError(err)
 	s.Empty(choices) // Should skip choices with nil or empty options
@@ -324,10 +324,10 @@ func (s *ChoiceResolverTestSuite) TestValidateProficiencySelections_NotImplement
 	race := &entities.Race{Key: "human", Name: "Human"}
 	class := &entities.Class{Key: "fighter", Name: "Fighter"}
 	selections := []string{"skill-athletics", "skill-intimidation"}
-	
+
 	// Execute
 	err := s.resolver.ValidateProficiencySelections(s.ctx, race, class, selections)
-	
+
 	// Assert
 	s.NoError(err) // Currently returns nil (not implemented)
 }

@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/dungeon"
@@ -17,53 +16,54 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/testcombat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	"github.com/bwmarrin/discordgo"
 )
 
 // Handler handles all Discord interactions
 type Handler struct {
-	ServiceProvider                    *services.Provider
-	characterCreateHandler             *character.CreateHandler
-	characterRaceSelectHandler         *character.RaceSelectHandler
-	characterShowClassesHandler        *character.ShowClassesHandler
-	characterClassSelectHandler        *character.ClassSelectHandler
-	characterAbilityScoresHandler      *character.AbilityScoresHandler
-	characterAssignAbilitiesHandler    *character.AssignAbilitiesHandler
-	characterProficiencyChoicesHandler *character.ProficiencyChoicesHandler
-	characterSelectProficienciesHandler *character.SelectProficienciesHandler
-	characterEquipmentChoicesHandler   *character.EquipmentChoicesHandler
-	characterSelectEquipmentHandler    *character.SelectEquipmentHandler
+	ServiceProvider                       *services.Provider
+	characterCreateHandler                *character.CreateHandler
+	characterRaceSelectHandler            *character.RaceSelectHandler
+	characterShowClassesHandler           *character.ShowClassesHandler
+	characterClassSelectHandler           *character.ClassSelectHandler
+	characterAbilityScoresHandler         *character.AbilityScoresHandler
+	characterAssignAbilitiesHandler       *character.AssignAbilitiesHandler
+	characterProficiencyChoicesHandler    *character.ProficiencyChoicesHandler
+	characterSelectProficienciesHandler   *character.SelectProficienciesHandler
+	characterEquipmentChoicesHandler      *character.EquipmentChoicesHandler
+	characterSelectEquipmentHandler       *character.SelectEquipmentHandler
 	characterSelectNestedEquipmentHandler *character.SelectNestedEquipmentHandler
-	characterDetailsHandler            *character.CharacterDetailsHandler
-	characterListHandler               *character.ListHandler
-	characterShowHandler               *character.ShowHandler
-	
+	characterDetailsHandler               *character.CharacterDetailsHandler
+	characterListHandler                  *character.ListHandler
+	characterShowHandler                  *character.ShowHandler
+
 	// Session handlers
-	sessionCreateHandler               *session.CreateHandler
-	sessionListHandler                 *session.ListHandler
-	sessionJoinHandler                 *session.JoinHandler
-	sessionStartHandler                *session.StartHandler
-	sessionEndHandler                  *session.EndHandler
-	sessionInfoHandler                 *session.InfoHandler
-	sessionLeaveHandler                *session.LeaveHandler
-	
+	sessionCreateHandler *session.CreateHandler
+	sessionListHandler   *session.ListHandler
+	sessionJoinHandler   *session.JoinHandler
+	sessionStartHandler  *session.StartHandler
+	sessionEndHandler    *session.EndHandler
+	sessionInfoHandler   *session.InfoHandler
+	sessionLeaveHandler  *session.LeaveHandler
+
 	// Encounter handlers
-	encounterAddMonsterHandler         *encounter.AddMonsterHandler
-	
+	encounterAddMonsterHandler *encounter.AddMonsterHandler
+
 	// Test combat handler
-	testCombatHandler                  *testcombat.TestCombatHandler
-	
+	testCombatHandler *testcombat.TestCombatHandler
+
 	// Dungeon handlers
-	dungeonStartHandler                *dungeon.StartDungeonHandler
-	dungeonJoinHandler                 *dungeon.JoinPartyHandler
-	dungeonEnterRoomHandler            *dungeon.EnterRoomHandler
-	
+	dungeonStartHandler     *dungeon.StartDungeonHandler
+	dungeonJoinHandler      *dungeon.JoinPartyHandler
+	dungeonEnterRoomHandler *dungeon.EnterRoomHandler
+
 	// Help handler
-	helpHandler                        *help.HelpHandler
+	helpHandler *help.HelpHandler
 }
 
 // HandlerConfig holds configuration for the Discord handler
 type HandlerConfig struct {
-	ServiceProvider  *services.Provider
+	ServiceProvider *services.Provider
 }
 
 // NewHandler creates a new Discord handler
@@ -108,7 +108,7 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		}),
 		characterListHandler: character.NewListHandler(cfg.ServiceProvider),
 		characterShowHandler: character.NewShowHandler(cfg.ServiceProvider),
-		
+
 		// Initialize session handlers
 		sessionCreateHandler: session.NewCreateHandler(cfg.ServiceProvider),
 		sessionListHandler:   session.NewListHandler(cfg.ServiceProvider),
@@ -117,18 +117,18 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		sessionEndHandler:    session.NewEndHandler(cfg.ServiceProvider),
 		sessionInfoHandler:   session.NewInfoHandler(cfg.ServiceProvider),
 		sessionLeaveHandler:  session.NewLeaveHandler(cfg.ServiceProvider),
-		
+
 		// Initialize encounter handlers
 		encounterAddMonsterHandler: encounter.NewAddMonsterHandler(cfg.ServiceProvider),
-		
+
 		// Initialize test combat handler
 		testCombatHandler: testcombat.NewTestCombatHandler(cfg.ServiceProvider),
-		
+
 		// Initialize dungeon handlers
 		dungeonStartHandler:     dungeon.NewStartDungeonHandler(cfg.ServiceProvider),
 		dungeonJoinHandler:      dungeon.NewJoinPartyHandler(cfg.ServiceProvider),
 		dungeonEnterRoomHandler: dungeon.NewEnterRoomHandler(cfg.ServiceProvider),
-		
+
 		// Initialize help handler
 		helpHandler: help.NewHelpHandler(),
 	}
@@ -345,7 +345,7 @@ func (h *Handler) HandleInteraction(s *discordgo.Session, i *discordgo.Interacti
 // handleCommand handles slash command interactions
 func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	data := i.ApplicationCommandData()
-	
+
 	// Check for /dnd command
 	if data.Name != "dnd" {
 		return
@@ -357,7 +357,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 	}
 
 	subcommandGroup := data.Options[0]
-	
+
 	// Handle direct subcommands (like help)
 	if subcommandGroup.Type == discordgo.ApplicationCommandOptionSubCommand {
 		switch subcommandGroup.Name {
@@ -415,11 +415,11 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 		}
 		return
 	}
-	
+
 	// Handle subcommand groups
 	if subcommandGroup.Name == "character" && len(subcommandGroup.Options) > 0 {
 		subcommand := subcommandGroup.Options[0]
-		
+
 		switch subcommand.Name {
 		case "create":
 			req := &character.CreateRequest{
@@ -457,7 +457,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 		}
 	} else if subcommandGroup.Name == "session" && len(subcommandGroup.Options) > 0 {
 		subcommand := subcommandGroup.Options[0]
-		
+
 		switch subcommand.Name {
 		case "create":
 			// Get name and description from options
@@ -521,7 +521,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 					break
 				}
 			}
-			
+
 			// If no session ID provided, try to find the user's session
 			if sessionID == "" {
 				sessions, err := h.ServiceProvider.SessionService.ListUserSessions(context.Background(), i.Member.User.ID)
@@ -542,7 +542,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 					return
 				}
 			}
-			
+
 			req := &session.StartRequest{
 				Session:     s,
 				Interaction: i,
@@ -560,7 +560,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 					break
 				}
 			}
-			
+
 			// If no session ID provided, try to find the user's session
 			if sessionID == "" {
 				sessions, err := h.ServiceProvider.SessionService.ListUserSessions(context.Background(), i.Member.User.ID)
@@ -581,7 +581,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 					return
 				}
 			}
-			
+
 			req := &session.EndRequest{
 				Session:     s,
 				Interaction: i,
@@ -601,7 +601,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 		}
 	} else if subcommandGroup.Name == "encounter" && len(subcommandGroup.Options) > 0 {
 		subcommand := subcommandGroup.Options[0]
-		
+
 		switch subcommand.Name {
 		case "add":
 			// Get monster name from options
@@ -612,7 +612,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 					break
 				}
 			}
-			
+
 			req := &encounter.AddMonsterRequest{
 				Session:     s,
 				Interaction: i,
@@ -628,19 +628,19 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 // handleComponent handles message component interactions (buttons, select menus)
 func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	customID := i.MessageComponentData().CustomID
-	
+
 	// Parse custom ID format: "context:action:data"
 	// e.g., "character_create:race_select"
-	
+
 	// Split the custom ID to parse it
 	parts := strings.Split(customID, ":")
 	if len(parts) < 2 {
 		return
 	}
-	
+
 	ctx := parts[0]
 	action := parts[1]
-	
+
 	if ctx == "character_create" {
 		switch action {
 		case "race_select":
@@ -701,7 +701,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						log.Printf("Error updating draft with race/class: %v", err)
 					}
 				}
-				
+
 				req := &character.AbilityScoresRequest{
 					Session:     s,
 					Interaction: i,
@@ -796,7 +796,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						}
 					}
 				}
-				
+
 				// Get draft character and update with ability scores
 				log.Printf("Parsed ability scores: %+v", abilityScores)
 				if len(abilityScores) == 6 {
@@ -814,8 +814,8 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							draftChar.ID,
 							&characterService.UpdateDraftInput{
 								AbilityScores: abilityScores,
-								RaceKey:      &raceKey,
-								ClassKey:     &classKey,
+								RaceKey:       &raceKey,
+								ClassKey:      &classKey,
 							},
 						)
 						if err != nil {
@@ -829,7 +829,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				} else {
 					log.Printf("Warning: Only parsed %d ability scores, expected 6", len(abilityScores))
 				}
-				
+
 				// Move to proficiency choices
 				req := &character.ProficiencyChoicesRequest{
 					Session:     s,
@@ -871,7 +871,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					// Get current proficiencies and add new ones
 					selectedProfs := i.MessageComponentData().Values
 					log.Printf("Selected proficiencies: %v", selectedProfs)
-					
+
 					// Get existing proficiencies if any
 					existingProfs := []string{}
 					if draftChar.Proficiencies != nil {
@@ -881,10 +881,10 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							}
 						}
 					}
-					
+
 					// Combine existing and new proficiencies
 					allProfs := append(existingProfs, selectedProfs...)
-					
+
 					// Update the draft with selected proficiencies
 					_, err = h.ServiceProvider.CharacterService.UpdateDraftCharacter(
 						context.Background(),
@@ -899,20 +899,20 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						log.Printf("Successfully updated draft with proficiencies")
 					}
 				}
-				
+
 				// Parse choice type and index
 				choiceType := parts[4]
 				choiceIndex, _ := strconv.Atoi(parts[5])
-				
+
 				// Check if there are more proficiency choices to make
 				race, _ := h.ServiceProvider.CharacterService.GetRace(context.Background(), parts[2])
 				class, _ := h.ServiceProvider.CharacterService.GetClass(context.Background(), parts[3])
-				
+
 				// Determine if we need to show more choices
 				hasMoreChoices := false
 				nextChoiceType := choiceType
 				nextChoiceIndex := choiceIndex + 1
-				
+
 				if choiceType == "class" && class != nil {
 					if nextChoiceIndex < len(class.ProficiencyChoices) {
 						hasMoreChoices = true
@@ -923,7 +923,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						nextChoiceIndex = 0
 					}
 				}
-				
+
 				if hasMoreChoices {
 					// Show next proficiency choice
 					req := &character.SelectProficienciesRequest{
@@ -996,13 +996,13 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			// Handle equipment selection confirmation
 			if len(parts) >= 5 {
 				choiceIndex, _ := strconv.Atoi(parts[4])
-				
+
 				// Check if this is a nested choice selection
 				selectedValues := i.MessageComponentData().Values
 				if len(selectedValues) > 0 && strings.HasPrefix(selectedValues[0], "nested-") {
 					// This is a bundle with nested choices - need to expand
 					log.Printf("Nested choice selected: %v", selectedValues[0])
-					
+
 					// Get the equipment choices to find the actual selection details
 					choices, err := h.ServiceProvider.CharacterService.ResolveChoices(
 						context.Background(),
@@ -1011,10 +1011,10 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							ClassKey: parts[3],
 						},
 					)
-					
+
 					selectionCount := 1
 					category := "martial-weapons"
-					
+
 					if err == nil && choiceIndex < len(choices.EquipmentChoices) {
 						// Find the selected option in the choice
 						choice := choices.EquipmentChoices[choiceIndex]
@@ -1029,7 +1029,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							}
 						}
 					}
-					
+
 					// Show martial weapon selection UI
 					req := &character.SelectNestedEquipmentRequest{
 						Session:        s,
@@ -1046,7 +1046,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					}
 					return
 				}
-				
+
 				// Get the draft character and update with selected equipment
 				draftChar, err := h.ServiceProvider.CharacterService.GetOrCreateDraftCharacter(
 					context.Background(),
@@ -1055,12 +1055,12 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				)
 				if err == nil {
 					log.Printf("Selected equipment: %v", selectedValues)
-					
+
 					// Get existing equipment if any
 					existingEquipment := []string{}
 					// Note: We would need to track equipment selections in the draft character
 					// For now, just use the new selections
-					
+
 					// Update the draft with selected equipment
 					_, err = h.ServiceProvider.CharacterService.UpdateDraftCharacter(
 						context.Background(),
@@ -1077,7 +1077,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				} else {
 					log.Printf("Error getting draft character: %v", err)
 				}
-				
+
 				// Move to next equipment choice or character details
 				req := &character.SelectEquipmentRequest{
 					Session:     s,
@@ -1095,11 +1095,11 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			if len(parts) >= 6 {
 				choiceIndex, _ := strconv.Atoi(parts[4])
 				bundleKey := parts[5]
-				
+
 				// Get selected weapons
 				selectedWeapons := i.MessageComponentData().Values
 				log.Printf("Selected weapons: %v for bundle: %s", selectedWeapons, bundleKey)
-				
+
 				// Check for duplicate selections
 				weaponMap := make(map[string]bool)
 				for _, weapon := range selectedWeapons {
@@ -1116,7 +1116,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					}
 					weaponMap[weapon] = true
 				}
-				
+
 				// Get the draft character
 				draftChar, err := h.ServiceProvider.CharacterService.GetOrCreateDraftCharacter(
 					context.Background(),
@@ -1127,15 +1127,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					// Get existing equipment
 					existingEquipment := []string{}
 					// TODO: Track equipment properly in draft
-					
+
 					// Add selected weapons
 					allEquipment := append(existingEquipment, selectedWeapons...)
-					
+
 					// If this was "weapon + shield" choice, add shield
 					if strings.Contains(strings.ToLower(bundleKey), "shield") && len(selectedWeapons) == 1 {
 						allEquipment = append(allEquipment, "shield")
 					}
-					
+
 					// Update draft with equipment
 					_, err = h.ServiceProvider.CharacterService.UpdateDraftCharacter(
 						context.Background(),
@@ -1148,7 +1148,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						log.Printf("Error updating draft with nested equipment: %v", err)
 					}
 				}
-				
+
 				// Continue to next equipment choice or character details
 				// Since the interaction is already acknowledged, we need to check if there are more choices
 				choices, err := h.ServiceProvider.CharacterService.ResolveChoices(
@@ -1205,7 +1205,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						},
 					},
 				}
-				
+
 				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseModal,
 					Data: &modal,
@@ -1219,7 +1219,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 		// Handle character management actions (edit, archive, delete, etc.)
 		if len(parts) >= 3 {
 			characterID := parts[2]
-			
+
 			switch action {
 			case "delete":
 				// Confirm deletion with a modal or direct action
@@ -1269,11 +1269,11 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseUpdateMessage,
 					Data: &discordgo.InteractionResponseData{
-						Content: "✅ Character successfully deleted.",
+						Content:    "✅ Character successfully deleted.",
 						Components: []discordgo.MessageComponent{},
 					},
 				})
@@ -1285,7 +1285,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseUpdateMessage,
 					Data: &discordgo.InteractionResponseData{
-						Content: "❌ Action cancelled.",
+						Content:    "❌ Action cancelled.",
 						Components: []discordgo.MessageComponent{},
 					},
 				})
@@ -1306,7 +1306,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -1331,7 +1331,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -1357,7 +1357,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				// Verify ownership
 				if char.OwnerID != i.Member.User.ID {
 					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -1369,7 +1369,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				// For now, show a message about what can be edited
 				// In the future, this could launch an edit flow
 				embed := &discordgo.MessageEmbed{
@@ -1392,7 +1392,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						Text: "Full character editing will be available in a future update",
 					},
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -1402,6 +1402,147 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				})
 				if err != nil {
 					log.Printf("Error showing edit info: %v", err)
+				}
+			case "continue":
+				// Continue creating a draft character
+				// Get the character first to validate it's a draft
+				char, err := h.ServiceProvider.CharacterService.GetByID(characterID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to get character: %v", err)
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					if err != nil {
+						log.Printf("Error responding to continue request: %v", err)
+					}
+					return
+				}
+
+				// Verify ownership
+				if char.OwnerID != i.Member.User.ID {
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "❌ You can only continue your own draft characters!",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					if err != nil {
+						log.Printf("Error responding to ownership check: %v", err)
+					}
+					return
+				}
+
+				// Verify it's a draft
+				if char.Status != entities.CharacterStatusDraft {
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "❌ This character is not a draft!",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					if err != nil {
+						log.Printf("Error responding to draft check: %v", err)
+					}
+					return
+				}
+
+				// Analyze the draft to determine where to resume
+				// Follow the new step order: Race -> Class -> Abilities -> Proficiencies -> Equipment -> Features -> Name
+				if char.Race == nil {
+					// Start from race selection
+					req := &character.CreateRequest{
+						Session:     s,
+						Interaction: i,
+					}
+					if err := h.characterCreateHandler.Handle(req); err != nil {
+						log.Printf("Error resuming character creation at race selection: %v", err)
+					}
+				} else if char.Class == nil {
+					// Continue from class selection
+					req := &character.ShowClassesRequest{
+						Session:     s,
+						Interaction: i,
+						RaceKey:     char.Race.Key,
+					}
+					if err := h.characterShowClassesHandler.Handle(req); err != nil {
+						log.Printf("Error resuming character creation at class selection: %v", err)
+					}
+				} else if len(char.Attributes) == 0 {
+					// Continue from ability scores
+					req := &character.AbilityScoresRequest{
+						Session:     s,
+						Interaction: i,
+					}
+					if err := h.characterAbilityScoresHandler.Handle(req); err != nil {
+						log.Printf("Error resuming character creation at ability scores: %v", err)
+					}
+				} else if len(char.Proficiencies) == 0 {
+					// Continue from proficiencies
+					req := &character.ProficiencyChoicesRequest{
+						Session:     s,
+						Interaction: i,
+						RaceKey:     char.Race.Key,
+						ClassKey:    char.Class.Key,
+					}
+					if err := h.characterProficiencyChoicesHandler.Handle(req); err != nil {
+						log.Printf("Error resuming character creation at proficiencies: %v", err)
+					}
+				} else if len(char.Inventory) == 0 && len(char.EquippedSlots) == 0 {
+					// Continue from equipment
+					req := &character.EquipmentChoicesRequest{
+						Session:     s,
+						Interaction: i,
+						RaceKey:     char.Race.Key,
+						ClassKey:    char.Class.Key,
+					}
+					if err := h.characterEquipmentChoicesHandler.Handle(req); err != nil {
+						log.Printf("Error resuming character creation at equipment: %v", err)
+					}
+				} else if char.Name == "" {
+					// All gameplay elements done, just need name
+					// For now, skip features step and go to name modal
+					modal := discordgo.InteractionResponseData{
+						CustomID: fmt.Sprintf("character_create:submit_name:%s:%s", char.Race.Key, char.Class.Key),
+						Title:    "Name Your Character",
+						Components: []discordgo.MessageComponent{
+							discordgo.ActionsRow{
+								Components: []discordgo.MessageComponent{
+									discordgo.TextInput{
+										CustomID:    "character_name",
+										Label:       "Character Name",
+										Style:       discordgo.TextInputShort,
+										Placeholder: "Enter your character's name",
+										Required:    true,
+										MinLength:   1,
+										MaxLength:   50,
+									},
+								},
+							},
+						},
+					}
+					err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseModal,
+						Data: &modal,
+					})
+					if err != nil {
+						log.Printf("Error showing name modal: %v", err)
+					}
+				} else {
+					// Character seems complete, show it
+					req := &character.ShowRequest{
+						Session:     s,
+						Interaction: i,
+						CharacterID: characterID,
+					}
+					if err := h.characterShowHandler.Handle(req); err != nil {
+						log.Printf("Error showing draft character: %v", err)
+					}
 				}
 			}
 		}
@@ -1422,7 +1563,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 		// Handle session management actions
 		if len(parts) >= 3 {
 			sessionID := parts[2]
-			
+
 			switch action {
 			case "start":
 				// Start the session
@@ -1438,7 +1579,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -1463,7 +1604,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -1489,7 +1630,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				// Build character options
 				options := make([]discordgo.SelectMenuOption, 0, len(chars))
 				for _, char := range chars {
@@ -1501,7 +1642,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						})
 					}
 				}
-				
+
 				if len(options) == 0 {
 					content := "❌ You don't have any active characters! Create or activate a character first."
 					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -1513,7 +1654,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				// Show character selection menu
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -1546,20 +1687,20 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 							Type: discordgo.InteractionResponseUpdateMessage,
 							Data: &discordgo.InteractionResponseData{
-								Content: content,
+								Content:    content,
 								Components: []discordgo.MessageComponent{},
 							},
 						})
 						return
 					}
-					
+
 					// Get character details for confirmation
 					char, _ := h.ServiceProvider.CharacterService.GetByID(characterID)
 					content := fmt.Sprintf("✅ Character selected: **%s** the %s", char.Name, char.GetDisplayInfo())
 					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseUpdateMessage,
 						Data: &discordgo.InteractionResponseData{
-							Content: content,
+							Content:    content,
 							Components: []discordgo.MessageComponent{},
 						},
 					})
@@ -1581,7 +1722,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -1616,7 +1757,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -1642,9 +1783,9 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				// Show invite code and instructions
-				content := fmt.Sprintf("📨 **Invite Players to %s**\n\n🔑 Invite Code: `%s`\n\nPlayers can join using:\n```/dnd session join %s```", 
+				content := fmt.Sprintf("📨 **Invite Players to %s**\n\n🔑 Invite Code: `%s`\n\nPlayers can join using:\n```/dnd session join %s```",
 					session.Name, session.InviteCode, session.InviteCode)
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -1675,7 +1816,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 		// Handle encounter management actions
 		if len(parts) >= 3 {
 			encounterID := parts[2]
-			
+
 			switch action {
 			case "roll_initiative":
 				// Roll initiative for all combatants
@@ -1691,7 +1832,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				// Get encounter to show results
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
@@ -1705,7 +1846,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				// Build initiative order display
 				var initiativeList strings.Builder
 				for i, combatantID := range encounter.TurnOrder {
@@ -1713,7 +1854,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						initiativeList.WriteString(fmt.Sprintf("%d. **%s** - Initiative: %d\n", i+1, combatant.Name, combatant.Initiative))
 					}
 				}
-				
+
 				embed := &discordgo.MessageEmbed{
 					Title:       "🎲 Initiative Rolled!",
 					Description: "Combat order has been determined:",
@@ -1726,7 +1867,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						},
 					},
 				}
-				
+
 				components := []discordgo.MessageComponent{
 					discordgo.ActionsRow{
 						Components: []discordgo.MessageComponent{
@@ -1745,7 +1886,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						},
 					},
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -1756,7 +1897,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				if err != nil {
 					log.Printf("Error showing initiative results: %v", err)
 				}
-				
+
 			case "view":
 				// View encounter details
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
@@ -1771,7 +1912,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				// Build encounter status
 				embed := &discordgo.MessageEmbed{
 					Title:       fmt.Sprintf("⚔️ %s", encounter.Name),
@@ -1779,7 +1920,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					Color:       0x3498db, // Blue
 					Fields:      []*discordgo.MessageEmbedField{},
 				}
-				
+
 				// Add status field
 				statusStr := string(encounter.Status)
 				if encounter.Status == entities.EncounterStatusActive {
@@ -1790,7 +1931,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					Value:  statusStr,
 					Inline: true,
 				})
-				
+
 				// Add combatant count
 				activeCombatants := 0
 				for _, c := range encounter.Combatants {
@@ -1803,7 +1944,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					Value:  fmt.Sprintf("%d active / %d total", activeCombatants, len(encounter.Combatants)),
 					Inline: true,
 				})
-				
+
 				// List combatants with HP
 				var combatantList strings.Builder
 				for _, combatant := range encounter.Combatants {
@@ -1820,11 +1961,11 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							hpBar = "💀"
 						}
 					}
-					
-					combatantList.WriteString(fmt.Sprintf("%s **%s** - HP: %d/%d | AC: %d\n", 
+
+					combatantList.WriteString(fmt.Sprintf("%s **%s** - HP: %d/%d | AC: %d\n",
 						hpBar, combatant.Name, combatant.CurrentHP, combatant.MaxHP, combatant.AC))
 				}
-				
+
 				if combatantList.Len() > 0 {
 					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 						Name:   "🗡️ Combatants",
@@ -1832,7 +1973,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						Inline: false,
 					})
 				}
-				
+
 				// Add appropriate buttons based on status
 				var components []discordgo.MessageComponent
 				if encounter.Status == entities.EncounterStatusSetup {
@@ -1855,7 +1996,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						},
 					}
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -1866,7 +2007,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				if err != nil {
 					log.Printf("Error showing encounter view: %v", err)
 				}
-				
+
 			case "add_monster":
 				// Prompt for monster name
 				content := "Use `/dnd encounter add <monster>` to add a monster to this encounter."
@@ -1894,7 +2035,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				// Get encounter to show combat status
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
@@ -1908,7 +2049,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				// Build combat tracker display
 				embed := &discordgo.MessageEmbed{
 					Title:       "⚔️ Combat Started!",
@@ -1916,7 +2057,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					Color:       0xe74c3c, // Red
 					Fields:      []*discordgo.MessageEmbedField{},
 				}
-				
+
 				// Show current turn
 				if current := encounter.GetCurrentCombatant(); current != nil {
 					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
@@ -1925,7 +2066,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						Inline: false,
 					})
 				}
-				
+
 				// Show turn order
 				var turnOrder strings.Builder
 				for i, combatantID := range encounter.TurnOrder {
@@ -1937,13 +2078,13 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						turnOrder.WriteString(fmt.Sprintf("%s %s (Initiative: %d)\n", prefix, combatant.Name, combatant.Initiative))
 					}
 				}
-				
+
 				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 					Name:   "📋 Turn Order",
 					Value:  turnOrder.String(),
 					Inline: false,
 				})
-				
+
 				// Add combat action buttons
 				components := []discordgo.MessageComponent{
 					discordgo.ActionsRow{
@@ -1991,7 +2132,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						},
 					},
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -2016,7 +2157,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				// Get updated encounter
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
@@ -2030,7 +2171,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				// Build turn update display
 				embed := &discordgo.MessageEmbed{
 					Title:       "➡️ Next Turn!",
@@ -2038,7 +2179,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					Color:       0x3498db, // Blue
 					Fields:      []*discordgo.MessageEmbedField{},
 				}
-				
+
 				// Show current turn
 				if current := encounter.GetCurrentCombatant(); current != nil {
 					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
@@ -2046,7 +2187,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						Value:  fmt.Sprintf("**%s** (HP: %d/%d | AC: %d)", current.Name, current.CurrentHP, current.MaxHP, current.AC),
 						Inline: false,
 					})
-					
+
 					// Show available actions for monsters
 					if current.Type == entities.CombatantTypeMonster && len(current.Actions) > 0 {
 						var actions strings.Builder
@@ -2060,7 +2201,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						})
 					}
 				}
-				
+
 				// Show upcoming turns
 				var upcoming strings.Builder
 				for i := 0; i < 3 && i < len(encounter.TurnOrder); i++ {
@@ -2073,13 +2214,13 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						}
 					}
 				}
-				
+
 				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 					Name:   "📋 Turn Order",
 					Value:  upcoming.String(),
 					Inline: true,
 				})
-				
+
 				// Combat action buttons
 				components := []discordgo.MessageComponent{
 					discordgo.ActionsRow{
@@ -2117,7 +2258,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						},
 					},
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -2160,7 +2301,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						},
 					},
 				}
-				
+
 				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseModal,
 					Data: &modal,
@@ -2200,7 +2341,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						},
 					},
 				}
-				
+
 				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseModal,
 					Data: &modal,
@@ -2222,7 +2363,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				// Show end summary
 				embed := &discordgo.MessageEmbed{
 					Title:       "🏁 Combat Ended!",
@@ -2236,7 +2377,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						},
 					},
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -2261,7 +2402,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				// Get current combatant
 				current := encounter.GetCurrentCombatant()
 				if current == nil {
@@ -2275,7 +2416,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				// Simple check: if it's a player's turn, they can attack
 				// if it's a monster's turn, only DM (bot) can attack
 				canAct := false
@@ -2285,7 +2426,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					// In test mode, bot is DM, so skip this check
 					canAct = true
 				}
-				
+
 				if !canAct && encounter.CreatedBy != i.Member.User.ID {
 					content := "❌ It's not your turn!"
 					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -2297,7 +2438,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				// For testing, we'll just simulate a simple attack
 				// Show modal to select target
 				modal := discordgo.InteractionResponseData{
@@ -2330,7 +2471,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						},
 					},
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseModal,
 					Data: &modal,
@@ -2344,7 +2485,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 		// Handle dungeon actions
 		if len(parts) >= 3 {
 			sessionID := parts[2]
-			
+
 			switch action {
 			case "join":
 				if err := h.dungeonJoinHandler.HandleButton(s, i, sessionID); err != nil {
@@ -2371,7 +2512,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					})
 					return
 				}
-				
+
 				// Build party status
 				embed := &discordgo.MessageEmbed{
 					Title:       "🎭 Party Status",
@@ -2379,7 +2520,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					Color:       0x3498db,
 					Fields:      []*discordgo.MessageEmbedField{},
 				}
-				
+
 				for _, member := range sess.Members {
 					if member.CharacterID != "" {
 						// Get character details
@@ -2393,11 +2534,11 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						}
 					}
 				}
-				
+
 				if len(embed.Fields) == 0 {
 					embed.Description = "No party members yet!"
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -2416,16 +2557,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 // handleModalSubmit handles modal form submissions
 func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	data := i.ModalSubmitData()
-	
+
 	// Parse custom ID
 	parts := strings.Split(data.CustomID, ":")
 	if len(parts) < 2 {
 		return
 	}
-	
+
 	ctx := parts[0]
 	action := parts[1]
-	
+
 	if ctx == "character_create" && action == "submit_name" {
 		if len(parts) >= 4 {
 			// Get the character name from the modal
@@ -2440,7 +2581,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					}
 				}
 			}
-			
+
 			// Get the draft character
 			draftChar, err := h.ServiceProvider.CharacterService.GetOrCreateDraftCharacter(
 				context.Background(),
@@ -2462,11 +2603,11 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				}
 				return
 			}
-			
+
 			// Update the draft with the final name and ensure race/class are set
 			raceKey := parts[2]
 			classKey := parts[3]
-			
+
 			_, err = h.ServiceProvider.CharacterService.UpdateDraftCharacter(
 				context.Background(),
 				draftChar.ID,
@@ -2479,7 +2620,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 			if err != nil {
 				log.Printf("Error updating draft with name: %v", err)
 			}
-			
+
 			// Get the updated character to ensure we have all the data
 			char, err := h.ServiceProvider.CharacterService.GetCharacter(context.Background(), draftChar.ID)
 			if err != nil {
@@ -2497,7 +2638,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				}
 				return
 			}
-			
+
 			// Build ability scores from the character
 			abilityScores := make(map[string]int)
 			log.Printf("Character attributes: %+v", char.Attributes)
@@ -2525,7 +2666,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				}
 			}
 			log.Printf("Final ability scores map: %+v", abilityScores)
-			
+
 			// Collect proficiencies
 			proficiencies := []string{}
 			if char.Proficiencies != nil {
@@ -2537,7 +2678,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					}
 				}
 			}
-			
+
 			// Finalize the draft character (marking it as active)
 			finalChar, err := h.ServiceProvider.CharacterService.FinalizeDraftCharacter(context.Background(), draftChar.ID)
 			if err != nil {
@@ -2555,7 +2696,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				}
 				return
 			}
-			
+
 			// Show success with character details
 			description := fmt.Sprintf("**Name:** %s", finalChar.Name)
 			if finalChar.Race != nil {
@@ -2564,27 +2705,26 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 			if finalChar.Class != nil {
 				description += fmt.Sprintf("\n**Class:** %s", finalChar.Class.Name)
 			}
-			
+
 			embed := &discordgo.MessageEmbed{
 				Title:       "Character Created!",
 				Description: description,
 				Color:       0x00ff00,
-				Fields: []*discordgo.MessageEmbedField{
-				},
+				Fields:      []*discordgo.MessageEmbedField{},
 			}
-			
+
 			// Only add ability scores if we have them
 			if len(abilityScores) > 0 {
 				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-					Name:   "💪 Base Abilities",
-					Value:  fmt.Sprintf("STR: %d, DEX: %d, CON: %d\nINT: %d, WIS: %d, CHA: %d",
+					Name: "💪 Base Abilities",
+					Value: fmt.Sprintf("STR: %d, DEX: %d, CON: %d\nINT: %d, WIS: %d, CHA: %d",
 						abilityScores["STR"], abilityScores["DEX"], abilityScores["CON"],
 						abilityScores["INT"], abilityScores["WIS"], abilityScores["CHA"],
 					),
 					Inline: true,
 				})
 			}
-			
+
 			// Add other fields
 			embed.Fields = append(embed.Fields,
 				&discordgo.MessageEmbedField{
@@ -2603,18 +2743,18 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					Inline: false,
 				},
 			)
-			
+
 			embed.Footer = &discordgo.MessageEmbedFooter{
 				Text: "Ready for adventure!",
 			}
-			
+
 			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Embeds: []*discordgo.MessageEmbed{embed},
 				},
 			})
-			
+
 			if err != nil {
 				log.Printf("Error responding to modal submit: %v", err)
 			}
@@ -2622,13 +2762,13 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 	} else if ctx == "encounter" {
 		if len(parts) >= 3 {
 			encounterID := parts[2]
-			
+
 			switch action {
 			case "apply_damage":
 				// Extract values from modal
 				damageAmount := 0
 				targetName := ""
-				
+
 				for _, comp := range data.Components {
 					if row, ok := comp.(*discordgo.ActionsRow); ok {
 						for _, rowComp := range row.Components {
@@ -2643,7 +2783,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 						}
 					}
 				}
-				
+
 				// Get encounter to find target
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
@@ -2657,7 +2797,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					})
 					return
 				}
-				
+
 				// Find target combatant
 				var targetID string
 				for id, combatant := range encounter.Combatants {
@@ -2666,7 +2806,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 						break
 					}
 				}
-				
+
 				if targetID == "" {
 					content := fmt.Sprintf("❌ Target '%s' not found in encounter!", targetName)
 					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -2678,7 +2818,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					})
 					return
 				}
-				
+
 				// Apply damage
 				err = h.ServiceProvider.EncounterService.ApplyDamage(context.Background(), encounterID, targetID, i.Member.User.ID, damageAmount)
 				if err != nil {
@@ -2692,11 +2832,11 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					})
 					return
 				}
-				
+
 				// Get updated combatant
 				encounter, _ = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				target := encounter.Combatants[targetID]
-				
+
 				// Show result
 				embed := &discordgo.MessageEmbed{
 					Title:       "💥 Damage Applied!",
@@ -2710,7 +2850,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 						},
 					},
 				}
-				
+
 				if target.CurrentHP <= 0 {
 					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 						Name:   "💀 Status",
@@ -2718,7 +2858,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 						Inline: true,
 					})
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -2728,12 +2868,12 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				if err != nil {
 					log.Printf("Error responding to damage: %v", err)
 				}
-				
+
 			case "apply_heal":
 				// Extract values from modal
 				healAmount := 0
 				targetName := ""
-				
+
 				for _, comp := range data.Components {
 					if row, ok := comp.(*discordgo.ActionsRow); ok {
 						for _, rowComp := range row.Components {
@@ -2748,7 +2888,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 						}
 					}
 				}
-				
+
 				// Get encounter to find target
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
@@ -2762,7 +2902,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					})
 					return
 				}
-				
+
 				// Find target combatant
 				var targetID string
 				for id, combatant := range encounter.Combatants {
@@ -2771,7 +2911,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 						break
 					}
 				}
-				
+
 				if targetID == "" {
 					content := fmt.Sprintf("❌ Target '%s' not found in encounter!", targetName)
 					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -2783,7 +2923,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					})
 					return
 				}
-				
+
 				// Apply healing
 				err = h.ServiceProvider.EncounterService.HealCombatant(context.Background(), encounterID, targetID, i.Member.User.ID, healAmount)
 				if err != nil {
@@ -2797,11 +2937,11 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					})
 					return
 				}
-				
+
 				// Get updated combatant
 				encounter, _ = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				target := encounter.Combatants[targetID]
-				
+
 				// Show result
 				embed := &discordgo.MessageEmbed{
 					Title:       "💚 Healing Applied!",
@@ -2815,7 +2955,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 						},
 					},
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -2829,7 +2969,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				// Extract values from modal
 				targetName := ""
 				attackRoll := 0
-				
+
 				for _, comp := range data.Components {
 					if row, ok := comp.(*discordgo.ActionsRow); ok {
 						for _, rowComp := range row.Components {
@@ -2844,7 +2984,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 						}
 					}
 				}
-				
+
 				// Validate attack roll
 				if attackRoll < 1 || attackRoll > 20 {
 					content := "❌ Invalid attack roll! Must be between 1-20."
@@ -2857,7 +2997,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					})
 					return
 				}
-				
+
 				// Get encounter
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
@@ -2871,7 +3011,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					})
 					return
 				}
-				
+
 				// Get attacker
 				attacker := encounter.GetCurrentCombatant()
 				if attacker == nil {
@@ -2885,7 +3025,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					})
 					return
 				}
-				
+
 				// Find target
 				var targetID string
 				var target *entities.Combatant
@@ -2896,7 +3036,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 						break
 					}
 				}
-				
+
 				if target == nil {
 					content := fmt.Sprintf("❌ Target '%s' not found!", targetName)
 					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -2908,16 +3048,16 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					})
 					return
 				}
-				
+
 				// Calculate attack bonus (simplified for testing)
 				attackBonus := 5 // Default
 				if attacker.Type == entities.CombatantTypeMonster && len(attacker.Actions) > 0 {
 					attackBonus = attacker.Actions[0].AttackBonus
 				}
-				
+
 				totalAttack := attackRoll + attackBonus
 				hit := totalAttack >= target.AC
-				
+
 				// Build result
 				embed := &discordgo.MessageEmbed{
 					Title: "⚔️ Attack Result",
@@ -2935,13 +3075,13 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 						},
 					},
 				}
-				
+
 				if hit {
 					// Roll damage (simplified - using 1d8+3 for all attacks)
 					damageRoll := 1 + (attackRoll % 8) // Simulate 1d8
 					damageMod := 3
 					totalDamage := damageRoll + damageMod
-					
+
 					embed.Description = fmt.Sprintf("**%s** hits **%s**!", attacker.Name, target.Name)
 					embed.Color = 0x2ecc71 // Green
 					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
@@ -2949,20 +3089,20 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 						Value:  fmt.Sprintf("1d8+3: %d + %d = **%d**", damageRoll, damageMod, totalDamage),
 						Inline: false,
 					})
-					
+
 					// Apply damage
 					h.ServiceProvider.EncounterService.ApplyDamage(context.Background(), encounterID, targetID, i.Member.User.ID, totalDamage)
-					
+
 					// Get updated target
 					encounter, _ = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 					updatedTarget := encounter.Combatants[targetID]
-					
+
 					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 						Name:   "❤️ Target HP",
 						Value:  fmt.Sprintf("%d / %d", updatedTarget.CurrentHP, updatedTarget.MaxHP),
 						Inline: true,
 					})
-					
+
 					if updatedTarget.CurrentHP <= 0 {
 						embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 							Name:   "💀 Status",
@@ -2974,7 +3114,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					embed.Description = fmt.Sprintf("**%s** misses **%s**!", attacker.Name, target.Name)
 					embed.Color = 0xe74c3c // Red
 				}
-				
+
 				// Add next turn button
 				components := []discordgo.MessageComponent{
 					discordgo.ActionsRow{
@@ -2994,7 +3134,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 						},
 					},
 				}
-				
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
