@@ -189,6 +189,16 @@ func Validationf(format string, args ...any) *Error {
 	return Newf(CodeValidation, format, args...)
 }
 
+// PermissionDenied creates a permission denied error
+func PermissionDenied(message string) *Error {
+	return New(CodePermissionDenied, message)
+}
+
+// PermissionDeniedf creates a formatted permission denied error
+func PermissionDeniedf(format string, args ...any) *Error {
+	return Newf(CodePermissionDenied, format, args...)
+}
+
 // Error checking functions
 
 // Is checks if the error is of a specific code

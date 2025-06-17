@@ -18,6 +18,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/config"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/gamesessions"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 )
 
@@ -88,6 +89,7 @@ func main() {
 				
 				// Create Redis repositories using bounded context constructors
 				providerConfig.CharacterRepository = characters.NewRedis(redisClient)
+				providerConfig.SessionRepository = gamesessions.NewRedis(redisClient)
 				
 				log.Println("Using Redis for persistence")
 			}
