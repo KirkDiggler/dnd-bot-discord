@@ -160,7 +160,7 @@ func (s *RedisMockTestSuite) TestUpdate_WithOwnerRealmChange() {
 	s.Require().NoError(err)
 
 	// Updated character with new owner
-	updatedChar := *existingChar
+	updatedChar := existingChar.Clone()
 	updatedChar.OwnerID = "new-owner-id"
 
 	// We're using the generated mock, so isTestMode will return false (not a *redis.Client)

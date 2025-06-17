@@ -41,8 +41,7 @@ func (r *InMemoryRepository) Create(ctx context.Context, character *entities.Cha
 	}
 
 	// Create a copy to avoid external modifications
-	charCopy := *character
-	r.characters[character.ID] = &charCopy
+	r.characters[character.ID] = character.Clone()
 
 	return nil
 }
@@ -63,8 +62,7 @@ func (r *InMemoryRepository) Get(ctx context.Context, id string) (*entities.Char
 	}
 
 	// Return a copy to avoid external modifications
-	charCopy := *character
-	return &charCopy, nil
+	return character.Clone(), nil
 }
 
 // GetByOwner retrieves all characters for a specific owner
@@ -80,8 +78,7 @@ func (r *InMemoryRepository) GetByOwner(ctx context.Context, ownerID string) ([]
 	for _, char := range r.characters {
 		if char.OwnerID == ownerID {
 			// Create a copy
-			charCopy := *char
-			result = append(result, &charCopy)
+			result = append(result, char.Clone())
 		}
 	}
 
@@ -105,8 +102,7 @@ func (r *InMemoryRepository) GetByOwnerAndRealm(ctx context.Context, ownerID, re
 	for _, char := range r.characters {
 		if char.OwnerID == ownerID && char.RealmID == realmID {
 			// Create a copy
-			charCopy := *char
-			result = append(result, &charCopy)
+			result = append(result, char.Clone())
 		}
 	}
 
@@ -132,8 +128,7 @@ func (r *InMemoryRepository) Update(ctx context.Context, character *entities.Cha
 	}
 
 	// Create a copy to avoid external modifications
-	charCopy := *character
-	r.characters[character.ID] = &charCopy
+	r.characters[character.ID] = character.Clone()
 
 	return nil
 }

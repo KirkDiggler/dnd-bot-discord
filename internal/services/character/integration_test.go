@@ -57,7 +57,11 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 				assert.Equal(t, userID, char.OwnerID)
 				assert.Equal(t, realmID, char.RealmID)
 				assert.Equal(t, entities.CharacterStatusDraft, char.Status)
-				*draftChar = *char
+				// Copy fields without mutex
+				draftChar.ID = char.ID
+				draftChar.OwnerID = char.OwnerID
+				draftChar.RealmID = char.RealmID
+				draftChar.Status = char.Status
 				return nil
 			})
 
@@ -86,7 +90,11 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 				assert.NotNil(t, char.Class)
 				assert.Equal(t, "human", char.Race.Key)
 				assert.Equal(t, "fighter", char.Class.Key)
-				*draftChar = *char
+				// Copy fields without mutex
+				draftChar.ID = char.ID
+				draftChar.OwnerID = char.OwnerID
+				draftChar.RealmID = char.RealmID
+				draftChar.Status = char.Status
 				return nil
 			}).
 			Times(2) // Called twice: once for race/class, once for abilities
@@ -141,7 +149,11 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 			DoAndReturn(func(ctx context.Context, char *entities.Character) error {
 				// Verify proficiencies are added
 				assert.NotEmpty(t, char.Proficiencies)
-				*draftChar = *char
+				// Copy fields without mutex
+				draftChar.ID = char.ID
+				draftChar.OwnerID = char.OwnerID
+				draftChar.RealmID = char.RealmID
+				draftChar.Status = char.Status
 				return nil
 			})
 
@@ -184,7 +196,11 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 			DoAndReturn(func(ctx context.Context, char *entities.Character) error {
 				// Verify equipment is added
 				assert.NotEmpty(t, char.Inventory)
-				*draftChar = *char
+				// Copy fields without mutex
+				draftChar.ID = char.ID
+				draftChar.OwnerID = char.OwnerID
+				draftChar.RealmID = char.RealmID
+				draftChar.Status = char.Status
 				return nil
 			})
 
@@ -210,7 +226,11 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 					// Finalize update
 					assert.Equal(t, entities.CharacterStatusActive, char.Status)
 				}
-				*draftChar = *char
+				// Copy fields without mutex
+				draftChar.ID = char.ID
+				draftChar.OwnerID = char.OwnerID
+				draftChar.RealmID = char.RealmID
+				draftChar.Status = char.Status
 				return nil
 			}).
 			Times(2) // Once for name, once for status

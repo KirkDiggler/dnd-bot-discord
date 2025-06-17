@@ -487,3 +487,122 @@ func (c *Character) resetAbilityScores() {
 func (c *Character) resetProficienciesBySource(step CreateStep) {}
 func (c *Character) resetSkillsBySource(step CreateStep)        {}
 func (c *Character) resetEquipmentBySource(step CreateStep)     {}
+
+// Clone creates a deep copy of the character without copying the mutex
+func (c *Character) Clone() *Character {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Create a new character with all fields except mutex
+	clone := &Character{
+		ID:                c.ID,
+		OwnerID:           c.OwnerID,
+		RealmID:           c.RealmID,
+		Name:              c.Name,
+		Level:             c.Level,
+		Experience:        c.Experience,
+		CurrentHitPoints:  c.CurrentHitPoints,
+		TemporaryHitPoints: c.TemporaryHitPoints,
+		MaxHitPoints:      c.MaxHitPoints,
+		AC:                c.AC,
+		HitDie:            c.HitDie,
+		Speed:             c.Speed,
+		Initiative:        c.Initiative,
+		PassivePerception: c.PassivePerception,
+		ProficiencyBonus:  c.ProficiencyBonus,
+		Status:            c.Status,
+		Background:        c.Background,
+		Alignment:         c.Alignment,
+		Age:               c.Age,
+		Height:            c.Height,
+		Weight:            c.Weight,
+		Eyes:              c.Eyes,
+		Skin:              c.Skin,
+		Hair:              c.Hair,
+		Backstory:         c.Backstory,
+		Portrait:          c.Portrait,
+		// Note: mu sync.Mutex is not copied - new instance gets its own
+	}
+
+	// Deep copy Race
+	if c.Race != nil {
+		raceCopy := *c.Race
+		clone.Race = &raceCopy
+	}
+
+	// Deep copy Class
+	if c.Class != nil {
+		classCopy := *c.Class
+		clone.Class = &classCopy
+	}
+
+	// Deep copy Attributes map
+	clone.Attributes = make(map[Attribute]*AbilityScore)
+	for k, v := range c.Attributes {
+		if v != nil {
+			scoreCopy := *v
+			clone.Attributes[k] = &scoreCopy
+		}
+	}
+
+	// Deep copy Inventory map
+	clone.Inventory = make(map[EquipmentType][]Equipment)
+	for k, v := range c.Inventory {
+		if v != nil {
+			clone.Inventory[k] = append([]Equipment(nil), v...)
+		}
+	}
+
+	// Deep copy Proficiencies map
+	clone.Proficiencies = make(map[ProficiencyType][]*Proficiency)
+	for k, v := range c.Proficiencies {
+		if v != nil {
+			profCopy := make([]*Proficiency, len(v))
+			for i, prof := range v {
+				if prof != nil {
+					p := *prof
+					profCopy[i] = &p
+				}
+			}
+			clone.Proficiencies[k] = profCopy
+		}
+	}
+
+	// Deep copy Features slice
+	if c.Features != nil {
+		clone.Features = make([]*CharacterFeature, len(c.Features))
+		for i, feat := range c.Features {
+			if feat != nil {
+				f := *feat
+				clone.Features[i] = &f
+			}
+		}
+	}
+
+	// Deep copy Languages slice
+	if c.Languages != nil {
+		clone.Languages = append([]Language(nil), c.Languages...)
+	}
+
+	// Deep copy Skills map
+	clone.Skills = make(map[SkillType]*Skill)
+	for k, v := range c.Skills {
+		if v != nil {
+			skillCopy := *v
+			clone.Skills[k] = &skillCopy
+		}
+	}
+
+	// Deep copy EquippedSlots map
+	clone.EquippedSlots = make(map[Slot]Equipment)
+	for k, v := range c.EquippedSlots {
+		clone.EquippedSlots[k] = v
+	}
+
+	// Deep copy Notes slice
+	if c.Notes != nil {
+		clone.Notes = append([]string(nil), c.Notes...)
+	}
+
+	return clone
+}
