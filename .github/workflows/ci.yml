@@ -118,11 +118,17 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [linux, darwin, windows]
-        goarch: [amd64, arm64]
-        exclude:
-          - goos: windows
+        include:
+          # AMD64 Linux (Ubuntu/Kubuntu)
+          - goos: linux
+            goarch: amd64
+          # ARM64 Linux (Raspberry Pi 4/5 64-bit)
+          - goos: linux
             goarch: arm64
+          # ARM Linux (Raspberry Pi 32-bit)
+          - goos: linux
+            goarch: arm
+            goarm: 7
     
     steps:
     - uses: actions/checkout@v4
@@ -137,17 +143,18 @@ jobs:
       env:
         GOOS: ${{ matrix.goos }}
         GOARCH: ${{ matrix.goarch }}
+        GOARM: ${{ matrix.goarm }}
       run: |
         output_name="dnd-bot-${{ matrix.goos }}-${{ matrix.goarch }}"
-        if [ "${{ matrix.goos }}" = "windows" ]; then
-          output_name="${output_name}.exe"
+        if [ "${{ matrix.goarch }}" = "arm" ] && [ -n "${{ matrix.goarm }}" ]; then
+          output_name="${output_name}v${{ matrix.goarm }}"
         fi
         go build -v -o ${output_name} ./cmd/bot
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: dnd-bot-${{ matrix.goos }}-${{ matrix.goarch }}
+        name: dnd-bot-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goarm && format('v{0}', matrix.goarm) || '' }}
         path: dnd-bot-*
 
   security:
