@@ -44,7 +44,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 		Name:        "Test Combat Arena",
 		Description: "Quick combat test session",
 		CreatorID:   botID,
-		GuildID:     req.Interaction.GuildID,
+		RealmID:     req.Interaction.GuildID,
 		ChannelID:   req.Interaction.ChannelID,
 	}
 	
@@ -85,9 +85,19 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 	}
 	
 	// Join the player to session automatically
-	err = h.services.SessionService.JoinSession(context.Background(), session.ID, req.Interaction.Member.User.ID, playerChar.ID)
+	_, err = h.services.SessionService.JoinSession(context.Background(), session.ID, req.Interaction.Member.User.ID)
 	if err != nil {
 		content := fmt.Sprintf("❌ Failed to join session: %v", err)
+		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
+		})
+		return err
+	}
+	
+	// Select character for the player
+	err = h.services.SessionService.SelectCharacter(context.Background(), session.ID, req.Interaction.Member.User.ID, playerChar.ID)
+	if err != nil {
+		content := fmt.Sprintf("❌ Failed to select character: %v", err)
 		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
 			Content: &content,
 		})
