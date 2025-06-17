@@ -11,6 +11,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/encounter"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/help"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/session"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
@@ -44,6 +45,9 @@ type Handler struct {
 	
 	// Encounter handlers
 	encounterAddMonsterHandler         *encounter.AddMonsterHandler
+	
+	// Help handler
+	helpHandler                        *help.HelpHandler
 }
 
 // HandlerConfig holds configuration for the Discord handler
@@ -104,6 +108,9 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		
 		// Initialize encounter handlers
 		encounterAddMonsterHandler: encounter.NewAddMonsterHandler(cfg.ServiceProvider),
+		
+		// Initialize help handler
+		helpHandler: help.NewHelpHandler(),
 	}
 }
 
@@ -239,6 +246,19 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 						},
 					},
 				},
+				{
+					Name:        "help",
+					Description: "Get help on using the bot",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "topic",
+							Description: "Specific help topic (character, session, encounter, combat)",
+							Required:    false,
+						},
+					},
+				},
 			},
 		},
 	}
@@ -281,6 +301,32 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 	}
 
 	subcommandGroup := data.Options[0]
+	
+	// Handle direct subcommands (like help)
+	if subcommandGroup.Type == discordgo.ApplicationCommandOptionSubCommand {
+		switch subcommandGroup.Name {
+		case "help":
+			// Get topic from options if provided
+			var topic string
+			for _, opt := range subcommandGroup.Options {
+				if opt.Name == "topic" {
+					topic = opt.StringValue()
+					break
+				}
+			}
+			req := &help.HelpRequest{
+				Session:     s,
+				Interaction: i,
+				Topic:       topic,
+			}
+			if err := h.helpHandler.Handle(req); err != nil {
+				log.Printf("Error handling help command: %v", err)
+			}
+		}
+		return
+	}
+	
+	// Handle subcommand groups
 	if subcommandGroup.Name == "character" && len(subcommandGroup.Options) > 0 {
 		subcommand := subcommandGroup.Options[0]
 		
