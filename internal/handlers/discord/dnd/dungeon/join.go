@@ -3,6 +3,8 @@ package dungeon
 import (
 	"context"
 	"fmt"
+	"log"
+	"strings"
 	
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
@@ -51,6 +53,35 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 		})
 	}
 	
+	// Check if character is complete
+	if !playerChar.IsComplete() {
+		missingInfo := []string{}
+		if playerChar.Name == "" {
+			missingInfo = append(missingInfo, "name")
+		}
+		if playerChar.Race == nil {
+			missingInfo = append(missingInfo, "race")
+		}
+		if playerChar.Class == nil {
+			missingInfo = append(missingInfo, "class")
+		}
+		if len(playerChar.Attributes) == 0 {
+			missingInfo = append(missingInfo, "ability scores")
+		}
+		
+		log.Printf("Character %s (ID: %s) is incomplete. Missing: %v", 
+			playerChar.Name, playerChar.ID, missingInfo)
+		
+		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: fmt.Sprintf("❌ Your character is incomplete! Missing: %s\n\nPlease create a new character or contact an admin if this is an error.", 
+					strings.Join(missingInfo, ", ")),
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+	}
+	
 	// Join the session
 	_, err = h.services.SessionService.JoinSession(context.Background(), sessionID, i.Member.User.ID)
 	if err != nil {
@@ -75,6 +106,9 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 		})
 	}
 	
+	// Build character info
+	charInfo := fmt.Sprintf("%s (Level %d)", playerChar.GetDisplayInfo(), playerChar.Level)
+	
 	// Success response
 	embed := &discordgo.MessageEmbed{
 		Title:       "🎉 Joined the Party!",
@@ -83,7 +117,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 		Fields: []*discordgo.MessageEmbedField{
 			{
 				Name:   "Character",
-				Value:  fmt.Sprintf("%s %s (Level %d)", playerChar.Race.Name, playerChar.Class.Name, playerChar.Level),
+				Value:  charInfo,
 				Inline: true,
 			},
 			{

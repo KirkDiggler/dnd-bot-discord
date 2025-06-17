@@ -88,10 +88,22 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 		return err
 	}
 	
+	// Add the bot as DM for dungeon mode
+	botID := req.Session.State.User.ID
+	log.Printf("Adding bot %s as DM to session %s", botID, sess.ID)
+	sess.AddMember(botID, entities.SessionRoleDM)
+	sess.DMID = botID // Set bot as the DM
+	
 	// Creator is automatically added as DM, but for dungeon mode we want them as a player
 	// Update their role to player
 	if member, exists := sess.Members[req.Interaction.Member.User.ID]; exists {
 		member.Role = entities.SessionRolePlayer
+	}
+	
+	// Log session members
+	log.Printf("Session members after modification:")
+	for userID, member := range sess.Members {
+		log.Printf("  - User %s: Role=%s", userID, member.Role)
 	}
 	
 	// Get user's active character and select it
@@ -181,15 +193,15 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 		"difficulty":  req.Difficulty,
 	}
 	
-	log.Printf("Dungeon started with difficulty: %s", req.Difficulty)
+	log.Printf("Dungeon started with difficulty: %s, bot ID: %s as DM", req.Difficulty, botID)
 	
-	// We need to update the session to save the metadata
+	// We need to update the session to save the metadata and bot as DM
 	updateInput := &session.UpdateSessionInput{
 		Name: &sess.Name, // Just update with same name to trigger save
 	}
 	sess, err = h.services.SessionService.UpdateSession(context.Background(), sess.ID, updateInput)
 	if err != nil {
-		log.Printf("Warning: Failed to save room metadata: %v", err)
+		log.Printf("Warning: Failed to save session updates: %v", err)
 	}
 	
 	_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{

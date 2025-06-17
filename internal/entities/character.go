@@ -354,9 +354,30 @@ func (c *Character) StatsString() string {
 	return msg.String()
 }
 
+// IsComplete checks if the character has all required fields
+func (c *Character) IsComplete() bool {
+	return c != nil && c.Race != nil && c.Class != nil && c.Name != "" && len(c.Attributes) > 0
+}
+
+// GetDisplayInfo returns a safe string representation of race and class
+func (c *Character) GetDisplayInfo() string {
+	if c == nil {
+		return "Unknown Character"
+	}
+	
+	if c.Race != nil && c.Class != nil {
+		return fmt.Sprintf("%s %s", c.Race.Name, c.Class.Name)
+	} else if c.Race != nil {
+		return c.Race.Name
+	} else if c.Class != nil {
+		return c.Class.Name
+	}
+	return "Incomplete Character"
+}
+
 func (c *Character) String() string {
 	msg := strings.Builder{}
-	if c.Race == nil || c.Class == nil {
+	if !c.IsComplete() {
 		return "Character not fully created"
 	}
 

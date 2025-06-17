@@ -3,6 +3,7 @@ package dungeon
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/rand"
 	"strings"
 	
@@ -92,6 +93,14 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 	
 	// Create encounter
 	botID := s.State.User.ID
+	log.Printf("Creating encounter - Bot ID: %s, Session ID: %s", botID, sess.ID)
+	
+	// Log session members
+	log.Printf("Current session members:")
+	for userID, member := range sess.Members {
+		log.Printf("  - User %s: Role=%s", userID, member.Role)
+	}
+	
 	encounterInput := &encounter.CreateEncounterInput{
 		SessionID:   sess.ID,
 		ChannelID:   i.ChannelID,

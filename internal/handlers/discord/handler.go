@@ -680,6 +680,28 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			}
 		case "ability_scores":
 			if len(parts) >= 4 {
+				// Update draft with race and class when we reach ability scores
+				draftChar, err := h.ServiceProvider.CharacterService.GetOrCreateDraftCharacter(
+					context.Background(),
+					i.Member.User.ID,
+					i.GuildID,
+				)
+				if err == nil {
+					raceKey := parts[2]
+					classKey := parts[3]
+					_, err = h.ServiceProvider.CharacterService.UpdateDraftCharacter(
+						context.Background(),
+						draftChar.ID,
+						&characterService.UpdateDraftInput{
+							RaceKey:  &raceKey,
+							ClassKey: &classKey,
+						},
+					)
+					if err != nil {
+						log.Printf("Error updating draft with race/class: %v", err)
+					}
+				}
+				
 				req := &character.AbilityScoresRequest{
 					Session:     s,
 					Interaction: i,
@@ -784,18 +806,22 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						i.GuildID,
 					)
 					if err == nil {
-						log.Printf("Updating draft character %s with ability scores", draftChar.ID)
+						log.Printf("Updating draft character %s with ability scores and race/class", draftChar.ID)
+						raceKey := parts[2]
+						classKey := parts[3]
 						_, err = h.ServiceProvider.CharacterService.UpdateDraftCharacter(
 							context.Background(),
 							draftChar.ID,
 							&characterService.UpdateDraftInput{
 								AbilityScores: abilityScores,
+								RaceKey:      &raceKey,
+								ClassKey:     &classKey,
 							},
 						)
 						if err != nil {
 							log.Printf("Error updating draft with ability scores: %v", err)
 						} else {
-							log.Printf("Successfully updated draft with ability scores")
+							log.Printf("Successfully updated draft with ability scores and race/class")
 						}
 					} else {
 						log.Printf("Error getting draft character: %v", err)
@@ -1316,6 +1342,80 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				if err != nil {
 					log.Printf("Error restoring character: %v", err)
 				}
+			case "edit":
+				// Edit character - for now, redirect to character creation flow
+				// Get the character first to validate ownership
+				char, err := h.ServiceProvider.CharacterService.GetByID(characterID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to get character: %v", err)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Verify ownership
+				if char.OwnerID != i.Member.User.ID {
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "❌ You can only edit your own characters!",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// For now, show a message about what can be edited
+				// In the future, this could launch an edit flow
+				embed := &discordgo.MessageEmbed{
+					Title:       fmt.Sprintf("Edit %s", char.Name),
+					Description: "Character editing is currently limited. You can:",
+					Color:       0x3498db,
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:   "Available Actions",
+							Value:  "• Archive/Restore the character\n• Delete the character\n• Create a new character with updated info",
+							Inline: false,
+						},
+						{
+							Name:   "Coming Soon",
+							Value:  "• Edit ability scores\n• Change equipment\n• Update proficiencies\n• Level up",
+							Inline: false,
+						},
+					},
+					Footer: &discordgo.MessageEmbedFooter{
+						Text: "Full character editing will be available in a future update",
+					},
+				}
+				
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Embeds: []*discordgo.MessageEmbed{embed},
+						Flags:  discordgo.MessageFlagsEphemeral,
+					},
+				})
+				if err != nil {
+					log.Printf("Error showing edit info: %v", err)
+				}
+			}
+		}
+	} else if ctx == "character" && action == "quickshow" {
+		// Quick show character from list
+		if len(parts) >= 3 {
+			characterID := parts[2]
+			req := &character.ShowRequest{
+				Session:     s,
+				Interaction: i,
+				CharacterID: characterID,
+			}
+			if err := h.characterShowHandler.Handle(req); err != nil {
+				log.Printf("Error handling character quickshow: %v", err)
 			}
 		}
 	} else if ctx == "session_manage" {
@@ -1395,7 +1495,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				for _, char := range chars {
 					if char.Status == entities.CharacterStatusActive {
 						options = append(options, discordgo.SelectMenuOption{
-							Label:       fmt.Sprintf("%s - %s %s", char.Name, char.Race.Name, char.Class.Name),
+							Label:       fmt.Sprintf("%s - %s", char.Name, char.GetDisplayInfo()),
 							Description: fmt.Sprintf("Level %d | HP: %d/%d | AC: %d", char.Level, char.CurrentHitPoints, char.MaxHitPoints, char.AC),
 							Value:       char.ID,
 						})
@@ -1455,7 +1555,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					
 					// Get character details for confirmation
 					char, _ := h.ServiceProvider.CharacterService.GetByID(characterID)
-					content := fmt.Sprintf("✅ Character selected: **%s** the %s %s", char.Name, char.Race.Name, char.Class.Name)
+					content := fmt.Sprintf("✅ Character selected: **%s** the %s", char.Name, char.GetDisplayInfo())
 					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseUpdateMessage,
 						Data: &discordgo.InteractionResponseData{
@@ -2287,7 +2387,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						if err == nil {
 							embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 								Name:   char.Name,
-								Value:  fmt.Sprintf("%s %s | HP: %d/%d | AC: %d", char.Race.Name, char.Class.Name, char.CurrentHitPoints, char.MaxHitPoints, char.AC),
+								Value:  fmt.Sprintf("%s | HP: %d/%d | AC: %d", char.GetDisplayInfo(), char.CurrentHitPoints, char.MaxHitPoints, char.AC),
 								Inline: false,
 							})
 						}
@@ -2363,12 +2463,17 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				return
 			}
 			
-			// Update the draft with the final name
+			// Update the draft with the final name and ensure race/class are set
+			raceKey := parts[2]
+			classKey := parts[3]
+			
 			_, err = h.ServiceProvider.CharacterService.UpdateDraftCharacter(
 				context.Background(),
 				draftChar.ID,
 				&characterService.UpdateDraftInput{
-					Name: &characterName,
+					Name:     &characterName,
+					RaceKey:  &raceKey,
+					ClassKey: &classKey,
 				},
 			)
 			if err != nil {

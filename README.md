@@ -13,20 +13,30 @@ A fully-featured Discord bot for playing Dungeons & Dragons 5th Edition online. 
 - **D&D 5e API Integration**: Real-time data from the official D&D 5e API  
 - **Smart Ability Assignment**: Auto-assign abilities based on class optimization
 - **Complex Choice Resolution**: Handles nested equipment and proficiency choices
-- **Redis Persistence**: Character storage with Redis backend
+- **Redis Persistence**: Full character, session, and encounter storage
 - **Character Management**: List, view, archive, and delete characters
+- **Session/Party System**: Create, join, and manage game sessions
+- **Combat Encounters**: Add monsters, roll initiative, track turns
+- **Dungeon Mode**: Cooperative play with bot as DM
+- **Class Features**: Proper AC calculation (Monk unarmored defense, etc)
+- **Help System**: Built-in help command with all available commands
 - **Docker Deployment**: Ready for Raspberry Pi deployment
 - **Comprehensive Test Coverage**: Unit and integration tests
 - **Clean Architecture**: Separation of concerns with interfaces
 
 ### 🚧 In Development
-- Session/party management system
-- Initiative tracker for combat
-- Advanced dice rolling with modifiers
-- Character state management (HP, conditions)
+- Bot-controlled monster turns in combat
+- Dungeon room mechanics (puzzles, traps, treasure)
+- Spell system integration
+- Character leveling system
 
 ### 📋 Planned Features
-See [GAMEPLAN.md](GAMEPLAN.md) for the complete development roadmap
+- Advanced dice rolling expressions
+- Character conditions and status effects
+- Inventory management system
+- Campaign persistence and world state
+- DM tools for custom content
+- See [GAMEPLAN.md](GAMEPLAN.md) for the complete development roadmap
 
 ## 🚀 Quick Start
 
@@ -53,6 +63,7 @@ See [GAMEPLAN.md](GAMEPLAN.md) for the complete development roadmap
    ```bash
    cp .env.example .env
    # Edit .env with your bot token and application ID
+   # Add Redis URL: REDIS_URL=redis://localhost:6379
    ```
 
 4. **Install Dependencies**
@@ -62,11 +73,12 @@ See [GAMEPLAN.md](GAMEPLAN.md) for the complete development roadmap
 
 5. **Run the Bot**
    ```bash
-   # Start Redis
+   # Start Redis (required for persistence)
    docker compose up -d redis
    
    # Run the bot
-   export REDIS_URL=redis://localhost:6379
+   make run
+   # or
    go run cmd/bot/main.go
    ```
 
@@ -85,6 +97,35 @@ See [GAMEPLAN.md](GAMEPLAN.md) for the complete development roadmap
 /dnd character create      # Start character creation wizard
 /dnd character list        # View all your characters
 /dnd character show <id>   # Display detailed character sheet
+/dnd character delete <id> # Delete a character
+```
+
+#### Session Management
+```
+/dnd session create <name> # Create a new game session
+/dnd session list          # View active sessions
+/dnd session join <code>   # Join a session with invite code
+/dnd session info          # View current session details
+/dnd session start         # Start the game session (DM only)
+/dnd session end           # End the session (DM only)
+```
+
+#### Combat & Encounters
+```
+/dnd encounter add <monster> # Add a monster to encounter (DM only)
+/dnd test combat [monster]   # Quick test combat with bot as DM
+```
+
+#### Dungeon Mode (Cooperative Play)
+```
+/dnd dungeon [difficulty]    # Start a dungeon delve (easy/medium/hard)
+# Bot acts as DM, all players cooperate
+# Features room exploration, combat encounters, and treasure
+```
+
+#### Help
+```
+/dnd help                    # Show all available commands
 ```
 
 #### Character Actions (via buttons)
