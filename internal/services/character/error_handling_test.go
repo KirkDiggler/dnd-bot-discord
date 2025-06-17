@@ -9,7 +9,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	mockrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character/mock"
+	mockrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 )

@@ -1,5 +1,7 @@
 package character
 
+//go:generate mockgen -destination=mock/mock_service.go -package=mockcharacters -source=service.go
+
 import (
 	"context"
 	"fmt"
@@ -9,7 +11,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
-	characterRepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character"
+	characterRepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 )
 
 // Repository is an alias for the character repository interface

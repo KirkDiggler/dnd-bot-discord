@@ -1,0 +1,19 @@
+version: '3.8'
+
+# Test-specific Redis configuration
+# This is used for integration tests, not deployed to Pi
+services:
+  redis-test:
+    image: redis:7-alpine
+    container_name: dnd-bot-redis-test
+    ports:
+      - "6380:6379"  # Different port to avoid conflicts
+    command: redis-server --save ""  # No persistence for tests
+    tmpfs:
+      - /data  # Use RAM for faster tests
+    networks:
+      - dnd-bot-test-network
+
+networks:
+  dnd-bot-test-network:
+    driver: bridge

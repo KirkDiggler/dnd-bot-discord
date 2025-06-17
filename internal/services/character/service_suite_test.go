@@ -8,8 +8,8 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	mockcharacter "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
-	mockrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character/mock"
+	mockcharacters "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
+	mockrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 )
@@ -19,7 +19,7 @@ type CharacterServiceTestSuite struct {
 	suite.Suite
 	ctrl           *gomock.Controller
 	mockDNDClient  *mockdnd5e.MockClient
-	mockResolver   *mockcharacter.MockChoiceResolver
+	mockResolver   *mockcharacters.MockChoiceResolver
 	mockRepository *mockrepo.MockRepository
 	service        character.Service
 	ctx            context.Context
@@ -29,7 +29,7 @@ type CharacterServiceTestSuite struct {
 func (s *CharacterServiceTestSuite) SetupTest() {
 	s.ctrl = gomock.NewController(s.T())
 	s.mockDNDClient = mockdnd5e.NewMockClient(s.ctrl)
-	s.mockResolver = mockcharacter.NewMockChoiceResolver(s.ctrl)
+	s.mockResolver = mockcharacters.NewMockChoiceResolver(s.ctrl)
 	s.mockRepository = mockrepo.NewMockRepository(s.ctrl)
 	s.ctx = context.Background()
 	

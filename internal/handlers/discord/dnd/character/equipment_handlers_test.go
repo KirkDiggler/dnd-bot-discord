@@ -12,7 +12,7 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
-	mockcharacter "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
+	mockcharacters "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 )
 
@@ -20,7 +20,7 @@ import (
 type EquipmentHandlersTestSuite struct {
 	suite.Suite
 	ctrl                *gomock.Controller
-	mockCharacterService *mockcharacter.MockService
+	mockCharacterService *mockcharacters.MockService
 	mockSession         *discordgo.Session
 	mockInteraction     *discordgo.InteractionCreate
 }
@@ -28,7 +28,7 @@ type EquipmentHandlersTestSuite struct {
 // SetupTest runs before each test
 func (s *EquipmentHandlersTestSuite) SetupTest() {
 	s.ctrl = gomock.NewController(s.T())
-	s.mockCharacterService = mockcharacter.NewMockService(s.ctrl)
+	s.mockCharacterService = mockcharacters.NewMockService(s.ctrl)
 	
 	// Setup mock Discord session
 	s.mockSession = &discordgo.Session{

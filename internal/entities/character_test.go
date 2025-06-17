@@ -265,9 +265,7 @@ func (s *suiteEquip) TestEquipArmorWithDexBonus() {
 
 func (s *suiteEquip) TestEquipArmorAndShield() {
 	s.char.Equip("leather-armor")
-
 	s.char.Equip("shield")
-
 	s.Equal(14, s.char.AC)
 }
 
