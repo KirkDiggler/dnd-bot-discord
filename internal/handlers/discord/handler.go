@@ -10,6 +10,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/encounter"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/session"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
@@ -40,6 +41,9 @@ type Handler struct {
 	sessionStartHandler                *session.StartHandler
 	sessionEndHandler                  *session.EndHandler
 	sessionInfoHandler                 *session.InfoHandler
+	
+	// Encounter handlers
+	encounterAddMonsterHandler         *encounter.AddMonsterHandler
 }
 
 // HandlerConfig holds configuration for the Discord handler
@@ -97,6 +101,9 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		sessionStartHandler:  session.NewStartHandler(cfg.ServiceProvider),
 		sessionEndHandler:    session.NewEndHandler(cfg.ServiceProvider),
 		sessionInfoHandler:   session.NewInfoHandler(cfg.ServiceProvider),
+		
+		// Initialize encounter handlers
+		encounterAddMonsterHandler: encounter.NewAddMonsterHandler(cfg.ServiceProvider),
 	}
 }
 
@@ -207,6 +214,26 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 									Name:        "id",
 									Description: "Session ID (optional if you have only one session)",
 									Required:    false,
+								},
+							},
+						},
+					},
+				},
+				{
+					Name:        "encounter",
+					Description: "Encounter and combat management",
+					Type:        discordgo.ApplicationCommandOptionSubCommandGroup,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Name:        "add",
+							Description: "Add a monster to the encounter",
+							Type:        discordgo.ApplicationCommandOptionSubCommand,
+							Options: []*discordgo.ApplicationCommandOption{
+								{
+									Type:        discordgo.ApplicationCommandOptionString,
+									Name:        "monster",
+									Description: "Monster name to search for",
+									Required:    true,
 								},
 							},
 						},
@@ -426,6 +453,29 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 			}
 			if err := h.sessionEndHandler.Handle(req); err != nil {
 				log.Printf("Error handling session end: %v", err)
+			}
+		}
+	} else if subcommandGroup.Name == "encounter" && len(subcommandGroup.Options) > 0 {
+		subcommand := subcommandGroup.Options[0]
+		
+		switch subcommand.Name {
+		case "add":
+			// Get monster name from options
+			var monsterQuery string
+			for _, opt := range subcommand.Options {
+				if opt.Name == "monster" {
+					monsterQuery = opt.StringValue()
+					break
+				}
+			}
+			
+			req := &encounter.AddMonsterRequest{
+				Session:     s,
+				Interaction: i,
+				Query:       monsterQuery,
+			}
+			if err := h.encounterAddMonsterHandler.Handle(req); err != nil {
+				log.Printf("Error handling add monster: %v", err)
 			}
 		}
 	}
