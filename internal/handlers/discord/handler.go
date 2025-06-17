@@ -1403,6 +1403,115 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				if err != nil {
 					log.Printf("Error showing edit info: %v", err)
 				}
+			case "continue":
+				// Continue creating a draft character
+				// Get the character first to validate it's a draft
+				char, err := h.ServiceProvider.CharacterService.GetByID(characterID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to get character: %v", err)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+
+				// Verify ownership
+				if char.OwnerID != i.Member.User.ID {
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "❌ You can only continue your own draft characters!",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+
+				// Verify it's a draft
+				if char.Status != entities.CharacterStatusDraft {
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "❌ This character is not a draft!",
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+
+				// Analyze the draft to determine where to resume
+				// Check what's been completed
+				if char.Race == nil {
+					// Start from race selection
+					req := &character.CreateRequest{
+						Session:     s,
+						Interaction: i,
+					}
+					if err := h.characterCreateHandler.Handle(req); err != nil {
+						log.Printf("Error resuming character creation at race selection: %v", err)
+					}
+				} else if char.Class == nil {
+					// Continue from class selection
+					req := &character.ShowClassesRequest{
+						Session:     s,
+						Interaction: i,
+						RaceKey:     char.Race.Key,
+					}
+					if err := h.characterShowClassesHandler.Handle(req); err != nil {
+						log.Printf("Error resuming character creation at class selection: %v", err)
+					}
+				} else if len(char.Attributes) == 0 {
+					// Continue from ability scores
+					req := &character.AbilityScoresRequest{
+						Session:     s,
+						Interaction: i,
+					}
+					if err := h.characterAbilityScoresHandler.Handle(req); err != nil {
+						log.Printf("Error resuming character creation at ability scores: %v", err)
+					}
+				} else if char.Name == "" {
+					// Show the name modal
+					modal := discordgo.InteractionResponseData{
+						CustomID: fmt.Sprintf("character_create:submit_name:%s:%s", char.Race.Key, char.Class.Key),
+						Title:    "Name Your Character",
+						Components: []discordgo.MessageComponent{
+							discordgo.ActionsRow{
+								Components: []discordgo.MessageComponent{
+									discordgo.TextInput{
+										CustomID:    "character_name",
+										Label:       "Character Name",
+										Style:       discordgo.TextInputShort,
+										Placeholder: "Enter your character's name",
+										Required:    true,
+										MinLength:   1,
+										MaxLength:   50,
+									},
+								},
+							},
+						},
+					}
+					err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseModal,
+						Data: &modal,
+					})
+					if err != nil {
+						log.Printf("Error showing name modal: %v", err)
+					}
+				} else {
+					// Character seems complete, show it
+					req := &character.ShowRequest{
+						Session:     s,
+						Interaction: i,
+						CharacterID: characterID,
+					}
+					if err := h.characterShowHandler.Handle(req); err != nil {
+						log.Printf("Error showing draft character: %v", err)
+					}
+				}
 			}
 		}
 	} else if ctx == "character" && action == "quickshow" {
