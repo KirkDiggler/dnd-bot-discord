@@ -1,0 +1,148 @@
+package character
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
+	"github.com/bwmarrin/discordgo"
+)
+
+type ListRequest struct {
+	Session     *discordgo.Session
+	Interaction *discordgo.InteractionCreate
+}
+
+type ListHandler struct {
+	services *services.Provider
+}
+
+func NewListHandler(services *services.Provider) *ListHandler {
+	return &ListHandler{
+		services: services,
+	}
+}
+
+func (h *ListHandler) Handle(req *ListRequest) error {
+	// Defer acknowledge the interaction
+	err := req.Session.InteractionRespond(req.Interaction.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to acknowledge interaction: %w", err)
+	}
+
+	// Get user's characters
+	characters, err := h.services.CharacterService.ListByOwner(req.Interaction.Member.User.ID)
+	if err != nil {
+		content := fmt.Sprintf("❌ Failed to retrieve your characters: %v", err)
+		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
+		})
+		return err
+	}
+
+	// Build response
+	if len(characters) == 0 {
+		content := "📝 You don't have any characters yet. Use `/dnd character create` to create one!"
+		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
+		})
+		return err
+	}
+
+	// Create embed with character list
+	embed := &discordgo.MessageEmbed{
+		Title:       "📚 Your Characters",
+		Description: fmt.Sprintf("You have %d character(s):", len(characters)),
+		Color:       0x3498db, // Blue color
+		Fields:      make([]*discordgo.MessageEmbedField, 0, len(characters)),
+	}
+
+	// Group characters by status
+	activeChars := make([]*entities.Character, 0)
+	draftChars := make([]*entities.Character, 0)
+	archivedChars := make([]*entities.Character, 0)
+
+	for _, char := range characters {
+		switch char.Status {
+		case entities.CharacterStatusActive:
+			activeChars = append(activeChars, char)
+		case entities.CharacterStatusDraft:
+			draftChars = append(draftChars, char)
+		case entities.CharacterStatusArchived:
+			archivedChars = append(archivedChars, char)
+		}
+	}
+
+	// Add active characters
+	if len(activeChars) > 0 {
+		var sb strings.Builder
+		for _, char := range activeChars {
+			sb.WriteString(fmt.Sprintf("**%s** - %s %s (Level %d)\n",
+				char.Name,
+				char.Race.Name,
+				char.Class.Name,
+				char.Level,
+			))
+			sb.WriteString(fmt.Sprintf("  HP: %d/%d | AC: %d | ID: `%s`\n\n",
+				char.CurrentHitPoints,
+				char.MaxHitPoints,
+				char.AC,
+				char.ID,
+			))
+		}
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "✅ Active Characters",
+			Value:  sb.String(),
+			Inline: false,
+		})
+	}
+
+	// Add draft characters
+	if len(draftChars) > 0 {
+		var sb strings.Builder
+		for _, char := range draftChars {
+			status := "Creating..."
+			if char.Name != "" {
+				status = char.Name
+			}
+			sb.WriteString(fmt.Sprintf("**%s** - ID: `%s`\n", status, char.ID))
+		}
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "📝 Draft Characters",
+			Value:  sb.String(),
+			Inline: false,
+		})
+	}
+
+	// Add archived characters
+	if len(archivedChars) > 0 {
+		var sb strings.Builder
+		for _, char := range archivedChars {
+			sb.WriteString(fmt.Sprintf("**%s** - %s %s | ID: `%s`\n",
+				char.Name,
+				char.Race.Name,
+				char.Class.Name,
+				char.ID,
+			))
+		}
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "🗄️ Archived Characters",
+			Value:  sb.String(),
+			Inline: false,
+		})
+	}
+
+	// Add footer with helpful commands
+	embed.Footer = &discordgo.MessageEmbedFooter{
+		Text: "Use /dnd character show <id> to view details | /dnd character select <id> to set as active",
+	}
+
+	// Send the embed
+	_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
+		Embeds: &[]*discordgo.MessageEmbed{embed},
+	})
+	return err
+}

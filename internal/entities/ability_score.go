@@ -35,3 +35,7 @@ func (a *AbilityScore) AddBonus(bonus int) *AbilityScore {
 func (a *AbilityScore) String() string {
 	return fmt.Sprintf("%d (%+d)", a.Score, a.Bonus)
 }
+
+func (a Attribute) Short() string {
+	return string(a)
+}
