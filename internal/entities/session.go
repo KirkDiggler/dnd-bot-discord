@@ -38,6 +38,7 @@ type Session struct {
 	Settings    *SessionSettings            `json:"settings"`
 	Encounters  []string                    `json:"encounters"`   // List of encounter IDs
 	ActiveEncounterID *string               `json:"active_encounter_id,omitempty"`
+	Metadata    map[string]interface{}      `json:"metadata,omitempty"`     // Custom metadata for the session
 	CreatedAt   time.Time                   `json:"created_at"`
 	StartedAt   *time.Time                  `json:"started_at"`
 	EndedAt     *time.Time                  `json:"ended_at"`

@@ -10,6 +10,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/dungeon"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/encounter"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/help"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/session"
@@ -49,6 +50,11 @@ type Handler struct {
 	
 	// Test combat handler
 	testCombatHandler                  *testcombat.TestCombatHandler
+	
+	// Dungeon handlers
+	dungeonStartHandler                *dungeon.StartDungeonHandler
+	dungeonJoinHandler                 *dungeon.JoinPartyHandler
+	dungeonEnterRoomHandler            *dungeon.EnterRoomHandler
 	
 	// Help handler
 	helpHandler                        *help.HelpHandler
@@ -115,6 +121,11 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		
 		// Initialize test combat handler
 		testCombatHandler: testcombat.NewTestCombatHandler(cfg.ServiceProvider),
+		
+		// Initialize dungeon handlers
+		dungeonStartHandler:     dungeon.NewStartDungeonHandler(cfg.ServiceProvider),
+		dungeonJoinHandler:      dungeon.NewJoinPartyHandler(cfg.ServiceProvider),
+		dungeonEnterRoomHandler: dungeon.NewEnterRoomHandler(cfg.ServiceProvider),
 		
 		// Initialize help handler
 		helpHandler: help.NewHelpHandler(),
@@ -279,6 +290,24 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 						},
 					},
 				},
+				{
+					Name:        "dungeon",
+					Description: "Start a cooperative dungeon delve with friends",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "difficulty",
+							Description: "Dungeon difficulty (easy, medium, hard)",
+							Required:    false,
+							Choices: []*discordgo.ApplicationCommandOptionChoice{
+								{Name: "Easy", Value: "easy"},
+								{Name: "Medium", Value: "medium"},
+								{Name: "Hard", Value: "hard"},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -358,6 +387,23 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 			}
 			if err := h.testCombatHandler.Handle(req); err != nil {
 				log.Printf("Error handling test combat: %v", err)
+			}
+		case "dungeon":
+			// Get difficulty from options if provided
+			var difficulty string = "medium" // default
+			for _, opt := range subcommandGroup.Options {
+				if opt.Name == "difficulty" {
+					difficulty = opt.StringValue()
+					break
+				}
+			}
+			req := &dungeon.StartDungeonRequest{
+				Session:     s,
+				Interaction: i,
+				Difficulty:  difficulty,
+			}
+			if err := h.dungeonStartHandler.Handle(req); err != nil {
+				log.Printf("Error handling dungeon start: %v", err)
 			}
 		}
 		return
@@ -2176,6 +2222,76 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				})
 				if err != nil {
 					log.Printf("Error showing attack modal: %v", err)
+				}
+			}
+		}
+	} else if ctx == "dungeon" {
+		// Handle dungeon actions
+		if len(parts) >= 3 {
+			sessionID := parts[2]
+			
+			switch action {
+			case "join":
+				if err := h.dungeonJoinHandler.HandleButton(s, i, sessionID); err != nil {
+					log.Printf("Error handling dungeon join: %v", err)
+				}
+			case "enter":
+				if len(parts) >= 4 {
+					roomType := parts[3]
+					if err := h.dungeonEnterRoomHandler.HandleButton(s, i, sessionID, roomType); err != nil {
+						log.Printf("Error handling dungeon enter: %v", err)
+					}
+				}
+			case "status":
+				// Get session to show party status
+				sess, err := h.ServiceProvider.SessionService.GetSession(context.Background(), sessionID)
+				if err != nil {
+					content := "❌ Session not found!"
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Build party status
+				embed := &discordgo.MessageEmbed{
+					Title:       "🎭 Party Status",
+					Description: "Current adventurers:",
+					Color:       0x3498db,
+					Fields:      []*discordgo.MessageEmbedField{},
+				}
+				
+				for _, member := range sess.Members {
+					if member.CharacterID != "" {
+						// Get character details
+						char, err := h.ServiceProvider.CharacterService.GetByID(member.CharacterID)
+						if err == nil {
+							embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+								Name:   char.Name,
+								Value:  fmt.Sprintf("%s %s | HP: %d/%d | AC: %d", char.Race.Name, char.Class.Name, char.CurrentHitPoints, char.MaxHitPoints, char.AC),
+								Inline: false,
+							})
+						}
+					}
+				}
+				
+				if len(embed.Fields) == 0 {
+					embed.Description = "No party members yet!"
+				}
+				
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Embeds: []*discordgo.MessageEmbed{embed},
+						Flags:  discordgo.MessageFlagsEphemeral,
+					},
+				})
+				if err != nil {
+					log.Printf("Error showing party status: %v", err)
 				}
 			}
 		}
