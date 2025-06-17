@@ -1444,7 +1444,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 
 				// Analyze the draft to determine where to resume
-				// Check what's been completed
+				// Follow the new step order: Race -> Class -> Abilities -> Proficiencies -> Equipment -> Features -> Name
 				if char.Race == nil {
 					// Start from race selection
 					req := &character.CreateRequest{
@@ -1473,8 +1473,31 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					if err := h.characterAbilityScoresHandler.Handle(req); err != nil {
 						log.Printf("Error resuming character creation at ability scores: %v", err)
 					}
+				} else if len(char.Proficiencies) == 0 {
+					// Continue from proficiencies
+					req := &character.ProficiencyChoicesRequest{
+						Session:     s,
+						Interaction: i,
+						RaceKey:     char.Race.Key,
+						ClassKey:    char.Class.Key,
+					}
+					if err := h.characterProficiencyChoicesHandler.Handle(req); err != nil {
+						log.Printf("Error resuming character creation at proficiencies: %v", err)
+					}
+				} else if len(char.Equipment) == 0 && len(char.EquippedSlots) == 0 {
+					// Continue from equipment
+					req := &character.EquipmentChoicesRequest{
+						Session:     s,
+						Interaction: i,
+						RaceKey:     char.Race.Key,
+						ClassKey:    char.Class.Key,
+					}
+					if err := h.characterEquipmentChoicesHandler.Handle(req); err != nil {
+						log.Printf("Error resuming character creation at equipment: %v", err)
+					}
 				} else if char.Name == "" {
-					// Show the name modal
+					// All gameplay elements done, just need name
+					// For now, skip features step and go to name modal
 					modal := discordgo.InteractionResponseData{
 						CustomID: fmt.Sprintf("character_create:submit_name:%s:%s", char.Race.Key, char.Class.Key),
 						Title:    "Name Your Character",

@@ -8,15 +8,16 @@ import (
 type CreateStep int
 
 const (
-	SelectRaceStep          CreateStep = 1 << 0 // 0000 0001
-	SelectClassStep         CreateStep = 1 << 1 // 0000 0010
-	EnterNameStep           CreateStep = 1 << 2 // 0000 0100
-	SelectBackgroundStep    CreateStep = 1 << 3 // 0000 1000
-	SelectAlignmentStep     CreateStep = 1 << 4 // 0001 0000
-	SelectAbilityScoresStep CreateStep = 1 << 5 // 0010 0000
-	SelectSkillsStep        CreateStep = 1 << 6 // 0100 0000
-	SelectEquipmentStep     CreateStep = 1 << 7 // 1000 0000
-	SelectProficienciesStep CreateStep = 1 << 8
+	SelectRaceStep          CreateStep = 1 << 0  // 0000 0001
+	SelectClassStep         CreateStep = 1 << 1  // 0000 0010
+	SelectAbilityScoresStep CreateStep = 1 << 2  // 0000 0100
+	SelectProficienciesStep CreateStep = 1 << 3  // 0000 1000
+	SelectEquipmentStep     CreateStep = 1 << 4  // 0001 0000
+	SelectFeaturesStep      CreateStep = 1 << 5  // 0010 0000
+	EnterNameStep           CreateStep = 1 << 6  // 0100 0000
+	SelectBackgroundStep    CreateStep = 1 << 7  // 1000 0000
+	SelectAlignmentStep     CreateStep = 1 << 8  // 0001 0000 0000
+	SelectSkillsStep        CreateStep = 1 << 9  // 0010 0000 0000
 )
 
 // StepDependencies defines which steps need to be reset when a step changes
@@ -24,30 +25,35 @@ var StepDependencies = map[CreateStep][]CreateStep{
 	SelectRaceStep: {
 		SelectProficienciesStep, // Race affects available proficiencies
 		SelectAbilityScoresStep, // Race might give ability score bonuses
+		SelectFeaturesStep,      // Race provides racial features
 	},
 	SelectClassStep: {
 		SelectProficienciesStep, // Class affects available proficiencies
 		SelectSkillsStep,        // Class affects skill choices
 		SelectEquipmentStep,     // Class affects starting equipment
+		SelectFeaturesStep,      // Class provides class features
 	},
 	SelectBackgroundStep: {
 		SelectProficienciesStep, // Background affects proficiencies
 		SelectSkillsStep,        // Background affects skills
 		SelectEquipmentStep,     // Background affects equipment
+		SelectFeaturesStep,      // Background may provide features
 	},
 }
 
 // StepOrder defines the valid progression of steps
 var StepOrder = []CreateStep{
-	SelectRaceStep,
-	SelectClassStep,
-	EnterNameStep,
-	SelectBackgroundStep,
-	SelectAlignmentStep,
-	SelectAbilityScoresStep,
-	SelectSkillsStep,
-	SelectEquipmentStep,
-	SelectProficienciesStep,
+	SelectRaceStep,          // 1. Choose race
+	SelectClassStep,         // 2. Choose class
+	SelectAbilityScoresStep, // 3. Assign ability scores
+	SelectProficienciesStep, // 4. Select proficiencies (from race/class/background)
+	SelectEquipmentStep,     // 5. Choose starting equipment
+	SelectFeaturesStep,      // 6. Review/select features (if any choices)
+	EnterNameStep,           // 7. Enter character name and finalize
+	// Future steps:
+	// SelectBackgroundStep,    // Background (not implemented yet)
+	// SelectAlignmentStep,     // Alignment (not implemented yet)
+	// SelectSkillsStep,        // Skills (partially handled by proficiencies)
 }
 
 type CharacterDraft struct {
@@ -87,10 +93,10 @@ func (d *CharacterDraft) UncompleteStep(step CreateStep) {
 }
 
 func (d *CharacterDraft) AllStepsCompleted() bool {
-	allSteps := SelectRaceStep | SelectClassStep | EnterNameStep | SelectBackgroundStep |
-		SelectAlignmentStep | SelectAbilityScoresStep | SelectSkillsStep |
-		SelectEquipmentStep | SelectProficienciesStep
-	return d.CompletedSteps == allSteps
+	// Only check currently implemented steps
+	implementedSteps := SelectRaceStep | SelectClassStep | SelectAbilityScoresStep |
+		SelectProficienciesStep | SelectEquipmentStep | SelectFeaturesStep | EnterNameStep
+	return (d.CompletedSteps & implementedSteps) == implementedSteps
 }
 
 func (d *CharacterDraft) canCompleteStep(step CreateStep) error {
