@@ -1,0 +1,186 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+    types: [ opened, synchronize, reopened ]
+
+# Cancel in-progress runs for the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Quick checks that should fail fast
+  quick-checks:
+    name: Quick Checks
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+        cache: true
+
+    - name: Check go mod tidy
+      run: |
+        go mod tidy
+        git diff --exit-code go.mod go.sum || (echo "Please run 'go mod tidy'" && exit 1)
+
+    - name: Check formatting
+      run: |
+        gofmt_files=$(gofmt -l .)
+        if [[ -n ${gofmt_files} ]]; then
+          echo "Please format these files:"
+          echo "${gofmt_files}"
+          exit 1
+        fi
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+        cache: true
+    
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: latest
+        args: --timeout=10m
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+        cache: true
+
+    - name: Install dependencies
+      run: |
+        go mod download
+        go install go.uber.org/mock/mockgen@latest
+
+    - name: Generate mocks
+      run: |
+        export PATH=$PATH:$(go env GOPATH)/bin
+        go generate ./...
+
+    - name: Run unit tests
+      run: |
+        go test ./... -short -race -coverprofile=coverage.out -covermode=atomic
+        echo "### Test Coverage" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        go tool cover -func=coverage.out | tail -n 1 >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+    - name: Run integration tests
+      run: go test ./... -tags=integration -race -timeout=10m
+      env:
+        REDIS_URL: redis://localhost:6379
+
+    - name: Upload coverage to Codecov
+      if: github.event_name == 'pull_request'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.out
+        flags: unittests
+        fail_ci_if_error: false
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+        cache: true
+    
+    - name: Build
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+      run: |
+        output_name="dnd-bot-${{ matrix.goos }}-${{ matrix.goarch }}"
+        if [ "${{ matrix.goos }}" = "windows" ]; then
+          output_name="${output_name}.exe"
+        fi
+        go build -v -o ${output_name} ./cmd/bot
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: dnd-bot-${{ matrix.goos }}-${{ matrix.goarch }}
+        path: dnd-bot-*
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run gosec Security Scanner
+      uses: securego/gosec@master
+      with:
+        args: '-no-fail -fmt sarif -out results.sarif ./...'
+    
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: results.sarif
+
+  # This job ensures all required checks pass
+  ci-success:
+    name: CI Success
+    if: always()
+    needs: [quick-checks, lint, test, build, security]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check if all jobs succeeded
+      run: |
+        if [[ "${{ needs.quick-checks.result }}" != "success" || 
+              "${{ needs.lint.result }}" != "success" || 
+              "${{ needs.test.result }}" != "success" || 
+              "${{ needs.build.result }}" != "success" ||
+              "${{ needs.security.result }}" != "success" ]]; then
+          echo "One or more required jobs failed"
+          exit 1
+        fi
+        echo "All required jobs passed!"

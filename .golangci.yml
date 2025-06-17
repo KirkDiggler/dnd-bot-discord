@@ -1,0 +1,142 @@
+# golangci-lint configuration
+# https://golangci-lint.run/usage/configuration/
+
+run:
+  timeout: 5m
+  tests: true
+  build-tags:
+    - integration
+  skip-dirs:
+    - internal/mocks
+    - internal/clients/dnd5e/mock
+    - internal/repositories/characters/mock
+    - internal/services/character/mock
+
+linters:
+  enable:
+    # Default linters
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    
+    # Additional linters
+    - bodyclose      # Checks whether HTTP response body is closed
+    - dupl          # Code duplication detector
+    - exportloopref # Checks for pointers to enclosing loop variables
+    - goconst       # Finds repeated strings that could be constants
+    - gocyclo       # Cyclomatic complexity checker
+    - gofmt         # Checks formatting
+    - goimports     # Checks imports formatting
+    - gosec         # Security checker
+    - misspell      # Spell checker
+    - prealloc      # Finds slice declarations that could be preallocated
+    - revive        # Fast, configurable linter
+    - unconvert     # Unnecessary type conversions
+    - unparam       # Unused function parameters
+    
+  disable:
+    - depguard      # We manage dependencies via go.mod
+    - exhaustive    # Too strict for switch statements
+    - gochecknoglobals # We use some globals for configs
+    - gomnd         # Magic numbers are sometimes OK
+    - lll           # Line length limit is too strict
+    - wsl           # Whitespace linter is too opinionated
+
+linters-settings:
+  dupl:
+    threshold: 100
+    
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+    
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+    
+  gocyclo:
+    min-complexity: 15
+    
+  goimports:
+    local-prefixes: github.com/KirkDiggler/dnd-bot-discord
+    
+  gosec:
+    excludes:
+      - G104  # Unhandled errors in defer statements
+      
+  govet:
+    check-shadowing: true
+    enable-all: true
+    
+  misspell:
+    locale: US
+    
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: if-return
+      - name: increment-decrement
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      
+  unparam:
+    check-exported: false
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      linters:
+        - dupl
+        - gosec
+        - goconst
+        
+    # Exclude generated files
+    - path: "mock"
+      linters:
+        - dupl
+        - gosec
+        - gocyclo
+        
+    # Allow unused parameters in interfaces
+    - path: "interface"
+      linters:
+        - unparam
+        
+    # Allow init functions
+    - path: "init"
+      linters:
+        - gochecknoinits
+        
+  # Maximum issues count per one linter
+  max-issues-per-linter: 50
+  
+  # Maximum count of issues with the same text
+  max-same-issues: 10
+  
+  # Show only new issues on PRs
+  new: false
+
+# Output configuration
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  uniq-by-line: true
+  sort-results: true
