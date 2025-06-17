@@ -3,6 +3,7 @@ package dungeon
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/rand"
 	"strings"
 	"time"
@@ -93,6 +94,25 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 		member.Role = entities.SessionRolePlayer
 	}
 	
+	// Get user's active character and select it
+	var characterName string
+	chars, err := h.services.CharacterService.ListByOwner(req.Interaction.Member.User.ID)
+	if err == nil && len(chars) > 0 {
+		// Find first active character
+		for _, char := range chars {
+			if char.Status == entities.CharacterStatusActive {
+				// Select this character for the session
+				err = h.services.SessionService.SelectCharacter(context.Background(), sess.ID, req.Interaction.Member.User.ID, char.ID)
+				if err != nil {
+					log.Printf("Warning: Failed to auto-select character: %v", err)
+				} else {
+					characterName = char.Name
+				}
+				break
+			}
+		}
+	}
+	
 	// Generate first room
 	room := h.generateRoom(req.Difficulty, 1)
 	
@@ -114,7 +134,7 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 			},
 			{
 				Name:   "👥 Party",
-				Value:  fmt.Sprintf("<@%s> (more can join!)", req.Interaction.Member.User.ID),
+				Value:  h.formatPartyMember(req.Interaction.Member.User.ID, characterName),
 				Inline: true,
 			},
 			{
@@ -159,6 +179,15 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 		"currentRoom": room,
 		"roomNumber":  1,
 		"difficulty":  req.Difficulty,
+	}
+	
+	// We need to update the session to save the metadata
+	updateInput := &session.UpdateSessionInput{
+		Name: &sess.Name, // Just update with same name to trigger save
+	}
+	sess, err = h.services.SessionService.UpdateSession(context.Background(), sess.ID, updateInput)
+	if err != nil {
+		log.Printf("Warning: Failed to save room metadata: %v", err)
 	}
 	
 	_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
@@ -352,4 +381,12 @@ func (h *StartDungeonHandler) getRoomObjective(room *Room) string {
 	default:
 		return room.Challenge
 	}
+}
+
+// formatPartyMember formats a party member display
+func (h *StartDungeonHandler) formatPartyMember(userID, characterName string) string {
+	if characterName != "" {
+		return fmt.Sprintf("<@%s> - %s", userID, characterName)
+	}
+	return fmt.Sprintf("<@%s> (no character selected)", userID)
 }

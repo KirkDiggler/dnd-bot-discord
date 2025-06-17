@@ -3,6 +3,7 @@ package dungeon
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"strings"
 	
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
@@ -70,19 +71,25 @@ func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 }
 
 func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *entities.Session) error {
-	// Get room data from session metadata
-	roomData, ok := sess.Metadata["currentRoom"].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("no room data found")
+	// For now, generate a room on the fly based on the session name
+	// In a full implementation, we'd store this properly
+	difficulty := "medium"
+	if sess.Metadata != nil {
+		if diff, ok := sess.Metadata["difficulty"].(string); ok {
+			difficulty = diff
+		}
 	}
+	
+	// Generate a combat room
+	room := h.generateCombatRoom(difficulty, 1)
 	
 	// Create encounter
 	botID := s.State.User.ID
 	encounterInput := &encounter.CreateEncounterInput{
 		SessionID:   sess.ID,
 		ChannelID:   i.ChannelID,
-		Name:        roomData["Name"].(string),
-		Description: roomData["Description"].(string),
+		Name:        room.Name,
+		Description: room.Description,
 		UserID:      botID, // Bot manages the encounter
 	}
 	
@@ -108,15 +115,12 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		}
 	}
 	
-	// Add monsters from room data
-	monsters, ok := roomData["Monsters"].([]interface{})
-	if ok {
-		for _, monsterName := range monsters {
-			if monster := h.getMonster(monsterName.(string)); monster != nil {
-				_, err = h.services.EncounterService.AddMonster(context.Background(), enc.ID, botID, monster)
-				if err != nil {
-					fmt.Printf("Failed to add monster %s: %v\n", monsterName, err)
-				}
+	// Add monsters from room
+	for _, monsterName := range room.Monsters {
+		if monster := h.getMonster(monsterName); monster != nil {
+			_, err = h.services.EncounterService.AddMonster(context.Background(), enc.ID, botID, monster)
+			if err != nil {
+				fmt.Printf("Failed to add monster %s: %v\n", monsterName, err)
 			}
 		}
 	}
@@ -433,4 +437,46 @@ func (h *EnterRoomHandler) getMonster(name string) *encounter.AddMonsterInput {
 	}
 	
 	return monsters[name]
+}
+
+// generateCombatRoom creates a combat encounter room
+func (h *EnterRoomHandler) generateCombatRoom(difficulty string, roomNumber int) *Room {
+	rooms := []struct {
+		name        string
+		description string
+	}{
+		{"Guard Chamber", "Stone walls echo with the sounds of movement. Weapons glint in the torchlight."},
+		{"Ancient Crypt", "Dusty sarcophagi line the walls. Something stirs in the darkness."},
+		{"Goblin Warren", "The stench is overwhelming. Crude weapons and bones litter the floor."},
+		{"Spider's Den", "Thick webs cover every surface. Multiple eyes gleam from the shadows."},
+	}
+	
+	selected := rooms[rand.Intn(len(rooms))]
+	
+	// Determine monsters based on difficulty
+	var monsters []string
+	switch difficulty {
+	case "easy":
+		monsters = []string{"goblin", "skeleton"}
+	case "medium":
+		monsters = []string{"orc", "goblin", "goblin"}
+	case "hard":
+		monsters = []string{"orc", "dire wolf", "skeleton", "skeleton"}
+	default:
+		monsters = []string{"goblin"}
+	}
+	
+	// Scale with room number
+	extraMonsters := roomNumber / 3
+	for i := 0; i < extraMonsters; i++ {
+		monsters = append(monsters, monsters[rand.Intn(len(monsters))])
+	}
+	
+	return &Room{
+		Type:        RoomTypeCombat,
+		Name:        selected.name,
+		Description: selected.description,
+		Monsters:    monsters,
+		Challenge:   fmt.Sprintf("Defeat all %d enemies!", len(monsters)),
+	}
 }
