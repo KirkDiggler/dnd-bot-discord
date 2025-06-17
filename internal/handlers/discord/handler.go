@@ -2452,38 +2452,55 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 			}
 			
 			// Show success with character details
+			description := fmt.Sprintf("**Name:** %s", finalChar.Name)
+			if finalChar.Race != nil {
+				description += fmt.Sprintf("\n**Race:** %s", finalChar.Race.Name)
+			}
+			if finalChar.Class != nil {
+				description += fmt.Sprintf("\n**Class:** %s", finalChar.Class.Name)
+			}
+			
 			embed := &discordgo.MessageEmbed{
 				Title:       "Character Created!",
-				Description: fmt.Sprintf("**Name:** %s\n**Race:** %s\n**Class:** %s", finalChar.Name, finalChar.Race.Name, finalChar.Class.Name),
+				Description: description,
 				Color:       0x00ff00,
 				Fields: []*discordgo.MessageEmbedField{
-					{
-						Name:   "💪 Base Abilities",
-						Value:  fmt.Sprintf("STR: %d, DEX: %d, CON: %d\nINT: %d, WIS: %d, CHA: %d",
-							abilityScores["STR"], abilityScores["DEX"], abilityScores["CON"],
-							abilityScores["INT"], abilityScores["WIS"], abilityScores["CHA"],
-						),
-						Inline: true,
-					},
-					{
-						Name:   "❤️ Hit Points",
-						Value:  fmt.Sprintf("%d", finalChar.MaxHitPoints),
-						Inline: true,
-					},
-					{
-						Name:   "🛡️ Hit Die",
-						Value:  fmt.Sprintf("d%d", finalChar.HitDie),
-						Inline: true,
-					},
-					{
-						Name:   "✅ Character Complete",
-						Value:  "Your character has been created and saved successfully!",
-						Inline: false,
-					},
 				},
-				Footer: &discordgo.MessageEmbedFooter{
-					Text: "Ready for adventure!",
+			}
+			
+			// Only add ability scores if we have them
+			if len(abilityScores) > 0 {
+				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+					Name:   "💪 Base Abilities",
+					Value:  fmt.Sprintf("STR: %d, DEX: %d, CON: %d\nINT: %d, WIS: %d, CHA: %d",
+						abilityScores["STR"], abilityScores["DEX"], abilityScores["CON"],
+						abilityScores["INT"], abilityScores["WIS"], abilityScores["CHA"],
+					),
+					Inline: true,
+				})
+			}
+			
+			// Add other fields
+			embed.Fields = append(embed.Fields,
+				&discordgo.MessageEmbedField{
+					Name:   "❤️ Hit Points",
+					Value:  fmt.Sprintf("%d", finalChar.MaxHitPoints),
+					Inline: true,
 				},
+				&discordgo.MessageEmbedField{
+					Name:   "🛡️ Hit Die",
+					Value:  fmt.Sprintf("d%d", finalChar.HitDie),
+					Inline: true,
+				},
+				&discordgo.MessageEmbedField{
+					Name:   "✅ Character Complete",
+					Value:  "Your character has been created and saved successfully!",
+					Inline: false,
+				},
+			)
+			
+			embed.Footer = &discordgo.MessageEmbedFooter{
+				Text: "Ready for adventure!",
 			}
 			
 			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{

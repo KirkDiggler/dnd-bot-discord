@@ -154,7 +154,7 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 	
 	// Build combat display
 	embed := &discordgo.MessageEmbed{
-		Title:       fmt.Sprintf("⚔️ Combat: %s", roomData["Name"].(string)),
+		Title:       fmt.Sprintf("⚔️ Combat: %s", room.Name),
 		Description: "The party engages in battle!",
 		Color:       0xe74c3c, // Red
 		Fields:      []*discordgo.MessageEmbedField{},
