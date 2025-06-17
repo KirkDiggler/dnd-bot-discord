@@ -1473,6 +1473,583 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 			}
 		}
+	} else if ctx == "encounter" {
+		// Handle encounter management actions
+		if len(parts) >= 3 {
+			encounterID := parts[2]
+			
+			switch action {
+			case "roll_initiative":
+				// Roll initiative for all combatants
+				err := h.ServiceProvider.EncounterService.RollInitiative(context.Background(), encounterID, i.Member.User.ID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to roll initiative: %v", err)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Get encounter to show results
+				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				if err != nil {
+					content := "✅ Initiative rolled! Use View Encounter to see the order."
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Build initiative order display
+				var initiativeList strings.Builder
+				for i, combatantID := range encounter.TurnOrder {
+					if combatant, exists := encounter.Combatants[combatantID]; exists {
+						initiativeList.WriteString(fmt.Sprintf("%d. **%s** - Initiative: %d\n", i+1, combatant.Name, combatant.Initiative))
+					}
+				}
+				
+				embed := &discordgo.MessageEmbed{
+					Title:       "🎲 Initiative Rolled!",
+					Description: "Combat order has been determined:",
+					Color:       0x2ecc71, // Green
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:   "⚔️ Turn Order",
+							Value:  initiativeList.String(),
+							Inline: false,
+						},
+					},
+				}
+				
+				components := []discordgo.MessageComponent{
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label:    "Start Combat",
+								Style:    discordgo.SuccessButton,
+								CustomID: fmt.Sprintf("encounter:start:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
+							},
+							discordgo.Button{
+								Label:    "View Encounter",
+								Style:    discordgo.SecondaryButton,
+								CustomID: fmt.Sprintf("encounter:view:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "👁️"},
+							},
+						},
+					},
+				}
+				
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Embeds:     []*discordgo.MessageEmbed{embed},
+						Components: components,
+					},
+				})
+				if err != nil {
+					log.Printf("Error showing initiative results: %v", err)
+				}
+				
+			case "view":
+				// View encounter details
+				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Build encounter status
+				embed := &discordgo.MessageEmbed{
+					Title:       fmt.Sprintf("⚔️ %s", encounter.Name),
+					Description: encounter.Description,
+					Color:       0x3498db, // Blue
+					Fields:      []*discordgo.MessageEmbedField{},
+				}
+				
+				// Add status field
+				statusStr := string(encounter.Status)
+				if encounter.Status == entities.EncounterStatusActive {
+					statusStr = fmt.Sprintf("Active - Round %d", encounter.Round)
+				}
+				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+					Name:   "📊 Status",
+					Value:  statusStr,
+					Inline: true,
+				})
+				
+				// Add combatant count
+				activeCombatants := 0
+				for _, c := range encounter.Combatants {
+					if c.IsActive {
+						activeCombatants++
+					}
+				}
+				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+					Name:   "👥 Combatants",
+					Value:  fmt.Sprintf("%d active / %d total", activeCombatants, len(encounter.Combatants)),
+					Inline: true,
+				})
+				
+				// List combatants with HP
+				var combatantList strings.Builder
+				for _, combatant := range encounter.Combatants {
+					hpBar := ""
+					if combatant.MaxHP > 0 {
+						hpPercent := float64(combatant.CurrentHP) / float64(combatant.MaxHP)
+						if hpPercent > 0.5 {
+							hpBar = "🟢"
+						} else if hpPercent > 0.25 {
+							hpBar = "🟡"
+						} else if combatant.CurrentHP > 0 {
+							hpBar = "🔴"
+						} else {
+							hpBar = "💀"
+						}
+					}
+					
+					combatantList.WriteString(fmt.Sprintf("%s **%s** - HP: %d/%d | AC: %d\n", 
+						hpBar, combatant.Name, combatant.CurrentHP, combatant.MaxHP, combatant.AC))
+				}
+				
+				if combatantList.Len() > 0 {
+					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+						Name:   "🗡️ Combatants",
+						Value:  combatantList.String(),
+						Inline: false,
+					})
+				}
+				
+				// Add appropriate buttons based on status
+				var components []discordgo.MessageComponent
+				if encounter.Status == entities.EncounterStatusSetup {
+					components = []discordgo.MessageComponent{
+						discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								discordgo.Button{
+									Label:    "Add Monster",
+									Style:    discordgo.PrimaryButton,
+									CustomID: fmt.Sprintf("encounter:add_monster:%s", encounterID),
+									Emoji:    &discordgo.ComponentEmoji{Name: "➕"},
+								},
+								discordgo.Button{
+									Label:    "Roll Initiative",
+									Style:    discordgo.SuccessButton,
+									CustomID: fmt.Sprintf("encounter:roll_initiative:%s", encounterID),
+									Emoji:    &discordgo.ComponentEmoji{Name: "🎲"},
+								},
+							},
+						},
+					}
+				}
+				
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Embeds:     []*discordgo.MessageEmbed{embed},
+						Components: components,
+					},
+				})
+				if err != nil {
+					log.Printf("Error showing encounter view: %v", err)
+				}
+				
+			case "add_monster":
+				// Prompt for monster name
+				content := "Use `/dnd encounter add <monster>` to add a monster to this encounter."
+				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: content,
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				})
+				if err != nil {
+					log.Printf("Error prompting for add monster: %v", err)
+				}
+			case "start":
+				// Start combat
+				err := h.ServiceProvider.EncounterService.StartEncounter(context.Background(), encounterID, i.Member.User.ID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to start combat: %v", err)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Get encounter to show combat status
+				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				if err != nil {
+					content := "✅ Combat started!"
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Build combat tracker display
+				embed := &discordgo.MessageEmbed{
+					Title:       "⚔️ Combat Started!",
+					Description: fmt.Sprintf("**%s** - Round %d", encounter.Name, encounter.Round),
+					Color:       0xe74c3c, // Red
+					Fields:      []*discordgo.MessageEmbedField{},
+				}
+				
+				// Show current turn
+				if current := encounter.GetCurrentCombatant(); current != nil {
+					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+						Name:   "🎯 Current Turn",
+						Value:  fmt.Sprintf("**%s** (HP: %d/%d | AC: %d)", current.Name, current.CurrentHP, current.MaxHP, current.AC),
+						Inline: false,
+					})
+				}
+				
+				// Show turn order
+				var turnOrder strings.Builder
+				for i, combatantID := range encounter.TurnOrder {
+					if combatant, exists := encounter.Combatants[combatantID]; exists && combatant.IsActive {
+						prefix := "  "
+						if i == encounter.Turn {
+							prefix = "▶️"
+						}
+						turnOrder.WriteString(fmt.Sprintf("%s %s (Initiative: %d)\n", prefix, combatant.Name, combatant.Initiative))
+					}
+				}
+				
+				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+					Name:   "📋 Turn Order",
+					Value:  turnOrder.String(),
+					Inline: false,
+				})
+				
+				// Add combat action buttons
+				components := []discordgo.MessageComponent{
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label:    "Attack",
+								Style:    discordgo.DangerButton,
+								CustomID: fmt.Sprintf("encounter:attack:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
+							},
+							discordgo.Button{
+								Label:    "Apply Damage",
+								Style:    discordgo.DangerButton,
+								CustomID: fmt.Sprintf("encounter:damage:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "💥"},
+							},
+							discordgo.Button{
+								Label:    "Heal",
+								Style:    discordgo.SuccessButton,
+								CustomID: fmt.Sprintf("encounter:heal:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "💚"},
+							},
+							discordgo.Button{
+								Label:    "Next Turn",
+								Style:    discordgo.PrimaryButton,
+								CustomID: fmt.Sprintf("encounter:next_turn:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
+							},
+						},
+					},
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label:    "View Full",
+								Style:    discordgo.SecondaryButton,
+								CustomID: fmt.Sprintf("encounter:view_full:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
+							},
+							discordgo.Button{
+								Label:    "End Combat",
+								Style:    discordgo.SecondaryButton,
+								CustomID: fmt.Sprintf("encounter:end:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "🏁"},
+							},
+						},
+					},
+				}
+				
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Embeds:     []*discordgo.MessageEmbed{embed},
+						Components: components,
+					},
+				})
+				if err != nil {
+					log.Printf("Error showing combat started: %v", err)
+				}
+			case "next_turn":
+				// Advance to next turn
+				err := h.ServiceProvider.EncounterService.NextTurn(context.Background(), encounterID, i.Member.User.ID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to advance turn: %v", err)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Get updated encounter
+				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				if err != nil {
+					content := "✅ Turn advanced!"
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Build turn update display
+				embed := &discordgo.MessageEmbed{
+					Title:       "➡️ Next Turn!",
+					Description: fmt.Sprintf("**%s** - Round %d", encounter.Name, encounter.Round),
+					Color:       0x3498db, // Blue
+					Fields:      []*discordgo.MessageEmbedField{},
+				}
+				
+				// Show current turn
+				if current := encounter.GetCurrentCombatant(); current != nil {
+					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+						Name:   "🎯 Current Turn",
+						Value:  fmt.Sprintf("**%s** (HP: %d/%d | AC: %d)", current.Name, current.CurrentHP, current.MaxHP, current.AC),
+						Inline: false,
+					})
+					
+					// Show available actions for monsters
+					if current.Type == entities.CombatantTypeMonster && len(current.Actions) > 0 {
+						var actions strings.Builder
+						for _, action := range current.Actions {
+							actions.WriteString(fmt.Sprintf("• **%s** (+%d to hit)\n", action.Name, action.AttackBonus))
+						}
+						embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+							Name:   "🗡️ Available Actions",
+							Value:  actions.String(),
+							Inline: false,
+						})
+					}
+				}
+				
+				// Show upcoming turns
+				var upcoming strings.Builder
+				for i := 0; i < 3 && i < len(encounter.TurnOrder); i++ {
+					idx := (encounter.Turn + i) % len(encounter.TurnOrder)
+					if combatant, exists := encounter.Combatants[encounter.TurnOrder[idx]]; exists && combatant.IsActive {
+						if i == 0 {
+							upcoming.WriteString(fmt.Sprintf("▶️ **%s** (current)\n", combatant.Name))
+						} else {
+							upcoming.WriteString(fmt.Sprintf("%d. %s\n", i, combatant.Name))
+						}
+					}
+				}
+				
+				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+					Name:   "📋 Turn Order",
+					Value:  upcoming.String(),
+					Inline: true,
+				})
+				
+				// Combat action buttons
+				components := []discordgo.MessageComponent{
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label:    "Attack",
+								Style:    discordgo.DangerButton,
+								CustomID: fmt.Sprintf("encounter:attack:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
+							},
+							discordgo.Button{
+								Label:    "Apply Damage",
+								Style:    discordgo.DangerButton,
+								CustomID: fmt.Sprintf("encounter:damage:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "💥"},
+							},
+							discordgo.Button{
+								Label:    "Heal",
+								Style:    discordgo.SuccessButton,
+								CustomID: fmt.Sprintf("encounter:heal:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "💚"},
+							},
+							discordgo.Button{
+								Label:    "Next Turn",
+								Style:    discordgo.PrimaryButton,
+								CustomID: fmt.Sprintf("encounter:next_turn:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
+							},
+							discordgo.Button{
+								Label:    "View Full",
+								Style:    discordgo.SecondaryButton,
+								CustomID: fmt.Sprintf("encounter:view_full:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
+							},
+						},
+					},
+				}
+				
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Embeds:     []*discordgo.MessageEmbed{embed},
+						Components: components,
+					},
+				})
+				if err != nil {
+					log.Printf("Error showing next turn: %v", err)
+				}
+			case "damage":
+				// Show damage modal
+				modal := discordgo.InteractionResponseData{
+					CustomID: fmt.Sprintf("encounter:apply_damage:%s", encounterID),
+					Title:    "Apply Damage",
+					Components: []discordgo.MessageComponent{
+						discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								discordgo.TextInput{
+									CustomID:    "damage_amount",
+									Label:       "Damage Amount",
+									Style:       discordgo.TextInputShort,
+									Placeholder: "Enter damage (e.g., 12)",
+									Required:    true,
+									MaxLength:   3,
+								},
+							},
+						},
+						discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								discordgo.TextInput{
+									CustomID:    "target_name",
+									Label:       "Target Name",
+									Style:       discordgo.TextInputShort,
+									Placeholder: "Enter target name",
+									Required:    true,
+									MaxLength:   50,
+								},
+							},
+						},
+					},
+				}
+				
+				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseModal,
+					Data: &modal,
+				})
+				if err != nil {
+					log.Printf("Error showing damage modal: %v", err)
+				}
+			case "heal":
+				// Show heal modal
+				modal := discordgo.InteractionResponseData{
+					CustomID: fmt.Sprintf("encounter:apply_heal:%s", encounterID),
+					Title:    "Heal Target",
+					Components: []discordgo.MessageComponent{
+						discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								discordgo.TextInput{
+									CustomID:    "heal_amount",
+									Label:       "Healing Amount",
+									Style:       discordgo.TextInputShort,
+									Placeholder: "Enter healing (e.g., 8)",
+									Required:    true,
+									MaxLength:   3,
+								},
+							},
+						},
+						discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								discordgo.TextInput{
+									CustomID:    "target_name",
+									Label:       "Target Name",
+									Style:       discordgo.TextInputShort,
+									Placeholder: "Enter target name",
+									Required:    true,
+									MaxLength:   50,
+								},
+							},
+						},
+					},
+				}
+				
+				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseModal,
+					Data: &modal,
+				})
+				if err != nil {
+					log.Printf("Error showing heal modal: %v", err)
+				}
+			case "end":
+				// End the encounter
+				err := h.ServiceProvider.EncounterService.EndEncounter(context.Background(), encounterID, i.Member.User.ID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to end encounter: %v", err)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Show end summary
+				embed := &discordgo.MessageEmbed{
+					Title:       "🏁 Combat Ended!",
+					Description: "The encounter has concluded.",
+					Color:       0x2ecc71, // Green
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:   "📊 Summary",
+							Value:  "Combat statistics will be available in a future update!",
+							Inline: false,
+						},
+					},
+				}
+				
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Embeds: []*discordgo.MessageEmbed{embed},
+					},
+				})
+				if err != nil {
+					log.Printf("Error showing end combat: %v", err)
+				}
+			}
+		}
 	}
 }
 
@@ -1658,6 +2235,214 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 			
 			if err != nil {
 				log.Printf("Error responding to modal submit: %v", err)
+			}
+		}
+	} else if ctx == "encounter" {
+		if len(parts) >= 3 {
+			encounterID := parts[2]
+			
+			switch action {
+			case "apply_damage":
+				// Extract values from modal
+				damageAmount := 0
+				targetName := ""
+				
+				for _, comp := range data.Components {
+					if row, ok := comp.(*discordgo.ActionsRow); ok {
+						for _, rowComp := range row.Components {
+							if input, ok := rowComp.(*discordgo.TextInput); ok {
+								switch input.CustomID {
+								case "damage_amount":
+									damageAmount, _ = strconv.Atoi(input.Value)
+								case "target_name":
+									targetName = input.Value
+								}
+							}
+						}
+					}
+				}
+				
+				// Get encounter to find target
+				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Find target combatant
+				var targetID string
+				for id, combatant := range encounter.Combatants {
+					if strings.EqualFold(combatant.Name, targetName) {
+						targetID = id
+						break
+					}
+				}
+				
+				if targetID == "" {
+					content := fmt.Sprintf("❌ Target '%s' not found in encounter!", targetName)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Apply damage
+				err = h.ServiceProvider.EncounterService.ApplyDamage(context.Background(), encounterID, targetID, i.Member.User.ID, damageAmount)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to apply damage: %v", err)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Get updated combatant
+				encounter, _ = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				target := encounter.Combatants[targetID]
+				
+				// Show result
+				embed := &discordgo.MessageEmbed{
+					Title:       "💥 Damage Applied!",
+					Description: fmt.Sprintf("**%s** takes %d damage!", target.Name, damageAmount),
+					Color:       0xe74c3c, // Red
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:   "❤️ Hit Points",
+							Value:  fmt.Sprintf("%d / %d", target.CurrentHP, target.MaxHP),
+							Inline: true,
+						},
+					},
+				}
+				
+				if target.CurrentHP <= 0 {
+					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+						Name:   "💀 Status",
+						Value:  "**Unconscious!**",
+						Inline: true,
+					})
+				}
+				
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Embeds: []*discordgo.MessageEmbed{embed},
+					},
+				})
+				if err != nil {
+					log.Printf("Error responding to damage: %v", err)
+				}
+				
+			case "apply_heal":
+				// Extract values from modal
+				healAmount := 0
+				targetName := ""
+				
+				for _, comp := range data.Components {
+					if row, ok := comp.(*discordgo.ActionsRow); ok {
+						for _, rowComp := range row.Components {
+							if input, ok := rowComp.(*discordgo.TextInput); ok {
+								switch input.CustomID {
+								case "heal_amount":
+									healAmount, _ = strconv.Atoi(input.Value)
+								case "target_name":
+									targetName = input.Value
+								}
+							}
+						}
+					}
+				}
+				
+				// Get encounter to find target
+				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Find target combatant
+				var targetID string
+				for id, combatant := range encounter.Combatants {
+					if strings.EqualFold(combatant.Name, targetName) {
+						targetID = id
+						break
+					}
+				}
+				
+				if targetID == "" {
+					content := fmt.Sprintf("❌ Target '%s' not found in encounter!", targetName)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Apply healing
+				err = h.ServiceProvider.EncounterService.HealCombatant(context.Background(), encounterID, targetID, i.Member.User.ID, healAmount)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to apply healing: %v", err)
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					return
+				}
+				
+				// Get updated combatant
+				encounter, _ = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				target := encounter.Combatants[targetID]
+				
+				// Show result
+				embed := &discordgo.MessageEmbed{
+					Title:       "💚 Healing Applied!",
+					Description: fmt.Sprintf("**%s** is healed for %d points!", target.Name, healAmount),
+					Color:       0x2ecc71, // Green
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:   "❤️ Hit Points",
+							Value:  fmt.Sprintf("%d / %d", target.CurrentHP, target.MaxHP),
+							Inline: true,
+						},
+					},
+				}
+				
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Embeds: []*discordgo.MessageEmbed{embed},
+					},
+				})
+				if err != nil {
+					log.Printf("Error responding to heal: %v", err)
+				}
 			}
 		}
 	}
