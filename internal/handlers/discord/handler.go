@@ -1484,7 +1484,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					if err := h.characterProficiencyChoicesHandler.Handle(req); err != nil {
 						log.Printf("Error resuming character creation at proficiencies: %v", err)
 					}
-				} else if len(char.Equipment) == 0 && len(char.EquippedSlots) == 0 {
+				} else if len(char.Inventory) == 0 && len(char.EquippedSlots) == 0 {
 					// Continue from equipment
 					req := &character.EquipmentChoicesRequest{
 						Session:     s,
