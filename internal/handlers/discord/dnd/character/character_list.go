@@ -117,7 +117,7 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 			} else if char.Race != nil {
 				status = fmt.Sprintf("%s (selecting class)", char.Race.Name)
 			}
-			
+
 			// Add progress indicator
 			progress := ""
 			if char.Race != nil {
@@ -132,7 +132,7 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 			if char.Name != "" {
 				progress += "✓ Name"
 			}
-			
+
 			sb.WriteString(fmt.Sprintf("**%s**\n", status))
 			if progress != "" {
 				sb.WriteString(fmt.Sprintf("  Progress: %s\n", progress))

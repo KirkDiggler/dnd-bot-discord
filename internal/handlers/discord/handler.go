@@ -1409,37 +1409,46 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				char, err := h.ServiceProvider.CharacterService.GetByID(characterID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to get character: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error responding to continue request: %v", err)
+					}
 					return
 				}
 
 				// Verify ownership
 				if char.OwnerID != i.Member.User.ID {
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: "❌ You can only continue your own draft characters!",
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error responding to ownership check: %v", err)
+					}
 					return
 				}
 
 				// Verify it's a draft
 				if char.Status != entities.CharacterStatusDraft {
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: "❌ This character is not a draft!",
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error responding to draft check: %v", err)
+					}
 					return
 				}
 

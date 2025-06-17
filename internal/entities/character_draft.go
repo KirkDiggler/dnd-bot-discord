@@ -8,16 +8,16 @@ import (
 type CreateStep int
 
 const (
-	SelectRaceStep          CreateStep = 1 << 0  // 0000 0001
-	SelectClassStep         CreateStep = 1 << 1  // 0000 0010
-	SelectAbilityScoresStep CreateStep = 1 << 2  // 0000 0100
-	SelectProficienciesStep CreateStep = 1 << 3  // 0000 1000
-	SelectEquipmentStep     CreateStep = 1 << 4  // 0001 0000
-	SelectFeaturesStep      CreateStep = 1 << 5  // 0010 0000
-	EnterNameStep           CreateStep = 1 << 6  // 0100 0000
-	SelectBackgroundStep    CreateStep = 1 << 7  // 1000 0000
-	SelectAlignmentStep     CreateStep = 1 << 8  // 0001 0000 0000
-	SelectSkillsStep        CreateStep = 1 << 9  // 0010 0000 0000
+	SelectRaceStep          CreateStep = 1 << 0 // 0000 0001
+	SelectClassStep         CreateStep = 1 << 1 // 0000 0010
+	SelectAbilityScoresStep CreateStep = 1 << 2 // 0000 0100
+	SelectProficienciesStep CreateStep = 1 << 3 // 0000 1000
+	SelectEquipmentStep     CreateStep = 1 << 4 // 0001 0000
+	SelectFeaturesStep      CreateStep = 1 << 5 // 0010 0000
+	EnterNameStep           CreateStep = 1 << 6 // 0100 0000
+	SelectBackgroundStep    CreateStep = 1 << 7 // 1000 0000
+	SelectAlignmentStep     CreateStep = 1 << 8 // 0001 0000 0000
+	SelectSkillsStep        CreateStep = 1 << 9 // 0010 0000 0000
 )
 
 // StepDependencies defines which steps need to be reset when a step changes
