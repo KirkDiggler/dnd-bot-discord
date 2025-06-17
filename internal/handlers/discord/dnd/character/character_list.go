@@ -80,10 +80,12 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 	if len(activeChars) > 0 {
 		var sb strings.Builder
 		for _, char := range activeChars {
-			sb.WriteString(fmt.Sprintf("**%s** - %s %s (Level %d)\n",
+			// Debug logging
+			fmt.Printf("Character %s (ID: %s) - Race: %v, Class: %v\n", 
+				char.Name, char.ID, char.Race != nil, char.Class != nil)
+			sb.WriteString(fmt.Sprintf("**%s** - %s (Level %d)\n",
 				char.Name,
-				char.Race.Name,
-				char.Class.Name,
+				char.GetDisplayInfo(),
 				char.Level,
 			))
 			sb.WriteString(fmt.Sprintf("  HP: %d/%d | AC: %d | ID: `%s`\n\n",
@@ -121,10 +123,9 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 	if len(archivedChars) > 0 {
 		var sb strings.Builder
 		for _, char := range archivedChars {
-			sb.WriteString(fmt.Sprintf("**%s** - %s %s | ID: `%s`\n",
+			sb.WriteString(fmt.Sprintf("**%s** - %s | ID: `%s`\n",
 				char.Name,
-				char.Race.Name,
-				char.Class.Name,
+				char.GetDisplayInfo(),
 				char.ID,
 			))
 		}
@@ -140,9 +141,58 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 		Text: "Use /dnd character show <id> to view details | /dnd character select <id> to set as active",
 	}
 
-	// Send the embed
+	// Add components for quick actions
+	components := []discordgo.MessageComponent{}
+	
+	// Add show/edit buttons for active characters
+	if len(activeChars) > 0 {
+		var buttons []discordgo.MessageComponent
+		for i, char := range activeChars {
+			// Limit to 5 characters per row
+			if i >= 5 {
+				break
+			}
+			buttons = append(buttons, discordgo.Button{
+				Label:    char.Name,
+				Style:    discordgo.SecondaryButton,
+				CustomID: fmt.Sprintf("character:quickshow:%s", char.ID),
+				Emoji: &discordgo.ComponentEmoji{
+					Name: "👁️",
+				},
+			})
+		}
+		if len(buttons) > 0 {
+			components = append(components, discordgo.ActionsRow{
+				Components: buttons,
+			})
+		}
+		
+		// Add second row for edit buttons if we have any characters
+		var editButtons []discordgo.MessageComponent
+		for i, char := range activeChars {
+			if i >= 5 {
+				break
+			}
+			editButtons = append(editButtons, discordgo.Button{
+				Label:    "Edit " + char.Name,
+				Style:    discordgo.PrimaryButton,
+				CustomID: fmt.Sprintf("character_manage:edit:%s", char.ID),
+				Emoji: &discordgo.ComponentEmoji{
+					Name: "✏️",
+				},
+			})
+		}
+		if len(editButtons) > 0 {
+			components = append(components, discordgo.ActionsRow{
+				Components: editButtons,
+			})
+		}
+	}
+
+	// Send the embed with components
 	_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
-		Embeds: &[]*discordgo.MessageEmbed{embed},
+		Embeds:     &[]*discordgo.MessageEmbed{embed},
+		Components: &components,
 	})
 	return err
 }

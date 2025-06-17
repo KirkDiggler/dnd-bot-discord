@@ -10,40 +10,69 @@ This document outlines the development roadmap for creating a fully-featured D&D
   - Interactive flow with race, class, ability scores, proficiencies, and equipment selection
   - Full D&D 5e API integration
   - Draft system for incomplete characters
+  - Class features integration (Monk unarmored defense, etc.)
   
 - **Character Commands**
   - `/dnd character list` - View all your characters (active, draft, archived)
   - `/dnd character show <id>` - Detailed character sheet with stats
+  - `/dnd character delete <id>` - Permanently delete characters
   - Character management buttons (archive, restore, delete)
 
+### Session Management
+- **Session System** - Full party/game session support
+  - `/dnd session create <name>` - Create new game sessions
+  - `/dnd session join <code>` - Join sessions with invite codes
+  - `/dnd session list` - View your active sessions
+  - `/dnd session info` - Display current session details
+  - `/dnd session start/end` - Control session state
+  - DM role assignment and permissions
+  - Character selection per session
+  - Party composition tracking
+
+### Combat & Encounters
+- **Basic Combat System**
+  - `/dnd encounter add <monster>` - Add monsters to encounters
+  - Initiative tracking with automatic turn order
+  - Combat state management (HP, conditions)
+  - Turn-based action system
+  - Attack/damage/heal modals
+  
+- **Test Combat Mode** (`/dnd test combat`)
+  - Quick combat testing with bot as DM
+  - Automatic encounter setup
+  
+- **Dungeon Mode** (`/dnd dungeon [difficulty]`)
+  - Cooperative gameplay (all players, bot as DM)
+  - Random room generation (combat, puzzle, trap, treasure, rest)
+  - Difficulty scaling (easy/medium/hard)
+  - Party-based exploration
+
 ### Technical Infrastructure
-- Redis persistence layer for character storage
+- Redis persistence for characters, sessions, and encounters
 - Docker setup for deployment (optimized for Raspberry Pi)
 - Clean architecture with bounded contexts
 - Comprehensive test coverage
+- Help system (`/dnd help`)
 
 ## 🚧 In Progress
 
-### Session Management (Current Focus)
-The foundation for multiplayer D&D gameplay.
+### Bot-Controlled Combat
+- Automated monster turns during combat
+- AI decision making for monster actions
+- Target selection based on threat/proximity
+- Special ability usage
 
-#### Commands to Implement:
-```
-/dnd session create "Campaign Name" - DM creates a new session
-/dnd session invite @player - DM invites players
-/dnd session join <code> - Players join with invite code
-/dnd session start - Begin the session (locks character selection)
-/dnd session end - End and archive the session
-/dnd session list - Show your active sessions
-/dnd session info - Display current session details
-```
+### Dungeon Room Mechanics
+- **Puzzle Rooms**: Logic puzzles, riddles, skill challenges
+- **Trap Rooms**: DEX saves, damage rolls, disarm attempts
+- **Treasure Rooms**: Loot tables, item generation, gold rewards
+- **Rest Rooms**: Short/long rest mechanics, HP recovery
 
-#### Session Features:
-- DM role assignment
-- Character selection per session
-- Invite system with codes or direct mentions
-- Session state management (planning → active → ended)
-- Party composition display
+### Features System Enhancement
+- Migrate to D&D 5e API features endpoint
+- Remove hardcoded feature data
+- Maintain custom AC calculation logic
+- Add feature effects to combat
 
 ## 📋 Upcoming Features
 

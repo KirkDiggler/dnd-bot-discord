@@ -61,13 +61,23 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 	}
 
 	// Basic info
+	basicInfo := fmt.Sprintf("**Level:** %d\n**Experience:** %d XP\n**Speed:** %d ft",
+		character.Level,
+		character.Experience,
+		character.Speed,
+	)
+	
+	// Add race and class info
+	if character.Race != nil {
+		basicInfo = fmt.Sprintf("**Race:** %s\n%s", character.Race.Name, basicInfo)
+	}
+	if character.Class != nil {
+		basicInfo = fmt.Sprintf("**Class:** %s\n%s", character.Class.Name, basicInfo)
+	}
+	
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-		Name: "📋 Basic Info",
-		Value: fmt.Sprintf("**Level:** %d\n**Experience:** %d XP\n**Speed:** %d ft",
-			character.Level,
-			character.Experience,
-			character.Speed,
-		),
+		Name:   "📋 Basic Info",
+		Value:  basicInfo,
 		Inline: true,
 	})
 

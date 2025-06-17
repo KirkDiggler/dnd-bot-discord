@@ -389,8 +389,8 @@ func (s *service) LeaveSession(ctx context.Context, sessionID, userID string) er
 			WithMeta("session_id", sessionID)
 	}
 	
-	// Don't allow DM to leave unless ending session
-	if member.Role == entities.SessionRoleDM && session.Status != entities.SessionStatusEnded {
+	// Don't allow DM to leave unless ending session (skip this for planning sessions)
+	if member.Role == entities.SessionRoleDM && session.Status != entities.SessionStatusEnded && session.Status != entities.SessionStatusPlanning {
 		return dnderr.InvalidArgument("DM cannot leave an active session").
 			WithMeta("user_id", userID).
 			WithMeta("session_id", sessionID)

@@ -50,6 +50,7 @@ type Character struct {
 	Proficiencies      map[ProficiencyType][]*Proficiency
 	ProficiencyChoices []*Choice
 	Inventory          map[EquipmentType][]Equipment
+	Features           []*CharacterFeature // Character features (class, racial, etc.)
 
 	HitDie           int
 	AC               int
@@ -191,6 +192,8 @@ func (c *Character) Equip(key string) bool {
 }
 
 func (c *Character) calculateAC() {
+	// This will be called from the service layer which has access to features package
+	// For now, keep the basic calculation
 	c.AC = 10
 	
 	// First, check for body armor which sets the base AC
@@ -351,9 +354,30 @@ func (c *Character) StatsString() string {
 	return msg.String()
 }
 
+// IsComplete checks if the character has all required fields
+func (c *Character) IsComplete() bool {
+	return c != nil && c.Race != nil && c.Class != nil && c.Name != "" && len(c.Attributes) > 0
+}
+
+// GetDisplayInfo returns a safe string representation of race and class
+func (c *Character) GetDisplayInfo() string {
+	if c == nil {
+		return "Unknown Character"
+	}
+	
+	if c.Race != nil && c.Class != nil {
+		return fmt.Sprintf("%s %s", c.Race.Name, c.Class.Name)
+	} else if c.Race != nil {
+		return c.Race.Name
+	} else if c.Class != nil {
+		return c.Class.Name
+	}
+	return "Incomplete Character"
+}
+
 func (c *Character) String() string {
 	msg := strings.Builder{}
-	if c.Race == nil || c.Class == nil {
+	if !c.IsComplete() {
 		return "Character not fully created"
 	}
 
@@ -372,6 +396,14 @@ func (c *Character) String() string {
 	msg.WriteString(fmt.Sprintf("  -  Current Hit Points: %d\n", c.CurrentHitPoints))
 	msg.WriteString(fmt.Sprintf("  -  Level: %d\n", c.Level))
 	msg.WriteString(fmt.Sprintf("  -  Experience: %d\n", c.Experience))
+
+	// Add features section
+	if len(c.Features) > 0 {
+		msg.WriteString("\n**Features**:\n")
+		for _, feat := range c.Features {
+			msg.WriteString(fmt.Sprintf("  - **%s**: %s\n", feat.Name, feat.Description))
+		}
+	}
 
 	msg.WriteString("\n**Attributes**:\n")
 	for _, attr := range Attributes {

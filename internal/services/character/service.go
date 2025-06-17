@@ -10,6 +10,7 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/features"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	characterRepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 )
@@ -499,7 +500,25 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 				WithMeta("race_key", *updates.RaceKey)
 		}
 		char.Race = race
-		char.Speed = race.Speed
+		char.Speed = features.CalculateSpeed(char)
+		
+		// Apply racial features
+		racialFeatures := features.GetRacialFeatures(race.Key)
+		if char.Features == nil {
+			char.Features = []*entities.CharacterFeature{}
+		}
+		// Remove existing racial features
+		newFeatures := []*entities.CharacterFeature{}
+		for _, f := range char.Features {
+			if f.Type != entities.FeatureTypeRacial {
+				newFeatures = append(newFeatures, f)
+			}
+		}
+		// Add new racial features
+		for _, feat := range racialFeatures {
+			newFeatures = append(newFeatures, &feat)
+		}
+		char.Features = newFeatures
 	}
 	
 	// Update class if provided
@@ -511,6 +530,24 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		}
 		char.Class = class
 		char.HitDie = class.HitDie
+		
+		// Apply class features
+		classFeatures := features.GetClassFeatures(class.Key, char.Level)
+		if char.Features == nil {
+			char.Features = []*entities.CharacterFeature{}
+		}
+		// Remove existing class features
+		newFeatures := []*entities.CharacterFeature{}
+		for _, f := range char.Features {
+			if f.Type != entities.FeatureTypeClass {
+				newFeatures = append(newFeatures, f)
+			}
+		}
+		// Add new class features
+		for _, feat := range classFeatures {
+			newFeatures = append(newFeatures, &feat)
+		}
+		char.Features = newFeatures
 	}
 	
 	// Update ability rolls if provided
@@ -550,6 +587,9 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 			
 			// Update hit points
 			char.SetHitpoints()
+			
+			// Recalculate AC with new ability scores
+			char.AC = features.CalculateAC(char)
 		}
 	}
 	
@@ -573,6 +613,9 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		
 		// Update hit points
 		char.SetHitpoints()
+		
+		// Recalculate AC with new ability scores
+		char.AC = features.CalculateAC(char)
 	}
 	
 	// Update name if provided
@@ -610,6 +653,9 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 				char.AddInventory(equipment)
 			}
 		}
+		
+		// Recalculate AC in case equipment affects it
+		char.AC = features.CalculateAC(char)
 	}
 	
 	// Save changes

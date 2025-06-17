@@ -33,6 +33,9 @@ type CharacterData struct {
 	Level              int                                  `json:"level"`
 	Experience         int                                  `json:"experience"`
 	Status             entities.CharacterStatus             `json:"status"`
+	Features           []*entities.CharacterFeature         `json:"features"`
+	Inventory          map[entities.EquipmentType][]entities.Equipment `json:"inventory"`
+	EquippedSlots      map[entities.Slot]entities.Equipment `json:"equipped_slots"`
 	CreatedAt          time.Time                            `json:"created_at"`
 	UpdatedAt          time.Time                            `json:"updated_at"`
 }
@@ -351,6 +354,9 @@ func (r *redisRepo) toCharacterData(char *entities.Character) *CharacterData {
 		Level:              char.Level,
 		Experience:         char.Experience,
 		Status:             char.Status,
+		Features:           char.Features,
+		Inventory:          char.Inventory,
+		EquippedSlots:      char.EquippedSlots,
 	}
 }
 
@@ -376,6 +382,9 @@ func (r *redisRepo) fromCharacterData(data *CharacterData) *entities.Character {
 		Level:              data.Level,
 		Experience:         data.Experience,
 		Status:             data.Status,
+		Features:           data.Features,
+		Inventory:          data.Inventory,
+		EquippedSlots:      data.EquippedSlots,
 	}
 }
 
