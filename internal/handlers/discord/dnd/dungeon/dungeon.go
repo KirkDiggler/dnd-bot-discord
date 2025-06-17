@@ -181,6 +181,8 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 		"difficulty":  req.Difficulty,
 	}
 	
+	log.Printf("Dungeon started with difficulty: %s", req.Difficulty)
+	
 	// We need to update the session to save the metadata
 	updateInput := &session.UpdateSessionInput{
 		Name: &sess.Name, // Just update with same name to trigger save
@@ -200,6 +202,11 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 // generateRoom creates a random room based on difficulty and room number
 func (h *StartDungeonHandler) generateRoom(difficulty string, roomNumber int) *Room {
 	rand.Seed(time.Now().UnixNano())
+	
+	// First room is always combat to start the adventure
+	if roomNumber == 1 {
+		return h.generateCombatRoom(difficulty, roomNumber)
+	}
 	
 	// Room type probabilities
 	roomTypes := []RoomType{

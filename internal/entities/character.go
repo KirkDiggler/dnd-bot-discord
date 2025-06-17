@@ -50,6 +50,7 @@ type Character struct {
 	Proficiencies      map[ProficiencyType][]*Proficiency
 	ProficiencyChoices []*Choice
 	Inventory          map[EquipmentType][]Equipment
+	Features           []*CharacterFeature // Character features (class, racial, etc.)
 
 	HitDie           int
 	AC               int
@@ -191,6 +192,8 @@ func (c *Character) Equip(key string) bool {
 }
 
 func (c *Character) calculateAC() {
+	// This will be called from the service layer which has access to features package
+	// For now, keep the basic calculation
 	c.AC = 10
 	
 	// First, check for body armor which sets the base AC
@@ -372,6 +375,14 @@ func (c *Character) String() string {
 	msg.WriteString(fmt.Sprintf("  -  Current Hit Points: %d\n", c.CurrentHitPoints))
 	msg.WriteString(fmt.Sprintf("  -  Level: %d\n", c.Level))
 	msg.WriteString(fmt.Sprintf("  -  Experience: %d\n", c.Experience))
+
+	// Add features section
+	if len(c.Features) > 0 {
+		msg.WriteString("\n**Features**:\n")
+		for _, feat := range c.Features {
+			msg.WriteString(fmt.Sprintf("  - **%s**: %s\n", feat.Name, feat.Description))
+		}
+	}
 
 	msg.WriteString("\n**Attributes**:\n")
 	for _, attr := range Attributes {

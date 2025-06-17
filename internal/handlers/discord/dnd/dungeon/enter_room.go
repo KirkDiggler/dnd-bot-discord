@@ -71,17 +71,24 @@ func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 }
 
 func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *entities.Session) error {
-	// For now, generate a room on the fly based on the session name
-	// In a full implementation, we'd store this properly
+	// Get difficulty and room number from session metadata
 	difficulty := "medium"
+	roomNumber := 1
 	if sess.Metadata != nil {
 		if diff, ok := sess.Metadata["difficulty"].(string); ok {
 			difficulty = diff
 		}
+		// Try different type assertions for roomNumber
+		if roomNum, ok := sess.Metadata["roomNumber"].(float64); ok {
+			roomNumber = int(roomNum)
+		} else if roomNum, ok := sess.Metadata["roomNumber"].(int); ok {
+			roomNumber = roomNum
+		}
 	}
+	fmt.Printf("Combat room - Difficulty: %s, Room Number: %d\n", difficulty, roomNumber)
 	
 	// Generate a combat room
-	room := h.generateCombatRoom(difficulty, 1)
+	room := h.generateCombatRoom(difficulty, roomNumber)
 	
 	// Create encounter
 	botID := s.State.User.ID
