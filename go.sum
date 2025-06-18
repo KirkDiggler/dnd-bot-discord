@@ -11,8 +11,6 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
-github.com/fadedpez/dnd5e-api v0.0.0-20250616205936-da505a6be0dd h1:GHESFpfuV6RmHebsy/2SqawzjDzImbPS9kEtoqurewc=
-github.com/fadedpez/dnd5e-api v0.0.0-20250616205936-da505a6be0dd/go.mod h1:7OpXfFTO5ZwD03Rh3MfR0sFIi6U1qJx71rkuGz9IPqw=
 github.com/fadedpez/dnd5e-api v0.0.0-20250618163518-632e109d4682 h1:A9xvIvn96nV2ecZu+WyHf6OxGbL7JCutYyvT7io5/Vg=
 github.com/fadedpez/dnd5e-api v0.0.0-20250618163518-632e109d4682/go.mod h1:7OpXfFTO5ZwD03Rh3MfR0sFIi6U1qJx71rkuGz9IPqw=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
