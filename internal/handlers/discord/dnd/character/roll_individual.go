@@ -143,9 +143,21 @@ func (h *RollIndividualHandler) Handle(req *RollIndividualRequest) error {
 		copy(sortedDice, dice)
 		sort.Ints(sortedDice)
 
+		// Add flavor text based on roll quality
+		rollFlavor := ""
+		if currentRoll.Value >= 16 {
+			rollFlavor = "\n*Exceptional!*"
+		} else if currentRoll.Value >= 14 {
+			rollFlavor = "\n*A strong roll!*"
+		} else if currentRoll.Value <= 8 {
+			rollFlavor = "\n*The dice are cruel...*"
+		} else if currentRoll.Value <= 10 {
+			rollFlavor = "\n*Below average, but workable.*"
+		}
+		
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   "🎲 Dice Rolled",
-			Value:  fmt.Sprintf("**Rolled:** %s\n**Dropped:** %d (lowest)\n**Total:** %d", strings.Join(diceStr, ", "), sortedDice[0], currentRoll.Value),
+			Value:  fmt.Sprintf("**Rolled:** %s\n**Dropped:** %d (lowest)\n**Total:** %d%s", strings.Join(diceStr, ", "), sortedDice[0], currentRoll.Value, rollFlavor),
 			Inline: false,
 		})
 	}
@@ -219,10 +231,22 @@ func (h *RollIndividualHandler) Handle(req *RollIndividualRequest) error {
 			Text: fmt.Sprintf("Roll %d more times or use current rolls", 6-len(existingRolls)),
 		}
 	} else {
-		// All rolls complete
+		// All rolls complete - calculate total and add appropriate flavor text
+		totalScore := 0
+		for _, roll := range existingRolls {
+			totalScore += roll.Value
+		}
+		
+		flavorText := "The dice have spoken! Your fate is sealed."
+		if totalScore >= 78 { // Average of 13+ per stat
+			flavorText = "The gods smile upon you! An exceptional set of rolls."
+		} else if totalScore <= 60 { // Average of 10- per stat
+			flavorText = "The dice show no mercy... But legends are born from adversity!"
+		}
+		
 		embed.Title = "All Ability Scores Rolled!"
 		embed.Footer = &discordgo.MessageEmbedFooter{
-			Text: "All 6 ability scores have been rolled. Proceed to assign them!",
+			Text: flavorText,
 		}
 		components = []discordgo.MessageComponent{
 			discordgo.ActionsRow{
@@ -233,14 +257,6 @@ func (h *RollIndividualHandler) Handle(req *RollIndividualRequest) error {
 						CustomID: fmt.Sprintf("character_create:start_assign:%s:%s", req.RaceKey, req.ClassKey),
 						Emoji: &discordgo.ComponentEmoji{
 							Name: "📊",
-						},
-					},
-					discordgo.Button{
-						Label:    "Start Over",
-						Style:    discordgo.DangerButton,
-						CustomID: fmt.Sprintf("character_create:ability_scores:%s:%s", req.RaceKey, req.ClassKey),
-						Emoji: &discordgo.ComponentEmoji{
-							Name: "🔄",
 						},
 					},
 				},
