@@ -816,7 +816,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 
 	// Fetch class features if not already loaded
 	if char.Features == nil && char.Class != nil {
-		features, err := s.dndClient.GetClassFeatures(char.Class.Key, char.Level)
+		features, err := s.dndClient.ListClassFeatures(char.Class.Key, char.Level)
 		if err == nil {
 			char.Features = features
 		}

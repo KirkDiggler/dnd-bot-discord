@@ -70,7 +70,7 @@ func TestCharacterAbilityAssignment_RedisIntegration(t *testing.T) {
 		HitDie: 8,
 	}, nil).AnyTimes()
 
-	mockClient.EXPECT().GetClassFeatures("monk", 1).Return([]*entities.CharacterFeature{
+	mockClient.EXPECT().ListClassFeatures("monk", 1).Return([]*entities.CharacterFeature{
 		{
 			Name: "Unarmored Defense",
 			Type: entities.FeatureTypeClass,

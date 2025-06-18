@@ -93,7 +93,7 @@ func TestFixCharacterAttributes(t *testing.T) {
 	})
 
 	// Mock getting class features for AC calculation
-	mockClient.EXPECT().GetClassFeatures("monk", 1).Return([]*entities.CharacterFeature{
+	mockClient.EXPECT().ListClassFeatures("monk", 1).Return([]*entities.CharacterFeature{
 		{
 			Name: "Unarmored Defense",
 			Type: entities.FeatureTypeClass,

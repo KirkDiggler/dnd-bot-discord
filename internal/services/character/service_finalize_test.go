@@ -71,8 +71,8 @@ func TestService_FinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T)
 	// Mock repository calls
 	mockRepo.EXPECT().Get(ctx, characterID).Return(draftChar, nil)
 
-	// Mock GetClassFeatures call (happens during finalization)
-	mockDNDClient.EXPECT().GetClassFeatures("wizard", 1).Return(nil, nil)
+	// Mock ListClassFeatures call (happens during finalization)
+	mockDNDClient.EXPECT().ListClassFeatures("wizard", 1).Return(nil, nil)
 
 	// Expect update with converted attributes
 	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *entities.Character) error {
@@ -157,8 +157,8 @@ func TestService_FinalizeDraftCharacter_PreservesExistingAttributes(t *testing.T
 	// Mock repository calls
 	mockRepo.EXPECT().Get(ctx, characterID).Return(draftChar, nil)
 
-	// Mock GetClassFeatures call (happens during finalization)
-	mockDNDClient.EXPECT().GetClassFeatures("fighter", 1).Return(nil, nil)
+	// Mock ListClassFeatures call (happens during finalization)
+	mockDNDClient.EXPECT().ListClassFeatures("fighter", 1).Return(nil, nil)
 
 	// Expect update without conversion
 	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *entities.Character) error {

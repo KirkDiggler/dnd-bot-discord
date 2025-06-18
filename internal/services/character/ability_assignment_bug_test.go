@@ -83,7 +83,7 @@ func TestAbilityAssignmentBug_CharacterShowsZeroAttributes(t *testing.T) {
 	mockRepo.EXPECT().Update(ctx, gomock.Any()).Return(nil).Times(1)
 
 	// Mock getting class features
-	mockClient.EXPECT().GetClassFeatures("monk", 1).Return([]*entities.CharacterFeature{
+	mockClient.EXPECT().ListClassFeatures("monk", 1).Return([]*entities.CharacterFeature{
 		{
 			Name: "Unarmored Defense",
 			Type: entities.FeatureTypeClass,

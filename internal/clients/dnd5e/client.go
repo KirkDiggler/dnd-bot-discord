@@ -1,6 +1,7 @@
 package dnd5e
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -145,25 +146,68 @@ func (c *client) GetEquipmentByCategory(category string) ([]entities.Equipment, 
 	return equipment, nil
 }
 
-// GetClassFeatures returns features for a class at a specific level
+// ListClassFeatures returns features for a class at a specific level
 // TODO: Implement when dnd5e-api supports class features
-func (c *client) GetClassFeatures(classKey string, level int) ([]*entities.CharacterFeature, error) {
+func (c *client) ListClassFeatures(classKey string, level int) ([]*entities.CharacterFeature, error) {
 	// Stub implementation - return empty for now
 	return []*entities.CharacterFeature{}, nil
 }
 
 // ListMonstersByCR returns monsters within a challenge rating range
-// TODO: Implement when dnd5e-api supports CR filtering
 func (c *client) ListMonstersByCR(minCR, maxCR float32) ([]*entities.MonsterTemplate, error) {
-	// Stub implementation - return empty for now
-	return []*entities.MonsterTemplate{}, nil
+	// Get list of all monster references
+	monsterRefs, err := c.client.ListMonsters()
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch each monster and filter by CR
+	// Note: This is inefficient but necessary until the API supports filtering
+	monsters := make([]*entities.MonsterTemplate, 0)
+	for _, ref := range monsterRefs {
+		if ref.Key != "" {
+			monster, err := c.client.GetMonster(ref.Key)
+			if err != nil {
+				// Skip monsters that fail to load
+				continue
+			}
+			if monster != nil && monster.ChallengeRating >= minCR && monster.ChallengeRating <= maxCR {
+				template := apiToMonsterTemplate(monster)
+				if template != nil {
+					monsters = append(monsters, template)
+				}
+			}
+		}
+	}
+
+	return monsters, nil
 }
 
 // ListEquipment returns all equipment
-// TODO: Implement when dnd5e-api supports listing all equipment
 func (c *client) ListEquipment() ([]entities.Equipment, error) {
-	// Stub implementation - return empty for now
-	return []entities.Equipment{}, nil
+	// Get list of all equipment references
+	equipmentRefs, err := c.client.ListEquipment()
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch each piece of equipment
+	equipment := make([]entities.Equipment, 0, len(equipmentRefs))
+	for _, ref := range equipmentRefs {
+		if ref.Key != "" {
+			equip, err := c.GetEquipment(ref.Key)
+			if err != nil {
+				// Log error but continue with other equipment
+				log.Printf("Failed to get equipment %s: %v", ref.Key, err)
+				continue
+			}
+			if equip != nil {
+				equipment = append(equipment, equip)
+			}
+		}
+	}
+
+	return equipment, nil
 }
 
 func apiToMonsterTemplate(input *apiEntities.Monster) *entities.MonsterTemplate {

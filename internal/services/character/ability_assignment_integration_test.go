@@ -127,7 +127,7 @@ func TestAbilityAssignmentFlow_Integration(t *testing.T) {
 	require.NoError(t, err)
 
 	// Step 6: Finalize character
-	mockClient.EXPECT().GetClassFeatures("wizard", 1).Return(nil, nil).AnyTimes()
+	mockClient.EXPECT().ListClassFeatures("wizard", 1).Return(nil, nil).AnyTimes()
 
 	finalChar, err := svc.FinalizeDraftCharacter(ctx, char.ID)
 	require.NoError(t, err)
