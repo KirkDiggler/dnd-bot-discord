@@ -137,9 +137,15 @@ func (s *service) CreateEncounter(ctx context.Context, input *CreateEncounterInp
 		return nil, dnderr.Wrap(err, "failed to get session")
 	}
 
-	// Check if user is DM
+	// Check if user is DM or system/bot (for dungeon encounters)
 	member, exists := session.Members[input.UserID]
-	if !exists || member.Role != entities.SessionRoleDM {
+	if !exists {
+		// Allow system/bot to create encounters for dungeons
+		if sessionType, ok := session.Metadata["sessionType"].(string); !ok || sessionType != "dungeon" {
+			return nil, dnderr.PermissionDenied("only the DM can create encounters")
+		}
+		// For dungeon sessions, bot/system can create encounters
+	} else if member.Role != entities.SessionRoleDM {
 		return nil, dnderr.PermissionDenied("only the DM can create encounters")
 	}
 
@@ -212,7 +218,7 @@ func (s *service) AddMonster(ctx context.Context, encounterID, userID string, in
 		return nil, dnderr.Wrap(err, "failed to get encounter")
 	}
 
-	// Verify user is DM
+	// Verify user is DM or system
 	if encounter.CreatedBy != userID {
 		// Check if user is DM of the session
 		session, err := s.sessionService.GetSession(ctx, encounter.SessionID)
@@ -221,7 +227,12 @@ func (s *service) AddMonster(ctx context.Context, encounterID, userID string, in
 		}
 
 		member, exists := session.Members[userID]
-		if !exists || member.Role != entities.SessionRoleDM {
+		if !exists {
+			// Allow system/bot for dungeon sessions
+			if sessionType, ok := session.Metadata["sessionType"].(string); !ok || sessionType != "dungeon" {
+				return nil, dnderr.PermissionDenied("only the DM can add monsters")
+			}
+		} else if member.Role != entities.SessionRoleDM {
 			return nil, dnderr.PermissionDenied("only the DM can add monsters")
 		}
 	}
@@ -351,7 +362,14 @@ func (s *service) RollInitiative(ctx context.Context, encounterID, userID string
 
 	// Check permissions
 	if encounter.CreatedBy != userID {
-		return dnderr.PermissionDenied("only the DM can roll initiative")
+		// Allow system/bot for dungeon encounters
+		session, err := s.sessionService.GetSession(ctx, encounter.SessionID)
+		if err != nil {
+			return dnderr.Wrap(err, "failed to get session")
+		}
+		if sessionType, ok := session.Metadata["sessionType"].(string); !ok || sessionType != "dungeon" {
+			return dnderr.PermissionDenied("only the DM can roll initiative")
+		}
 	}
 
 	// Check status
@@ -405,7 +423,14 @@ func (s *service) StartEncounter(ctx context.Context, encounterID, userID string
 
 	// Check permissions
 	if encounter.CreatedBy != userID {
-		return dnderr.PermissionDenied("only the DM can start the encounter")
+		// Allow system/bot for dungeon encounters
+		session, err := s.sessionService.GetSession(ctx, encounter.SessionID)
+		if err != nil {
+			return dnderr.Wrap(err, "failed to get session")
+		}
+		if sessionType, ok := session.Metadata["sessionType"].(string); !ok || sessionType != "dungeon" {
+			return dnderr.PermissionDenied("only the DM can start the encounter")
+		}
 	}
 
 	// Start encounter
