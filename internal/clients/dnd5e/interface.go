@@ -1,5 +1,7 @@
 package dnd5e
 
+//go:generate mockgen -destination=mock/mock_client.go -package=mockdnd5e . Client
+
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 )

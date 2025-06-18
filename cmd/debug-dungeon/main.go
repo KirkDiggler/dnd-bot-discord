@@ -87,10 +87,4 @@ func main() {
 	fmt.Printf("  State is AwaitingParty: %v\n", dungeon.State == entities.DungeonStateAwaitingParty)
 	fmt.Printf("  State is RoomReady: %v\n", dungeon.State == entities.DungeonStateRoomReady)
 
-	if dungeon.Metadata != nil {
-		fmt.Printf("\nMetadata:\n")
-		for k, v := range dungeon.Metadata {
-			fmt.Printf("  %s: %v\n", k, v)
-		}
-	}
 }

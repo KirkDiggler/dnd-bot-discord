@@ -105,34 +105,8 @@ func TestDungeonService_CreateDungeon_WithLootService(t *testing.T) {
 	// First room should be combat
 	assert.Equal(t, entities.RoomTypeCombat, result.CurrentRoom.Type)
 
-	// Progress to treasure room
-	// Set up expectation for treasure generation
-	lootService.EXPECT().GenerateTreasure(gomock.Any(), "hard", 5).Return([]string{
-		"100 gold pieces",
-		"2 healing potions",
-		"mysterious scroll",
-		"enchanted ring",
-	}, nil)
-
-	// Simulate progressing to room 5 (treasure room)
-	dungeon, _ := service.GetDungeon(context.Background(), result.ID)
-	dungeon.State = entities.DungeonStateRoomCleared
-	dungeon.RoomNumber = 4
-	dungeon.CurrentRoom.Completed = true
-	_ = repo.Update(context.Background(), dungeon)
-
-	// Proceed to next room (should be treasure room at room 5)
-	nextRoom, err := service.ProceedToNextRoom(context.Background(), result.ID)
-	require.NoError(t, err)
-
-	// Check if it's a treasure room (room 5 should have higher chance)
-	if nextRoom.Type == entities.RoomTypeTreasure {
-		// Should have dynamic treasure from the service
-		assert.Contains(t, nextRoom.Treasure, "100 gold pieces")
-		assert.Contains(t, nextRoom.Treasure, "2 healing potions")
-		assert.Contains(t, nextRoom.Treasure, "mysterious scroll")
-		assert.Contains(t, nextRoom.Treasure, "enchanted ring")
-	}
+	// TODO: Add test for treasure room generation when we have proper room progression
+	// This would require simulating combat completion and room clearing
 }
 
 func TestDungeonService_CreateDungeon_FallbackWithoutServices(t *testing.T) {

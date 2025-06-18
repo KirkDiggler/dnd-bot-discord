@@ -185,8 +185,12 @@ func TestUpdateDraftCharacter_AbilityAssignmentConversion(t *testing.T) {
 
 	// Mock the Get call for UpdateDraftCharacter
 	mockRepo.EXPECT().Get(ctx, char.ID).Return(char, nil)
-	// Mock the Update call
-	mockRepo.EXPECT().Update(ctx, gomock.Any()).Return(nil)
+	// Mock the Update call and capture the updated character
+	var capturedChar *entities.Character
+	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, c *entities.Character) error {
+		capturedChar = c
+		return nil
+	})
 
 	// Update with ability assignments
 	updated, err := svc.UpdateDraftCharacter(ctx, char.ID, &character.UpdateDraftInput{
@@ -200,8 +204,14 @@ func TestUpdateDraftCharacter_AbilityAssignmentConversion(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify the conversion happened immediately
+	require.NotNil(t, updated, "Updated character should not be nil")
 	assert.NotEmpty(t, updated.Attributes, "Attributes should be populated after assignment")
 	assert.NotNil(t, updated.Attributes[entities.AttributeDexterity], "DEX attribute should exist")
 	assert.Equal(t, 16, updated.Attributes[entities.AttributeDexterity].Score, "DEX should include racial bonus")
 	assert.Equal(t, 3, updated.Attributes[entities.AttributeDexterity].Bonus, "DEX modifier should be (16-10)/2 = 3")
+	
+	// Also verify the captured character from the Update call
+	if capturedChar != nil {
+		assert.Equal(t, 16, capturedChar.Attributes[entities.AttributeDexterity].Score, "Captured char DEX should include racial bonus")
+	}
 }

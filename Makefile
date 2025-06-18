@@ -72,7 +72,7 @@ install-tools:
 # Generate mocks
 generate-mocks:
 	@echo "Generating mocks..."
-	@go generate ./...
+	@PATH="/home/kirk/go/bin:$$PATH" go generate ./...
 
 # Docker targets
 docker-build:
