@@ -147,10 +147,32 @@ func (c *client) GetEquipmentByCategory(category string) ([]entities.Equipment, 
 }
 
 // ListClassFeatures returns features for a class at a specific level
-// TODO: Implement when dnd5e-api supports class features
 func (c *client) ListClassFeatures(classKey string, level int) ([]*entities.CharacterFeature, error) {
-	// Stub implementation - return empty for now
-	return []*entities.CharacterFeature{}, nil
+	// Get the class level data which includes features
+	classLevel, err := c.client.GetClassLevel(classKey, level)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert feature references to CharacterFeatures
+	features := make([]*entities.CharacterFeature, 0, len(classLevel.Features))
+	for _, featureRef := range classLevel.Features {
+		if featureRef.Key != "" {
+			// For now, we just create basic features from the reference
+			// In the future, we might want to fetch full feature details
+			feature := &entities.CharacterFeature{
+				Key:         featureRef.Key,
+				Name:        featureRef.Name,
+				Description: "", // Would need to fetch full feature for description
+				Type:        entities.FeatureTypeClass,
+				Level:       level,
+				Source:      classKey,
+			}
+			features = append(features, feature)
+		}
+	}
+
+	return features, nil
 }
 
 // ListMonstersByCR returns monsters within a challenge rating range
