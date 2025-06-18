@@ -21,7 +21,7 @@ func TestCharacterDraft_ResetStep(t *testing.T) {
 				Character:      &Character{},
 			},
 			stepToReset:   SelectBackgroundStep,
-			expectedError: "step 8 is not completed",
+			expectedError: "step 128 is not completed",
 		},
 		{
 			name: "reset race step clears race and dependent steps",
@@ -121,20 +121,23 @@ func TestCharacterDraft_StepDependencies(t *testing.T) {
 		raceDeps := StepDependencies[SelectRaceStep]
 		assert.Contains(t, raceDeps, SelectProficienciesStep)
 		assert.Contains(t, raceDeps, SelectAbilityScoresStep)
-		assert.Len(t, raceDeps, 2)
+		assert.Contains(t, raceDeps, SelectFeaturesStep)
+		assert.Len(t, raceDeps, 3)
 
 		// Class dependencies
 		classDeps := StepDependencies[SelectClassStep]
 		assert.Contains(t, classDeps, SelectProficienciesStep)
 		assert.Contains(t, classDeps, SelectSkillsStep)
 		assert.Contains(t, classDeps, SelectEquipmentStep)
-		assert.Len(t, classDeps, 3)
+		assert.Contains(t, classDeps, SelectFeaturesStep)
+		assert.Len(t, classDeps, 4)
 
 		// Background dependencies
 		backgroundDeps := StepDependencies[SelectBackgroundStep]
 		assert.Contains(t, backgroundDeps, SelectProficienciesStep)
 		assert.Contains(t, backgroundDeps, SelectSkillsStep)
 		assert.Contains(t, backgroundDeps, SelectEquipmentStep)
-		assert.Len(t, backgroundDeps, 3)
+		assert.Contains(t, backgroundDeps, SelectFeaturesStep)
+		assert.Len(t, backgroundDeps, 4)
 	})
 }
