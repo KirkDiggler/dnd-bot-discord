@@ -75,6 +75,9 @@ type Service interface {
 
 	// ListActiveRealmSessions lists active sessions for a realm
 	ListActiveRealmSessions(ctx context.Context, realmID string) ([]*entities.Session, error)
+	
+	// SaveSession saves a session to the repository
+	SaveSession(ctx context.Context, session *entities.Session) error
 }
 
 // CreateSessionInput contains data for creating a session
@@ -674,6 +677,16 @@ func (s *service) ListActiveRealmSessions(ctx context.Context, realmID string) (
 	}
 
 	return sessions, nil
+}
+
+// SaveSession saves a session to the repository
+func (s *service) SaveSession(ctx context.Context, session *entities.Session) error {
+	if session == nil {
+		return dnderr.Wrap("session is required")
+	}
+	
+	// Use Update method since repository doesn't have Save
+	return s.repository.Update(ctx, session)
 }
 
 // generateInviteCode generates a unique invite code

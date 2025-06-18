@@ -145,6 +145,27 @@ func (c *client) GetEquipmentByCategory(category string) ([]entities.Equipment, 
 	return equipment, nil
 }
 
+// GetClassFeatures returns features for a class at a specific level
+// TODO: Implement when dnd5e-api supports class features
+func (c *client) GetClassFeatures(classKey string, level int) ([]*entities.CharacterFeature, error) {
+	// Stub implementation - return empty for now
+	return []*entities.CharacterFeature{}, nil
+}
+
+// ListMonstersByCR returns monsters within a challenge rating range
+// TODO: Implement when dnd5e-api supports CR filtering
+func (c *client) ListMonstersByCR(minCR, maxCR float32) ([]*entities.MonsterTemplate, error) {
+	// Stub implementation - return empty for now
+	return []*entities.MonsterTemplate{}, nil
+}
+
+// ListEquipment returns all equipment
+// TODO: Implement when dnd5e-api supports listing all equipment
+func (c *client) ListEquipment() ([]entities.Equipment, error) {
+	// Stub implementation - return empty for now
+	return []entities.Equipment{}, nil
+}
+
 func apiToMonsterTemplate(input *apiEntities.Monster) *entities.MonsterTemplate {
 	if input == nil {
 		return nil

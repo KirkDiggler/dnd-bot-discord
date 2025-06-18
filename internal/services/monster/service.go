@@ -100,9 +100,12 @@ func (s *service) GetMonstersByCR(ctx context.Context, minCR, maxCR float32) ([]
 		
 		for _, cr := range crValues {
 			if float32(cr) >= minCR && float32(cr) <= maxCR {
-				monsters, err := s.dndClient.ListMonstersByCR(cr)
+				// For now, get all monsters within the CR range
+				// TODO: Update when API supports better CR filtering
+				monsters, err := s.dndClient.ListMonstersByCR(minCR, maxCR)
 				if err == nil {
 					allMonsters = append(allMonsters, monsters...)
+					break // Don't duplicate results
 				}
 			}
 		}

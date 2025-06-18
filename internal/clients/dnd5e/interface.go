@@ -13,4 +13,9 @@ type Client interface {
 	GetMonster(key string) (*entities.MonsterTemplate, error)
 	GetEquipment(key string) (entities.Equipment, error)
 	GetEquipmentByCategory(category string) ([]entities.Equipment, error)
+	
+	// New methods needed by services
+	GetClassFeatures(classKey string, level int) ([]*entities.CharacterFeature, error)
+	ListMonstersByCR(minCR, maxCR float32) ([]*entities.MonsterTemplate, error)
+	ListEquipment() ([]entities.Equipment, error)
 }

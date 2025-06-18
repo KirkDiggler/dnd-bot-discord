@@ -1,0 +1,167 @@
+package dungeon_test
+
+import (
+	"context"
+	"testing"
+
+	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/dungeons"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/gamesessions"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/services/dungeon"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestDungeonFlow_CreateJoinAndEnter(t *testing.T) {
+	// Set up services
+	provider := services.NewProvider(&services.ProviderConfig{
+		DNDClient:           &mockDNDClient{},
+		CharacterRepository: characters.NewInMemoryRepository(),
+		SessionRepository:   gamesessions.NewInMemoryRepository(),
+		EncounterRepository: encounters.NewInMemoryRepository(),
+		DungeonRepository:   dungeons.NewInMemoryRepository(),
+	})
+
+	ctx := context.Background()
+	userID := "test-user-123"
+
+	// Create a simple test character
+	char, err := provider.CharacterService.CreateCharacter(userID)
+	require.NoError(t, err)
+	
+	// Set basic character data
+	char.Name = "Test Hero"
+	char.Race = &entities.Race{Key: "human", Name: "Human"}
+	char.Class = &entities.Class{Key: "fighter", Name: "Fighter"}
+	char.Level = 1
+	char.CurrentHitPoints = 10
+	char.MaxHitPoints = 10
+	char.AC = 15
+	
+	// Finalize the character
+	err = provider.CharacterService.FinalizeDraftCharacter(char.ID)
+	require.NoError(t, err)
+
+	// Create a session
+	sess, err := provider.SessionService.CreateSession(ctx, &session.CreateSessionInput{
+		Name:        "Test Dungeon",
+		Description: "Testing dungeon flow",
+		CreatorID:   "bot",
+	})
+	require.NoError(t, err)
+
+	// Join the session
+	_, err = provider.SessionService.JoinSession(ctx, sess.ID, userID)
+	require.NoError(t, err)
+
+	// Select character
+	err = provider.SessionService.SelectCharacter(ctx, sess.ID, userID, char.ID)
+	require.NoError(t, err)
+
+	// Create a dungeon
+	dung, err := provider.DungeonService.CreateDungeon(ctx, &dungeon.CreateDungeonInput{
+		SessionID:  sess.ID,
+		Difficulty: "medium",
+		CreatorID:  userID,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, entities.DungeonStateAwaitingParty, dung.State)
+	assert.Equal(t, 1, dung.RoomNumber)
+	assert.NotNil(t, dung.CurrentRoom)
+
+	// Join the dungeon
+	err = provider.DungeonService.JoinDungeon(ctx, dung.ID, userID, char.ID)
+	require.NoError(t, err)
+
+	// Get updated dungeon
+	dung, err = provider.DungeonService.GetDungeon(ctx, dung.ID)
+	require.NoError(t, err)
+	assert.Equal(t, entities.DungeonStateRoomReady, dung.State)
+	assert.Len(t, dung.Party, 1)
+	assert.Equal(t, userID, dung.Party[0].UserID)
+	assert.Equal(t, char.ID, dung.Party[0].CharacterID)
+
+	// Check available actions
+	actions, err := provider.DungeonService.GetAvailableActions(ctx, dung.ID)
+	require.NoError(t, err)
+	assert.NotEmpty(t, actions)
+	
+	// Should have "enter" action available
+	var hasEnter bool
+	for _, action := range actions {
+		if action.ID == "enter" && action.Available {
+			hasEnter = true
+			break
+		}
+	}
+	assert.True(t, hasEnter, "Should have enter room action available")
+
+	// Enter the room
+	room, err := provider.DungeonService.EnterRoom(ctx, dung.ID)
+	require.NoError(t, err)
+	assert.Equal(t, dung.CurrentRoom, room)
+
+	// Get updated dungeon
+	dung, err = provider.DungeonService.GetDungeon(ctx, dung.ID)
+	require.NoError(t, err)
+	assert.Equal(t, entities.DungeonStateInProgress, dung.State)
+}
+
+// Mock DND client for testing
+type mockDNDClient struct{}
+
+func (m *mockDNDClient) ListClasses() ([]*entities.Class, error) {
+	return []*entities.Class{{Key: "fighter", Name: "Fighter"}}, nil
+}
+
+func (m *mockDNDClient) ListRaces() ([]*entities.Race, error) {
+	return []*entities.Race{{Key: "human", Name: "Human"}}, nil
+}
+
+func (m *mockDNDClient) GetRace(key string) (*entities.Race, error) {
+	return &entities.Race{Key: key, Name: "Human"}, nil
+}
+
+func (m *mockDNDClient) GetClass(key string) (*entities.Class, error) {
+	return &entities.Class{Key: key, Name: "Fighter"}, nil
+}
+
+func (m *mockDNDClient) GetProficiency(key string) (*entities.Proficiency, error) {
+	return &entities.Proficiency{Key: key, Name: "Test"}, nil
+}
+
+func (m *mockDNDClient) ListEquipment() ([]entities.Equipment, error) {
+	return []entities.Equipment{}, nil
+}
+
+func (m *mockDNDClient) GetEquipment(key string) (entities.Equipment, error) {
+	return &entities.BasicEquipment{Key: key, Name: "Test Item"}, nil
+}
+
+func (m *mockDNDClient) GetEquipmentByCategory(category string) ([]entities.Equipment, error) {
+	return []entities.Equipment{}, nil
+}
+
+func (m *mockDNDClient) ListMonsters() ([]*entities.MonsterTemplate, error) {
+	return []*entities.MonsterTemplate{
+		{Key: "goblin", Name: "Goblin"},
+		{Key: "orc", Name: "Orc"},
+	}, nil
+}
+
+func (m *mockDNDClient) ListMonstersByCR(challengeRating float64) ([]*entities.MonsterTemplate, error) {
+	return []*entities.MonsterTemplate{
+		{Key: "goblin", Name: "Goblin"},
+	}, nil
+}
+
+func (m *mockDNDClient) GetMonster(key string) (*entities.MonsterTemplate, error) {
+	return &entities.MonsterTemplate{Key: key, Name: "Goblin"}, nil
+}
+
+var _ dnd5e.Client = (*mockDNDClient)(nil)

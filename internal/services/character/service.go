@@ -816,13 +816,13 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 		char.HitDie = char.Class.HitDie
 	}
 	
-	// TODO: Fetch class features when GetClassFeatures is added to dnd5e client
-	// if char.Features == nil && char.Class != nil {
-	// 	features, err := s.dndClient.GetClassFeatures(char.Class.Key, char.Level)
-	// 	if err == nil {
-	// 		char.Features = features
-	// 	}
-	// }
+	// Fetch class features if not already loaded
+	if char.Features == nil && char.Class != nil {
+		features, err := s.dndClient.GetClassFeatures(char.Class.Key, char.Level)
+		if err == nil {
+			char.Features = features
+		}
+	}
 	
 	// Calculate AC if not set
 	if char.AC == 0 {
