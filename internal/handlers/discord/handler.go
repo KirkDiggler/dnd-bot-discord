@@ -28,6 +28,8 @@ type Handler struct {
 	characterShowClassesHandler           *character.ShowClassesHandler
 	characterClassSelectHandler           *character.ClassSelectHandler
 	characterAbilityScoresHandler         *character.AbilityScoresHandler
+	characterRollAllHandler               *character.RollAllHandler
+	characterRollIndividualHandler        *character.RollIndividualHandler
 	characterAssignAbilitiesHandler       *character.AssignAbilitiesHandler
 	characterProficiencyChoicesHandler    *character.ProficiencyChoicesHandler
 	characterSelectProficienciesHandler   *character.SelectProficienciesHandler
@@ -84,6 +86,12 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
 		characterAbilityScoresHandler: character.NewAbilityScoresHandler(&character.AbilityScoresHandlerConfig{
+			CharacterService: cfg.ServiceProvider.CharacterService,
+		}),
+		characterRollAllHandler: character.NewRollAllHandler(&character.RollAllHandlerConfig{
+			CharacterService: cfg.ServiceProvider.CharacterService,
+		}),
+		characterRollIndividualHandler: character.NewRollIndividualHandler(&character.RollIndividualHandlerConfig{
 			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
 		characterAssignAbilitiesHandler: character.NewAssignAbilitiesHandler(&character.AssignAbilitiesHandlerConfig{
@@ -710,6 +718,37 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 				if err := h.characterAbilityScoresHandler.Handle(req); err != nil {
 					log.Printf("Error handling ability scores: %v", err)
+				}
+			}
+		case "roll_all":
+			if len(parts) >= 4 {
+				req := &character.RollAllRequest{
+					Session:     s,
+					Interaction: i,
+					RaceKey:     parts[2],
+					ClassKey:    parts[3],
+				}
+				if err := h.characterRollAllHandler.Handle(req); err != nil {
+					log.Printf("Error handling roll all: %v", err)
+				}
+			}
+		case "roll_individual":
+			if len(parts) >= 4 {
+				rollIndex := 0
+				if len(parts) >= 5 {
+					if idx, err := strconv.Atoi(parts[4]); err == nil {
+						rollIndex = idx
+					}
+				}
+				req := &character.RollIndividualRequest{
+					Session:     s,
+					Interaction: i,
+					RaceKey:     parts[2],
+					ClassKey:    parts[3],
+					RollIndex:   rollIndex,
+				}
+				if err := h.characterRollIndividualHandler.Handle(req); err != nil {
+					log.Printf("Error handling roll individual: %v", err)
 				}
 			}
 		case "start_assign":
