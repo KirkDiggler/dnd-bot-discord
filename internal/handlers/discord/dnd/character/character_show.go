@@ -18,9 +18,9 @@ type ShowHandler struct {
 	services *services.Provider
 }
 
-func NewShowHandler(services *services.Provider) *ShowHandler {
+func NewShowHandler(serviceProvider *services.Provider) *ShowHandler {
 	return &ShowHandler{
-		services: services,
+		services: serviceProvider,
 	}
 }
 
@@ -79,10 +79,7 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 		Name:   "📋 Basic Info",
 		Value:  basicInfo,
 		Inline: true,
-	})
-
-	// Combat stats
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+	}, &discordgo.MessageEmbedField{
 		Name: "⚔️ Combat Stats",
 		Value: fmt.Sprintf("**HP:** %d/%d\n**AC:** %d\n**Hit Die:** d%d",
 			character.CurrentHitPoints,
@@ -171,7 +168,8 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 
 	// Add action buttons based on status
 	components := []discordgo.MessageComponent{}
-	if character.Status == entities.CharacterStatusActive {
+	switch character.Status {
+	case entities.CharacterStatusActive:
 		components = append(components, discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.Button{
@@ -200,7 +198,7 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 				},
 			},
 		})
-	} else if character.Status == entities.CharacterStatusDraft {
+	case entities.CharacterStatusDraft:
 		components = append(components, discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.Button{
@@ -221,7 +219,7 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 				},
 			},
 		})
-	} else if character.Status == entities.CharacterStatusArchived {
+	case entities.CharacterStatusArchived:
 		components = append(components, discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.Button{

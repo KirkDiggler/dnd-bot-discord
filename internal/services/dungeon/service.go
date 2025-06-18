@@ -301,7 +301,7 @@ func (s *service) generateCombatRoom(difficulty string, roomNumber int) *entitie
 	selected := rooms[s.random.Intn(len(rooms))]
 
 	// Determine number of monsters based on difficulty and room number
-	baseCount := 1
+	var baseCount int
 	switch difficulty {
 	case "easy":
 		baseCount = 1
@@ -544,8 +544,7 @@ func (s *service) GetAvailableActions(ctx context.Context, dungeonID string) ([]
 			Label:       "Next Room",
 			Description: "Proceed to the next room",
 			Available:   true,
-		})
-		actions = append(actions, DungeonAction{
+		}, DungeonAction{
 			ID:          "rest",
 			Label:       "Take a Rest",
 			Description: "Rest and recover before continuing",
@@ -568,8 +567,7 @@ func (s *service) GetAvailableActions(ctx context.Context, dungeonID string) ([]
 			Label:       "Party Status",
 			Description: "View party status and statistics",
 			Available:   true,
-		})
-		actions = append(actions, DungeonAction{
+		}, DungeonAction{
 			ID:          "abandon",
 			Label:       "Abandon Dungeon",
 			Description: "Give up and leave the dungeon",

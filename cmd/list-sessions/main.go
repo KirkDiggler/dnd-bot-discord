@@ -24,25 +24,31 @@ func main() {
 	}
 
 	client := redis.NewClient(opts)
-	defer client.Close()
 
 	// Test connection
-	if _, err := client.Ping(ctx).Result(); err != nil {
-		log.Fatalf("Failed to connect to Redis: %v", err)
+	if _, pingErr := client.Ping(ctx).Result(); pingErr != nil {
+		log.Fatalf("Failed to connect to Redis: %v", pingErr)
 	}
+	defer func() {
+		clientErr := client.Close()
+		if clientErr != nil {
+			log.Printf("Failed to close Redis connection: %v", clientErr)
+		}
+	}()
 
 	// Find all session keys
 	sessionKeys, err := client.Keys(ctx, "session:*").Result()
 	if err != nil {
-		log.Fatalf("Failed to get session keys: %v", err)
+		log.Printf("Failed to get session keys: %v", err)
+		return
 	}
 
 	fmt.Printf("Found %d sessions:\n", len(sessionKeys))
 	for _, key := range sessionKeys {
 		// Get the session data
-		data, err := client.Get(ctx, key).Result()
-		if err != nil {
-			fmt.Printf("  %s: ERROR - %v\n", key, err)
+		data, getErr := client.Get(ctx, key).Result()
+		if getErr != nil {
+			fmt.Printf("  %s: ERROR - %v\n", key, getErr)
 			continue
 		}
 
@@ -53,7 +59,8 @@ func main() {
 	// Also find dungeon keys
 	dungeonKeys, err := client.Keys(ctx, "dungeon:*").Result()
 	if err != nil {
-		log.Fatalf("Failed to get dungeon keys: %v", err)
+		log.Printf("Failed to get dungeon keys: %v", err)
+		return
 	}
 
 	fmt.Printf("\nFound %d dungeons:\n", len(dungeonKeys))

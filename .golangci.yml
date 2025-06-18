@@ -25,6 +25,10 @@ linters:
     errcheck:
       check-type-assertions: true
       check-blank: true
+    revive:
+      rules:
+        - name: exported
+          disabled: true
     gocritic:
       disabled-checks:
         - dupImport
@@ -41,6 +45,7 @@ linters:
     gosec:
       excludes:
         - G104  # Unhandled errors in defer statements
+        - G404  # Use of weak random number generator - fine for game mechanics
 
 issues:
   exclude-dirs:

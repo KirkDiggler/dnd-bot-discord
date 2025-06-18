@@ -50,7 +50,7 @@ func (i *CreateCharacterInput) Validate() error {
 		return dnderr.InvalidArgument("class is required")
 	}
 
-	if i.AbilityScores == nil || len(i.AbilityScores) == 0 {
+	if len(i.AbilityScores) == 0 {
 		return dnderr.InvalidArgument("ability scores are required")
 	}
 
@@ -100,7 +100,7 @@ func (i *ValidateCharacterInput) Validate() error {
 		return dnderr.InvalidArgument("class is required")
 	}
 
-	if i.AbilityScores == nil || len(i.AbilityScores) == 0 {
+	if len(i.AbilityScores) == 0 {
 		return dnderr.InvalidArgument("ability scores are required")
 	}
 

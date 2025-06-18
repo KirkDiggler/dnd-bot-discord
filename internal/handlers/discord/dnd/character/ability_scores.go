@@ -130,10 +130,7 @@ func (h *AbilityScoresHandler) Handle(req *AbilityScoresRequest) error {
 		Name:   fmt.Sprintf("💡 %s Recommendations", class.Name),
 		Value:  recommendations,
 		Inline: false,
-	})
-
-	// Progress
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+	}, &discordgo.MessageEmbedField{
 		Name:   "Progress",
 		Value:  "✅ Step 1: Race\n✅ Step 2: Class\n⏳ Step 3: Abilities\n⏳ Step 4: Details",
 		Inline: false,

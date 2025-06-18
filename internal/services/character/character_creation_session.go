@@ -153,17 +153,3 @@ func (s *service) GetCharacterFromSession(ctx context.Context, sessionID string)
 
 	return char, nil
 }
-
-// cleanupExpiredSessions removes expired sessions (should be called periodically)
-func (s *service) cleanupExpiredSessions() {
-	sessionMutex.Lock()
-	defer sessionMutex.Unlock()
-
-	now := time.Now()
-	for id, session := range s.sessions {
-		if now.After(session.ExpiresAt) {
-			log.Printf("Cleaning up expired session %s", id)
-			delete(s.sessions, id)
-		}
-	}
-}

@@ -1,3 +1,4 @@
+// uuid simple generator that allows mocking
 package uuid
 
 import (

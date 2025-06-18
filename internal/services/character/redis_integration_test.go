@@ -5,6 +5,7 @@ package character_test
 
 import (
 	"context"
+	"log"
 	"os"
 	"testing"
 
@@ -34,7 +35,12 @@ func TestCharacterAbilityAssignment_RedisIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	client := redis.NewClient(opts)
-	defer client.Close()
+	defer func() {
+		clientErr := client.Close()
+		if clientErr != nil {
+			log.Printf("Failed to close Redis client: %v", clientErr)
+		}
+	}()
 
 	// Verify Redis is available
 	ctx := context.Background()

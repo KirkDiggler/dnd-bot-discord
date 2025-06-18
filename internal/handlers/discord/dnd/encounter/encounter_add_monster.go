@@ -22,9 +22,9 @@ type AddMonsterHandler struct {
 	services *services.Provider
 }
 
-func NewAddMonsterHandler(services *services.Provider) *AddMonsterHandler {
+func NewAddMonsterHandler(serviceProvider *services.Provider) *AddMonsterHandler {
 	return &AddMonsterHandler{
-		services: services,
+		services: serviceProvider,
 	}
 }
 

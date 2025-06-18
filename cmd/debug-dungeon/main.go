@@ -33,15 +33,15 @@ func main() {
 		redisURL = "redis://localhost:6379"
 	}
 
-	opt, err := redis.ParseURL(redisURL)
-	if err != nil {
-		log.Fatalf("Failed to parse Redis URL: %v", err)
+	opt, parseErr := redis.ParseURL(redisURL)
+	if parseErr != nil {
+		log.Fatalf("Failed to parse Redis URL: %v", parseErr)
 	}
 
 	client := redis.NewClient(opt)
 	ctx := context.Background()
-	if err := client.Ping(ctx).Err(); err != nil {
-		log.Fatalf("Failed to connect to Redis: %v", err)
+	if pingErr := client.Ping(ctx).Err(); pingErr != nil {
+		log.Fatalf("Failed to connect to Redis: %v", pingErr)
 	}
 
 	// Create repository
@@ -50,9 +50,9 @@ func main() {
 	})
 
 	// Find active dungeon for this session
-	dungeon, err := repo.GetBySession(ctx, *sessionID)
-	if err != nil {
-		log.Fatalf("Failed to get dungeon: %v", err)
+	dungeon, getErr := repo.GetBySession(ctx, *sessionID)
+	if getErr != nil {
+		log.Fatalf("Failed to get dungeon: %v", getErr)
 	}
 
 	if dungeon == nil {
@@ -87,10 +87,4 @@ func main() {
 	fmt.Printf("  State is AwaitingParty: %v\n", dungeon.State == entities.DungeonStateAwaitingParty)
 	fmt.Printf("  State is RoomReady: %v\n", dungeon.State == entities.DungeonStateRoomReady)
 
-	if dungeon.Metadata != nil {
-		fmt.Printf("\nMetadata:\n")
-		for k, v := range dungeon.Metadata {
-			fmt.Printf("  %s: %v\n", k, v)
-		}
-	}
 }

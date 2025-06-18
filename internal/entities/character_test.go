@@ -11,8 +11,9 @@ func TestCharacter_AddAbilityBonus(t *testing.T) {
 		AbilityScores map[Attribute]*AbilityScore
 	}
 	type args struct {
-		abilityBonus  *AbilityBonus
-		expectedBonus int
+		abilityBonus   *AbilityBonus
+		expectedScore  int
+		expectedBonus  int
 	}
 	tests := []struct {
 		name   string
@@ -23,7 +24,7 @@ func TestCharacter_AddAbilityBonus(t *testing.T) {
 			name: "TestCharacter_AddAbilityBonus",
 			fields: fields{
 				AbilityScores: map[Attribute]*AbilityScore{
-					AttributeStrength:     {Score: 10},
+					AttributeStrength:     {Score: 10, Bonus: 0},
 					AttributeDexterity:    {Score: 10},
 					AttributeConstitution: {Score: 10},
 					AttributeIntelligence: {Score: 10},
@@ -36,7 +37,8 @@ func TestCharacter_AddAbilityBonus(t *testing.T) {
 					Attribute: AttributeStrength,
 					Bonus:     2,
 				},
-				expectedBonus: 2,
+				expectedScore: 12,
+				expectedBonus: 1, // (12-10)/2 = 1
 			},
 		},
 		{
@@ -56,7 +58,8 @@ func TestCharacter_AddAbilityBonus(t *testing.T) {
 					Attribute: AttributeStrength,
 					Bonus:     2,
 				},
-				expectedBonus: 3,
+				expectedScore: 14,
+				expectedBonus: 2, // (14-10)/2 = 2
 			},
 		},
 		{
@@ -75,7 +78,8 @@ func TestCharacter_AddAbilityBonus(t *testing.T) {
 					Attribute: AttributeStrength,
 					Bonus:     2,
 				},
-				expectedBonus: 2,
+				expectedScore: 2,
+				expectedBonus: -4, // (2-10)/2 = -4
 			},
 		},
 	}
@@ -87,6 +91,9 @@ func TestCharacter_AddAbilityBonus(t *testing.T) {
 
 			c.AddAbilityBonus(tt.args.abilityBonus)
 
+			if c.Attributes[tt.args.abilityBonus.Attribute].Score != tt.args.expectedScore {
+				t.Errorf("expected score to be %d, got %d", tt.args.expectedScore, c.Attributes[tt.args.abilityBonus.Attribute].Score)
+			}
 			if c.Attributes[tt.args.abilityBonus.Attribute].Bonus != tt.args.expectedBonus {
 				t.Errorf("expected bonus to be %d, got %d", tt.args.expectedBonus, c.Attributes[tt.args.abilityBonus.Attribute].Bonus)
 			}
@@ -123,7 +130,7 @@ func TestCharacter_AddAttribute(t *testing.T) {
 				attribute: AttributeStrength,
 				abilityScore: &AbilityScore{
 					Score: 10,
-					Bonus: 2,
+					Bonus: 0, // (10-10)/2 = 0
 				},
 			},
 		},

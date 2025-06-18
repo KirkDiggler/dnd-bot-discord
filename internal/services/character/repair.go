@@ -36,47 +36,51 @@ func (s *service) RepairCharacterAttributes(ctx context.Context, characterID str
 
 	// Convert assignments to attributes
 	for abilityStr, rollID := range char.AbilityAssignments {
-		if rollValue, ok := rollValues[rollID]; ok {
-			// Parse ability string to Attribute type
-			var attr entities.Attribute
-			switch abilityStr {
-			case "STR":
-				attr = entities.AttributeStrength
-			case "DEX":
-				attr = entities.AttributeDexterity
-			case "CON":
-				attr = entities.AttributeConstitution
-			case "INT":
-				attr = entities.AttributeIntelligence
-			case "WIS":
-				attr = entities.AttributeWisdom
-			case "CHA":
-				attr = entities.AttributeCharisma
-			default:
-				continue
-			}
+		if _, ok := rollValues[rollID]; !ok {
+			log.Printf("Roll ID %s not found for character %s", rollID, char.ID)
+			continue
+		}
+		rollValue := rollValues[rollID]
+		// Parse ability string to Attribute type
+		var attr entities.Attribute
+		switch abilityStr {
+		case "STR":
+			attr = entities.AttributeStrength
+		case "DEX":
+			attr = entities.AttributeDexterity
+		case "CON":
+			attr = entities.AttributeConstitution
+		case "INT":
+			attr = entities.AttributeIntelligence
+		case "WIS":
+			attr = entities.AttributeWisdom
+		case "CHA":
+			attr = entities.AttributeCharisma
+		default:
+			continue
+		}
 
-			// Create base ability score
-			score := rollValue
+		// Create base ability score
+		score := rollValue
 
-			// Apply racial bonuses
-			if char.Race != nil {
-				for _, bonus := range char.Race.AbilityBonuses {
-					if bonus.Attribute == attr {
-						score += bonus.Bonus
-					}
+		// Apply racial bonuses
+		if char.Race != nil {
+			for _, bonus := range char.Race.AbilityBonuses {
+				if bonus.Attribute == attr {
+					score += bonus.Bonus
 				}
 			}
-
-			// Calculate modifier
-			modifier := (score - 10) / 2
-
-			// Create ability score
-			char.Attributes[attr] = &entities.AbilityScore{
-				Score: score,
-				Bonus: modifier,
-			}
 		}
+
+		// Calculate modifier
+		modifier := (score - 10) / 2
+
+		// Create ability score
+		char.Attributes[attr] = &entities.AbilityScore{
+			Score: score,
+			Bonus: modifier,
+		}
+
 	}
 
 	// Recalculate HP if needed

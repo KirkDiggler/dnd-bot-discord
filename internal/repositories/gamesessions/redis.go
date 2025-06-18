@@ -99,9 +99,15 @@ func (r *redisRepository) Create(ctx context.Context, session *entities.Session)
 		return fmt.Errorf("failed to create session: %w", err)
 	}
 
+	if _, ok := cmds[0].(*redis.IntCmd); !ok {
+		return fmt.Errorf("failed to create session: %w", err)
+	}
+
 	// Check if session already existed
-	if cmds[0].(*redis.IntCmd).Val() > 0 {
-		return fmt.Errorf("session with ID %s already exists", session.ID)
+	if cmdVal, ok := cmds[0].(*redis.IntCmd); ok {
+		if cmdVal.Val() > 0 {
+			return fmt.Errorf("session with ID %s already exists", session.ID)
+		}
 	}
 
 	return nil

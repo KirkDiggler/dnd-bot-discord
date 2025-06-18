@@ -3,6 +3,7 @@ package testutils
 import (
 	"context"
 	"fmt"
+	"log"
 	"testing"
 	"time"
 
@@ -54,8 +55,14 @@ func CreateTestRedisClient(t *testing.T, cfg *TestRedisConfig) redis.UniversalCl
 	// Register cleanup
 	t.Cleanup(func() {
 		// Clear the database after test
-		_ = client.FlushDB(context.Background()).Err()
-		_ = client.Close()
+		err := client.FlushDB(context.Background()).Err()
+		if err != nil {
+			log.Printf("Failed to flush test Redis database: %v", err)
+		}
+		err = client.Close()
+		if err != nil {
+			log.Printf("Failed to close test Redis client: %v", err)
+		}
 	})
 
 	return client
@@ -73,7 +80,12 @@ func WaitForRedis(addr string, timeout time.Duration) error {
 		Addr: addr,
 		DB:   15,
 	})
-	defer client.Close()
+	defer func() {
+		err := client.Close()
+		if err != nil {
+			log.Printf("Failed to close Redis client: %v", err)
+		}
+	}()
 
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {

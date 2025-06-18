@@ -754,7 +754,8 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 
 		// Convert assignments to attributes
 		for abilityStr, rollID := range char.AbilityAssignments {
-			if rollValue, ok := rollValues[rollID]; ok {
+			rollValue, rollValueOk := rollValues[rollID]
+			if rollValueOk {
 				// Parse ability string to Attribute type
 				var attr entities.Attribute
 				switch abilityStr {
@@ -816,15 +817,14 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 
 	// Fetch class features if not already loaded
 	if char.Features == nil && char.Class != nil {
-		features, err := s.dndClient.GetClassFeatures(char.Class.Key, char.Level)
-		if err == nil {
-			char.Features = features
+		feat, featErr := s.dndClient.GetClassFeatures(char.Class.Key, char.Level)
+		if featErr == nil {
+			char.Features = feat
 		}
 	}
 
 	// Calculate AC if not set
 	if char.AC == 0 {
-		baseAC := 10
 		dexMod := 0
 		wisMod := 0
 
@@ -849,6 +849,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 		}
 
 		// Calculate AC based on class and features
+		var baseAC int
 		if hasUnarmoredDefense && char.Class != nil {
 			switch strings.ToLower(char.Class.Key) {
 			case "monk":

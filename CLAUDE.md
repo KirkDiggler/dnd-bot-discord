@@ -64,8 +64,11 @@
   - Moved all business logic from handlers to services
   - Fixed session metadata persistence with new SaveSession method
 - **D&D 5e API Integration**:
-  - Added ListMonstersByCR() to filter monsters by challenge rating
-  - Updated dnd5e-api client to support query parameters
+  - Implemented stub methods in dnd5e client:
+    - ListEquipment() - fetches all equipment from API
+    - ListClassFeatures() - uses GetClassLevel to avoid N+1 queries
+    - ListMonstersByCR() - temporarily hardcoded until API supports filtering
+  - Fixed AbilityScore.AddBonus() to correctly apply racial bonuses to score
   - Monster service now fetches from API with fallback to hardcoded
   - Loot service integrates with equipment API
 - **Service Provider Pattern**:
@@ -98,9 +101,17 @@ make lint
 # Build
 make build
 
+# Generate mocks (uses /home/kirk/go/bin/mockgen)
+make generate-mocks
+
 # Run locally (needs Redis and Discord token)
 DISCORD_TOKEN=xxx REDIS_URL=redis://localhost:6379 ./bin/dnd-bot
 ```
+
+#### Mock Generation
+- mockgen is installed at `/home/kirk/go/bin/mockgen`
+- The Makefile automatically adds this to PATH when running `make generate-mocks`
+- If you see "mockgen not found", use the full path or run `make generate-mocks`
 
 ### Key Decisions Made
 - Use Uber's gomock for mocking (go.uber.org/mock)

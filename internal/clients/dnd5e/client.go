@@ -1,6 +1,7 @@
 package dnd5e
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -146,24 +147,118 @@ func (c *client) GetEquipmentByCategory(category string) ([]entities.Equipment, 
 }
 
 // GetClassFeatures returns features for a class at a specific level
-// TODO: Implement when dnd5e-api supports class features
 func (c *client) GetClassFeatures(classKey string, level int) ([]*entities.CharacterFeature, error) {
-	// Stub implementation - return empty for now
-	return []*entities.CharacterFeature{}, nil
+	// Get the class level data which includes features
+	classLevel, err := c.client.GetClassLevel(classKey, level)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert feature references to CharacterFeatures
+	features := make([]*entities.CharacterFeature, 0, len(classLevel.Features))
+	for _, featureRef := range classLevel.Features {
+		if featureRef.Key != "" {
+			// For now, we just create basic features from the reference
+			// In the future, we might want to fetch full feature details
+			feature := &entities.CharacterFeature{
+				Key:         featureRef.Key,
+				Name:        featureRef.Name,
+				Description: "", // Would need to fetch full feature for description
+				Type:        entities.FeatureTypeClass,
+				Level:       level,
+				Source:      classKey,
+			}
+			features = append(features, feature)
+		}
+	}
+
+	return features, nil
 }
 
 // ListMonstersByCR returns monsters within a challenge rating range
-// TODO: Implement when dnd5e-api supports CR filtering
 func (c *client) ListMonstersByCR(minCR, maxCR float32) ([]*entities.MonsterTemplate, error) {
-	// Stub implementation - return empty for now
-	return []*entities.MonsterTemplate{}, nil
+	// The API only supports filtering by exact CR, not range
+	// So we need to fetch monsters for each CR value in the range
+	crValues := getCRValuesInRange(minCR, maxCR)
+
+	monsters := make([]*entities.MonsterTemplate, 0)
+	processedKeys := make(map[string]bool) // Track processed monsters to avoid duplicates
+
+	for _, cr := range crValues {
+		crFloat64 := float64(cr)
+		input := &dnd5e.ListMonstersInput{
+			ChallengeRating: &crFloat64,
+		}
+
+		// Get monster references for this CR
+		monsterRefs, err := c.client.ListMonstersWithFilter(input)
+		if err != nil {
+			log.Printf("Failed to list monsters for CR %f: %v", cr, err)
+			continue
+		}
+
+		// Fetch each monster's details
+		for _, ref := range monsterRefs {
+			if ref.Key != "" && !processedKeys[ref.Key] {
+				monster, err := c.client.GetMonster(ref.Key)
+				if err != nil {
+					log.Printf("Failed to get monster %s: %v", ref.Key, err)
+					continue
+				}
+				if monster != nil {
+					template := apiToMonsterTemplate(monster)
+					if template != nil {
+						monsters = append(monsters, template)
+						processedKeys[ref.Key] = true
+					}
+				}
+			}
+		}
+	}
+
+	return monsters, nil
+}
+
+// getCRValuesInRange returns all standard CR values within the given range
+func getCRValuesInRange(minCR, maxCR float32) []float32 {
+	// Standard D&D 5e CR values
+	allCRs := []float32{0, 0.125, 0.25, 0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+		11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30}
+
+	var result []float32
+	for _, cr := range allCRs {
+		if cr >= minCR && cr <= maxCR {
+			result = append(result, cr)
+		}
+	}
+	return result
 }
 
 // ListEquipment returns all equipment
-// TODO: Implement when dnd5e-api supports listing all equipment
 func (c *client) ListEquipment() ([]entities.Equipment, error) {
-	// Stub implementation - return empty for now
-	return []entities.Equipment{}, nil
+	// Get list of all equipment references
+	equipmentRefs, err := c.client.ListEquipment()
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch each piece of equipment
+	equipment := make([]entities.Equipment, 0, len(equipmentRefs))
+	for _, ref := range equipmentRefs {
+		if ref.Key != "" {
+			equip, err := c.GetEquipment(ref.Key)
+			if err != nil {
+				// Log error but continue with other equipment
+				log.Printf("Failed to get equipment %s: %v", ref.Key, err)
+				continue
+			}
+			if equip != nil {
+				equipment = append(equipment, equip)
+			}
+		}
+	}
+
+	return equipment, nil
 }
 
 func apiToMonsterTemplate(input *apiEntities.Monster) *entities.MonsterTemplate {
@@ -185,17 +280,30 @@ func apiToMonsterTemplate(input *apiEntities.Monster) *entities.MonsterTemplate 
 
 func apiToDamage(input *apiEntities.Damage) *damage.Damage {
 	a := strings.Split(input.DamageDice, "+")
-	var dice string = input.DamageDice
+	dice := input.DamageDice
 	var bonus, diceValue, diceCount int
+	var err error
 	if len(a) == 2 {
-		bonus, _ = strconv.Atoi(a[1])
+		bonus, err = strconv.Atoi(a[1])
+		if err != nil {
+			log.Printf("Unknown dice format %s", input.DamageDice)
+			return nil
+		}
 		dice = a[0]
 	}
 
 	b := strings.Split(dice, "d")
 	if len(b) == 2 {
-		diceCount, _ = strconv.Atoi(b[0])
-		diceValue, _ = strconv.Atoi(b[1])
+		diceCount, err = strconv.Atoi(b[0])
+		if err != nil {
+			log.Printf("Unknown dice format %s", input.DamageDice)
+			return nil
+		}
+		diceValue, err = strconv.Atoi(b[1])
+		if err != nil {
+			log.Printf("Unknown dice format %s", input.DamageDice)
+			return nil
+		}
 	}
 
 	// TODO: add damage type

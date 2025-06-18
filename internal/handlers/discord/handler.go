@@ -4,15 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/dungeon"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/encounter"
+	encounterHandler "github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/encounter"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/help"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/session"
+	sessionHandler "github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/session"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/testcombat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
@@ -38,16 +39,16 @@ type Handler struct {
 	characterShowHandler                  *character.ShowHandler
 
 	// Session handlers
-	sessionCreateHandler *session.CreateHandler
-	sessionListHandler   *session.ListHandler
-	sessionJoinHandler   *session.JoinHandler
-	sessionStartHandler  *session.StartHandler
-	sessionEndHandler    *session.EndHandler
-	sessionInfoHandler   *session.InfoHandler
-	sessionLeaveHandler  *session.LeaveHandler
+	sessionCreateHandler *sessionHandler.CreateHandler
+	sessionListHandler   *sessionHandler.ListHandler
+	sessionJoinHandler   *sessionHandler.JoinHandler
+	sessionStartHandler  *sessionHandler.StartHandler
+	sessionEndHandler    *sessionHandler.EndHandler
+	sessionInfoHandler   *sessionHandler.InfoHandler
+	sessionLeaveHandler  *sessionHandler.LeaveHandler
 
 	// Encounter handlers
-	encounterAddMonsterHandler *encounter.AddMonsterHandler
+	encounterAddMonsterHandler *encounterHandler.AddMonsterHandler
 
 	// Test combat handler
 	testCombatHandler *testcombat.TestCombatHandler
@@ -110,16 +111,16 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		characterShowHandler: character.NewShowHandler(cfg.ServiceProvider),
 
 		// Initialize session handlers
-		sessionCreateHandler: session.NewCreateHandler(cfg.ServiceProvider),
-		sessionListHandler:   session.NewListHandler(cfg.ServiceProvider),
-		sessionJoinHandler:   session.NewJoinHandler(cfg.ServiceProvider),
-		sessionStartHandler:  session.NewStartHandler(cfg.ServiceProvider),
-		sessionEndHandler:    session.NewEndHandler(cfg.ServiceProvider),
-		sessionInfoHandler:   session.NewInfoHandler(cfg.ServiceProvider),
-		sessionLeaveHandler:  session.NewLeaveHandler(cfg.ServiceProvider),
+		sessionCreateHandler: sessionHandler.NewCreateHandler(cfg.ServiceProvider),
+		sessionListHandler:   sessionHandler.NewListHandler(cfg.ServiceProvider),
+		sessionJoinHandler:   sessionHandler.NewJoinHandler(cfg.ServiceProvider),
+		sessionStartHandler:  sessionHandler.NewStartHandler(cfg.ServiceProvider),
+		sessionEndHandler:    sessionHandler.NewEndHandler(cfg.ServiceProvider),
+		sessionInfoHandler:   sessionHandler.NewInfoHandler(cfg.ServiceProvider),
+		sessionLeaveHandler:  sessionHandler.NewLeaveHandler(cfg.ServiceProvider),
 
 		// Initialize encounter handlers
-		encounterAddMonsterHandler: encounter.NewAddMonsterHandler(cfg.ServiceProvider),
+		encounterAddMonsterHandler: encounterHandler.NewAddMonsterHandler(cfg.ServiceProvider),
 
 		// Initialize test combat handler
 		testCombatHandler: testcombat.NewTestCombatHandler(cfg.ServiceProvider),
@@ -397,7 +398,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 			}
 		case "dungeon":
 			// Get difficulty from options if provided
-			var difficulty string = "medium" // default
+			difficulty := "medium" // default
 			for _, opt := range subcommandGroup.Options {
 				if opt.Name == "difficulty" {
 					difficulty = opt.StringValue()
@@ -470,7 +471,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 					description = opt.StringValue()
 				}
 			}
-			req := &session.CreateRequest{
+			req := &sessionHandler.CreateRequest{
 				Session:     s,
 				Interaction: i,
 				Name:        name,
@@ -480,7 +481,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 				log.Printf("Error handling session create: %v", err)
 			}
 		case "list":
-			req := &session.ListRequest{
+			req := &sessionHandler.ListRequest{
 				Session:     s,
 				Interaction: i,
 			}
@@ -496,7 +497,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 					break
 				}
 			}
-			req := &session.JoinRequest{
+			req := &sessionHandler.JoinRequest{
 				Session:     s,
 				Interaction: i,
 				InviteCode:  code,
@@ -505,7 +506,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 				log.Printf("Error handling session join: %v", err)
 			}
 		case "info":
-			req := &session.InfoRequest{
+			req := &sessionHandler.InfoRequest{
 				Session:     s,
 				Interaction: i,
 			}
@@ -543,7 +544,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 				}
 			}
 
-			req := &session.StartRequest{
+			req := &sessionHandler.StartRequest{
 				Session:     s,
 				Interaction: i,
 				SessionID:   sessionID,
@@ -582,7 +583,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 				}
 			}
 
-			req := &session.EndRequest{
+			req := &sessionHandler.EndRequest{
 				Session:     s,
 				Interaction: i,
 				SessionID:   sessionID,
@@ -591,7 +592,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 				log.Printf("Error handling session end: %v", err)
 			}
 		case "leave":
-			req := &session.LeaveRequest{
+			req := &sessionHandler.LeaveRequest{
 				Session:     s,
 				Interaction: i,
 			}
@@ -602,8 +603,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 	} else if subcommandGroup.Name == "encounter" && len(subcommandGroup.Options) > 0 {
 		subcommand := subcommandGroup.Options[0]
 
-		switch subcommand.Name {
-		case "add":
+		if subcommand.Name == "add" {
 			// Get monster name from options
 			var monsterQuery string
 			for _, opt := range subcommand.Options {
@@ -613,7 +613,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 				}
 			}
 
-			req := &encounter.AddMonsterRequest{
+			req := &encounterHandler.AddMonsterRequest{
 				Session:     s,
 				Interaction: i,
 				Query:       monsterQuery,
@@ -780,17 +780,19 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							lines := strings.Split(field.Value, "\n")
 							for _, line := range lines {
 								// Parse lines like "**STR:** 17 (+2) = 19 [+4]" or "**STR:** 17 [+3]"
-								if strings.Contains(line, ":") && !strings.Contains(line, "_Not assigned_") {
-									parts := strings.Split(line, ":")
-									ability := strings.Trim(strings.Trim(parts[0], "*"), " ")
-									scoreStr := strings.TrimSpace(parts[1])
-									// Extract just the base score
-									if idx := strings.Index(scoreStr, " "); idx > 0 {
-										scoreStr = scoreStr[:idx]
-									}
-									if score, err := strconv.Atoi(scoreStr); err == nil {
-										abilityScores[ability] = score
-									}
+								if !strings.Contains(line, ":") && strings.Contains(line, "_Not assigned_") {
+									continue
+								}
+
+								subParts := strings.Split(line, ":")
+								ability := strings.Trim(strings.Trim(subParts[0], "*"), " ")
+								scoreStr := strings.TrimSpace(subParts[1])
+								// Extract just the base score
+								if idx := strings.Index(scoreStr, " "); idx > 0 {
+									scoreStr = scoreStr[:idx]
+								}
+								if score, err := strconv.Atoi(scoreStr); err == nil {
+									abilityScores[ability] = score
 								}
 							}
 						}
@@ -883,7 +885,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					}
 
 					// Combine existing and new proficiencies
-					allProfs := append(existingProfs, selectedProfs...)
+					allProfs := slices.Concat(existingProfs, selectedProfs)
 
 					// Update the draft with selected proficiencies
 					_, err = h.ServiceProvider.CharacterService.UpdateDraftCharacter(
@@ -902,11 +904,23 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 				// Parse choice type and index
 				choiceType := parts[4]
-				choiceIndex, _ := strconv.Atoi(parts[5])
+				choiceIndex, err := strconv.Atoi(parts[5])
+				if err != nil {
+					log.Printf("Error converting choice index to int: %v", err)
+					return
+				}
 
 				// Check if there are more proficiency choices to make
-				race, _ := h.ServiceProvider.CharacterService.GetRace(context.Background(), parts[2])
-				class, _ := h.ServiceProvider.CharacterService.GetClass(context.Background(), parts[3])
+				race, err := h.ServiceProvider.CharacterService.GetRace(context.Background(), parts[2])
+				if err != nil {
+					log.Printf("Error getting race: %v", err)
+					return
+				}
+				class, err := h.ServiceProvider.CharacterService.GetClass(context.Background(), parts[3])
+				if err != nil {
+					log.Printf("Error getting class: %v", err)
+					return
+				}
 
 				// Determine if we need to show more choices
 				hasMoreChoices := false
@@ -995,7 +1009,11 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 		case "confirm_equipment":
 			// Handle equipment selection confirmation
 			if len(parts) >= 5 {
-				choiceIndex, _ := strconv.Atoi(parts[4])
+				choiceIndex, err := strconv.Atoi(parts[4])
+				if err != nil {
+					log.Printf("Error converting choice index to int: %v", err)
+					return
+				}
 
 				// Check if this is a nested choice selection
 				selectedValues := i.MessageComponentData().Values
@@ -1004,7 +1022,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					log.Printf("Nested choice selected: %v", selectedValues[0])
 
 					// Get the equipment choices to find the actual selection details
-					choices, err := h.ServiceProvider.CharacterService.ResolveChoices(
+					choices, resolveErr := h.ServiceProvider.CharacterService.ResolveChoices(
 						context.Background(),
 						&characterService.ResolveChoicesInput{
 							RaceKey:  parts[2],
@@ -1015,7 +1033,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					selectionCount := 1
 					category := "martial-weapons"
 
-					if err == nil && choiceIndex < len(choices.EquipmentChoices) {
+					if resolveErr == nil && choiceIndex < len(choices.EquipmentChoices) {
 						// Find the selected option in the choice
 						choice := choices.EquipmentChoices[choiceIndex]
 						for _, opt := range choice.Options {
@@ -1041,8 +1059,8 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						SelectionCount: selectionCount,
 						Category:       category,
 					}
-					if err := h.characterSelectNestedEquipmentHandler.Handle(req); err != nil {
-						log.Printf("Error handling nested equipment selection: %v", err)
+					if selectNestedErr := h.characterSelectNestedEquipmentHandler.Handle(req); selectNestedErr != nil {
+						log.Printf("Error handling nested equipment selection: %v", selectNestedErr)
 					}
 					return
 				}
@@ -1062,15 +1080,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					// For now, just use the new selections
 
 					// Update the draft with selected equipment
-					_, err = h.ServiceProvider.CharacterService.UpdateDraftCharacter(
+					_, updateDraftErr := h.ServiceProvider.CharacterService.UpdateDraftCharacter(
 						context.Background(),
 						draftChar.ID,
 						&characterService.UpdateDraftInput{
 							Equipment: append(existingEquipment, selectedValues...),
 						},
 					)
-					if err != nil {
-						log.Printf("Error updating draft with equipment: %v", err)
+					if updateDraftErr != nil {
+						log.Printf("Error updating draft with equipment: %v", updateDraftErr)
 					} else {
 						log.Printf("Successfully updated draft with equipment")
 					}
@@ -1086,14 +1104,18 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					ClassKey:    parts[3],
 					ChoiceIndex: choiceIndex + 1,
 				}
-				if err := h.characterSelectEquipmentHandler.Handle(req); err != nil {
-					log.Printf("Error handling next equipment selection: %v", err)
+				if selectErr := h.characterSelectEquipmentHandler.Handle(req); selectErr != nil {
+					log.Printf("Error handling next equipment selection: %v", selectErr)
 				}
 			}
 		case "confirm_nested_equipment":
 			// Handle nested equipment selection (e.g., selecting specific martial weapons)
 			if len(parts) >= 6 {
-				choiceIndex, _ := strconv.Atoi(parts[4])
+				choiceIndex, err := strconv.Atoi(parts[4])
+				if err != nil {
+					log.Printf("Error converting choice index to int: %v", err)
+					return
+				}
 				bundleKey := parts[5]
 
 				// Get selected weapons
@@ -1106,11 +1128,11 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					if weaponMap[weapon] {
 						// Duplicate found - show error
 						content := "❌ You cannot select the same weapon twice. Please choose different weapons."
-						_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+						_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
 							Content: &content,
 						})
-						if err != nil {
-							log.Printf("Error sending duplicate weapon error: %v", err)
+						if editErr != nil {
+							log.Printf("Error sending duplicate weapon error: %v", editErr)
 						}
 						return
 					}
@@ -1129,7 +1151,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					// TODO: Track equipment properly in draft
 
 					// Add selected weapons
-					allEquipment := append(existingEquipment, selectedWeapons...)
+					allEquipment := slices.Concat(existingEquipment, selectedWeapons)
 
 					// If this was "weapon + shield" choice, add shield
 					if strings.Contains(strings.ToLower(bundleKey), "shield") && len(selectedWeapons) == 1 {
@@ -1260,13 +1282,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				err := h.ServiceProvider.CharacterService.Delete(characterID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to delete character: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error confirming deletion: %v", err)
+					}
 					return
 				}
 
@@ -1297,13 +1322,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				err := h.ServiceProvider.CharacterService.UpdateStatus(characterID, entities.CharacterStatusArchived)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to archive character: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error responding to archive character: %v", err)
+					}
 					return
 				}
 
@@ -1322,13 +1350,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				err := h.ServiceProvider.CharacterService.UpdateStatus(characterID, entities.CharacterStatusActive)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to restore character: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error responding to restore character: %v", err)
+					}
 					return
 				}
 
@@ -1348,25 +1379,31 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				char, err := h.ServiceProvider.CharacterService.GetByID(characterID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to get character: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error responding to edit character: %v", err)
+					}
 					return
 				}
 
 				// Verify ownership
 				if char.OwnerID != i.Member.User.ID {
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: "❌ You can only edit your own characters!",
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error responding to edit character: %v", err)
+					}
 					return
 				}
 
@@ -1570,13 +1607,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				err := h.ServiceProvider.SessionService.StartSession(context.Background(), sessionID, i.Member.User.ID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to start session: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error responding to start session: %v", err)
+					}
 					return
 				}
 
@@ -1595,13 +1635,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				err := h.ServiceProvider.SessionService.LeaveSession(context.Background(), sessionID, i.Member.User.ID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to leave session: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error responding to leave session: %v", err)
+					}
 					return
 				}
 
@@ -1621,13 +1664,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				chars, err := h.ServiceProvider.CharacterService.ListByOwner(i.Member.User.ID)
 				if err != nil || len(chars) == 0 {
 					content := "❌ You need to create a character first! Use `/dnd character create`"
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error responding with error: %v", err)
+					}
 					return
 				}
 
@@ -1645,13 +1691,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 				if len(options) == 0 {
 					content := "❌ You don't have any active characters! Create or activate a character first."
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error responding with error: %v", err)
+					}
 					return
 				}
 
@@ -1684,18 +1733,35 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					err := h.ServiceProvider.SessionService.SelectCharacter(context.Background(), sessionID, i.Member.User.ID, characterID)
 					if err != nil {
 						content := fmt.Sprintf("❌ Failed to select character: %v", err)
-						s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 							Type: discordgo.InteractionResponseUpdateMessage,
 							Data: &discordgo.InteractionResponseData{
 								Content:    content,
 								Components: []discordgo.MessageComponent{},
 							},
 						})
+						if err != nil {
+							log.Printf("Error responding with error: %v", err)
+						}
 						return
 					}
 
 					// Get character details for confirmation
-					char, _ := h.ServiceProvider.CharacterService.GetByID(characterID)
+					char, charErr := h.ServiceProvider.CharacterService.GetByID(characterID)
+					if charErr != nil {
+						content := fmt.Sprintf("❌ Failed to get character: %v", charErr)
+						err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseUpdateMessage,
+							Data: &discordgo.InteractionResponseData{
+								Content:    content,
+								Components: []discordgo.MessageComponent{},
+							},
+						})
+						if err != nil {
+							log.Printf("Error responding with error: %v", err)
+						}
+						return
+					}
 					content := fmt.Sprintf("✅ Character selected: **%s** the %s", char.Name, char.GetDisplayInfo())
 					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseUpdateMessage,
@@ -1713,13 +1779,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				err := h.ServiceProvider.SessionService.PauseSession(context.Background(), sessionID, i.Member.User.ID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to pause session: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error responding with error: %v", err)
+					}
 					return
 				}
 
@@ -1735,7 +1804,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 			case "end":
 				// Use the end handler
-				req := &session.EndRequest{
+				req := &sessionHandler.EndRequest{
 					Session:     s,
 					Interaction: i,
 					SessionID:   sessionID,
@@ -1748,13 +1817,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				err := h.ServiceProvider.SessionService.ResumeSession(context.Background(), sessionID, i.Member.User.ID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to resume session: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error responding with error: %v", err)
+					}
 					return
 				}
 
@@ -1774,13 +1846,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				session, err := h.ServiceProvider.SessionService.GetSession(context.Background(), sessionID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to get session: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error responding with error: %v", err)
+					}
 					return
 				}
 
@@ -1823,13 +1898,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				err := h.ServiceProvider.EncounterService.RollInitiative(context.Background(), encounterID, i.Member.User.ID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to roll initiative: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error responding with error: %v", err)
+					}
 					return
 				}
 
@@ -1837,13 +1915,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := "✅ Initiative rolled! Use View Encounter to see the order."
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error responding with error: %v", err)
+					}
 					return
 				}
 
@@ -1903,13 +1984,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
 					})
+					if err != nil {
+						log.Printf("Error responding with error: %v", err)
+					}
 					return
 				}
 
@@ -2026,13 +2110,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				err := h.ServiceProvider.EncounterService.StartEncounter(context.Background(), encounterID, i.Member.User.ID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to start combat: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2040,13 +2126,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := "✅ Combat started!"
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2148,13 +2236,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				err := h.ServiceProvider.EncounterService.NextTurn(context.Background(), encounterID, i.Member.User.ID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to advance turn: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2162,13 +2252,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := "✅ Turn advanced!"
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2354,13 +2446,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				err := h.ServiceProvider.EncounterService.EndEncounter(context.Background(), encounterID, i.Member.User.ID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to end encounter: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2393,13 +2487,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2407,13 +2503,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				current := encounter.GetCurrentCombatant()
 				if current == nil {
 					content := "❌ No active combatant!"
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2429,13 +2527,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 				if !canAct && encounter.CreatedBy != i.Member.User.ID {
 					content := "❌ It's not your turn!"
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2503,13 +2603,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				sess, err := h.ServiceProvider.SessionService.GetSession(context.Background(), sessionID)
 				if err != nil {
 					content := "❌ Session not found!"
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2524,8 +2626,8 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				for _, member := range sess.Members {
 					if member.CharacterID != "" {
 						// Get character details
-						char, err := h.ServiceProvider.CharacterService.GetByID(member.CharacterID)
-						if err == nil {
+						char, getCharErr := h.ServiceProvider.CharacterService.GetByID(member.CharacterID)
+						if getCharErr == nil {
 							embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 								Name:   char.Name,
 								Value:  fmt.Sprintf("%s | HP: %d/%d | AC: %d", char.GetDisplayInfo(), char.CurrentHitPoints, char.MaxHitPoints, char.AC),
@@ -2591,15 +2693,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 			if err != nil {
 				log.Printf("Error getting draft character: %v", err)
 				// Show error to user
-				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				getDraftErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
 						Content: "❌ Failed to get character draft. Please try again.",
 						Flags:   discordgo.MessageFlagsEphemeral,
 					},
 				})
-				if err != nil {
-					log.Printf("Error responding with error: %v", err)
+				if getDraftErr != nil {
+					log.Printf("Error responding with error: %v", getDraftErr)
 				}
 				return
 			}
@@ -2626,15 +2728,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 			if err != nil {
 				log.Printf("Error getting updated character: %v", err)
 				// Show error to user
-				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				getCharErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
 						Content: "❌ Failed to finalize character. Please try again.",
 						Flags:   discordgo.MessageFlagsEphemeral,
 					},
 				})
-				if err != nil {
-					log.Printf("Error responding with error: %v", err)
+				if getCharErr != nil {
+					log.Printf("Error responding with error: %v", getCharErr)
 				}
 				return
 			}
@@ -2667,32 +2769,20 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 			}
 			log.Printf("Final ability scores map: %+v", abilityScores)
 
-			// Collect proficiencies
-			proficiencies := []string{}
-			if char.Proficiencies != nil {
-				for _, profList := range char.Proficiencies {
-					for _, prof := range profList {
-						if prof != nil {
-							proficiencies = append(proficiencies, prof.Key)
-						}
-					}
-				}
-			}
-
 			// Finalize the draft character (marking it as active)
 			finalChar, err := h.ServiceProvider.CharacterService.FinalizeDraftCharacter(context.Background(), draftChar.ID)
 			if err != nil {
 				log.Printf("Error finalizing character: %v", err)
 				// Show error to user
-				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				finalCharErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
 						Content: fmt.Sprintf("❌ Failed to finalize character: %v", err),
 						Flags:   discordgo.MessageFlagsEphemeral,
 					},
 				})
-				if err != nil {
-					log.Printf("Error responding with error: %v", err)
+				if finalCharErr != nil {
+					log.Printf("Error responding with error: %v", finalCharErr)
 				}
 				return
 			}
@@ -2775,7 +2865,12 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 							if input, ok := rowComp.(*discordgo.TextInput); ok {
 								switch input.CustomID {
 								case "damage_amount":
-									damageAmount, _ = strconv.Atoi(input.Value)
+									var err error
+									damageAmount, err = strconv.Atoi(input.Value)
+									if err != nil {
+										log.Printf("Error parsing damage amount: %v", err)
+										return
+									}
 								case "target_name":
 									targetName = input.Value
 								}
@@ -2788,13 +2883,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2809,13 +2906,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 
 				if targetID == "" {
 					content := fmt.Sprintf("❌ Target '%s' not found in encounter!", targetName)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2823,18 +2922,33 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				err = h.ServiceProvider.EncounterService.ApplyDamage(context.Background(), encounterID, targetID, i.Member.User.ID, damageAmount)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to apply damage: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
 				// Get updated combatant
-				encounter, _ = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				encounter, err = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
+					return
+				}
 				target := encounter.Combatants[targetID]
 
 				// Show result
@@ -2859,12 +2973,14 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					})
 				}
 
-				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
 						Embeds: []*discordgo.MessageEmbed{embed},
 					},
-				})
+				}); responseErr != nil {
+					log.Printf("Failed to respond with error message: %v", responseErr)
+				}
 				if err != nil {
 					log.Printf("Error responding to damage: %v", err)
 				}
@@ -2880,7 +2996,12 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 							if input, ok := rowComp.(*discordgo.TextInput); ok {
 								switch input.CustomID {
 								case "heal_amount":
-									healAmount, _ = strconv.Atoi(input.Value)
+									var err error
+									healAmount, err = strconv.Atoi(input.Value)
+									if err != nil {
+										log.Printf("Error parsing heal amount: %v", err)
+										return
+									}
 								case "target_name":
 									targetName = input.Value
 								}
@@ -2893,13 +3014,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2914,13 +3037,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 
 				if targetID == "" {
 					content := fmt.Sprintf("❌ Target '%s' not found in encounter!", targetName)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2928,18 +3053,33 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				err = h.ServiceProvider.EncounterService.HealCombatant(context.Background(), encounterID, targetID, i.Member.User.ID, healAmount)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to apply healing: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
 				// Get updated combatant
-				encounter, _ = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				encounter, err = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
+					return
+				}
 				target := encounter.Combatants[targetID]
 
 				// Show result
@@ -2978,7 +3118,12 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 								case "target_name":
 									targetName = input.Value
 								case "attack_roll":
-									attackRoll, _ = strconv.Atoi(input.Value)
+									var attackErr error
+									attackRoll, attackErr = strconv.Atoi(input.Value)
+									if attackErr != nil {
+										log.Printf("Error parsing attack roll: %v", attackErr)
+										return
+									}
 								}
 							}
 						}
@@ -2988,13 +3133,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				// Validate attack roll
 				if attackRoll < 1 || attackRoll > 20 {
 					content := "❌ Invalid attack roll! Must be between 1-20."
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -3002,13 +3149,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -3016,13 +3165,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				attacker := encounter.GetCurrentCombatant()
 				if attacker == nil {
 					content := "❌ No active attacker!"
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -3039,13 +3190,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 
 				if target == nil {
 					content := fmt.Sprintf("❌ Target '%s' not found!", targetName)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -3091,10 +3244,18 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					})
 
 					// Apply damage
-					h.ServiceProvider.EncounterService.ApplyDamage(context.Background(), encounterID, targetID, i.Member.User.ID, totalDamage)
+					encounterErr := h.ServiceProvider.EncounterService.ApplyDamage(context.Background(), encounterID, targetID, i.Member.User.ID, totalDamage)
+					if encounterErr != nil {
+						log.Printf("Error applying damage: %v", encounterErr)
+						return
+					}
 
 					// Get updated target
-					encounter, _ = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+					encounter, encounterErr := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+					if encounterErr != nil {
+						log.Printf("Error getting encounter: %v", encounterErr)
+						return
+					}
 					updatedTarget := encounter.Combatants[targetID]
 
 					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{

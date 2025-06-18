@@ -360,10 +360,8 @@ func (s *EquipmentEdgeCasesTestSuite) TestZeroAndNegativeCounts() {
 	// Implementation should handle these gracefully
 	// The exact behavior depends on business rules
 	// Verify we got some result, even if filtered
-	if choices != nil {
-		for _, choice := range choices {
-			s.NotNil(choice)
-		}
+	for _, choice := range choices {
+		s.NotNil(choice)
 	}
 }
 

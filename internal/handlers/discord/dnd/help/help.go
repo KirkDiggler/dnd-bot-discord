@@ -1,8 +1,6 @@
 package help
 
 import (
-	"fmt"
-
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -197,7 +195,7 @@ func (h *HelpHandler) getCombatHelp() *discordgo.MessageEmbed {
 			},
 		},
 		Footer: &discordgo.MessageEmbedFooter{
-			Text: fmt.Sprintf("Based on D&D 5th Edition rules"),
+			Text: "Based on D&D 5th Edition rules",
 		},
 	}
 }

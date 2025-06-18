@@ -62,12 +62,12 @@ func TestAbilityAssignmentBug_CharacterShowsZeroAttributes(t *testing.T) {
 			{ID: "roll_6", Value: 10},
 		},
 		AbilityAssignments: map[string]string{
-			"STR": "roll_3", // 13
-			"DEX": "roll_2", // 14 + 2 (racial) = 16
-			"CON": "roll_4", // 12
-			"INT": "roll_1", // 15 + 1 (racial) = 16
-			"WIS": "roll_5", // 11
-			"CHA": "roll_6", // 10
+			"STR": "roll_3", // Strength is roll 3 and has a score of 13
+			"DEX": "roll_2", // Dexterity is roll 2 and has a score of 14 + 2 (racial) = 16
+			"CON": "roll_4", // Constitution is roll 4 and has a score of 12
+			"INT": "roll_1", // Intelligence is roll 1 and has a score of 15 + 1 (racial) = 16
+			"WIS": "roll_5", // Wisdom is roll 5 and has a score of 11
+			"CHA": "roll_6", // Charisma is roll 6 and has a score of 10
 		},
 		Attributes:    map[entities.Attribute]*entities.AbilityScore{}, // Empty!
 		Proficiencies: make(map[entities.ProficiencyType][]*entities.Proficiency),

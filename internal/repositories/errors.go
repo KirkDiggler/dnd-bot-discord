@@ -18,7 +18,8 @@ type RecordError struct {
 	internal.ErrorWrapper
 }
 
-func NewRecordNotFoundError(id string) error {
+// NewRecordNotFoundError returns a new not found error
+func NewRecordNotFoundError(id string) *RecordError {
 	return &RecordError{
 		ErrorWrapper: internal.ErrorWrapper{
 			Err:     internal.ErrNotFound,

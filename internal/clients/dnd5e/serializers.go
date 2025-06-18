@@ -158,13 +158,13 @@ func apiEquipmentInterfaceToEquipment(input dnd5e.EquipmentInterface) entities.E
 		return nil
 	}
 
-	switch input.(type) {
+	switch equip := input.(type) {
 	case *apiEntities.Equipment:
-		return apiEquipmentToEquipment(input.(*apiEntities.Equipment))
+		return apiEquipmentToEquipment(equip)
 	case *apiEntities.Weapon:
-		return apiWeaponToWeapon(input.(*apiEntities.Weapon))
+		return apiWeaponToWeapon(equip)
 	case *apiEntities.Armor:
-		return apiArmorToArmor(input.(*apiEntities.Armor))
+		return apiArmorToArmor(equip)
 	default:
 		// Silently handle unknown equipment types
 		return nil
@@ -340,8 +340,8 @@ func apiChoiceTypeToChoiceType(input string) entities.ChoiceType {
 func apiOptionToOption(input apiEntities.Option) entities.Option {
 	switch input.GetOptionType() {
 	case apiEntities.OptionTypeReference:
-		item := input.(*apiEntities.ReferenceOption)
-		if item.Reference == nil {
+		item, ok := input.(*apiEntities.ReferenceOption)
+		if !ok || item.Reference == nil {
 			return nil
 		}
 
@@ -349,12 +349,15 @@ func apiOptionToOption(input apiEntities.Option) entities.Option {
 			Reference: apiReferenceItemToReferenceItem(item.Reference),
 		}
 	case apiEntities.OptionTypeChoice:
-		item := input.(*apiEntities.ChoiceOption)
+		item, ok := input.(*apiEntities.ChoiceOption)
+		if !ok {
+			return nil
+		}
 
 		return apiChoiceOptionToChoice(item)
 	case apiEntities.OptionalTypeCountedReference:
-		item := input.(*apiEntities.CountedReferenceOption)
-		if item.Reference == nil {
+		item, ok := input.(*apiEntities.CountedReferenceOption)
+		if !ok || item.Reference == nil {
 			return nil
 		}
 
@@ -363,8 +366,8 @@ func apiOptionToOption(input apiEntities.Option) entities.Option {
 			Reference: apiReferenceItemToReferenceItem(item.Reference),
 		}
 	case apiEntities.OptionTypeMultiple:
-		item := input.(*apiEntities.MultipleOption)
-		if item.Items == nil {
+		item, ok := input.(*apiEntities.MultipleOption)
+		if !ok || item.Items == nil {
 			return nil
 		}
 

@@ -21,9 +21,9 @@ type CreateHandler struct {
 	services *services.Provider
 }
 
-func NewCreateHandler(services *services.Provider) *CreateHandler {
+func NewCreateHandler(serviceProvider *services.Provider) *CreateHandler {
 	return &CreateHandler{
-		services: services,
+		services: serviceProvider,
 	}
 }
 

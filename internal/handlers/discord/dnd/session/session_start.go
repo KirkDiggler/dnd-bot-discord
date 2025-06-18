@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
@@ -18,9 +19,9 @@ type StartHandler struct {
 	services *services.Provider
 }
 
-func NewStartHandler(services *services.Provider) *StartHandler {
+func NewStartHandler(servicesProvider *services.Provider) *StartHandler {
 	return &StartHandler{
-		services: services,
+		services: servicesProvider,
 	}
 }
 
@@ -57,6 +58,9 @@ func (h *StartHandler) Handle(req *StartRequest) error {
 		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
 			Content: &content,
 		})
+		if err != nil {
+			log.Println("Failed to edit interaction response:", err)
+		}
 		return nil
 	}
 

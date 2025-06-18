@@ -68,7 +68,7 @@ func (h *SelectNestedEquipmentHandler) Handle(req *SelectNestedEquipmentRequest)
 	}
 
 	// Create embed
-	title := "Select Equipment"
+	var title string
 	if req.SelectionCount > 1 {
 		title = fmt.Sprintf("Select %d Weapons", req.SelectionCount)
 	} else {

@@ -38,12 +38,12 @@ func RollAttack(attackBonus, damageBonus int, dmg *damage.Damage) (*Result, erro
 			return nil, err
 		}
 
-		dmgValue = dmgValue + critDmg.Total
-		attackRoll = attackRoll + attackBonus
+		dmgValue += critDmg.Total
+		attackRoll += attackBonus
 	case 1:
 		attackRoll = 0
 	default:
-		attackRoll = attackRoll + attackBonus
+		attackRoll += attackBonus
 
 	}
 

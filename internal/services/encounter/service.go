@@ -10,8 +10,8 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
+	charService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	sessService "github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/uuid"
 )
 
@@ -80,16 +80,16 @@ type AddMonsterInput struct {
 
 type service struct {
 	repository       encounters.Repository
-	sessionService   session.Service
-	characterService character.Service
+	sessionService   sessService.Service
+	characterService charService.Service
 	uuidGenerator    uuid.Generator
 }
 
 // ServiceConfig holds configuration for the service
 type ServiceConfig struct {
 	Repository       encounters.Repository
-	SessionService   session.Service
-	CharacterService character.Service
+	SessionService   sessService.Service
+	CharacterService charService.Service
 	UUIDGenerator    uuid.Generator
 }
 
@@ -144,7 +144,10 @@ func (s *service) CreateEncounter(ctx context.Context, input *CreateEncounterInp
 	}
 
 	// Check if there's already an active encounter
-	activeEncounter, _ := s.repository.GetActiveBySession(ctx, input.SessionID)
+	activeEncounter, err := s.repository.GetActiveBySession(ctx, input.SessionID)
+	if err != nil {
+		return nil, dnderr.Wrap(err, "failed to get active encounter")
+	}
 	if activeEncounter != nil {
 		return nil, dnderr.InvalidArgument("session already has an active encounter")
 	}

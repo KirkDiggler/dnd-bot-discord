@@ -18,9 +18,9 @@ type EndHandler struct {
 	services *services.Provider
 }
 
-func NewEndHandler(services *services.Provider) *EndHandler {
+func NewEndHandler(serviceProvider *services.Provider) *EndHandler {
 	return &EndHandler{
-		services: services,
+		services: serviceProvider,
 	}
 }
 
@@ -93,10 +93,7 @@ func (h *EndHandler) Handle(req *EndRequest) error {
 		Name:   "👥 Players",
 		Value:  fmt.Sprintf("%d players participated", len(session.GetActivePlayers())),
 		Inline: true,
-	})
-
-	// Add DM info
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+	}, &discordgo.MessageEmbedField{
 		Name:   "🎲 Dungeon Master",
 		Value:  fmt.Sprintf("<@%s>", session.DMID),
 		Inline: true,

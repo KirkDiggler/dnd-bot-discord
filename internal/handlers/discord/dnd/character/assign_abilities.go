@@ -67,24 +67,27 @@ func (h *AssignAbilitiesHandler) Handle(req *AssignAbilitiesRequest) error {
 
 	// Handle auto-assign
 	if req.AutoAssign {
-		class, err := h.characterService.GetClass(context.Background(), req.ClassKey)
-		if err == nil {
+		class, getClassErr := h.characterService.GetClass(context.Background(), req.ClassKey)
+		if getClassErr == nil {
 			assignments := h.autoAssignAbilitiesWithIDs(class.Name, draftChar.AbilityRolls)
 
 			// Save auto-assigned scores immediately
-			_, err = h.characterService.UpdateDraftCharacter(
+			_, updateErr := h.characterService.UpdateDraftCharacter(
 				context.Background(),
 				draftChar.ID,
 				&characterService.UpdateDraftInput{
 					AbilityAssignments: assignments,
 				},
 			)
-			if err != nil {
+			if updateErr != nil {
 				return h.respondWithError(req, "Failed to save auto-assignments.")
 			}
 
 			// Reload character to get updated state
-			draftChar, _ = h.characterService.GetCharacter(context.Background(), draftChar.ID)
+			draftChar, err = h.characterService.GetCharacter(context.Background(), draftChar.ID)
+			if err != nil {
+				return h.respondWithError(req, "Failed to reload character.")
+			}
 		}
 	}
 
@@ -129,7 +132,10 @@ func (h *AssignAbilitiesHandler) Handle(req *AssignAbilitiesRequest) error {
 				}
 
 				// Reload character to get updated state
-				draftChar, _ = h.characterService.GetCharacter(context.Background(), draftChar.ID)
+				draftChar, err = h.characterService.GetCharacter(context.Background(), draftChar.ID)
+				if err != nil {
+					return h.respondWithError(req, "Failed to reload character.")
+				}
 			}
 		}
 	}
@@ -147,16 +153,6 @@ func (h *AssignAbilitiesHandler) Handle(req *AssignAbilitiesRequest) error {
 
 	// Build the UI
 	return h.buildAssignmentUI(req, draftChar, race, class)
-}
-
-// isScoreAssigned checks if a score is assigned to any ability
-func (h *AssignAbilitiesHandler) isScoreAssigned(score int, assignments map[string]int) bool {
-	for _, s := range assignments {
-		if s == score {
-			return true
-		}
-	}
-	return false
 }
 
 // getRacialBonus gets the racial bonus for a specific ability
@@ -184,24 +180,6 @@ func (h *AssignAbilitiesHandler) getRacialBonus(race *entities.Race, ability str
 		}
 	}
 	return 0
-}
-
-// getAbilityDescription returns a description for an ability
-func (h *AssignAbilitiesHandler) getAbilityDescription(ability string) string {
-	descriptions := map[string]string{
-		"STR": "Physical power",
-		"DEX": "Agility and reflexes",
-		"CON": "Endurance and health",
-		"INT": "Reasoning and memory",
-		"WIS": "Perception and insight",
-		"CHA": "Force of personality",
-	}
-
-	if desc, ok := descriptions[ability]; ok {
-		return desc
-	}
-
-	return ""
 }
 
 // getClassRecommendations returns ability score recommendations for a class
@@ -370,9 +348,7 @@ func (h *AssignAbilitiesHandler) buildAssignmentUI(req *AssignAbilitiesRequest, 
 		Name:   "💪 Physical",
 		Value:  strings.Join(physicalStrings, "\n"),
 		Inline: true,
-	})
-
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+	}, &discordgo.MessageEmbedField{
 		Name:   "🧠 Mental",
 		Value:  strings.Join(mentalStrings, "\n"),
 		Inline: true,
@@ -384,10 +360,7 @@ func (h *AssignAbilitiesHandler) buildAssignmentUI(req *AssignAbilitiesRequest, 
 		Name:   fmt.Sprintf("💡 %s Tips", class.Name),
 		Value:  recommendations,
 		Inline: true,
-	})
-
-	// Progress
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+	}, &discordgo.MessageEmbedField{
 		Name:   "Progress",
 		Value:  "✅ Step 1: Race\n✅ Step 2: Class\n⏳ Step 3: Abilities\n⏳ Step 4: Details",
 		Inline: false,
@@ -517,7 +490,7 @@ func (h *AssignAbilitiesHandler) buildComponents(req *AssignAbilitiesRequest, ch
 	components = append(components, row1, row2)
 
 	// Add action buttons
-	allAssigned := char.AbilityAssignments != nil && len(char.AbilityAssignments) == 6
+	allAssigned := len(char.AbilityAssignments) == 6
 	components = append(components, discordgo.ActionsRow{
 		Components: []discordgo.MessageComponent{
 			discordgo.Button{
