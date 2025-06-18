@@ -482,7 +482,7 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 		// Delete any extra drafts
 		if len(drafts) > 1 {
 			for i := 1; i < len(drafts); i++ {
-				s.repository.Delete(ctx, drafts[i].ID)
+				_ = s.repository.Delete(ctx, drafts[i].ID)
 			}
 		}
 		
