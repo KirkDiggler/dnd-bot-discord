@@ -52,11 +52,11 @@ func main() {
 	fmt.Printf("Channel: %s\n", session.ChannelID)
 	fmt.Printf("Status: %s\n", session.Status)
 	fmt.Printf("Members: %d\n", len(session.Members))
-	
+
 	for userID, member := range session.Members {
 		fmt.Printf("  %s: %s (character: %s)\n", userID, member.Role, member.CharacterID)
 	}
-	
+
 	fmt.Printf("Metadata: %d items\n", len(session.Metadata))
 	for key, value := range session.Metadata {
 		fmt.Printf("  %s: %v\n", key, value)

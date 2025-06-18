@@ -25,25 +25,25 @@ type Repository = dungeons.Repository
 type Service interface {
 	// CreateDungeon creates a new dungeon instance
 	CreateDungeon(ctx context.Context, input *CreateDungeonInput) (*entities.Dungeon, error)
-	
+
 	// GetDungeon retrieves a dungeon by ID
 	GetDungeon(ctx context.Context, dungeonID string) (*entities.Dungeon, error)
-	
+
 	// JoinDungeon adds a player to the dungeon party
 	JoinDungeon(ctx context.Context, dungeonID, userID, characterID string) error
-	
+
 	// EnterRoom handles entering the current room
 	EnterRoom(ctx context.Context, dungeonID string) (*entities.DungeonRoom, error)
-	
+
 	// CompleteRoom marks the current room as completed
 	CompleteRoom(ctx context.Context, dungeonID string) error
-	
+
 	// ProceedToNextRoom generates and moves to the next room
 	ProceedToNextRoom(ctx context.Context, dungeonID string) (*entities.DungeonRoom, error)
-	
+
 	// GetAvailableActions returns actions available in current state
 	GetAvailableActions(ctx context.Context, dungeonID string) ([]DungeonAction, error)
-	
+
 	// AbandonDungeon ends the dungeon run
 	AbandonDungeon(ctx context.Context, dungeonID string) error
 }
@@ -77,12 +77,12 @@ type service struct {
 
 // ServiceConfig holds configuration for the service
 type ServiceConfig struct {
-	Repository       Repository         // Required
-	SessionService   session.Service    // Required
-	EncounterService encounter.Service  // Required
-	MonsterService   monster.Service    // Optional (will use hardcoded if nil)
-	LootService      loot.Service       // Optional (will use hardcoded if nil)
-	UUIDGenerator    uuid.Generator     // Optional
+	Repository       Repository        // Required
+	SessionService   session.Service   // Required
+	EncounterService encounter.Service // Required
+	MonsterService   monster.Service   // Optional (will use hardcoded if nil)
+	LootService      loot.Service      // Optional (will use hardcoded if nil)
+	UUIDGenerator    uuid.Generator    // Optional
 }
 
 // NewService creates a new dungeon service
@@ -103,7 +103,7 @@ func NewService(cfg *ServiceConfig) Service {
 		encounterService: cfg.EncounterService,
 		monsterService:   cfg.MonsterService,
 		lootService:      cfg.LootService,
-		random:          rand.New(rand.NewSource(time.Now().UnixNano())),
+		random:           rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 
 	// Use provided UUID generator or create default
@@ -329,7 +329,7 @@ func (s *service) generateCombatRoom(difficulty string, roomNumber int) *entitie
 			}
 		}
 	}
-	
+
 	// Fallback to hardcoded monsters if monster service failed or unavailable
 	if len(monsters) == 0 {
 		// Hardcoded fallback
@@ -396,7 +396,7 @@ func (s *service) generateTreasureRoom(difficulty string, roomNumber int) *entit
 			treasure = generatedTreasure
 		}
 	}
-	
+
 	// Fallback to hardcoded treasure if loot service failed or unavailable
 	if len(treasure) == 0 {
 		treasure = []string{"gold", "healing potion", "mysterious artifact"}

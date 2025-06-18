@@ -78,17 +78,17 @@ type Service interface {
 
 	// FinalizeCharacterWithName sets the name and finalizes a draft character in one operation
 	FinalizeCharacterWithName(ctx context.Context, characterID, name, raceKey, classKey string) (*entities.Character, error)
-	
+
 	// Character Creation Session methods
 	// StartCharacterCreation starts a new character creation session
 	StartCharacterCreation(ctx context.Context, userID, guildID string) (*entities.CharacterCreationSession, error)
-	
+
 	// GetCharacterCreationSession retrieves an active session
 	GetCharacterCreationSession(ctx context.Context, sessionID string) (*entities.CharacterCreationSession, error)
-	
+
 	// UpdateCharacterCreationSession updates the session step
 	UpdateCharacterCreationSession(ctx context.Context, sessionID, step string) error
-	
+
 	// GetCharacterFromSession gets the character associated with a session
 	GetCharacterFromSession(ctx context.Context, sessionID string) (*entities.Character, error)
 }
@@ -165,7 +165,7 @@ type service struct {
 	choiceResolver ChoiceResolver
 	repository     Repository
 	// Temporary in-memory session store (should be Redis in production)
-	sessions       map[string]*entities.CharacterCreationSession
+	sessions map[string]*entities.CharacterCreationSession
 	// Later we'll add:
 	// validator  Validator
 }
@@ -471,14 +471,14 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 			drafts = append(drafts, char)
 		}
 	}
-	
+
 	// If we have any drafts, use the most recent one
 	if len(drafts) > 0 {
 		// Sort drafts by ID (which includes timestamp) to find most recent
 		sort.Slice(drafts, func(i, j int) bool {
 			return drafts[i].ID > drafts[j].ID // Descending order
 		})
-		
+
 		// Delete any extra drafts
 		if len(drafts) > 1 {
 			for i := 1; i < len(drafts); i++ {
@@ -487,7 +487,7 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 				}
 			}
 		}
-		
+
 		return drafts[0], nil
 	}
 
@@ -512,7 +512,6 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 			WithMeta("character_id", character.ID).
 			WithMeta("owner_id", userID)
 	}
-	
 
 	return character, nil
 }
@@ -532,7 +531,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		return nil, dnderr.Wrapf(err, "failed to get character '%s'", characterID).
 			WithMeta("character_id", characterID)
 	}
-	
+
 	// Log character state BEFORE updates
 
 	// Verify it's a draft
@@ -675,7 +674,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 
 	// Update proficiencies if provided
 	if len(updates.Proficiencies) > 0 {
-		
+
 		// Clear existing chosen proficiencies (keep starting ones from race/class)
 		if char.Proficiencies == nil {
 			char.Proficiencies = make(map[entities.ProficiencyType][]*entities.Proficiency)
@@ -688,12 +687,12 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 				char.AddProficiency(proficiency)
 			}
 		}
-		
+
 	}
 
 	// Update equipment if provided
 	if len(updates.Equipment) > 0 {
-		
+
 		// Initialize inventory if needed
 		if char.Inventory == nil {
 			char.Inventory = make(map[entities.EquipmentType][]entities.Equipment)
@@ -709,9 +708,8 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 
 		// Recalculate AC in case equipment affects it
 		char.AC = features.CalculateAC(char)
-		
-	}
 
+	}
 
 	// Save changes
 	if err := s.repository.Update(ctx, char); err != nil {
@@ -744,16 +742,16 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 
 	// Convert AbilityAssignments to Attributes if needed
 	if len(char.Attributes) == 0 && len(char.AbilityAssignments) > 0 && len(char.AbilityRolls) > 0 {
-		
+
 		// Create roll ID to value map
 		rollValues := make(map[string]int)
 		for _, roll := range char.AbilityRolls {
 			rollValues[roll.ID] = roll.Value
 		}
-		
+
 		// Initialize attributes map
 		char.Attributes = make(map[entities.Attribute]*entities.AbilityScore)
-		
+
 		// Convert assignments to attributes
 		for abilityStr, rollID := range char.AbilityAssignments {
 			if rollValue, ok := rollValues[rollID]; ok {
@@ -775,10 +773,10 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 				default:
 					continue
 				}
-				
+
 				// Create base ability score
 				score := rollValue
-				
+
 				// Apply racial bonuses
 				if char.Race != nil {
 					for _, bonus := range char.Race.AbilityBonuses {
@@ -787,19 +785,19 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 						}
 					}
 				}
-				
+
 				// Calculate modifier
 				modifier := (score - 10) / 2
-				
+
 				// Create ability score
 				char.Attributes[attr] = &entities.AbilityScore{
-					Score:    score,
-					Bonus:    modifier,
+					Score: score,
+					Bonus: modifier,
 				}
-				
+
 			}
 		}
-		
+
 	}
 
 	// Calculate hit points if not set
@@ -815,7 +813,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 		char.CurrentHitPoints = char.MaxHitPoints
 		char.HitDie = char.Class.HitDie
 	}
-	
+
 	// Fetch class features if not already loaded
 	if char.Features == nil && char.Class != nil {
 		features, err := s.dndClient.GetClassFeatures(char.Class.Key, char.Level)
@@ -823,13 +821,13 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 			char.Features = features
 		}
 	}
-	
+
 	// Calculate AC if not set
 	if char.AC == 0 {
 		baseAC := 10
 		dexMod := 0
 		wisMod := 0
-		
+
 		if char.Attributes != nil {
 			if dex, ok := char.Attributes[entities.AttributeDexterity]; ok && dex != nil {
 				dexMod = dex.Bonus
@@ -838,7 +836,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 				wisMod = wis.Bonus
 			}
 		}
-		
+
 		// Check for Unarmored Defense
 		hasUnarmoredDefense := false
 		if char.Features != nil {
@@ -849,7 +847,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 				}
 			}
 		}
-		
+
 		// Calculate AC based on class and features
 		if hasUnarmoredDefense && char.Class != nil {
 			switch strings.ToLower(char.Class.Key) {
@@ -871,7 +869,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 			// Default: 10 + Dex modifier
 			baseAC = 10 + dexMod
 		}
-		
+
 		char.AC = baseAC
 	}
 
@@ -883,7 +881,6 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 		return nil, dnderr.Wrap(err, "failed to finalize character").
 			WithMeta("character_id", characterID)
 	}
-	
 
 	return char, nil
 }

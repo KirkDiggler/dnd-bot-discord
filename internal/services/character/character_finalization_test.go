@@ -10,7 +10,7 @@ import (
 
 func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 	// This test verifies the exact bug: characters with AbilityAssignments but no Attributes
-	
+
 	tests := []struct {
 		name      string
 		character *entities.Character
@@ -66,7 +66,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 				// Verify conversion happened
 				require.NotNil(t, char.Attributes)
 				assert.Len(t, char.Attributes, 6, "Should have all 6 ability scores")
-				
+
 				// Verify specific scores with racial bonuses
 				assert.Equal(t, 13, char.Attributes[entities.AttributeStrength].Score)
 				assert.Equal(t, 16, char.Attributes[entities.AttributeDexterity].Score) // 14 + 2 racial
@@ -74,7 +74,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 				assert.Equal(t, 16, char.Attributes[entities.AttributeIntelligence].Score) // 15 + 1 racial
 				assert.Equal(t, 11, char.Attributes[entities.AttributeWisdom].Score)
 				assert.Equal(t, 10, char.Attributes[entities.AttributeCharisma].Score)
-				
+
 				// Verify modifiers
 				assert.Equal(t, 1, char.Attributes[entities.AttributeStrength].Bonus)     // (13-10)/2 = 1
 				assert.Equal(t, 3, char.Attributes[entities.AttributeDexterity].Bonus)    // (16-10)/2 = 3
@@ -82,14 +82,14 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 				assert.Equal(t, 3, char.Attributes[entities.AttributeIntelligence].Bonus) // (16-10)/2 = 3
 				assert.Equal(t, 0, char.Attributes[entities.AttributeWisdom].Bonus)       // (11-10)/2 = 0
 				assert.Equal(t, 0, char.Attributes[entities.AttributeCharisma].Bonus)     // (10-10)/2 = 0
-				
+
 				// Verify HP calculation
 				assert.Equal(t, 9, char.MaxHitPoints) // 8 (monk hit die) + 1 (CON modifier)
 				assert.Equal(t, 9, char.CurrentHitPoints)
-				
+
 				// Verify AC calculation for monk with unarmored defense
 				assert.Equal(t, 13, char.AC) // 10 + 3 (DEX modifier) + 0 (WIS modifier)
-				
+
 				// Verify status changed
 				assert.Equal(t, entities.CharacterStatusActive, char.Status)
 			},
@@ -130,10 +130,10 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 				// Verify attributes unchanged
 				assert.Len(t, char.Attributes, 6)
 				assert.Equal(t, 16, char.Attributes[entities.AttributeStrength].Score)
-				
+
 				// Verify HP calculated
 				assert.Equal(t, 12, char.MaxHitPoints) // 10 (fighter hit die) + 2 (CON modifier)
-				
+
 				// Verify AC calculated
 				assert.Equal(t, 12, char.AC) // 10 + 2 (DEX modifier)
 			},
@@ -147,7 +147,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 			wantErr: true,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Use the actual FinalizeDraftCharacter logic
@@ -157,7 +157,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 					return // Expected error case
 				}
 			}
-			
+
 			// Apply the conversion logic from FinalizeDraftCharacter
 			if len(tt.character.Attributes) == 0 && len(tt.character.AbilityAssignments) > 0 && len(tt.character.AbilityRolls) > 0 {
 				// Create roll ID to value map
@@ -165,10 +165,10 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 				for _, roll := range tt.character.AbilityRolls {
 					rollValues[roll.ID] = roll.Value
 				}
-				
+
 				// Initialize attributes map
 				tt.character.Attributes = make(map[entities.Attribute]*entities.AbilityScore)
-				
+
 				// Convert assignments to attributes
 				for abilityStr, rollID := range tt.character.AbilityAssignments {
 					if rollValue, ok := rollValues[rollID]; ok {
@@ -190,10 +190,10 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 						default:
 							continue
 						}
-						
+
 						// Create base ability score
 						score := rollValue
-						
+
 						// Apply racial bonuses
 						if tt.character.Race != nil {
 							for _, bonus := range tt.character.Race.AbilityBonuses {
@@ -202,10 +202,10 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 								}
 							}
 						}
-						
+
 						// Calculate modifier
 						modifier := (score - 10) / 2
-						
+
 						// Create ability score
 						tt.character.Attributes[attr] = &entities.AbilityScore{
 							Score: score,
@@ -214,7 +214,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 					}
 				}
 			}
-			
+
 			// Calculate HP
 			if tt.character.MaxHitPoints == 0 && tt.character.Class != nil {
 				conMod := 0
@@ -226,24 +226,24 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 				tt.character.MaxHitPoints = tt.character.Class.HitDie + conMod
 				tt.character.CurrentHitPoints = tt.character.MaxHitPoints
 			}
-			
+
 			// Calculate AC
 			if tt.character.AC == 0 {
 				baseAC := 10
 				dexMod := 0
-				
+
 				if tt.character.Attributes != nil {
 					if dex, ok := tt.character.Attributes[entities.AttributeDexterity]; ok && dex != nil {
 						dexMod = dex.Bonus
 					}
 				}
-				
+
 				tt.character.AC = baseAC + dexMod
 			}
-			
+
 			// Update status
 			tt.character.Status = entities.CharacterStatusActive
-			
+
 			// Run validation
 			if tt.validate != nil {
 				tt.validate(t, tt.character)

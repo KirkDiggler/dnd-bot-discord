@@ -9,46 +9,46 @@ import (
 
 func TestButtonCustomIDs(t *testing.T) {
 	tests := []struct {
-		name        string
-		customID    string
-		expectedCtx string
+		name           string
+		customID       string
+		expectedCtx    string
 		expectedAction string
-		expectedData  string
-		shouldParse   bool
+		expectedData   string
+		shouldParse    bool
 	}{
 		{
-			name:        "character quickshow button",
-			customID:    "character:quickshow:char_123",
-			expectedCtx: "character",
+			name:           "character quickshow button",
+			customID:       "character:quickshow:char_123",
+			expectedCtx:    "character",
 			expectedAction: "quickshow",
-			expectedData:  "char_123",
-			shouldParse:   true,
+			expectedData:   "char_123",
+			shouldParse:    true,
 		},
 		{
-			name:        "character manage continue button",
-			customID:    "character_manage:continue:char_456",
-			expectedCtx: "character_manage",
+			name:           "character manage continue button",
+			customID:       "character_manage:continue:char_456",
+			expectedCtx:    "character_manage",
 			expectedAction: "continue",
-			expectedData:  "char_456",
-			shouldParse:   true,
+			expectedData:   "char_456",
+			shouldParse:    true,
 		},
 		{
-			name:        "character manage edit button",
-			customID:    "character_manage:edit:char_789",
-			expectedCtx: "character_manage",
+			name:           "character manage edit button",
+			customID:       "character_manage:edit:char_789",
+			expectedCtx:    "character_manage",
 			expectedAction: "edit",
-			expectedData:  "char_789",
-			shouldParse:   true,
+			expectedData:   "char_789",
+			shouldParse:    true,
 		},
 		{
 			name:        "invalid format - single part",
 			customID:    "invalid",
-			shouldParse:   false,
+			shouldParse: false,
 		},
 		{
 			name:        "invalid format - no action",
 			customID:    "character:",
-			shouldParse:   false,
+			shouldParse: false,
 		},
 	}
 
@@ -56,7 +56,7 @@ func TestButtonCustomIDs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Parse custom ID like the handler does
 			parts := splitCustomID(tt.customID)
-			
+
 			if tt.shouldParse {
 				assert.True(t, len(parts) >= 2, "Should have at least 2 parts")
 				if len(parts) >= 2 {

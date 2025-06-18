@@ -24,7 +24,7 @@ func NewRedisRepository(cfg *RedisRepoConfig) Repository {
 	if cfg == nil || cfg.Client == nil {
 		panic("RedisRepoConfig and Client are required")
 	}
-	
+
 	return &redisRepository{
 		client: cfg.Client,
 	}
@@ -37,24 +37,24 @@ func (r *redisRepository) Create(ctx context.Context, dungeon *entities.Dungeon)
 	if err != nil {
 		return err
 	}
-	
+
 	if err := r.client.Set(ctx, key, data, 0).Err(); err != nil {
 		return err
 	}
-	
+
 	// Also add to session index
 	sessionKey := fmt.Sprintf("session:%s:dungeons", dungeon.SessionID)
 	if err := r.client.SAdd(ctx, sessionKey, dungeon.ID).Err(); err != nil {
 		return err
 	}
-	
+
 	// Add to active index if active
 	if dungeon.IsActive() {
 		if err := r.client.SAdd(ctx, "dungeons:active", dungeon.ID).Err(); err != nil {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
@@ -68,12 +68,12 @@ func (r *redisRepository) Get(ctx context.Context, id string) (*entities.Dungeon
 		}
 		return nil, err
 	}
-	
+
 	var dungeon entities.Dungeon
 	if err := json.Unmarshal(data, &dungeon); err != nil {
 		return nil, err
 	}
-	
+
 	return &dungeon, nil
 }
 
@@ -84,11 +84,11 @@ func (r *redisRepository) Update(ctx context.Context, dungeon *entities.Dungeon)
 	if err != nil {
 		return err
 	}
-	
+
 	if err := r.client.Set(ctx, key, data, 0).Err(); err != nil {
 		return err
 	}
-	
+
 	// Update active index
 	if dungeon.IsActive() {
 		if err := r.client.SAdd(ctx, "dungeons:active", dungeon.ID).Err(); err != nil {
@@ -99,7 +99,7 @@ func (r *redisRepository) Update(ctx context.Context, dungeon *entities.Dungeon)
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
@@ -113,18 +113,18 @@ func (r *redisRepository) Delete(ctx context.Context, id string) error {
 	if dungeon == nil {
 		return nil
 	}
-	
+
 	// Remove from session index
 	sessionKey := fmt.Sprintf("session:%s:dungeons", dungeon.SessionID)
 	if err := r.client.SRem(ctx, sessionKey, id).Err(); err != nil {
 		return err
 	}
-	
+
 	// Remove from active index
 	if err := r.client.SRem(ctx, "dungeons:active", id).Err(); err != nil {
 		return err
 	}
-	
+
 	// Delete the dungeon
 	key := fmt.Sprintf("dungeon:%s", id)
 	return r.client.Del(ctx, key).Err()
@@ -137,7 +137,7 @@ func (r *redisRepository) GetBySession(ctx context.Context, sessionID string) (*
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Find the active dungeon for this session
 	for _, id := range ids {
 		dungeon, err := r.Get(ctx, id)
@@ -148,7 +148,7 @@ func (r *redisRepository) GetBySession(ctx context.Context, sessionID string) (*
 			return dungeon, nil
 		}
 	}
-	
+
 	return nil, nil
 }
 
@@ -158,7 +158,7 @@ func (r *redisRepository) ListActive(ctx context.Context) ([]*entities.Dungeon, 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var dungeons []*entities.Dungeon
 	for _, id := range ids {
 		dungeon, err := r.Get(ctx, id)
@@ -169,6 +169,6 @@ func (r *redisRepository) ListActive(ctx context.Context) ([]*entities.Dungeon, 
 			dungeons = append(dungeons, dungeon)
 		}
 	}
-	
+
 	return dungeons, nil
 }

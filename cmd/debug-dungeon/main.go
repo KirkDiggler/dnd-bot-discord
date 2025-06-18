@@ -66,27 +66,27 @@ func main() {
 	fmt.Printf("State: %s\n", dungeon.State)
 	fmt.Printf("Room Number: %d\n", dungeon.RoomNumber)
 	fmt.Printf("Party Size: %d\n", len(dungeon.Party))
-	
+
 	if dungeon.CurrentRoom != nil {
 		fmt.Printf("Current Room: %s (%s)\n", dungeon.CurrentRoom.Name, dungeon.CurrentRoom.Type)
 	}
-	
+
 	fmt.Printf("\nParty Members:\n")
 	for j, member := range dungeon.Party {
-		fmt.Printf("  %d. User: %s, Character: %s, Status: %s\n", 
+		fmt.Printf("  %d. User: %s, Character: %s, Status: %s\n",
 			j+1, member.UserID, member.CharacterID, member.Status)
 	}
-	
+
 	fmt.Printf("\nState Checks:\n")
 	fmt.Printf("  CanEnterRoom(): %v\n", dungeon.CanEnterRoom())
 	fmt.Printf("  IsActive(): %v\n", dungeon.IsActive())
-	
+
 	// Debug the logic
 	fmt.Printf("\nDebug Info:\n")
 	fmt.Printf("  Party Size > 0: %v\n", len(dungeon.Party) > 0)
 	fmt.Printf("  State is AwaitingParty: %v\n", dungeon.State == entities.DungeonStateAwaitingParty)
 	fmt.Printf("  State is RoomReady: %v\n", dungeon.State == entities.DungeonStateRoomReady)
-	
+
 	if dungeon.Metadata != nil {
 		fmt.Printf("\nMetadata:\n")
 		for k, v := range dungeon.Metadata {

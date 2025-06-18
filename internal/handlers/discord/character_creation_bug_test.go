@@ -9,28 +9,28 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
+	"github.com/bwmarrin/discordgo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"github.com/bwmarrin/discordgo"
 )
 
 func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 	// This test reproduces the exact bug: characters end up with 0 attributes
 	// even though they go through the complete creation flow
-	
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockClient := mockdnd5e.NewMockClient(ctrl)
 	mockRepo := mockcharrepo.NewMockRepository(ctrl)
-	
+
 	// Set up service provider
 	provider := services.NewProvider(&services.ProviderConfig{
 		DNDClient:           mockClient,
 		CharacterRepository: mockRepo,
 	})
-	
+
 	_ = discord.NewHandler(&discord.HandlerConfig{
 		ServiceProvider: provider,
 	})
@@ -52,12 +52,12 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 	// Step 1: Character creation starts - user clicks "Create Character"
 	// This should create a draft character
 	draftChar := &entities.Character{
-		ID:      "draft_123",
-		OwnerID: user.ID,
-		RealmID: "test_guild",
-		Name:    "Draft Character",
-		Status:  entities.CharacterStatusDraft,
-		Level:   1,
+		ID:            "draft_123",
+		OwnerID:       user.ID,
+		RealmID:       "test_guild",
+		Name:          "Draft Character",
+		Status:        entities.CharacterStatusDraft,
+		Level:         1,
 		Attributes:    make(map[entities.Attribute]*entities.AbilityScore),
 		Proficiencies: make(map[entities.ProficiencyType][]*entities.Proficiency),
 		Inventory:     make(map[entities.EquipmentType][]entities.Equipment),
@@ -70,7 +70,7 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 
 	// Step 2-5: User goes through race/class/abilities/proficiencies/equipment selection
 	// Each step calls UpdateDraftCharacter with new data
-	
+
 	// Mock race selection
 	mockClient.EXPECT().GetRace("elf").Return(&entities.Race{
 		Key:  "elf",
@@ -80,10 +80,10 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 		},
 	}, nil).AnyTimes()
 
-	// Mock class selection  
+	// Mock class selection
 	mockClient.EXPECT().GetClass("monk").Return(&entities.Class{
 		Key:    "monk",
-		Name:   "Monk", 
+		Name:   "Monk",
 		HitDie: 8,
 	}, nil).AnyTimes()
 
@@ -118,7 +118,7 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 		},
 		AbilityAssignments: map[string]string{
 			"STR": "roll_3",
-			"DEX": "roll_2", 
+			"DEX": "roll_2",
 			"CON": "roll_4",
 			"INT": "roll_1",
 			"WIS": "roll_5",
@@ -137,16 +137,16 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 
 	// Step 6: Final step - user enters character name and character is finalized
 	// This simulates the modal submit that calls FinalizeCharacterWithName
-	
+
 	// The bug reproduction: Get character for finalization
 	mockRepo.EXPECT().Get(ctx, "draft_123").Return(charWithAbilities, nil)
-	
+
 	// Mock: FinalizeDraftCharacter should convert abilities and mark as active
 	_ = &entities.Character{
 		ID:      "draft_123",
 		OwnerID: user.ID,
 		RealmID: "test_guild",
-		Name:    "TestMonk", // Name added
+		Name:    "TestMonk",                     // Name added
 		Status:  entities.CharacterStatusActive, // Status changed
 		Level:   1,
 		Race:    charWithAbilities.Race,
@@ -172,13 +172,13 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 
 	// Call the actual service method that the handler uses
 	result, err := provider.CharacterService.FinalizeCharacterWithName(
-		ctx, 
-		"draft_123", 
-		"TestMonk", 
-		"elf", 
+		ctx,
+		"draft_123",
+		"TestMonk",
+		"elf",
 		"monk",
 	)
-	
+
 	// This test should FAIL initially, proving we can reproduce the bug
 	require.NoError(t, err)
 	assert.NotEmpty(t, result.Attributes, "Character should have attributes after finalization")

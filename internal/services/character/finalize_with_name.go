@@ -24,7 +24,7 @@ func (s *service) FinalizeCharacterWithName(ctx context.Context, characterID, na
 	updates := &UpdateDraftInput{
 		Name: &name,
 	}
-	
+
 	// Only set race/class if provided (they might already be set)
 	if raceKey != "" {
 		updates.RaceKey = &raceKey

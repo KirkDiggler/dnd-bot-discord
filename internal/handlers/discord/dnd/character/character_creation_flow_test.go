@@ -18,7 +18,7 @@ import (
 // MockDiscordSession for testing
 type MockDiscordSession struct {
 	discordgo.Session
-	RespondFunc     func(*discordgo.Interaction, *discordgo.InteractionResponse) error
+	RespondFunc      func(*discordgo.Interaction, *discordgo.InteractionResponse) error
 	ResponseEditFunc func(*discordgo.Interaction, *discordgo.WebhookEdit) (*discordgo.Message, error)
 }
 
@@ -246,10 +246,10 @@ func TestCharacterCreation_AutoAssign(t *testing.T) {
 	// Verify auto-assign put highest rolls in WIS and CON for cleric
 	updatedDraft, err := charService.GetCharacter(ctx, draft.ID)
 	require.NoError(t, err)
-	
+
 	// For cleric, the priority should be WIS, CON, STR, CHA, DEX, INT
 	assert.NotEmpty(t, updatedDraft.AbilityAssignments)
-	
+
 	// Check that WIS got the highest roll
 	wisRollID := updatedDraft.AbilityAssignments["WIS"]
 	var wisRoll *entities.AbilityRoll

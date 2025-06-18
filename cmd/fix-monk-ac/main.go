@@ -51,24 +51,24 @@ func main() {
 	if char.Class.Key == "monk" {
 		dexMod := 0
 		wisMod := 0
-		
+
 		if dex, ok := char.Attributes[entities.AttributeDexterity]; ok && dex != nil {
 			dexMod = dex.Bonus
 		}
 		if wis, ok := char.Attributes[entities.AttributeWisdom]; ok && wis != nil {
 			wisMod = wis.Bonus
 		}
-		
+
 		// Monk Unarmored Defense: 10 + DEX + WIS
 		newAC := 10 + dexMod + wisMod
 		log.Printf("Old AC: %d, New AC: %d (10 + %d DEX + %d WIS)", char.AC, newAC, dexMod, wisMod)
-		
+
 		char.AC = newAC
-		
+
 		if err := repo.Update(ctx, char); err != nil {
 			log.Fatalf("Failed to save character: %v", err)
 		}
-		
+
 		log.Println("AC updated successfully!")
 	} else {
 		log.Println("Not a monk, no AC update needed")

@@ -10,12 +10,12 @@ import (
 
 func TestCharacterListFiltering(t *testing.T) {
 	tests := []struct {
-		name            string
-		characters      []*entities.Character
-		expectedActive  int
-		expectedDraft   int
+		name             string
+		characters       []*entities.Character
+		expectedActive   int
+		expectedDraft    int
 		expectedArchived int
-		description     string
+		description      string
 	}{
 		{
 			name: "filters out empty draft characters",
@@ -23,7 +23,7 @@ func TestCharacterListFiltering(t *testing.T) {
 				{
 					ID:     "draft1",
 					Status: entities.CharacterStatusDraft,
-					Name:   "", // No name
+					Name:   "",  // No name
 					Race:   nil, // No race
 					Class:  nil, // No class
 				},
@@ -33,10 +33,10 @@ func TestCharacterListFiltering(t *testing.T) {
 					Name:   "Bob",
 				},
 			},
-			expectedActive:  0,
-			expectedDraft:   1, // Only Bob should show
+			expectedActive:   0,
+			expectedDraft:    1, // Only Bob should show
 			expectedArchived: 0,
-			description:     "Empty drafts should be filtered out",
+			description:      "Empty drafts should be filtered out",
 		},
 		{
 			name: "shows draft with race but no name",
@@ -48,10 +48,10 @@ func TestCharacterListFiltering(t *testing.T) {
 					Race:   testutils.CreateTestRace("human", "Human"),
 				},
 			},
-			expectedActive:  0,
-			expectedDraft:   1,
+			expectedActive:   0,
+			expectedDraft:    1,
 			expectedArchived: 0,
-			description:     "Draft with race should show even without name",
+			description:      "Draft with race should show even without name",
 		},
 		{
 			name: "shows draft with class but no name",
@@ -63,10 +63,10 @@ func TestCharacterListFiltering(t *testing.T) {
 					Class:  testutils.CreateTestClass("fighter", "Fighter", 10),
 				},
 			},
-			expectedActive:  0,
-			expectedDraft:   1,
+			expectedActive:   0,
+			expectedDraft:    1,
 			expectedArchived: 0,
-			description:     "Draft with class should show even without name",
+			description:      "Draft with class should show even without name",
 		},
 		{
 			name: "properly groups by status",
@@ -87,10 +87,10 @@ func TestCharacterListFiltering(t *testing.T) {
 					Name:   "Boromir",
 				},
 			},
-			expectedActive:  1,
-			expectedDraft:   1,
+			expectedActive:   1,
+			expectedDraft:    1,
 			expectedArchived: 1,
-			description:     "Characters should be grouped by status",
+			description:      "Characters should be grouped by status",
 		},
 	}
 
@@ -124,39 +124,39 @@ func TestCharacterListFiltering(t *testing.T) {
 
 func TestDraftCharacterDisplay(t *testing.T) {
 	tests := []struct {
-		name           string
-		character      *entities.Character
-		expectedStatus string
+		name             string
+		character        *entities.Character
+		expectedStatus   string
 		expectedProgress string
 	}{
 		{
 			name: "draft with name",
 			character: &entities.Character{
-				Name: "Aragorn",
+				Name:   "Aragorn",
 				Status: entities.CharacterStatusDraft,
 			},
-			expectedStatus: "Aragorn",
+			expectedStatus:   "Aragorn",
 			expectedProgress: "✓ Name",
 		},
 		{
 			name: "draft with race and class but no name",
 			character: &entities.Character{
-				Name:  "",
-				Race:  &entities.Race{Name: "Human"},
-				Class: &entities.Class{Name: "Ranger"},
+				Name:   "",
+				Race:   &entities.Race{Name: "Human"},
+				Class:  &entities.Class{Name: "Ranger"},
 				Status: entities.CharacterStatusDraft,
 			},
-			expectedStatus: "Human Ranger (unnamed)",
+			expectedStatus:   "Human Ranger (unnamed)",
 			expectedProgress: "✓ Race ✓ Class ",
 		},
 		{
 			name: "draft with only race",
 			character: &entities.Character{
-				Name:  "",
-				Race:  &entities.Race{Name: "Elf"},
+				Name:   "",
+				Race:   &entities.Race{Name: "Elf"},
 				Status: entities.CharacterStatusDraft,
 			},
-			expectedStatus: "Elf (selecting class)",
+			expectedStatus:   "Elf (selecting class)",
 			expectedProgress: "✓ Race ",
 		},
 		{
@@ -170,7 +170,7 @@ func TestDraftCharacterDisplay(t *testing.T) {
 				},
 				Status: entities.CharacterStatusDraft,
 			},
-			expectedStatus: "Legolas",
+			expectedStatus:   "Legolas",
 			expectedProgress: "✓ Race ✓ Class ✓ Abilities ✓ Name",
 		},
 	}

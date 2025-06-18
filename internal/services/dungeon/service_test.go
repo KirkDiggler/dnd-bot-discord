@@ -61,7 +61,7 @@ func TestDungeonService_CreateDungeon_WithMonsterService(t *testing.T) {
 	assert.Equal(t, 1, result.RoomNumber)
 	assert.NotNil(t, result.CurrentRoom)
 	assert.Equal(t, entities.RoomTypeCombat, result.CurrentRoom.Type)
-	
+
 	// Should have dynamic monsters from the service
 	assert.Contains(t, result.CurrentRoom.Monsters, "goblin")
 	assert.Contains(t, result.CurrentRoom.Monsters, "orc")
@@ -101,10 +101,10 @@ func TestDungeonService_CreateDungeon_WithLootService(t *testing.T) {
 	// Assert
 	require.NoError(t, err)
 	assert.NotEmpty(t, result.ID)
-	
+
 	// First room should be combat
 	assert.Equal(t, entities.RoomTypeCombat, result.CurrentRoom.Type)
-	
+
 	// Progress to treasure room
 	// Set up expectation for treasure generation
 	lootService.EXPECT().GenerateTreasure(gomock.Any(), "hard", 5).Return([]string{
@@ -113,18 +113,18 @@ func TestDungeonService_CreateDungeon_WithLootService(t *testing.T) {
 		"mysterious scroll",
 		"enchanted ring",
 	}, nil)
-	
+
 	// Simulate progressing to room 5 (treasure room)
 	dungeon, _ := service.GetDungeon(context.Background(), result.ID)
 	dungeon.State = entities.DungeonStateRoomCleared
 	dungeon.RoomNumber = 4
 	dungeon.CurrentRoom.Completed = true
 	_ = repo.Update(context.Background(), dungeon)
-	
+
 	// Proceed to next room (should be treasure room at room 5)
 	nextRoom, err := service.ProceedToNextRoom(context.Background(), result.ID)
 	require.NoError(t, err)
-	
+
 	// Check if it's a treasure room (room 5 should have higher chance)
 	if nextRoom.Type == entities.RoomTypeTreasure {
 		// Should have dynamic treasure from the service
@@ -169,7 +169,7 @@ func TestDungeonService_CreateDungeon_FallbackWithoutServices(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, result.ID)
 	assert.NotNil(t, result.CurrentRoom)
-	
+
 	// Should have hardcoded monsters
 	possibleMonsters := []string{"goblin", "skeleton", "orc", "dire-wolf"}
 	for _, monster := range result.CurrentRoom.Monsters {

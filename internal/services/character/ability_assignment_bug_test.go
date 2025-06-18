@@ -16,13 +16,13 @@ import (
 func TestAbilityAssignmentBug_CharacterShowsZeroAttributes(t *testing.T) {
 	// This test demonstrates the bug where characters show 0 attributes
 	// even after ability assignment is complete
-	
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockClient := mockdnd5e.NewMockClient(ctrl)
 	mockRepo := mockcharrepo.NewMockRepository(ctrl)
-	
+
 	svc := character.NewService(&character.ServiceConfig{
 		DNDClient:  mockClient,
 		Repository: mockRepo,
@@ -69,11 +69,11 @@ func TestAbilityAssignmentBug_CharacterShowsZeroAttributes(t *testing.T) {
 			"WIS": "roll_5", // 11
 			"CHA": "roll_6", // 10
 		},
-		Attributes: map[entities.Attribute]*entities.AbilityScore{}, // Empty!
+		Attributes:    map[entities.Attribute]*entities.AbilityScore{}, // Empty!
 		Proficiencies: make(map[entities.ProficiencyType][]*entities.Proficiency),
 		Inventory:     make(map[entities.EquipmentType][]entities.Equipment),
 		EquippedSlots: make(map[entities.Slot]entities.Equipment),
-		Features: []*entities.CharacterFeature{},
+		Features:      []*entities.CharacterFeature{},
 	}
 
 	// Mock the repository Get to return our test character
@@ -96,19 +96,19 @@ func TestAbilityAssignmentBug_CharacterShowsZeroAttributes(t *testing.T) {
 	require.NotNil(t, finalChar)
 
 	// BUG VERIFICATION: Character should have attributes but doesn't
-	t.Logf("Character after finalization - Name: %s, Attributes: %d, Status: %s", 
+	t.Logf("Character after finalization - Name: %s, Attributes: %d, Status: %s",
 		finalChar.Name, len(finalChar.Attributes), finalChar.Status)
-	
+
 	// These assertions would FAIL with the bug
 	assert.NotEmpty(t, finalChar.Attributes, "BUG: Character has 0 attributes after finalization")
 	assert.Len(t, finalChar.Attributes, 6, "BUG: Character missing ability scores")
-	
+
 	// Verify specific conversions with racial bonuses
 	if len(finalChar.Attributes) > 0 {
 		assert.Equal(t, 16, finalChar.Attributes[entities.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
 		assert.Equal(t, 16, finalChar.Attributes[entities.AttributeIntelligence].Score, "INT should be 15 + 1 racial")
 	}
-	
+
 	// Verify the character shows as complete
 	assert.True(t, finalChar.IsComplete(), "BUG: Character shows as incomplete due to missing ability scores")
 }

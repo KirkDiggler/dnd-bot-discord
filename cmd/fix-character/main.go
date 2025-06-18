@@ -71,7 +71,7 @@ func main() {
 
 	// Assign scores based on class (optimized for each class)
 	scores := map[entities.Attribute]int{}
-	
+
 	if char.Class != nil {
 		switch char.Class.Key {
 		case "monk":
@@ -117,7 +117,7 @@ func main() {
 	// Apply scores and racial bonuses
 	for attr, baseScore := range scores {
 		score := baseScore
-		
+
 		// Apply racial bonuses
 		if char.Race != nil {
 			for _, bonus := range char.Race.AbilityBonuses {
@@ -127,16 +127,16 @@ func main() {
 				}
 			}
 		}
-		
+
 		// Calculate modifier
 		modifier := (score - 10) / 2
-		
+
 		// Create ability score
 		char.Attributes[attr] = &entities.AbilityScore{
 			Score: score,
 			Bonus: modifier,
 		}
-		
+
 		log.Printf("Set %s: %d (modifier: %+d)", attr, score, modifier)
 	}
 
@@ -155,11 +155,11 @@ func main() {
 	if char.AC == 0 {
 		baseAC := 10
 		dexMod := 0
-		
+
 		if dex, ok := char.Attributes[entities.AttributeDexterity]; ok && dex != nil {
 			dexMod = dex.Bonus
 		}
-		
+
 		// Basic AC calculation (can be improved with features)
 		char.AC = baseAC + dexMod
 		log.Printf("Calculated AC: %d", char.AC)
@@ -171,13 +171,13 @@ func main() {
 	}
 
 	log.Println("Character fixed successfully!")
-	
+
 	// Verify the fix
 	fixed, err := repo.Get(ctx, characterID)
 	if err != nil {
 		log.Fatalf("Failed to verify fix: %v", err)
 	}
-	
+
 	log.Printf("Verification - Attributes: %d, HP: %d/%d, AC: %d",
 		len(fixed.Attributes), fixed.CurrentHitPoints, fixed.MaxHitPoints, fixed.AC)
 }

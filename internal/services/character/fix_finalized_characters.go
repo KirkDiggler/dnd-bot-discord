@@ -31,10 +31,10 @@ func (s *service) FixCharacterAttributes(ctx context.Context, characterID string
 	for _, roll := range char.AbilityRolls {
 		rollValues[roll.ID] = roll.Value
 	}
-	
+
 	// Initialize attributes map
 	char.Attributes = make(map[entities.Attribute]*entities.AbilityScore)
-	
+
 	// Convert assignments to attributes
 	for abilityStr, rollID := range char.AbilityAssignments {
 		if rollValue, ok := rollValues[rollID]; ok {
@@ -57,10 +57,10 @@ func (s *service) FixCharacterAttributes(ctx context.Context, characterID string
 				log.Printf("Unknown ability string: %s", abilityStr)
 				continue
 			}
-			
+
 			// Create base ability score
 			score := rollValue
-			
+
 			// Apply racial bonuses
 			if char.Race != nil {
 				for _, bonus := range char.Race.AbilityBonuses {
@@ -69,16 +69,16 @@ func (s *service) FixCharacterAttributes(ctx context.Context, characterID string
 					}
 				}
 			}
-			
+
 			// Calculate modifier
 			modifier := (score - 10) / 2
-			
+
 			// Create ability score
 			char.Attributes[attr] = &entities.AbilityScore{
 				Score: score,
 				Bonus: modifier,
 			}
-			
+
 			log.Printf("Created attribute %s: score=%d, modifier=%d", attr, score, modifier)
 		}
 	}

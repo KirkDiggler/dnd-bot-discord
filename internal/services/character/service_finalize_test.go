@@ -70,7 +70,7 @@ func TestService_FinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T)
 
 	// Mock repository calls
 	mockRepo.EXPECT().Get(ctx, characterID).Return(draftChar, nil)
-	
+
 	// Mock GetClassFeatures call (happens during finalization)
 	mockDNDClient.EXPECT().GetClassFeatures("wizard", 1).Return(nil, nil)
 
@@ -78,29 +78,29 @@ func TestService_FinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T)
 	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *entities.Character) error {
 		// Verify attributes were converted correctly
 		assert.Equal(t, entities.CharacterStatusActive, char.Status)
-		
+
 		// Check STR (13, no racial bonus)
 		assert.NotNil(t, char.Attributes[entities.AttributeStrength])
 		assert.Equal(t, 13, char.Attributes[entities.AttributeStrength].Score)
 		assert.Equal(t, 1, char.Attributes[entities.AttributeStrength].Bonus) // (13-10)/2 = 1
-		
+
 		// Check DEX (14 + 2 racial = 16)
 		assert.NotNil(t, char.Attributes[entities.AttributeDexterity])
 		assert.Equal(t, 16, char.Attributes[entities.AttributeDexterity].Score)
 		assert.Equal(t, 3, char.Attributes[entities.AttributeDexterity].Bonus) // (16-10)/2 = 3
-		
+
 		// Check INT (15 + 1 racial = 16)
 		assert.NotNil(t, char.Attributes[entities.AttributeIntelligence])
 		assert.Equal(t, 16, char.Attributes[entities.AttributeIntelligence].Score)
 		assert.Equal(t, 3, char.Attributes[entities.AttributeIntelligence].Bonus) // (16-10)/2 = 3
-		
+
 		// Check HP calculation (6 base + 1 con modifier)
 		assert.Equal(t, 7, char.MaxHitPoints)
 		assert.Equal(t, 7, char.CurrentHitPoints)
-		
+
 		// Check AC calculation (10 + 3 dex modifier)
 		assert.Equal(t, 13, char.AC)
-		
+
 		return nil
 	})
 
@@ -156,7 +156,7 @@ func TestService_FinalizeDraftCharacter_PreservesExistingAttributes(t *testing.T
 
 	// Mock repository calls
 	mockRepo.EXPECT().Get(ctx, characterID).Return(draftChar, nil)
-	
+
 	// Mock GetClassFeatures call (happens during finalization)
 	mockDNDClient.EXPECT().GetClassFeatures("fighter", 1).Return(nil, nil)
 
@@ -166,11 +166,11 @@ func TestService_FinalizeDraftCharacter_PreservesExistingAttributes(t *testing.T
 		assert.Equal(t, entities.CharacterStatusActive, char.Status)
 		assert.Equal(t, 16, char.Attributes[entities.AttributeStrength].Score)
 		assert.Equal(t, 3, char.Attributes[entities.AttributeStrength].Bonus)
-		
+
 		// HP and AC should remain the same
 		assert.Equal(t, 12, char.MaxHitPoints)
 		assert.Equal(t, 12, char.AC)
-		
+
 		return nil
 	})
 

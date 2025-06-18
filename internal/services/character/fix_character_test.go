@@ -19,7 +19,7 @@ func TestFixCharacterAttributes(t *testing.T) {
 
 	mockClient := mockdnd5e.NewMockClient(ctrl)
 	mockRepo := mockcharrepo.NewMockRepository(ctrl)
-	
+
 	svc := character.NewService(&character.ServiceConfig{
 		DNDClient:  mockClient,
 		Repository: mockRepo,
@@ -72,23 +72,23 @@ func TestFixCharacterAttributes(t *testing.T) {
 
 	// Mock repository calls
 	mockRepo.EXPECT().Get(ctx, characterID).Return(brokenChar, nil)
-	
+
 	// Expect the fixed character to be saved
 	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, char *entities.Character) error {
 		// Verify the character was fixed
 		assert.NotEmpty(t, char.Attributes, "Character should have attributes after fix")
 		assert.Len(t, char.Attributes, 6, "Should have all 6 ability scores")
-		
+
 		// Verify specific scores with racial bonuses
 		assert.Equal(t, 16, char.Attributes[entities.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
 		assert.Equal(t, 15, char.Attributes[entities.AttributeIntelligence].Score, "INT should be 15")
-		
+
 		// Verify HP was calculated
 		assert.Equal(t, 9, char.MaxHitPoints, "HP should be 8 (hit die) + 1 (CON mod)")
-		
+
 		// Verify AC was calculated
 		assert.Equal(t, 13, char.AC, "AC should be 10 + 3 (DEX mod)")
-		
+
 		return nil
 	})
 
@@ -104,7 +104,7 @@ func TestFixCharacterAttributes(t *testing.T) {
 	fixedChar, err := svc.FixCharacterAttributes(ctx, characterID)
 	require.NoError(t, err)
 	require.NotNil(t, fixedChar)
-	
+
 	// Verify the character is now complete
 	assert.True(t, fixedChar.IsComplete(), "Fixed character should be complete")
 	assert.NotEmpty(t, fixedChar.Attributes, "Fixed character should have attributes")
@@ -116,7 +116,7 @@ func TestFixCharacterAttributes_AlreadyHasAttributes(t *testing.T) {
 
 	mockClient := mockdnd5e.NewMockClient(ctrl)
 	mockRepo := mockcharrepo.NewMockRepository(ctrl)
-	
+
 	svc := character.NewService(&character.ServiceConfig{
 		DNDClient:  mockClient,
 		Repository: mockRepo,
@@ -127,9 +127,9 @@ func TestFixCharacterAttributes_AlreadyHasAttributes(t *testing.T) {
 
 	// Character that doesn't need fixing
 	goodChar := &entities.Character{
-		ID:      characterID,
-		Name:    "GoodChar",
-		Status:  entities.CharacterStatusActive,
+		ID:     characterID,
+		Name:   "GoodChar",
+		Status: entities.CharacterStatusActive,
 		Attributes: map[entities.Attribute]*entities.AbilityScore{
 			entities.AttributeStrength: {Score: 15, Bonus: 2},
 		},
@@ -143,7 +143,7 @@ func TestFixCharacterAttributes_AlreadyHasAttributes(t *testing.T) {
 	fixedChar, err := svc.FixCharacterAttributes(ctx, characterID)
 	require.NoError(t, err)
 	require.NotNil(t, fixedChar)
-	
+
 	// Should return the same character unchanged
 	assert.Equal(t, goodChar, fixedChar)
 }

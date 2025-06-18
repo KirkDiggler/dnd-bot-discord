@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package monster_test
@@ -36,7 +37,7 @@ func TestMonsterService_GetMonstersByCR_Integration(t *testing.T) {
 	monsters, err := service.GetMonstersByCR(ctx, 0.25, 0.25)
 	require.NoError(t, err)
 	assert.NotEmpty(t, monsters)
-	
+
 	// Check if we got some expected monsters
 	foundGoblin := false
 	for _, m := range monsters {
@@ -51,7 +52,7 @@ func TestMonsterService_GetMonstersByCR_Integration(t *testing.T) {
 	monsters, err = service.GetMonstersByCR(ctx, 1, 1)
 	require.NoError(t, err)
 	assert.NotEmpty(t, monsters)
-	
+
 	// Check if we got some expected monsters
 	foundBugbear := false
 	for _, m := range monsters {
@@ -86,7 +87,7 @@ func TestMonsterService_GetRandomMonsters_Integration(t *testing.T) {
 	monsters, err := service.GetRandomMonsters(ctx, "easy", 3)
 	require.NoError(t, err)
 	assert.Len(t, monsters, 3)
-	
+
 	// All should be low CR monsters
 	for _, m := range monsters {
 		assert.NotEmpty(t, m.Key)

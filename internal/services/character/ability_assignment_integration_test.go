@@ -15,14 +15,14 @@ import (
 
 func TestAbilityAssignmentFlow_Integration(t *testing.T) {
 	t.Skip("Skipping test - needs full mock setup")
-	
+
 	// This test reproduces the exact bug: characters showing 0 attributes after creation
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockClient := mockdnd5e.NewMockClient(ctrl)
 	mockRepo := mockcharrepo.NewMockRepository(ctrl)
-	
+
 	svc := character.NewService(&character.ServiceConfig{
 		DNDClient:  mockClient,
 		Repository: mockRepo,
@@ -35,7 +35,7 @@ func TestAbilityAssignmentFlow_Integration(t *testing.T) {
 	// Step 1: Get or create draft character
 	// Mock expects no existing characters
 	mockRepo.EXPECT().GetByOwnerAndRealm(ctx, userID, realmID).Return([]*entities.Character{}, nil)
-	
+
 	// Mock the creation of a new draft character
 	mockRepo.EXPECT().Create(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *entities.Character) error {
 		// Validate the character being created
@@ -44,7 +44,7 @@ func TestAbilityAssignmentFlow_Integration(t *testing.T) {
 		assert.Equal(t, entities.CharacterStatusDraft, char.Status)
 		return nil
 	})
-	
+
 	char, err := svc.GetOrCreateDraftCharacter(ctx, userID, realmID)
 	require.NoError(t, err)
 	require.NotNil(t, char)
@@ -99,7 +99,7 @@ func TestAbilityAssignmentFlow_Integration(t *testing.T) {
 		{ID: "roll_5", Value: 11},
 		{ID: "roll_6", Value: 10},
 	}
-	
+
 	abilityAssignments := map[string]string{
 		"STR": "roll_3", // 13
 		"DEX": "roll_2", // 14 + 2 (racial) = 16
@@ -114,11 +114,11 @@ func TestAbilityAssignmentFlow_Integration(t *testing.T) {
 		AbilityAssignments: abilityAssignments,
 	})
 	require.NoError(t, err)
-	
+
 	// At this point, the character should have attributes
 	t.Logf("After ability assignment - Attributes: %d, AbilityAssignments: %d, AbilityRolls: %d",
 		len(char.Attributes), len(char.AbilityAssignments), len(char.AbilityRolls))
-	
+
 	// Step 5: Update name
 	name := "TestWizard"
 	char, err = svc.UpdateDraftCharacter(ctx, char.ID, &character.UpdateDraftInput{
@@ -128,19 +128,19 @@ func TestAbilityAssignmentFlow_Integration(t *testing.T) {
 
 	// Step 6: Finalize character
 	mockClient.EXPECT().GetClassFeatures("wizard", 1).Return(nil, nil).AnyTimes()
-	
+
 	finalChar, err := svc.FinalizeDraftCharacter(ctx, char.ID)
 	require.NoError(t, err)
 	require.NotNil(t, finalChar)
-	
+
 	// THIS IS THE BUG: Character should have attributes but doesn't
 	assert.Equal(t, entities.CharacterStatusActive, finalChar.Status)
 	assert.NotEmpty(t, finalChar.Attributes, "Character should have attributes after finalization")
 	assert.Len(t, finalChar.Attributes, 6, "Character should have all 6 ability scores")
-	
+
 	// Verify the character is complete
 	assert.True(t, finalChar.IsComplete(), "Character should be complete after finalization")
-	
+
 	// Verify specific ability scores with racial bonuses
 	assert.Equal(t, 16, finalChar.Attributes[entities.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
 	assert.Equal(t, 16, finalChar.Attributes[entities.AttributeIntelligence].Score, "INT should be 15 + 1 racial")
@@ -154,7 +154,7 @@ func TestUpdateDraftCharacter_AbilityAssignmentConversion(t *testing.T) {
 
 	mockClient := mockdnd5e.NewMockClient(ctrl)
 	mockRepo := mockcharrepo.NewMockRepository(ctrl)
-	
+
 	svc := character.NewService(&character.ServiceConfig{
 		DNDClient:  mockClient,
 		Repository: mockRepo,
@@ -177,12 +177,12 @@ func TestUpdateDraftCharacter_AbilityAssignmentConversion(t *testing.T) {
 		},
 		Attributes: make(map[entities.Attribute]*entities.AbilityScore),
 	}
-	
+
 	// Mock the initial create
 	mockRepo.EXPECT().Create(ctx, char).Return(nil)
 	err := mockRepo.Create(ctx, char)
 	require.NoError(t, err)
-	
+
 	// Mock the Get call for UpdateDraftCharacter
 	mockRepo.EXPECT().Get(ctx, char.ID).Return(char, nil)
 	// Mock the Update call

@@ -75,7 +75,7 @@ type Service interface {
 
 	// ListActiveRealmSessions lists active sessions for a realm
 	ListActiveRealmSessions(ctx context.Context, realmID string) ([]*entities.Session, error)
-	
+
 	// SaveSession saves a session to the repository
 	SaveSession(ctx context.Context, session *entities.Session) error
 }
@@ -684,7 +684,7 @@ func (s *service) SaveSession(ctx context.Context, session *entities.Session) er
 	if session == nil {
 		return dnderr.New(dnderr.CodeInvalidArgument, "session is required")
 	}
-	
+
 	// Use Update method since repository doesn't have Save
 	return s.repository.Update(ctx, session)
 }

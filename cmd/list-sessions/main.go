@@ -45,7 +45,7 @@ func main() {
 			fmt.Printf("  %s: ERROR - %v\n", key, err)
 			continue
 		}
-		
+
 		// Just show basic info
 		fmt.Printf("  %s: %d bytes\n", key, len(data))
 	}

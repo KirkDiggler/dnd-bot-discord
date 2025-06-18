@@ -60,7 +60,7 @@ func equipmentToData(eq entities.Equipment) (EquipmentData, error) {
 	if err != nil {
 		return EquipmentData{}, fmt.Errorf("failed to marshal equipment: %w", err)
 	}
-	
+
 	// Determine the concrete type
 	var typeStr string
 	switch eq.(type) {
@@ -73,7 +73,7 @@ func equipmentToData(eq entities.Equipment) (EquipmentData, error) {
 	default:
 		typeStr = "unknown"
 	}
-	
+
 	return EquipmentData{
 		Type:      typeStr,
 		Equipment: data,
@@ -416,7 +416,7 @@ func (r *redisRepo) toCharacterData(char *entities.Character) (*CharacterData, e
 		}
 		inventory[eqType] = dataItems
 	}
-	
+
 	// Convert equipped slots
 	equippedSlots := make(map[entities.Slot]EquipmentData)
 	for slot, item := range char.EquippedSlots {
@@ -426,7 +426,7 @@ func (r *redisRepo) toCharacterData(char *entities.Character) (*CharacterData, e
 		}
 		equippedSlots[slot] = data
 	}
-	
+
 	return &CharacterData{
 		ID:                 char.ID,
 		OwnerID:            char.OwnerID,
@@ -468,7 +468,7 @@ func (r *redisRepo) fromCharacterData(data *CharacterData) (*entities.Character,
 		}
 		inventory[eqType] = eqItems
 	}
-	
+
 	// Convert equipped slots back
 	equippedSlots := make(map[entities.Slot]entities.Equipment)
 	for slot, item := range data.EquippedSlots {
@@ -478,7 +478,7 @@ func (r *redisRepo) fromCharacterData(data *CharacterData) (*entities.Character,
 		}
 		equippedSlots[slot] = eq
 	}
-	
+
 	return &entities.Character{
 		ID:                 data.ID,
 		OwnerID:            data.OwnerID,

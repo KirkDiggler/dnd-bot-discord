@@ -15,13 +15,13 @@ import (
 
 func TestAbilityAssignmentPersistence_SimulateDiscordFlow(t *testing.T) {
 	// This test simulates the exact Discord flow to find where attributes are lost
-	
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockClient := mockdnd5e.NewMockClient(ctrl)
 	mockRepo := mockcharrepo.NewMockRepository(ctrl)
-	
+
 	svc := character.NewService(&character.ServiceConfig{
 		DNDClient:  mockClient,
 		Repository: mockRepo,
@@ -78,7 +78,7 @@ func TestAbilityAssignmentPersistence_SimulateDiscordFlow(t *testing.T) {
 	}
 
 	mockRepo.EXPECT().Get(ctx, characterID).Return(charWithAssignments, nil)
-	
+
 	// Here's the potential bug: UpdateDraftCharacter should convert assignments to attributes
 	var updatedChar *entities.Character
 	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, char *entities.Character) error {
@@ -99,12 +99,12 @@ func TestAbilityAssignmentPersistence_SimulateDiscordFlow(t *testing.T) {
 
 	updated, err := svc.UpdateDraftCharacter(ctx, characterID, updates)
 	require.NoError(t, err)
-	
+
 	// THIS IS KEY: UpdateDraftCharacter should populate Attributes immediately
 	assert.NotEmpty(t, updated.Attributes, "Attributes should be populated after UpdateDraftCharacter")
-	
+
 	if updatedChar != nil {
-		t.Logf("After UpdateDraftCharacter - Attributes: %d, AbilityAssignments: %d", 
+		t.Logf("After UpdateDraftCharacter - Attributes: %d, AbilityAssignments: %d",
 			len(updatedChar.Attributes), len(updatedChar.AbilityAssignments))
 	}
 
@@ -118,7 +118,7 @@ func TestAbilityAssignmentPersistence_SimulateDiscordFlow(t *testing.T) {
 
 	loadedChar, err := svc.GetCharacter(ctx, characterID)
 	require.NoError(t, err)
-	
+
 	// Verify the loaded character has attributes
 	assert.NotEmpty(t, loadedChar.Attributes, "Loaded character should have attributes")
 	assert.True(t, loadedChar.IsComplete(), "Character should be complete")

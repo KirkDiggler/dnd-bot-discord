@@ -15,13 +15,13 @@ import (
 
 func TestDiscordCharacterCreationFlow(t *testing.T) {
 	// This test simulates the exact Discord flow to identify where attributes might be lost
-	
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockClient := mockdnd5e.NewMockClient(ctrl)
 	mockRepo := mockcharrepo.NewMockRepository(ctrl)
-	
+
 	svc := character.NewService(&character.ServiceConfig{
 		DNDClient:  mockClient,
 		Repository: mockRepo,
@@ -69,31 +69,31 @@ func TestDiscordCharacterCreationFlow(t *testing.T) {
 			"WIS": "roll_5",
 			"CHA": "roll_6",
 		},
-		Attributes:    map[entities.Attribute]*entities.AbilityScore{}, // Empty!
-		Proficiencies: make(map[entities.ProficiencyType][]*entities.Proficiency),
-		Inventory:     make(map[entities.EquipmentType][]entities.Equipment),
-		EquippedSlots: make(map[entities.Slot]entities.Equipment),
-		MaxHitPoints: 9,
+		Attributes:       map[entities.Attribute]*entities.AbilityScore{}, // Empty!
+		Proficiencies:    make(map[entities.ProficiencyType][]*entities.Proficiency),
+		Inventory:        make(map[entities.EquipmentType][]entities.Equipment),
+		EquippedSlots:    make(map[entities.Slot]entities.Equipment),
+		MaxHitPoints:     9,
 		CurrentHitPoints: 9,
-		AC: 13,
+		AC:               13,
 	}
 
 	// Test 1: ListByOwner returns character with empty attributes
 	mockRepo.EXPECT().GetByOwner(ctx, userID).Return([]*entities.Character{charState}, nil)
-	
+
 	chars, err := svc.ListByOwner(userID)
 	require.NoError(t, err)
 	require.Len(t, chars, 1)
-	
+
 	char := chars[0]
 	t.Logf("Character from ListByOwner - Name: %s, Status: %s, Attributes: %d, AbilityAssignments: %d",
 		char.Name, char.Status, len(char.Attributes), len(char.AbilityAssignments))
-	
+
 	// This reproduces the bug
 	assert.Empty(t, char.Attributes, "Character has empty attributes")
 	assert.NotEmpty(t, char.AbilityAssignments, "Character has ability assignments")
 	assert.False(t, char.IsComplete(), "Character shows as incomplete due to missing attributes")
-	
+
 	// Test 2: What happens if we try to "fix" the character
 	// The service doesn't have a method to fix already finalized characters
 	// This might be the root cause - characters get finalized before attributes are properly converted

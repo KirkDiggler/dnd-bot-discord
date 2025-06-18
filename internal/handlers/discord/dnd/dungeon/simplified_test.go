@@ -6,9 +6,9 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/dungeon"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	mockdungeon "github.com/KirkDiggler/dnd-bot-discord/internal/services/dungeon/mock"
 	mocksession "github.com/KirkDiggler/dnd-bot-discord/internal/services/session/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -59,39 +59,39 @@ func TestStartDungeonHandler_InitializesSessionMetadata(t *testing.T) {
 	// Create service provider
 	provider := &services.Provider{
 		SessionService: mockSessionService,
-		DungeonService:   mockDungeonService,
-		MonsterService:   nil, // Add if needed
-		LootService:      nil, // Add if needed
+		DungeonService: mockDungeonService,
+		MonsterService: nil, // Add if needed
+		LootService:    nil, // Add if needed
 	}
 
 	// Test that metadata is properly initialized
 	handler := dungeon.NewStartDungeonHandler(provider)
-	
+
 	// Simulate the critical part of the handle function
 	ctx := context.Background()
-	
+
 	// Create session
 	sess, err := mockSessionService.CreateSession(ctx, nil)
 	require.NoError(t, err)
-	
+
 	// Add bot as DM
 	sess.DMID = "bot123"
 	mockSessionService.SaveSession(ctx, sess)
-	
+
 	// Create dungeon
 	dung, err := mockDungeonService.CreateDungeon(ctx, nil)
 	require.NoError(t, err)
-	
+
 	// This is where the panic occurred - metadata was nil
 	if sess.Metadata == nil {
 		sess.Metadata = make(map[string]interface{})
 	}
 	sess.Metadata["dungeonID"] = dung.ID
-	
+
 	// Save session with metadata
 	err = mockSessionService.SaveSession(ctx, sess)
 	require.NoError(t, err)
-	
+
 	// Verify the handler exists (basic sanity check)
 	assert.NotNil(t, handler)
 }
