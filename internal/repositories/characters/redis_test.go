@@ -131,7 +131,8 @@ func (s *RedisMockTestSuite) TestCreate_AlreadyExists() {
 func (s *RedisMockTestSuite) TestGet_HappyPath() {
 	ctx := context.Background()
 	character := s.createTestCharacter()
-	data := s.repo.toCharacterData(character)
+	data, err := s.repo.toCharacterData(character)
+	s.Require().NoError(err)
 	data.CreatedAt = time.Now().UTC()
 	data.UpdatedAt = data.CreatedAt
 
@@ -152,7 +153,8 @@ func (s *RedisMockTestSuite) TestGet_HappyPath() {
 func (s *RedisMockTestSuite) TestUpdate_WithOwnerRealmChange() {
 	ctx := context.Background()
 	existingChar := s.createTestCharacter()
-	existingData := s.repo.toCharacterData(existingChar)
+	existingData, err := s.repo.toCharacterData(existingChar)
+	s.Require().NoError(err)
 	existingData.CreatedAt = time.Now().Add(-24 * time.Hour).UTC()
 	existingData.UpdatedAt = existingData.CreatedAt
 
@@ -209,7 +211,7 @@ func (s *RedisMockTestSuite) TestUpdate_WithOwnerRealmChange() {
 	cmds := []redis.Cmder{sRemCmd1, sRemCmd2, sRemCmd3, sAddCmd1, sAddCmd2, sAddCmd3}
 	pipeline.EXPECT().Exec(ctx).Return(cmds, nil)
 
-	err = s.repo.Update(ctx, &updatedChar)
+	err = s.repo.Update(ctx, updatedChar)
 	s.NoError(err)
 }
 
@@ -217,7 +219,8 @@ func (s *RedisMockTestSuite) TestUpdate_WithOwnerRealmChange() {
 func (s *RedisMockTestSuite) TestDelete_HappyPath() {
 	ctx := context.Background()
 	character := s.createTestCharacter()
-	data := s.repo.toCharacterData(character)
+	data, err := s.repo.toCharacterData(character)
+	s.Require().NoError(err)
 	data.CreatedAt = time.Now().UTC()
 	data.UpdatedAt = data.CreatedAt
 
@@ -269,14 +272,16 @@ func (s *RedisMockTestSuite) TestGetByOwner_HappyPath() {
 	char1 := s.createTestCharacter()
 	char1.ID = "char-1"
 	char1.Name = "Character 1"
-	data1 := s.repo.toCharacterData(char1)
+	data1, err := s.repo.toCharacterData(char1)
+	s.Require().NoError(err)
 	data1.CreatedAt = time.Now().UTC()
 	data1.UpdatedAt = data1.CreatedAt
 
 	char2 := s.createTestCharacter()
 	char2.ID = "char-2"
 	char2.Name = "Character 2"
-	data2 := s.repo.toCharacterData(char2)
+	data2, err := s.repo.toCharacterData(char2)
+	s.Require().NoError(err)
 	data2.CreatedAt = time.Now().UTC()
 	data2.UpdatedAt = data2.CreatedAt
 
