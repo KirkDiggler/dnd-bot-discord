@@ -7,6 +7,7 @@
 2. **Character List UI Issues** - Added show buttons, progress indicators, and filtering for empty drafts
 3. **Critical Mutex Copying Bug** - Added Character.Clone() method to prevent copying sync.Mutex
 4. **GitHub Actions CI/CD** - Set up comprehensive testing pipeline with Go 1.24 and golangci-lint v2.1.6
+5. **Character Disappearing Bug (June 18, 2025)** - Fixed Equipment interface JSON marshaling in Redis repository by implementing custom marshaling for equipment data
 
 ### Code Standards & Patterns
 
@@ -51,6 +52,25 @@
 - Continue button for resuming draft characters
 - Redis persistence for characters and sessions
 - Comprehensive GitHub Actions CI
+- Dungeon service with state machine for room progression
+- Dynamic monster selection from D&D 5e API with CR filtering
+- Loot service with treasure generation
+- Session metadata persistence for dungeon state
+
+#### Recent Improvements (June 18, 2025)
+- **Dungeon System Architecture**:
+  - Created clean service layer for dungeon management
+  - Implemented state machine (awaiting_party → room_ready → in_progress → room_cleared → complete/failed)
+  - Moved all business logic from handlers to services
+  - Fixed session metadata persistence with new SaveSession method
+- **D&D 5e API Integration**:
+  - Added ListMonstersByCR() to filter monsters by challenge rating
+  - Updated dnd5e-api client to support query parameters
+  - Monster service now fetches from API with fallback to hardcoded
+  - Loot service integrates with equipment API
+- **Service Provider Pattern**:
+  - Added MonsterService and LootService to provider
+  - Services properly inject dependencies
 
 #### Known Issues (Fix as we touch the code)
 - ~10 unchecked errors (errcheck)
@@ -59,10 +79,11 @@
 - Using math/rand instead of crypto/rand in places
 
 #### Next Priorities
-1. Implement features selection step (SelectFeaturesStep)
-2. Create end-to-end Discord bot tests
-3. Add more Redis integration tests
-4. Implement contract tests for D&D API
+1. Implement dungeon repository for Redis persistence
+2. Test dungeon flow end-to-end with Discord integration
+3. Implement features selection step (SelectFeaturesStep)
+4. Create end-to-end Discord bot tests
+5. Add more Redis integration tests
 
 ### Development Commands
 

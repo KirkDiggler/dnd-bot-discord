@@ -1,0 +1,114 @@
+package character_test
+
+import (
+	"context"
+	"testing"
+
+	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+)
+
+func TestAbilityAssignmentBug_CharacterShowsZeroAttributes(t *testing.T) {
+	// This test demonstrates the bug where characters show 0 attributes
+	// even after ability assignment is complete
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockClient := mockdnd5e.NewMockClient(ctrl)
+	mockRepo := mockcharrepo.NewMockRepository(ctrl)
+
+	svc := character.NewService(&character.ServiceConfig{
+		DNDClient:  mockClient,
+		Repository: mockRepo,
+	})
+
+	ctx := context.Background()
+	characterID := "char_123"
+
+	// Character state after ability assignment but before finalization
+	charAfterAssignment := &entities.Character{
+		ID:      characterID,
+		Name:    "NotGonnaWorkHere",
+		OwnerID: "user_123",
+		RealmID: "test_realm",
+		Status:  entities.CharacterStatusDraft,
+		Level:   1,
+		Race: &entities.Race{
+			Key:  "elf",
+			Name: "Elf",
+			AbilityBonuses: []*entities.AbilityBonus{
+				{Attribute: entities.AttributeDexterity, Bonus: 2},
+				{Attribute: entities.AttributeIntelligence, Bonus: 1},
+			},
+		},
+		Class: &entities.Class{
+			Key:    "monk",
+			Name:   "Monk",
+			HitDie: 8,
+		},
+		// THIS IS THE KEY: Character has AbilityAssignments but NO Attributes
+		AbilityRolls: []entities.AbilityRoll{
+			{ID: "roll_1", Value: 15},
+			{ID: "roll_2", Value: 14},
+			{ID: "roll_3", Value: 13},
+			{ID: "roll_4", Value: 12},
+			{ID: "roll_5", Value: 11},
+			{ID: "roll_6", Value: 10},
+		},
+		AbilityAssignments: map[string]string{
+			"STR": "roll_3", // 13
+			"DEX": "roll_2", // 14 + 2 (racial) = 16
+			"CON": "roll_4", // 12
+			"INT": "roll_1", // 15 + 1 (racial) = 16
+			"WIS": "roll_5", // 11
+			"CHA": "roll_6", // 10
+		},
+		Attributes:    map[entities.Attribute]*entities.AbilityScore{}, // Empty!
+		Proficiencies: make(map[entities.ProficiencyType][]*entities.Proficiency),
+		Inventory:     make(map[entities.EquipmentType][]entities.Equipment),
+		EquippedSlots: make(map[entities.Slot]entities.Equipment),
+		Features:      []*entities.CharacterFeature{},
+	}
+
+	// Mock the repository Get to return our test character
+	mockRepo.EXPECT().Get(ctx, characterID).Return(charAfterAssignment, nil).Times(1)
+
+	// Mock the Update call
+	mockRepo.EXPECT().Update(ctx, gomock.Any()).Return(nil).Times(1)
+
+	// Mock getting class features
+	mockClient.EXPECT().GetClassFeatures("monk", 1).Return([]*entities.CharacterFeature{
+		{
+			Name: "Unarmored Defense",
+			Type: entities.FeatureTypeClass,
+		},
+	}, nil).AnyTimes()
+
+	// Call FinalizeDraftCharacter
+	finalChar, err := svc.FinalizeDraftCharacter(ctx, characterID)
+	require.NoError(t, err)
+	require.NotNil(t, finalChar)
+
+	// BUG VERIFICATION: Character should have attributes but doesn't
+	t.Logf("Character after finalization - Name: %s, Attributes: %d, Status: %s",
+		finalChar.Name, len(finalChar.Attributes), finalChar.Status)
+
+	// These assertions would FAIL with the bug
+	assert.NotEmpty(t, finalChar.Attributes, "BUG: Character has 0 attributes after finalization")
+	assert.Len(t, finalChar.Attributes, 6, "BUG: Character missing ability scores")
+
+	// Verify specific conversions with racial bonuses
+	if len(finalChar.Attributes) > 0 {
+		assert.Equal(t, 16, finalChar.Attributes[entities.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
+		assert.Equal(t, 16, finalChar.Attributes[entities.AttributeIntelligence].Score, "INT should be 15 + 1 racial")
+	}
+
+	// Verify the character shows as complete
+	assert.True(t, finalChar.IsComplete(), "BUG: Character shows as incomplete due to missing ability scores")
+}

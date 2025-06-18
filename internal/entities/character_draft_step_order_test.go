@@ -34,23 +34,23 @@ func TestAllStepsCompleted(t *testing.T) {
 		},
 		{
 			name: "all implemented steps completed",
-			completedSteps: entities.SelectRaceStep | entities.SelectClassStep | 
+			completedSteps: entities.SelectRaceStep | entities.SelectClassStep |
 				entities.SelectAbilityScoresStep | entities.SelectProficienciesStep |
 				entities.SelectEquipmentStep | entities.SelectFeaturesStep | entities.EnterNameStep,
 			expected: true,
 		},
 		{
 			name: "missing name step",
-			completedSteps: entities.SelectRaceStep | entities.SelectClassStep | 
+			completedSteps: entities.SelectRaceStep | entities.SelectClassStep |
 				entities.SelectAbilityScoresStep | entities.SelectProficienciesStep |
 				entities.SelectEquipmentStep | entities.SelectFeaturesStep,
 			expected: false,
 		},
 		{
 			name: "includes unimplemented steps",
-			completedSteps: entities.SelectRaceStep | entities.SelectClassStep | 
+			completedSteps: entities.SelectRaceStep | entities.SelectClassStep |
 				entities.SelectAbilityScoresStep | entities.SelectProficienciesStep |
-				entities.SelectEquipmentStep | entities.SelectFeaturesStep | 
+				entities.SelectEquipmentStep | entities.SelectFeaturesStep |
 				entities.EnterNameStep | entities.SelectBackgroundStep | entities.SelectAlignmentStep,
 			expected: true, // Should still be true as we have all implemented steps
 		},
@@ -69,10 +69,10 @@ func TestAllStepsCompleted(t *testing.T) {
 func TestStepDependencies(t *testing.T) {
 	// Verify race affects features
 	assert.Contains(t, entities.StepDependencies[entities.SelectRaceStep], entities.SelectFeaturesStep)
-	
+
 	// Verify class affects features
 	assert.Contains(t, entities.StepDependencies[entities.SelectClassStep], entities.SelectFeaturesStep)
-	
+
 	// Verify background affects features
 	assert.Contains(t, entities.StepDependencies[entities.SelectBackgroundStep], entities.SelectFeaturesStep)
 }

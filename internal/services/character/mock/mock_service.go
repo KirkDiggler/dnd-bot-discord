@@ -57,6 +57,35 @@ func (mr *MockServiceMockRecorder) CreateCharacter(ctx, input any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCharacter", reflect.TypeOf((*MockService)(nil).CreateCharacter), ctx, input)
 }
 
+// Delete mocks base method.
+func (m *MockService) Delete(characterID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", characterID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockServiceMockRecorder) Delete(characterID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockService)(nil).Delete), characterID)
+}
+
+// FinalizeCharacterWithName mocks base method.
+func (m *MockService) FinalizeCharacterWithName(ctx context.Context, characterID, name, raceKey, classKey string) (*entities.Character, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FinalizeCharacterWithName", ctx, characterID, name, raceKey, classKey)
+	ret0, _ := ret[0].(*entities.Character)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FinalizeCharacterWithName indicates an expected call of FinalizeCharacterWithName.
+func (mr *MockServiceMockRecorder) FinalizeCharacterWithName(ctx, characterID, name, raceKey, classKey any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeCharacterWithName", reflect.TypeOf((*MockService)(nil).FinalizeCharacterWithName), ctx, characterID, name, raceKey, classKey)
+}
+
 // FinalizeDraftCharacter mocks base method.
 func (m *MockService) FinalizeDraftCharacter(ctx context.Context, characterID string) (*entities.Character, error) {
 	m.ctrl.T.Helper()
@@ -72,6 +101,36 @@ func (mr *MockServiceMockRecorder) FinalizeDraftCharacter(ctx, characterID any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeDraftCharacter", reflect.TypeOf((*MockService)(nil).FinalizeDraftCharacter), ctx, characterID)
 }
 
+// FixCharacterAttributes mocks base method.
+func (m *MockService) FixCharacterAttributes(ctx context.Context, characterID string) (*entities.Character, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FixCharacterAttributes", ctx, characterID)
+	ret0, _ := ret[0].(*entities.Character)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FixCharacterAttributes indicates an expected call of FixCharacterAttributes.
+func (mr *MockServiceMockRecorder) FixCharacterAttributes(ctx, characterID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FixCharacterAttributes", reflect.TypeOf((*MockService)(nil).FixCharacterAttributes), ctx, characterID)
+}
+
+// GetByID mocks base method.
+func (m *MockService) GetByID(characterID string) (*entities.Character, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByID", characterID)
+	ret0, _ := ret[0].(*entities.Character)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetByID indicates an expected call of GetByID.
+func (mr *MockServiceMockRecorder) GetByID(characterID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockService)(nil).GetByID), characterID)
+}
+
 // GetCharacter mocks base method.
 func (m *MockService) GetCharacter(ctx context.Context, characterID string) (*entities.Character, error) {
 	m.ctrl.T.Helper()
@@ -85,6 +144,36 @@ func (m *MockService) GetCharacter(ctx context.Context, characterID string) (*en
 func (mr *MockServiceMockRecorder) GetCharacter(ctx, characterID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCharacter", reflect.TypeOf((*MockService)(nil).GetCharacter), ctx, characterID)
+}
+
+// GetCharacterCreationSession mocks base method.
+func (m *MockService) GetCharacterCreationSession(ctx context.Context, sessionID string) (*entities.CharacterCreationSession, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCharacterCreationSession", ctx, sessionID)
+	ret0, _ := ret[0].(*entities.CharacterCreationSession)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCharacterCreationSession indicates an expected call of GetCharacterCreationSession.
+func (mr *MockServiceMockRecorder) GetCharacterCreationSession(ctx, sessionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCharacterCreationSession", reflect.TypeOf((*MockService)(nil).GetCharacterCreationSession), ctx, sessionID)
+}
+
+// GetCharacterFromSession mocks base method.
+func (m *MockService) GetCharacterFromSession(ctx context.Context, sessionID string) (*entities.Character, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCharacterFromSession", ctx, sessionID)
+	ret0, _ := ret[0].(*entities.Character)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCharacterFromSession indicates an expected call of GetCharacterFromSession.
+func (mr *MockServiceMockRecorder) GetCharacterFromSession(ctx, sessionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCharacterFromSession", reflect.TypeOf((*MockService)(nil).GetCharacterFromSession), ctx, sessionID)
 }
 
 // GetClass mocks base method.
@@ -115,6 +204,21 @@ func (m *MockService) GetClasses(ctx context.Context) ([]*entities.Class, error)
 func (mr *MockServiceMockRecorder) GetClasses(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClasses", reflect.TypeOf((*MockService)(nil).GetClasses), ctx)
+}
+
+// GetEquipmentByCategory mocks base method.
+func (m *MockService) GetEquipmentByCategory(ctx context.Context, category string) ([]entities.Equipment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEquipmentByCategory", ctx, category)
+	ret0, _ := ret[0].([]entities.Equipment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEquipmentByCategory indicates an expected call of GetEquipmentByCategory.
+func (mr *MockServiceMockRecorder) GetEquipmentByCategory(ctx, category any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEquipmentByCategory", reflect.TypeOf((*MockService)(nil).GetEquipmentByCategory), ctx, category)
 }
 
 // GetOrCreateDraftCharacter mocks base method.
@@ -162,6 +266,21 @@ func (mr *MockServiceMockRecorder) GetRaces(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRaces", reflect.TypeOf((*MockService)(nil).GetRaces), ctx)
 }
 
+// ListByOwner mocks base method.
+func (m *MockService) ListByOwner(ownerID string) ([]*entities.Character, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListByOwner", ownerID)
+	ret0, _ := ret[0].([]*entities.Character)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListByOwner indicates an expected call of ListByOwner.
+func (mr *MockServiceMockRecorder) ListByOwner(ownerID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByOwner", reflect.TypeOf((*MockService)(nil).ListByOwner), ownerID)
+}
+
 // ListCharacters mocks base method.
 func (m *MockService) ListCharacters(ctx context.Context, userID string) ([]*entities.Character, error) {
 	m.ctrl.T.Helper()
@@ -192,6 +311,35 @@ func (mr *MockServiceMockRecorder) ResolveChoices(ctx, input any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveChoices", reflect.TypeOf((*MockService)(nil).ResolveChoices), ctx, input)
 }
 
+// StartCharacterCreation mocks base method.
+func (m *MockService) StartCharacterCreation(ctx context.Context, userID, guildID string) (*entities.CharacterCreationSession, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartCharacterCreation", ctx, userID, guildID)
+	ret0, _ := ret[0].(*entities.CharacterCreationSession)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StartCharacterCreation indicates an expected call of StartCharacterCreation.
+func (mr *MockServiceMockRecorder) StartCharacterCreation(ctx, userID, guildID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartCharacterCreation", reflect.TypeOf((*MockService)(nil).StartCharacterCreation), ctx, userID, guildID)
+}
+
+// UpdateCharacterCreationSession mocks base method.
+func (m *MockService) UpdateCharacterCreationSession(ctx context.Context, sessionID, step string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateCharacterCreationSession", ctx, sessionID, step)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateCharacterCreationSession indicates an expected call of UpdateCharacterCreationSession.
+func (mr *MockServiceMockRecorder) UpdateCharacterCreationSession(ctx, sessionID, step any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCharacterCreationSession", reflect.TypeOf((*MockService)(nil).UpdateCharacterCreationSession), ctx, sessionID, step)
+}
+
 // UpdateDraftCharacter mocks base method.
 func (m *MockService) UpdateDraftCharacter(ctx context.Context, characterID string, updates *character.UpdateDraftInput) (*entities.Character, error) {
 	m.ctrl.T.Helper()
@@ -205,6 +353,20 @@ func (m *MockService) UpdateDraftCharacter(ctx context.Context, characterID stri
 func (mr *MockServiceMockRecorder) UpdateDraftCharacter(ctx, characterID, updates any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDraftCharacter", reflect.TypeOf((*MockService)(nil).UpdateDraftCharacter), ctx, characterID, updates)
+}
+
+// UpdateStatus mocks base method.
+func (m *MockService) UpdateStatus(characterID string, status entities.CharacterStatus) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateStatus", characterID, status)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateStatus indicates an expected call of UpdateStatus.
+func (mr *MockServiceMockRecorder) UpdateStatus(characterID, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockService)(nil).UpdateStatus), characterID, status)
 }
 
 // ValidateCharacterCreation mocks base method.

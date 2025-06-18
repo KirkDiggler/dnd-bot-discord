@@ -495,32 +495,32 @@ func (c *Character) Clone() *Character {
 
 	// Create a new character with all fields except mutex
 	clone := &Character{
-		ID:                c.ID,
-		OwnerID:           c.OwnerID,
-		RealmID:           c.RealmID,
-		Name:              c.Name,
-		Level:             c.Level,
-		Experience:        c.Experience,
-		CurrentHitPoints:  c.CurrentHitPoints,
-		TemporaryHitPoints: c.TemporaryHitPoints,
-		MaxHitPoints:      c.MaxHitPoints,
-		AC:                c.AC,
-		HitDie:            c.HitDie,
-		Speed:             c.Speed,
-		Initiative:        c.Initiative,
-		PassivePerception: c.PassivePerception,
-		ProficiencyBonus:  c.ProficiencyBonus,
-		Status:            c.Status,
-		Background:        c.Background,
-		Alignment:         c.Alignment,
-		Age:               c.Age,
-		Height:            c.Height,
-		Weight:            c.Weight,
-		Eyes:              c.Eyes,
-		Skin:              c.Skin,
-		Hair:              c.Hair,
-		Backstory:         c.Backstory,
-		Portrait:          c.Portrait,
+		ID:               c.ID,
+		OwnerID:          c.OwnerID,
+		RealmID:          c.RealmID,
+		Name:             c.Name,
+		Level:            c.Level,
+		Experience:       c.Experience,
+		CurrentHitPoints: c.CurrentHitPoints,
+		// TemporaryHitPoints: c.TemporaryHitPoints,
+		MaxHitPoints: c.MaxHitPoints,
+		AC:           c.AC,
+		HitDie:       c.HitDie,
+		Speed:        c.Speed,
+		// Initiative:        c.Initiative,
+		// PassivePerception: c.PassivePerception,
+		// ProficiencyBonus:  c.ProficiencyBonus,
+		Status:     c.Status,
+		Background: c.Background,
+		// Alignment:         c.Alignment,
+		// Age:               c.Age,
+		// Height:            c.Height,
+		// Weight:            c.Weight,
+		// Eyes:              c.Eyes,
+		// Skin:              c.Skin,
+		// Hair:              c.Hair,
+		// Backstory:         c.Backstory,
+		// Portrait:          c.Portrait,
 		// Note: mu sync.Mutex is not copied - new instance gets its own
 	}
 
@@ -580,18 +580,18 @@ func (c *Character) Clone() *Character {
 	}
 
 	// Deep copy Languages slice
-	if c.Languages != nil {
-		clone.Languages = append([]Language(nil), c.Languages...)
-	}
+	// if c.Languages != nil {
+	// 	clone.Languages = append([]Language(nil), c.Languages...)
+	// }
 
 	// Deep copy Skills map
-	clone.Skills = make(map[SkillType]*Skill)
-	for k, v := range c.Skills {
-		if v != nil {
-			skillCopy := *v
-			clone.Skills[k] = &skillCopy
-		}
-	}
+	// clone.Skills = make(map[SkillType]*Skill)
+	// for k, v := range c.Skills {
+	// 	if v != nil {
+	// 		skillCopy := *v
+	// 		clone.Skills[k] = &skillCopy
+	// 	}
+	// }
 
 	// Deep copy EquippedSlots map
 	clone.EquippedSlots = make(map[Slot]Equipment)
@@ -600,9 +600,9 @@ func (c *Character) Clone() *Character {
 	}
 
 	// Deep copy Notes slice
-	if c.Notes != nil {
-		clone.Notes = append([]string(nil), c.Notes...)
-	}
+	// if c.Notes != nil {
+	// 	clone.Notes = append([]string(nil), c.Notes...)
+	// }
 
 	return clone
 }
