@@ -117,7 +117,7 @@ func (h *AbilityScoresHandler) Handle(req *AbilityScoresRequest) error {
 				discordgo.Button{
 					Label:    "Roll Individually",
 					Style:    discordgo.SecondaryButton,
-					CustomID: fmt.Sprintf("character_create:roll_individual:%s:%s", req.RaceKey, req.ClassKey),
+					CustomID: fmt.Sprintf("character_create:roll_individual:%s:%s:0", req.RaceKey, req.ClassKey),
 					Emoji: &discordgo.ComponentEmoji{
 						Name: "🎯",
 					},
