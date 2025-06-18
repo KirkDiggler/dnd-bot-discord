@@ -682,7 +682,7 @@ func (s *service) ListActiveRealmSessions(ctx context.Context, realmID string) (
 // SaveSession saves a session to the repository
 func (s *service) SaveSession(ctx context.Context, session *entities.Session) error {
 	if session == nil {
-		return dnderr.Wrap("session is required")
+		return dnderr.New(dnderr.CodeInvalidArgument, "session is required")
 	}
 	
 	// Use Update method since repository doesn't have Save
