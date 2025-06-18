@@ -31,21 +31,21 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 		CharacterRepository: mockRepo,
 	})
 	
-	handler := discord.NewHandler(&discord.HandlerConfig{
+	_ = discord.NewHandler(&discord.HandlerConfig{
 		ServiceProvider: provider,
 	})
 
 	// Mock Discord session and interaction
-	session := &discordgo.Session{}
+	//session := &discordgo.Session{}
 	user := &discordgo.User{ID: "test_user"}
-	interaction := &discordgo.InteractionCreate{
+	/*interaction := &discordgo.InteractionCreate{
 		Interaction: &discordgo.Interaction{
 			Type: discordgo.InteractionMessageComponent,
 			Data: discordgo.ApplicationCommandInteractionData{},
 			Member: &discordgo.Member{User: user},
 			GuildID: "test_guild",
 		},
-	}
+	}*/
 
 	ctx := context.Background()
 
@@ -142,7 +142,7 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 	mockRepo.EXPECT().Get(ctx, "draft_123").Return(charWithAbilities, nil)
 	
 	// Mock: FinalizeDraftCharacter should convert abilities and mark as active
-	finalizedChar := &entities.Character{
+	_ = &entities.Character{
 		ID:      "draft_123",
 		OwnerID: user.ID,
 		RealmID: "test_guild",

@@ -59,7 +59,9 @@ func TestStartDungeonHandler_InitializesSessionMetadata(t *testing.T) {
 	// Create service provider
 	provider := &services.Provider{
 		SessionService: mockSessionService,
-		DungeonService: mockDungeonService,
+		DungeonService:   mockDungeonService,
+		MonsterService:   nil, // Add if needed
+		LootService:      nil, // Add if needed
 	}
 
 	// Test that metadata is properly initialized

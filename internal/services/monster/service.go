@@ -15,16 +15,17 @@ import (
 )
 
 // Service defines the monster service interface
+
 type Service interface {
 	// GetMonster fetches a specific monster by key
 	GetMonster(ctx context.Context, key string) (*entities.MonsterTemplate, error)
-	
+
 	// GetMonstersByCR returns monsters within a CR range
 	GetMonstersByCR(ctx context.Context, minCR, maxCR float32) ([]*entities.MonsterTemplate, error)
-	
+
 	// GetRandomMonsters returns random monsters for a given difficulty
 	GetRandomMonsters(ctx context.Context, difficulty string, count int) ([]*entities.MonsterTemplate, error)
-	
+
 	// GetMonsterForEncounter converts a monster template to encounter format
 	GetMonsterForEncounter(template *entities.MonsterTemplate) *MonsterEncounterData
 }
@@ -68,7 +69,7 @@ func NewService(cfg *ServiceConfig) Service {
 // GetMonster fetches a specific monster by key
 func (s *service) GetMonster(ctx context.Context, key string) (*entities.MonsterTemplate, error) {
 	if key == "" {
-		return nil, dnderr.InvalidArgument("monster key is required")
+		return nil, dnderr.InvalidArgument("monster key is req")
 	}
 
 	// Check cache first
@@ -93,11 +94,11 @@ func (s *service) GetMonstersByCR(ctx context.Context, minCR, maxCR float32) ([]
 	// Try to use API if available
 	if s.dndClient != nil {
 		var allMonsters []*entities.MonsterTemplate
-		
+
 		// The API requires exact CR values, so we need to query for each CR in range
 		// Common CR values: 0, 0.125, 0.25, 0.5, 1, 2, 3, 4, 5, etc.
 		crValues := []float64{0, 0.125, 0.25, 0.5, 1, 2, 3, 4, 5, 6, 7, 8}
-		
+
 		for _, cr := range crValues {
 			if float32(cr) >= minCR && float32(cr) <= maxCR {
 				// For now, get all monsters within the CR range
@@ -109,42 +110,42 @@ func (s *service) GetMonstersByCR(ctx context.Context, minCR, maxCR float32) ([]
 				}
 			}
 		}
-		
+
 		if len(allMonsters) > 0 {
 			return allMonsters, nil
 		}
 	}
-	
+
 	// Fallback to hardcoded list
 	var monsters []*entities.MonsterTemplate
-	
+
 	// CR 0-0.5
 	if minCR <= 0.5 {
 		monsters = append(monsters, s.getHardcodedMonsters("goblin", "skeleton", "kobold", "rat", "spider")...)
 	}
-	
+
 	// CR 0.5-1
 	if minCR <= 1 && maxCR >= 0.5 {
 		monsters = append(monsters, s.getHardcodedMonsters("orc", "wolf", "zombie", "hobgoblin")...)
 	}
-	
+
 	// CR 1-2
 	if minCR <= 2 && maxCR >= 1 {
 		monsters = append(monsters, s.getHardcodedMonsters("dire-wolf", "ghoul", "ogre", "bugbear")...)
 	}
-	
+
 	// CR 2+
 	if maxCR >= 2 {
 		monsters = append(monsters, s.getHardcodedMonsters("owlbear", "troll", "wight")...)
 	}
-	
+
 	return monsters, nil
 }
 
 // GetRandomMonsters returns random monsters for a given difficulty
 func (s *service) GetRandomMonsters(ctx context.Context, difficulty string, count int) ([]*entities.MonsterTemplate, error) {
 	var minCR, maxCR float32
-	
+
 	switch strings.ToLower(difficulty) {
 	case "easy":
 		minCR, maxCR = 0, 0.5
@@ -157,24 +158,24 @@ func (s *service) GetRandomMonsters(ctx context.Context, difficulty string, coun
 	default:
 		return nil, dnderr.InvalidArgument("difficulty must be easy, medium, hard, or deadly")
 	}
-	
+
 	// Get monsters in CR range
 	availableMonsters, err := s.GetMonstersByCR(ctx, minCR, maxCR)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if len(availableMonsters) == 0 {
 		return nil, dnderr.NotFound("no monsters found for difficulty")
 	}
-	
+
 	// Select random monsters
 	result := make([]*entities.MonsterTemplate, 0, count)
 	for i := 0; i < count; i++ {
 		idx := rand.Intn(len(availableMonsters))
 		result = append(result, availableMonsters[idx])
 	}
-	
+
 	return result, nil
 }
 
@@ -183,7 +184,7 @@ func (s *service) GetMonsterForEncounter(template *entities.MonsterTemplate) *Mo
 	if template == nil {
 		return nil
 	}
-	
+
 	// For now, return hardcoded data based on monster key
 	// In a full implementation, we'd parse the monster template data
 	return s.getHardcodedEncounterData(template.Key)
@@ -325,11 +326,11 @@ func (s *service) getHardcodedEncounterData(key string) *MonsterEncounterData {
 			},
 		},
 	}
-	
+
 	if data, ok := monsters[key]; ok {
 		return data
 	}
-	
+
 	// Default monster if not found
 	return &MonsterEncounterData{
 		Name:            fmt.Sprintf("Unknown Monster (%s)", key),

@@ -17,7 +17,7 @@ import (
 
 // MockDiscordSession for testing
 type MockDiscordSession struct {
-	*discordgo.Session
+	discordgo.Session
 	RespondFunc     func(*discordgo.Interaction, *discordgo.InteractionResponse) error
 	ResponseEditFunc func(*discordgo.Interaction, *discordgo.WebhookEdit) (*discordgo.Message, error)
 }
@@ -112,7 +112,7 @@ func TestCharacterCreation_AbilityAssignmentFlow(t *testing.T) {
 
 	// Handle the ability assignment
 	req := &character.AssignAbilitiesRequest{
-		Session:     mockSession,
+		Session:     &mockSession.Session,
 		Interaction: interaction,
 		RaceKey:     raceKey,
 		ClassKey:    classKey,
@@ -234,7 +234,7 @@ func TestCharacterCreation_AutoAssign(t *testing.T) {
 	}
 
 	req := &character.AssignAbilitiesRequest{
-		Session:     mockSession,
+		Session:     &mockSession.Session,
 		Interaction: interaction,
 		RaceKey:     raceKey,
 		ClassKey:    classKey,
