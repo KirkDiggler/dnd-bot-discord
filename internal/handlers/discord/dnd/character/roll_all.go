@@ -136,8 +136,21 @@ func (h *RollAllHandler) Handle(req *RollAllRequest) error {
 		Inline: false,
 	})
 
+	// Add flavor text based on total roll quality
+	totalScore := 0
+	for _, roll := range rolls {
+		totalScore += roll.Value
+	}
+	
+	flavorText := "The dice have spoken! Your fate is sealed."
+	if totalScore >= 78 { // Average of 13+ per stat
+		flavorText = "The gods smile upon you! An exceptional set of rolls."
+	} else if totalScore <= 60 { // Average of 10- per stat
+		flavorText = "The dice show no mercy... But legends are born from adversity!"
+	}
+	
 	embed.Footer = &discordgo.MessageEmbedFooter{
-		Text: "Click 'Assign to Abilities' to assign each roll to a specific ability",
+		Text: flavorText,
 	}
 
 	components := []discordgo.MessageComponent{
@@ -149,14 +162,6 @@ func (h *RollAllHandler) Handle(req *RollAllRequest) error {
 					CustomID: fmt.Sprintf("character_create:start_assign:%s:%s", req.RaceKey, req.ClassKey),
 					Emoji: &discordgo.ComponentEmoji{
 						Name: "📊",
-					},
-				},
-				discordgo.Button{
-					Label:    "Reroll All",
-					Style:    discordgo.SecondaryButton,
-					CustomID: fmt.Sprintf("character_create:roll_all:%s:%s", req.RaceKey, req.ClassKey),
-					Emoji: &discordgo.ComponentEmoji{
-						Name: "🎲",
 					},
 				},
 			},

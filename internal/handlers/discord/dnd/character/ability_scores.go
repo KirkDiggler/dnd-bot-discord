@@ -100,7 +100,7 @@ func (h *AbilityScoresHandler) Handle(req *AbilityScoresRequest) error {
 	}
 
 	embed.Footer = &discordgo.MessageEmbedFooter{
-		Text: "Choose your preferred rolling method",
+		Text: "Choose your rolling method - remember, the dice are final!",
 	}
 
 	components := []discordgo.MessageComponent{
