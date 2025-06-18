@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -602,8 +603,7 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 	} else if subcommandGroup.Name == "encounter" && len(subcommandGroup.Options) > 0 {
 		subcommand := subcommandGroup.Options[0]
 
-		switch subcommand.Name {
-		case "add":
+		if subcommand.Name == "add" {
 			// Get monster name from options
 			var monsterQuery string
 			for _, opt := range subcommand.Options {
@@ -780,17 +780,19 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							lines := strings.Split(field.Value, "\n")
 							for _, line := range lines {
 								// Parse lines like "**STR:** 17 (+2) = 19 [+4]" or "**STR:** 17 [+3]"
-								if strings.Contains(line, ":") && !strings.Contains(line, "_Not assigned_") {
-									subParts := strings.Split(line, ":")
-									ability := strings.Trim(strings.Trim(subParts[0], "*"), " ")
-									scoreStr := strings.TrimSpace(subParts[1])
-									// Extract just the base score
-									if idx := strings.Index(scoreStr, " "); idx > 0 {
-										scoreStr = scoreStr[:idx]
-									}
-									if score, err := strconv.Atoi(scoreStr); err == nil {
-										abilityScores[ability] = score
-									}
+								if !strings.Contains(line, ":") && strings.Contains(line, "_Not assigned_") {
+									continue
+								}
+
+								subParts := strings.Split(line, ":")
+								ability := strings.Trim(strings.Trim(subParts[0], "*"), " ")
+								scoreStr := strings.TrimSpace(subParts[1])
+								// Extract just the base score
+								if idx := strings.Index(scoreStr, " "); idx > 0 {
+									scoreStr = scoreStr[:idx]
+								}
+								if score, err := strconv.Atoi(scoreStr); err == nil {
+									abilityScores[ability] = score
 								}
 							}
 						}
@@ -883,7 +885,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					}
 
 					// Combine existing and new proficiencies
-					allProfs := append(existingProfs, selectedProfs...)
+					allProfs := slices.Concat(existingProfs, selectedProfs)
 
 					// Update the draft with selected proficiencies
 					_, err = h.ServiceProvider.CharacterService.UpdateDraftCharacter(
@@ -1149,7 +1151,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					// TODO: Track equipment properly in draft
 
 					// Add selected weapons
-					allEquipment := append(existingEquipment, selectedWeapons...)
+					allEquipment := slices.Concat(existingEquipment, selectedWeapons)
 
 					// If this was "weapon + shield" choice, add shield
 					if strings.Contains(strings.ToLower(bundleKey), "shield") && len(selectedWeapons) == 1 {
@@ -2108,13 +2110,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				err := h.ServiceProvider.EncounterService.StartEncounter(context.Background(), encounterID, i.Member.User.ID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to start combat: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2122,13 +2126,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := "✅ Combat started!"
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2230,13 +2236,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				err := h.ServiceProvider.EncounterService.NextTurn(context.Background(), encounterID, i.Member.User.ID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to advance turn: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2244,13 +2252,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := "✅ Turn advanced!"
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2436,13 +2446,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				err := h.ServiceProvider.EncounterService.EndEncounter(context.Background(), encounterID, i.Member.User.ID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to end encounter: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2475,13 +2487,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2489,13 +2503,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				current := encounter.GetCurrentCombatant()
 				if current == nil {
 					content := "❌ No active combatant!"
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2511,13 +2527,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 				if !canAct && encounter.CreatedBy != i.Member.User.ID {
 					content := "❌ It's not your turn!"
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2585,13 +2603,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				sess, err := h.ServiceProvider.SessionService.GetSession(context.Background(), sessionID)
 				if err != nil {
 					content := "❌ Session not found!"
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2863,13 +2883,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2884,13 +2906,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 
 				if targetID == "" {
 					content := fmt.Sprintf("❌ Target '%s' not found in encounter!", targetName)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2898,13 +2922,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				err = h.ServiceProvider.EncounterService.ApplyDamage(context.Background(), encounterID, targetID, i.Member.User.ID, damageAmount)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to apply damage: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -2912,13 +2938,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				encounter, err = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 				target := encounter.Combatants[targetID]
@@ -2945,12 +2973,14 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					})
 				}
 
-				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
 						Embeds: []*discordgo.MessageEmbed{embed},
 					},
-				})
+				}); responseErr != nil {
+					log.Printf("Failed to respond with error message: %v", responseErr)
+				}
 				if err != nil {
 					log.Printf("Error responding to damage: %v", err)
 				}
@@ -2984,13 +3014,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -3005,13 +3037,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 
 				if targetID == "" {
 					content := fmt.Sprintf("❌ Target '%s' not found in encounter!", targetName)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -3019,13 +3053,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				err = h.ServiceProvider.EncounterService.HealCombatant(context.Background(), encounterID, targetID, i.Member.User.ID, healAmount)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to apply healing: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -3033,13 +3069,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				encounter, err = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 				target := encounter.Combatants[targetID]
@@ -3095,13 +3133,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				// Validate attack roll
 				if attackRoll < 1 || attackRoll > 20 {
 					content := "❌ Invalid attack roll! Must be between 1-20."
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -3109,13 +3149,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -3123,13 +3165,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				attacker := encounter.GetCurrentCombatant()
 				if attacker == nil {
 					content := "❌ No active attacker!"
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -3146,13 +3190,15 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 
 				if target == nil {
 					content := fmt.Sprintf("❌ Target '%s' not found!", targetName)
-					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
 						},
-					})
+					}); responseErr != nil {
+						log.Printf("Failed to respond with error message: %v", responseErr)
+					}
 					return
 				}
 
@@ -3205,9 +3251,9 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					}
 
 					// Get updated target
-					encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
-					if err != nil {
-						log.Printf("Error getting encounter: %v", err)
+					encounter, encounterErr := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+					if encounterErr != nil {
+						log.Printf("Error getting encounter: %v", encounterErr)
 						return
 					}
 					updatedTarget := encounter.Combatants[targetID]

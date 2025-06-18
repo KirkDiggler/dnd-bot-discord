@@ -32,18 +32,30 @@ func main() {
 	}
 
 	client := redis.NewClient(opts)
-	defer client.Close()
+
+	// Test connection first
+	if _, pingErr := client.Ping(ctx).Result(); pingErr != nil {
+		log.Fatalf("Failed to connect to Redis: %v", pingErr)
+	}
+	defer func() {
+		clientErr := client.Close()
+		if clientErr != nil {
+			log.Printf("Failed to close Redis connection: %v", clientErr)
+		}
+	}()
 
 	// Get session data
 	data, err := client.Get(ctx, fmt.Sprintf("session:%s", sessionID)).Result()
 	if err != nil {
-		log.Fatalf("Failed to get session: %v", err)
+		log.Printf("Failed to get session: %v", err)
+		return
 	}
 
 	// Parse the session
 	var session entities.Session
 	if err := json.Unmarshal([]byte(data), &session); err != nil {
-		log.Fatalf("Failed to parse session: %v", err)
+		log.Printf("Failed to parse session: %v", err)
+		return
 	}
 
 	fmt.Printf("Session ID: %s\n", session.ID)

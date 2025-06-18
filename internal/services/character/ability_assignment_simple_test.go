@@ -1,6 +1,7 @@
 package character
 
 import (
+	"log"
 	"testing"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
@@ -39,12 +40,12 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments_Simple(t *testing.T) 
 			{ID: "roll_6", Value: 10},
 		},
 		AbilityAssignments: map[string]string{
-			"STR": "roll_3", // 13
-			"DEX": "roll_2", // 14 + 2 (racial) = 16
-			"CON": "roll_4", // 12
-			"INT": "roll_1", // 15 + 1 (racial) = 16
-			"WIS": "roll_5", // 11
-			"CHA": "roll_6", // 10
+			"STR": "roll_3", // Strength is roll 3 and has a score of 13
+			"DEX": "roll_2", // Dexterity is roll 2 and has a score of 14 + 2 (racial) = 16
+			"CON": "roll_4", // Constitution is roll 4 and has a score of 12
+			"INT": "roll_1", // Intelligence is roll 1 and has a score of 15 + 1 (racial) = 16
+			"WIS": "roll_5", // Wisdom is roll 5 and has a score of 11
+			"CHA": "roll_6", // Charisma is roll 6 and has a score of 10
 		},
 		Attributes: make(map[entities.Attribute]*entities.AbilityScore), // Empty attributes
 	}
@@ -63,46 +64,49 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments_Simple(t *testing.T) 
 
 		// Convert assignments to attributes
 		for abilityStr, rollID := range char.AbilityAssignments {
-			if rollValue, ok := rollValues[rollID]; ok {
-				// Parse ability string to Attribute type
-				var attr entities.Attribute
-				switch abilityStr {
-				case "STR":
-					attr = entities.AttributeStrength
-				case "DEX":
-					attr = entities.AttributeDexterity
-				case "CON":
-					attr = entities.AttributeConstitution
-				case "INT":
-					attr = entities.AttributeIntelligence
-				case "WIS":
-					attr = entities.AttributeWisdom
-				case "CHA":
-					attr = entities.AttributeCharisma
-				default:
-					continue
-				}
+			if _, ok := rollValues[rollID]; !ok {
+				log.Printf("Roll ID %s not found for character %s", rollID, char.ID)
+				continue
+			}
+			rollValue := rollValues[rollID]
+			// Parse ability string to Attribute type
+			var attr entities.Attribute
+			switch abilityStr {
+			case "STR":
+				attr = entities.AttributeStrength
+			case "DEX":
+				attr = entities.AttributeDexterity
+			case "CON":
+				attr = entities.AttributeConstitution
+			case "INT":
+				attr = entities.AttributeIntelligence
+			case "WIS":
+				attr = entities.AttributeWisdom
+			case "CHA":
+				attr = entities.AttributeCharisma
+			default:
+				continue
+			}
 
-				// Create base ability score
-				score := rollValue
+			// Create base ability score
+			score := rollValue
 
-				// Apply racial bonuses
-				if char.Race != nil {
-					for _, bonus := range char.Race.AbilityBonuses {
-						if bonus.Attribute == attr {
-							score += bonus.Bonus
-						}
+			// Apply racial bonuses
+			if char.Race != nil {
+				for _, bonus := range char.Race.AbilityBonuses {
+					if bonus.Attribute == attr {
+						score += bonus.Bonus
 					}
 				}
+			}
 
-				// Calculate modifier
-				modifier := (score - 10) / 2
+			// Calculate modifier
+			modifier := (score - 10) / 2
 
-				// Create ability score
-				char.Attributes[attr] = &entities.AbilityScore{
-					Score: score,
-					Bonus: modifier,
-				}
+			// Create ability score
+			char.Attributes[attr] = &entities.AbilityScore{
+				Score: score,
+				Bonus: modifier,
 			}
 		}
 	}

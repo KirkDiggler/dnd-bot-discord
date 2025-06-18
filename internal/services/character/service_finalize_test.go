@@ -58,12 +58,12 @@ func TestService_FinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T)
 			{ID: "roll_6", Value: 10},
 		},
 		AbilityAssignments: map[string]string{
-			"STR": "roll_3", // 13
-			"DEX": "roll_2", // 14 + 2 (racial) = 16
-			"CON": "roll_4", // 12
-			"INT": "roll_1", // 15 + 1 (racial) = 16
-			"WIS": "roll_5", // 11
-			"CHA": "roll_6", // 10
+			"STR": "roll_3", // Str uses roll 3 with 13
+			"DEX": "roll_2", // Dex uses roll 2 with 14 + 2 (racial) = 16
+			"CON": "roll_4", // Con uses roll 4 with 12
+			"INT": "roll_1", // Int uses roll 1 with 15 + 1 (racial) = 16
+			"WIS": "roll_5", // Wis uses roll 5 with 11
+			"CHA": "roll_6", // Cha uses roll 6 with 10
 		},
 		Attributes: make(map[entities.Attribute]*entities.AbilityScore), // Empty attributes
 	}

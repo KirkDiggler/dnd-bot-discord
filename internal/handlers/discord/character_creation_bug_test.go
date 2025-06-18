@@ -41,14 +41,6 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 	// Mock Discord session and interaction
 	// session := &discordgo.Session{}
 	user := &discordgo.User{ID: "test_user"}
-	/*interaction := &discordgo.InteractionCreate{
-		Interaction: &discordgo.Interaction{
-			Type: discordgo.InteractionMessageComponent,
-			Data: discordgo.ApplicationCommandInteractionData{},
-			Member: &discordgo.Member{User: user},
-			GuildID: "test_guild",
-		},
-	}*/
 
 	ctx := context.Background()
 

@@ -79,12 +79,13 @@ func main() {
 
 			// Test connection
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
 
 			if pingErr := redisClient.Ping(ctx).Err(); pingErr != nil {
+				cancel()
 				log.Printf("Failed to connect to Redis: %v", pingErr)
 				log.Println("Falling back to in-memory repositories")
 			} else {
+				defer cancel()
 				log.Println("Successfully connected to Redis")
 
 				// Create Redis repositories using bounded context constructors
@@ -112,14 +113,21 @@ func main() {
 	// Open connection to Discord
 	err = dg.Open()
 	if err != nil {
-		log.Fatalf("Failed to open Discord connection: %v", err)
+		log.Printf("Failed to open Discord connection: %v", err)
+		return
 	}
-	defer dg.Close()
+	defer func() {
+		clientErr := dg.Close()
+		if clientErr != nil {
+			log.Printf("Failed to close Discord connection: %v", clientErr)
+		}
+	}()
 
 	// Register commands
 	// Use empty string for global commands, or set a specific guild ID for testing
 	if err := handler.RegisterCommands(dg, cfg.Discord.GuildID); err != nil {
-		log.Fatalf("Failed to register commands: %v", err)
+		log.Printf("Failed to register commands: %v", err)
+		return
 	}
 
 	if cfg.Discord.GuildID != "" {

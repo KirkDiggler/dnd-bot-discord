@@ -32,7 +32,17 @@ func main() {
 	}
 
 	client := redis.NewClient(opts)
-	defer client.Close()
+
+	// Test connection first
+	if _, pingErr := client.Ping(ctx).Result(); pingErr != nil {
+		log.Fatalf("Failed to connect to Redis: %v", pingErr)
+	}
+	defer func() {
+		clientErr := client.Close()
+		if clientErr != nil {
+			log.Printf("Failed to close Redis connection: %v", clientErr)
+		}
+	}()
 
 	// Create repository
 	repo := charactersRepo.NewRedisRepository(&charactersRepo.RedisRepoConfig{
@@ -42,7 +52,8 @@ func main() {
 	// Get the character
 	char, err := repo.Get(ctx, characterID)
 	if err != nil {
-		log.Fatalf("Failed to get character: %v", err)
+		log.Printf("Failed to get character: %v", err)
+		return
 	}
 
 	log.Printf("Character: %s, Class: %s", char.Name, char.Class.Key)
@@ -66,7 +77,8 @@ func main() {
 		char.AC = newAC
 
 		if err := repo.Update(ctx, char); err != nil {
-			log.Fatalf("Failed to save character: %v", err)
+			log.Printf("Failed to save character: %v", err)
+			return
 		}
 
 		log.Println("AC updated successfully!")
