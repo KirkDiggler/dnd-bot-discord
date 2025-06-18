@@ -198,11 +198,8 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 
 	log.Printf("Dungeon started with difficulty: %s, bot ID: %s as DM", req.Difficulty, botID)
 
-	// We need to update the session to save the metadata and bot as DM
-	updateInput := &session.UpdateSessionInput{
-		Name: &sess.Name, // Just update with same name to trigger save
-	}
-	_, err = h.services.SessionService.UpdateSession(context.Background(), sess.ID, updateInput)
+	// Save the session with the bot as DM and metadata
+	err = h.services.SessionService.SaveSession(context.Background(), sess)
 	if err != nil {
 		log.Printf("Warning: Failed to save session updates: %v", err)
 	}
