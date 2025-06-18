@@ -12,6 +12,12 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// EquipmentData wraps equipment with type information for JSON marshaling
+type EquipmentData struct {
+	Type      string          `json:"type"`
+	Equipment json.RawMessage `json:"equipment"`
+}
+
 // CharacterData represents the serialized form of a character in Redis
 type CharacterData struct {
 	ID                 string                                               `json:"id"`
@@ -34,8 +40,8 @@ type CharacterData struct {
 	Experience         int                                                  `json:"experience"`
 	Status             entities.CharacterStatus                             `json:"status"`
 	Features           []*entities.CharacterFeature                         `json:"features"`
-	Inventory          map[entities.EquipmentType][]entities.Equipment      `json:"inventory"`
-	EquippedSlots      map[entities.Slot]entities.Equipment                 `json:"equipped_slots"`
+	Inventory          map[entities.EquipmentType][]EquipmentData           `json:"inventory"`
+	EquippedSlots      map[entities.Slot]EquipmentData                      `json:"equipped_slots"`
 	CreatedAt          time.Time                                            `json:"created_at"`
 	UpdatedAt          time.Time                                            `json:"updated_at"`
 }
@@ -45,6 +51,59 @@ type redisRepo struct {
 	client        redis.UniversalClient
 	uuidGenerator uuid.Generator
 	ttl           time.Duration // TTL for draft characters
+}
+
+// equipmentToData converts an Equipment interface to EquipmentData for storage
+func equipmentToData(eq entities.Equipment) (EquipmentData, error) {
+	// Marshal the concrete type
+	data, err := json.Marshal(eq)
+	if err != nil {
+		return EquipmentData{}, fmt.Errorf("failed to marshal equipment: %w", err)
+	}
+	
+	// Determine the concrete type
+	var typeStr string
+	switch eq.(type) {
+	case *entities.Weapon:
+		typeStr = "weapon"
+	case *entities.Armor:
+		typeStr = "armor"
+	case *entities.BasicEquipment:
+		typeStr = "basic"
+	default:
+		typeStr = "unknown"
+	}
+	
+	return EquipmentData{
+		Type:      typeStr,
+		Equipment: data,
+	}, nil
+}
+
+// dataToEquipment converts EquipmentData back to Equipment interface
+func dataToEquipment(data EquipmentData) (entities.Equipment, error) {
+	switch data.Type {
+	case "weapon":
+		var weapon entities.Weapon
+		if err := json.Unmarshal(data.Equipment, &weapon); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal weapon: %w", err)
+		}
+		return &weapon, nil
+	case "armor":
+		var armor entities.Armor
+		if err := json.Unmarshal(data.Equipment, &armor); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal armor: %w", err)
+		}
+		return &armor, nil
+	case "basic":
+		var basic entities.BasicEquipment
+		if err := json.Unmarshal(data.Equipment, &basic); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal basic equipment: %w", err)
+		}
+		return &basic, nil
+	default:
+		return nil, fmt.Errorf("unknown equipment type: %s", data.Type)
+	}
 }
 
 // RedisRepoConfig holds configuration for the Redis repository
@@ -124,7 +183,10 @@ func (r *redisRepo) Create(ctx context.Context, character *entities.Character) e
 	}
 
 	// Convert to data struct
-	data := r.toCharacterData(character)
+	data, err := r.toCharacterData(character)
+	if err != nil {
+		return fmt.Errorf("failed to convert character data: %w", err)
+	}
 	data.CreatedAt = time.Now().UTC()
 	data.UpdatedAt = data.CreatedAt
 
@@ -177,7 +239,11 @@ func (r *redisRepo) Get(ctx context.Context, id string) (*entities.Character, er
 	}
 
 	// Convert to entity
-	return r.fromCharacterData(&data), nil
+	char, err := r.fromCharacterData(&data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert character from data: %w", err)
+	}
+	return char, nil
 }
 
 // GetByOwner retrieves all characters for a specific owner
@@ -261,7 +327,10 @@ func (r *redisRepo) Update(ctx context.Context, character *entities.Character) e
 	}
 
 	// Convert to data struct
-	data := r.toCharacterData(character)
+	data, err := r.toCharacterData(character)
+	if err != nil {
+		return fmt.Errorf("failed to convert character data: %w", err)
+	}
 	data.CreatedAt = existing.CreatedAt // Preserve creation time
 	data.UpdatedAt = time.Now().UTC()
 
@@ -333,7 +402,31 @@ func (r *redisRepo) Delete(ctx context.Context, id string) error {
 }
 
 // toCharacterData converts an entity to the data struct for storage
-func (r *redisRepo) toCharacterData(char *entities.Character) *CharacterData {
+func (r *redisRepo) toCharacterData(char *entities.Character) (*CharacterData, error) {
+	// Convert inventory
+	inventory := make(map[entities.EquipmentType][]EquipmentData)
+	for eqType, items := range char.Inventory {
+		var dataItems []EquipmentData
+		for _, item := range items {
+			data, err := equipmentToData(item)
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert inventory item: %w", err)
+			}
+			dataItems = append(dataItems, data)
+		}
+		inventory[eqType] = dataItems
+	}
+	
+	// Convert equipped slots
+	equippedSlots := make(map[entities.Slot]EquipmentData)
+	for slot, item := range char.EquippedSlots {
+		data, err := equipmentToData(item)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert equipped item: %w", err)
+		}
+		equippedSlots[slot] = data
+	}
+	
 	return &CharacterData{
 		ID:                 char.ID,
 		OwnerID:            char.OwnerID,
@@ -355,13 +448,37 @@ func (r *redisRepo) toCharacterData(char *entities.Character) *CharacterData {
 		Experience:         char.Experience,
 		Status:             char.Status,
 		Features:           char.Features,
-		Inventory:          char.Inventory,
-		EquippedSlots:      char.EquippedSlots,
-	}
+		Inventory:          inventory,
+		EquippedSlots:      equippedSlots,
+	}, nil
 }
 
 // fromCharacterData converts a data struct to an entity
-func (r *redisRepo) fromCharacterData(data *CharacterData) *entities.Character {
+func (r *redisRepo) fromCharacterData(data *CharacterData) (*entities.Character, error) {
+	// Convert inventory back
+	inventory := make(map[entities.EquipmentType][]entities.Equipment)
+	for eqType, items := range data.Inventory {
+		var eqItems []entities.Equipment
+		for _, item := range items {
+			eq, err := dataToEquipment(item)
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert inventory data: %w", err)
+			}
+			eqItems = append(eqItems, eq)
+		}
+		inventory[eqType] = eqItems
+	}
+	
+	// Convert equipped slots back
+	equippedSlots := make(map[entities.Slot]entities.Equipment)
+	for slot, item := range data.EquippedSlots {
+		eq, err := dataToEquipment(item)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert equipped data: %w", err)
+		}
+		equippedSlots[slot] = eq
+	}
+	
 	return &entities.Character{
 		ID:                 data.ID,
 		OwnerID:            data.OwnerID,
@@ -383,7 +500,7 @@ func (r *redisRepo) fromCharacterData(data *CharacterData) *entities.Character {
 		Experience:         data.Experience,
 		Status:             data.Status,
 		Features:           data.Features,
-		Inventory:          data.Inventory,
-		EquippedSlots:      data.EquippedSlots,
-	}
+		Inventory:          inventory,
+		EquippedSlots:      equippedSlots,
+	}, nil
 }

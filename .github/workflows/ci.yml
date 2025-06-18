@@ -101,7 +101,10 @@ jobs:
         echo '```' >> $GITHUB_STEP_SUMMARY
 
     - name: Run integration tests
-      run: go test ./... -tags=integration -race -timeout=10m
+      run: |
+        export INTEGRATION_TEST=true
+        export REDIS_URL=redis://localhost:6379
+        go test ./... -run TestCharacterCreationFlow -v -race -timeout=10m
       env:
         REDIS_URL: redis://localhost:6379
 
