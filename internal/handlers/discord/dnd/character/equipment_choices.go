@@ -76,7 +76,7 @@ func (h *EquipmentChoicesHandler) Handle(req *EquipmentChoicesRequest) error {
 	}
 
 	// Show fixed starting equipment
-	if class.StartingEquipment != nil && len(class.StartingEquipment) > 0 {
+	if len(class.StartingEquipment) > 0 {
 		fixedItems := []string{}
 		for _, se := range class.StartingEquipment {
 			if se != nil && se.Equipment != nil {

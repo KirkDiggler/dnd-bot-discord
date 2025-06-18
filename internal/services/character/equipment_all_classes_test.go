@@ -605,7 +605,7 @@ func createArcaneFocusOptions() []entities.Option {
 }
 
 func capitalize(s string) string {
-	if len(s) == 0 {
+	if s == "" {
 		return s
 	}
 	// Simple capitalization - in production you'd handle multi-word items better

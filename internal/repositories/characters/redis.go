@@ -234,8 +234,8 @@ func (r *redisRepo) Get(ctx context.Context, id string) (*entities.Character, er
 
 	// Deserialize character data
 	var data CharacterData
-	if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal character: %w", err)
+	if unmarshalErr := json.Unmarshal([]byte(jsonData), &data); unmarshalErr != nil {
+		return nil, fmt.Errorf("failed to unmarshal character: %w", unmarshalErr)
 	}
 
 	// Convert to entity
@@ -322,8 +322,8 @@ func (r *redisRepo) Update(ctx context.Context, character *entities.Character) e
 
 	// Parse existing data to preserve created timestamp
 	var existing CharacterData
-	if err := json.Unmarshal([]byte(existingData), &existing); err != nil {
-		return fmt.Errorf("failed to unmarshal existing character: %w", err)
+	if marshErr := json.Unmarshal([]byte(existingData), &existing); marshErr != nil {
+		return fmt.Errorf("failed to unmarshal existing character: %w", marshErr)
 	}
 
 	// Convert to data struct

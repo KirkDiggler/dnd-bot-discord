@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"strings"
-	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
 	"github.com/bwmarrin/discordgo"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type StartDungeonRequest struct {
@@ -24,9 +24,9 @@ type StartDungeonHandler struct {
 	services *services.Provider
 }
 
-func NewStartDungeonHandler(services *services.Provider) *StartDungeonHandler {
+func NewStartDungeonHandler(serviceProvider *services.Provider) *StartDungeonHandler {
 	return &StartDungeonHandler{
-		services: services,
+		services: serviceProvider,
 	}
 }
 
@@ -66,7 +66,10 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 	if err == nil && len(activeSessions) > 0 {
 		// Leave any existing sessions first
 		for _, activeSession := range activeSessions {
-			h.services.SessionService.LeaveSession(context.Background(), activeSession.ID, req.Interaction.Member.User.ID)
+			err = h.services.SessionService.LeaveSession(context.Background(), activeSession.ID, req.Interaction.Member.User.ID)
+			if err != nil {
+				log.Printf("Error leaving session %s: %v", activeSession.ID, err)
+			}
 		}
 	}
 
@@ -151,7 +154,7 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 			},
 			{
 				Name:   "🏆 Difficulty",
-				Value:  strings.Title(req.Difficulty),
+				Value:  cases.Title(language.English).String(req.Difficulty),
 				Inline: true,
 			},
 		},
@@ -199,7 +202,7 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 	updateInput := &session.UpdateSessionInput{
 		Name: &sess.Name, // Just update with same name to trigger save
 	}
-	sess, err = h.services.SessionService.UpdateSession(context.Background(), sess.ID, updateInput)
+	_, err = h.services.SessionService.UpdateSession(context.Background(), sess.ID, updateInput)
 	if err != nil {
 		log.Printf("Warning: Failed to save session updates: %v", err)
 	}
@@ -213,8 +216,6 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 
 // generateRoom creates a random room based on difficulty and room number
 func (h *StartDungeonHandler) generateRoom(difficulty string, roomNumber int) *Room {
-	rand.Seed(time.Now().UnixNano())
-
 	// First room is always combat to start the adventure
 	if roomNumber == 1 {
 		return h.generateCombatRoom(difficulty, roomNumber)

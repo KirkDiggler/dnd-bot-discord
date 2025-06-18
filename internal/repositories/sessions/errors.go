@@ -21,7 +21,7 @@ type SessionRepositoryError struct {
 func NewSessionNotFoundError(id string) error {
 	return &SessionRepositoryError{
 		RecordError: repositories.RecordError{
-			ErrorWrapper: repositories.NewRecordNotFoundError(id).(*repositories.RecordError).ErrorWrapper,
+			ErrorWrapper: repositories.NewRecordNotFoundError(id).ErrorWrapper,
 		},
 	}
 }

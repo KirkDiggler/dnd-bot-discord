@@ -18,9 +18,9 @@ type LeaveHandler struct {
 	services *services.Provider
 }
 
-func NewLeaveHandler(services *services.Provider) *LeaveHandler {
+func NewLeaveHandler(serviceProvider *services.Provider) *LeaveHandler {
 	return &LeaveHandler{
-		services: services,
+		services: serviceProvider,
 	}
 }
 

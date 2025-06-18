@@ -180,23 +180,23 @@ func (c *client) ListMonstersByCR(minCR, maxCR float32) ([]*entities.MonsterTemp
 	// The API only supports filtering by exact CR, not range
 	// So we need to fetch monsters for each CR value in the range
 	crValues := getCRValuesInRange(minCR, maxCR)
-	
+
 	monsters := make([]*entities.MonsterTemplate, 0)
 	processedKeys := make(map[string]bool) // Track processed monsters to avoid duplicates
-	
+
 	for _, cr := range crValues {
 		crFloat64 := float64(cr)
 		input := &dnd5e.ListMonstersInput{
 			ChallengeRating: &crFloat64,
 		}
-		
+
 		// Get monster references for this CR
 		monsterRefs, err := c.client.ListMonstersWithFilter(input)
 		if err != nil {
 			log.Printf("Failed to list monsters for CR %f: %v", cr, err)
 			continue
 		}
-		
+
 		// Fetch each monster's details
 		for _, ref := range monsterRefs {
 			if ref.Key != "" && !processedKeys[ref.Key] {
@@ -215,7 +215,7 @@ func (c *client) ListMonstersByCR(minCR, maxCR float32) ([]*entities.MonsterTemp
 			}
 		}
 	}
-	
+
 	return monsters, nil
 }
 
@@ -224,7 +224,7 @@ func getCRValuesInRange(minCR, maxCR float32) []float32 {
 	// Standard D&D 5e CR values
 	allCRs := []float32{0, 0.125, 0.25, 0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
 		11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30}
-	
+
 	var result []float32
 	for _, cr := range allCRs {
 		if cr >= minCR && cr <= maxCR {
@@ -280,17 +280,30 @@ func apiToMonsterTemplate(input *apiEntities.Monster) *entities.MonsterTemplate 
 
 func apiToDamage(input *apiEntities.Damage) *damage.Damage {
 	a := strings.Split(input.DamageDice, "+")
-	var dice string = input.DamageDice
+	dice := input.DamageDice
 	var bonus, diceValue, diceCount int
+	var err error
 	if len(a) == 2 {
-		bonus, _ = strconv.Atoi(a[1])
+		bonus, err = strconv.Atoi(a[1])
+		if err != nil {
+			log.Printf("Unknown dice format %s", input.DamageDice)
+			return nil
+		}
 		dice = a[0]
 	}
 
 	b := strings.Split(dice, "d")
 	if len(b) == 2 {
-		diceCount, _ = strconv.Atoi(b[0])
-		diceValue, _ = strconv.Atoi(b[1])
+		diceCount, err = strconv.Atoi(b[0])
+		if err != nil {
+			log.Printf("Unknown dice format %s", input.DamageDice)
+			return nil
+		}
+		diceValue, err = strconv.Atoi(b[1])
+		if err != nil {
+			log.Printf("Unknown dice format %s", input.DamageDice)
+			return nil
+		}
 	}
 
 	// TODO: add damage type

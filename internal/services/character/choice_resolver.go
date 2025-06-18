@@ -203,7 +203,7 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 			}
 		case *entities.MultipleOption:
 			// Skip if no items
-			if o.Items == nil || len(o.Items) == 0 {
+			if len(o.Items) == 0 {
 				continue
 			}
 

@@ -18,9 +18,9 @@ type ListHandler struct {
 	services *services.Provider
 }
 
-func NewListHandler(services *services.Provider) *ListHandler {
+func NewListHandler(serviceProvider *services.Provider) *ListHandler {
 	return &ListHandler{
-		services: services,
+		services: serviceProvider,
 	}
 }
 

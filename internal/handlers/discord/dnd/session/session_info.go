@@ -19,9 +19,9 @@ type InfoHandler struct {
 	services *services.Provider
 }
 
-func NewInfoHandler(services *services.Provider) *InfoHandler {
+func NewInfoHandler(serviceProvider *services.Provider) *InfoHandler {
 	return &InfoHandler{
-		services: services,
+		services: serviceProvider,
 	}
 }
 
@@ -82,16 +82,11 @@ func (h *InfoHandler) Handle(req *InfoRequest) error {
 		Name:   "📋 Status",
 		Value:  h.getStatusDisplay(session.Status),
 		Inline: true,
-	})
-
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+	}, &discordgo.MessageEmbedField{
 		Name:   "🎲 Dungeon Master",
 		Value:  fmt.Sprintf("<@%s>", session.DMID),
 		Inline: true,
-	})
-
-	// Add player count
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+	}, &discordgo.MessageEmbedField{
 		Name:   "👥 Players",
 		Value:  fmt.Sprintf("%d/%d", len(session.GetActivePlayers()), session.Settings.MaxPlayers),
 		Inline: true,
@@ -117,7 +112,7 @@ func (h *InfoHandler) Handle(req *InfoRequest) error {
 			playerList.WriteString(fmt.Sprintf("<@%s>", player.UserID))
 			if player.CharacterID != "" {
 				// Get character name if possible
-				if char, err := h.services.CharacterService.GetByID(player.CharacterID); err == nil {
+				if char, getCharErr := h.services.CharacterService.GetByID(player.CharacterID); getCharErr == nil {
 					playerList.WriteString(fmt.Sprintf(" - %s", char.Name))
 				} else {
 					playerList.WriteString(" - Character Selected")
@@ -228,8 +223,7 @@ func (h *InfoHandler) getActionButtons(session *entities.Session, member *entiti
 				Style:    discordgo.SuccessButton,
 				CustomID: fmt.Sprintf("session_manage:start:%s", session.ID),
 				Emoji:    &discordgo.ComponentEmoji{Name: "▶️"},
-			})
-			buttons = append(buttons, discordgo.Button{
+			}, discordgo.Button{
 				Label:    "Invite Players",
 				Style:    discordgo.PrimaryButton,
 				CustomID: fmt.Sprintf("session_manage:invite:%s", session.ID),
@@ -241,8 +235,7 @@ func (h *InfoHandler) getActionButtons(session *entities.Session, member *entiti
 				Style:    discordgo.SecondaryButton,
 				CustomID: fmt.Sprintf("session_manage:pause:%s", session.ID),
 				Emoji:    &discordgo.ComponentEmoji{Name: "⏸️"},
-			})
-			buttons = append(buttons, discordgo.Button{
+			}, discordgo.Button{
 				Label:    "End Session",
 				Style:    discordgo.DangerButton,
 				CustomID: fmt.Sprintf("session_manage:end:%s", session.ID),
@@ -254,8 +247,7 @@ func (h *InfoHandler) getActionButtons(session *entities.Session, member *entiti
 				Style:    discordgo.SuccessButton,
 				CustomID: fmt.Sprintf("session_manage:resume:%s", session.ID),
 				Emoji:    &discordgo.ComponentEmoji{Name: "▶️"},
-			})
-			buttons = append(buttons, discordgo.Button{
+			}, discordgo.Button{
 				Label:    "End Session",
 				Style:    discordgo.DangerButton,
 				CustomID: fmt.Sprintf("session_manage:end:%s", session.ID),

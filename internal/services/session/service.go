@@ -13,7 +13,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/gamesessions"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	charService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/uuid"
 )
 
@@ -100,15 +100,15 @@ type UpdateSessionInput struct {
 // service implements the Service interface
 type service struct {
 	repository       Repository
-	characterService character.Service
+	characterService charService.Service
 	uuidGenerator    uuid.Generator
 }
 
 // ServiceConfig holds configuration for the service
 type ServiceConfig struct {
-	Repository       Repository        // Required
-	CharacterService character.Service // Required
-	UUIDGenerator    uuid.Generator    // Optional, will use default if nil
+	Repository       Repository          // Required
+	CharacterService charService.Service // Required
+	UUIDGenerator    uuid.Generator      // Optional, will use default if nil
 }
 
 // NewService creates a new session service
@@ -424,9 +424,9 @@ func (s *service) SelectCharacter(ctx context.Context, sessionID, userID, charac
 	}
 
 	// Verify character exists and belongs to user
-	character, err := s.characterService.GetByID(characterID)
-	if err != nil {
-		return dnderr.Wrapf(err, "failed to get character '%s'", characterID).
+	character, getErr := s.characterService.GetByID(characterID)
+	if getErr != nil {
+		return dnderr.Wrapf(getErr, "failed to get character '%s'", characterID).
 			WithMeta("character_id", characterID)
 	}
 

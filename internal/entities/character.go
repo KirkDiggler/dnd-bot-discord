@@ -199,7 +199,10 @@ func (c *Character) calculateAC() {
 	// First, check for body armor which sets the base AC
 	if bodyArmor := c.EquippedSlots[SlotBody]; bodyArmor != nil {
 		if bodyArmor.GetEquipmentType() == "Armor" {
-			armor := bodyArmor.(*Armor)
+			armor, ok := bodyArmor.(*Armor)
+			if !ok {
+				log.Printf("Invalid body armor: %v", bodyArmor)
+			}
 			if armor.ArmorClass != nil {
 				c.AC = armor.ArmorClass.Base
 				if armor.ArmorClass.DexBonus {
@@ -217,7 +220,10 @@ func (c *Character) calculateAC() {
 		}
 
 		if e.GetEquipmentType() == "Armor" {
-			armor := e.(*Armor)
+			armor, ok := e.(*Armor)
+			if !ok {
+				continue
+			}
 			if armor.ArmorClass == nil {
 				continue
 			}
@@ -253,7 +259,7 @@ func (c *Character) AddAttribute(attr Attribute, score int) {
 
 	// Calculate the modifier based on the score
 	modifier := (score - 10) / 2
-	
+
 	abilityScore := &AbilityScore{
 		Score: score,
 		Bonus: modifier,
@@ -458,10 +464,6 @@ func (c *Character) resetBackground() {
 func (c *Character) resetAbilityScores() {
 	c.Attributes = make(map[Attribute]*AbilityScore)
 }
-
-func (c *Character) resetProficienciesBySource(step CreateStep) {}
-func (c *Character) resetSkillsBySource(step CreateStep)        {}
-func (c *Character) resetEquipmentBySource(step CreateStep)     {}
 
 // Clone creates a deep copy of the character without copying the mutex
 func (c *Character) Clone() *Character {

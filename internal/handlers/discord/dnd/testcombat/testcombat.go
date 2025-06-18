@@ -9,7 +9,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
+	sessService "github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -23,9 +23,9 @@ type TestCombatHandler struct {
 	services *services.Provider
 }
 
-func NewTestCombatHandler(services *services.Provider) *TestCombatHandler {
+func NewTestCombatHandler(servicesProvider *services.Provider) *TestCombatHandler {
 	return &TestCombatHandler{
-		services: services,
+		services: servicesProvider,
 	}
 }
 
@@ -40,7 +40,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 
 	// Create a test session with bot as DM
 	botID := req.Session.State.User.ID
-	sessionInput := &session.CreateSessionInput{
+	sessionInput := &sessService.CreateSessionInput{
 		Name:        "Test Combat Arena",
 		Description: "Quick combat test session",
 		CreatorID:   botID,
@@ -188,7 +188,14 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 	}
 
 	// Get final encounter state
-	enc, _ = h.services.EncounterService.GetEncounter(context.Background(), enc.ID)
+	enc, err = h.services.EncounterService.GetEncounter(context.Background(), enc.ID)
+	if err != nil {
+		content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
+		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
+		})
+		return err
+	}
 
 	// Build response
 	embed := &discordgo.MessageEmbed{

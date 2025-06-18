@@ -5,6 +5,7 @@ package loot
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/rand"
 	"time"
 
@@ -141,8 +142,10 @@ func (s *service) GenerateLootTable(ctx context.Context, challengeRating float64
 
 	// Try to add magic item from API
 	if s.dndClient != nil && challengeRating >= 3 {
-		magicItem, _ := s.getRandomEquipment(ctx)
-		if magicItem != nil {
+		magicItem, err := s.getRandomEquipment(ctx)
+		if err != nil {
+			log.Println("Failed to get random equipment:", err)
+		} else if magicItem != nil {
 			table.MagicItem = &magicItem
 		}
 	}
@@ -151,7 +154,7 @@ func (s *service) GenerateLootTable(ctx context.Context, challengeRating float64
 }
 
 // getGoldRange returns min/max gold for difficulty and room
-func (s *service) getGoldRange(difficulty string, roomNumber int) (int, int) {
+func (s *service) getGoldRange(difficulty string, roomNumber int) (minValue, maxValue int) {
 	base := 10
 	switch difficulty {
 	case "easy":
@@ -164,10 +167,10 @@ func (s *service) getGoldRange(difficulty string, roomNumber int) (int, int) {
 
 	// Scale with room number
 	multiplier := 1 + (roomNumber / 3)
-	min := base * multiplier
-	max := base * multiplier * 3
+	minValue = base * multiplier
+	maxValue = base * multiplier * 3
 
-	return min, max
+	return minValue, maxValue
 }
 
 // getGoldRangeForCR returns gold range based on challenge rating

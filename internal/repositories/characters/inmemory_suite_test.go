@@ -108,7 +108,8 @@ func (s *InMemoryRepositoryTestSuite) TestGet_Success() {
 		RealmID: "realm_789",
 		Name:    "Thorin",
 	}
-	s.repo.Create(s.ctx, char)
+	err := s.repo.Create(s.ctx, char)
+	s.NoError(err)
 
 	// Execute
 	gotChar, err := s.repo.Get(s.ctx, "char_123")
@@ -139,7 +140,8 @@ func (s *InMemoryRepositoryTestSuite) TestGet_ReturnsCopy() {
 		RealmID: "realm_789",
 		Name:    "Thorin",
 	}
-	s.repo.Create(s.ctx, char)
+	err := s.repo.Create(s.ctx, char)
+	s.NoError(err)
 
 	// Get character twice
 	gotChar1, err := s.repo.Get(s.ctx, "char_123")
@@ -181,7 +183,8 @@ func (s *InMemoryRepositoryTestSuite) TestGetByOwner_Success() {
 	}
 
 	for _, char := range chars {
-		s.repo.Create(s.ctx, char)
+		err := s.repo.Create(s.ctx, char)
+		s.NoError(err)
 	}
 
 	// Execute
@@ -232,7 +235,8 @@ func (s *InMemoryRepositoryTestSuite) TestGetByOwnerAndRealm_Success() {
 	}
 
 	for _, char := range chars {
-		s.repo.Create(s.ctx, char)
+		err := s.repo.Create(s.ctx, char)
+		s.NoError(err)
 	}
 
 	// Execute
@@ -258,11 +262,12 @@ func (s *InMemoryRepositoryTestSuite) TestUpdate_Success() {
 		RealmID: "realm_789",
 		Name:    "Thorin",
 	}
-	s.repo.Create(s.ctx, char)
+	err := s.repo.Create(s.ctx, char)
+	s.NoError(err)
 
 	// Update character
 	char.Name = "Thorin Oakenshield"
-	err := s.repo.Update(s.ctx, char)
+	err = s.repo.Update(s.ctx, char)
 
 	// Assert
 	s.NoError(err)
@@ -300,10 +305,11 @@ func (s *InMemoryRepositoryTestSuite) TestDelete_Success() {
 		RealmID: "realm_789",
 		Name:    "Thorin",
 	}
-	s.repo.Create(s.ctx, char)
+	err := s.repo.Create(s.ctx, char)
+	s.NoError(err)
 
 	// Execute
-	err := s.repo.Delete(s.ctx, "char_123")
+	err = s.repo.Delete(s.ctx, "char_123")
 
 	// Assert
 	s.NoError(err)
@@ -363,7 +369,8 @@ func (s *InMemoryRepositoryTestSuite) TestConcurrentReadsAndWrites() {
 		Name:    "Thorin",
 		Level:   1,
 	}
-	s.repo.Create(s.ctx, char)
+	err := s.repo.Create(s.ctx, char)
+	s.NoError(err)
 
 	var wg sync.WaitGroup
 	numReaders := 5
@@ -375,8 +382,8 @@ func (s *InMemoryRepositoryTestSuite) TestConcurrentReadsAndWrites() {
 		go func() {
 			defer wg.Done()
 			for j := 0; j < 10; j++ {
-				gotChar, err := s.repo.Get(s.ctx, "char_123")
-				s.NoError(err)
+				gotChar, getErr := s.repo.Get(s.ctx, "char_123")
+				s.NoError(getErr)
 				s.NotNil(gotChar)
 			}
 		}()
@@ -395,8 +402,8 @@ func (s *InMemoryRepositoryTestSuite) TestConcurrentReadsAndWrites() {
 					Name:    fmt.Sprintf("Thorin v%d", writerID*10+j),
 					Level:   writerID*10 + j,
 				}
-				err := s.repo.Update(s.ctx, char)
-				s.NoError(err)
+				updateErr := s.repo.Update(s.ctx, char)
+				s.NoError(updateErr)
 			}
 		}(i)
 	}

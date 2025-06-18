@@ -76,7 +76,8 @@ func TestStartDungeonHandler_InitializesSessionMetadata(t *testing.T) {
 
 	// Add bot as DM
 	sess.DMID = "bot123"
-	mockSessionService.SaveSession(ctx, sess)
+	err = mockSessionService.SaveSession(ctx, sess)
+	require.NoError(t, err)
 
 	// Create dungeon
 	dung, err := mockDungeonService.CreateDungeon(ctx, nil)

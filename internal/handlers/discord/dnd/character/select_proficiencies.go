@@ -143,7 +143,6 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 		optionName := h.getOptionName(option)
 		if optionName != "" {
 			optionStrings = append(optionStrings, fmt.Sprintf("• %s", optionName))
-		} else {
 		}
 	}
 

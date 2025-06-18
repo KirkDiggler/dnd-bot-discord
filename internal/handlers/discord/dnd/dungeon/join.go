@@ -15,9 +15,9 @@ type JoinPartyHandler struct {
 	services *services.Provider
 }
 
-func NewJoinPartyHandler(services *services.Provider) *JoinPartyHandler {
+func NewJoinPartyHandler(serviceProvider *services.Provider) *JoinPartyHandler {
 	return &JoinPartyHandler{
-		services: services,
+		services: serviceProvider,
 	}
 }
 

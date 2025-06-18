@@ -39,7 +39,7 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 	})
 
 	// Mock Discord session and interaction
-	//session := &discordgo.Session{}
+	// session := &discordgo.Session{}
 	user := &discordgo.User{ID: "test_user"}
 	/*interaction := &discordgo.InteractionCreate{
 		Interaction: &discordgo.Interaction{

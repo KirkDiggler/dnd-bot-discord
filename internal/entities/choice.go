@@ -96,7 +96,10 @@ func (o *Choice) Select(key string) *SelectOuput {
 		}
 
 		if option.GetOptionType() == OptionTypeChoice {
-			choiceOption := option.(*Choice)
+			choiceOption, ok := option.(*Choice)
+			if !ok {
+				return nil
+			}
 			choice := choiceOption.Select(key)
 			if choice.Option != nil {
 				selected = choice
@@ -108,7 +111,10 @@ func (o *Choice) Select(key string) *SelectOuput {
 		}
 
 		if option.GetOptionType() == OptionTypeMultiple {
-			multipleOption := option.(*MultipleOption)
+			multipleOption, ok := option.(*MultipleOption)
+			if !ok {
+				return nil
+			}
 			multiple := multipleOption.Select(key)
 			if multiple.Option != nil {
 				selected = multiple

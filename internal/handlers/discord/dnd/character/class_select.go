@@ -196,9 +196,7 @@ func (h *ClassSelectHandler) buildSummaryEmbed(race *entities.Race, class *entit
 		Name:   "Progress",
 		Value:  "✅ Step 1: Race\n✅ Step 2: Class\n⏳ Step 3: Abilities\n⏳ Step 4: Details",
 		Inline: false,
-	})
-
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+	}, &discordgo.MessageEmbedField{
 		Name:   "📊 Starting Hit Points",
 		Value:  fmt.Sprintf("Base: %d (will add Constitution modifier)", class.HitDie),
 		Inline: false,

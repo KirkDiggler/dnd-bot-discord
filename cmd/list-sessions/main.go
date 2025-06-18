@@ -27,8 +27,8 @@ func main() {
 	defer client.Close()
 
 	// Test connection
-	if _, err := client.Ping(ctx).Result(); err != nil {
-		log.Fatalf("Failed to connect to Redis: %v", err)
+	if _, pingErr := client.Ping(ctx).Result(); pingErr != nil {
+		log.Fatalf("Failed to connect to Redis: %v", pingErr)
 	}
 
 	// Find all session keys
@@ -40,9 +40,9 @@ func main() {
 	fmt.Printf("Found %d sessions:\n", len(sessionKeys))
 	for _, key := range sessionKeys {
 		// Get the session data
-		data, err := client.Get(ctx, key).Result()
-		if err != nil {
-			fmt.Printf("  %s: ERROR - %v\n", key, err)
+		data, getErr := client.Get(ctx, key).Result()
+		if getErr != nil {
+			fmt.Printf("  %s: ERROR - %v\n", key, getErr)
 			continue
 		}
 

@@ -18,10 +18,11 @@ type Weapon struct {
 
 func (w *Weapon) Attack(char *Character) (*attack.Result, error) {
 	var bonus int
-	if w.WeaponRange == "Ranged" {
-		bonus = char.Attributes[AttributeDexterity].Bonus
-	} else if w.WeaponRange == "Melee" {
 
+	switch w.WeaponRange {
+	case "Ranged":
+		bonus = char.Attributes[AttributeDexterity].Bonus
+	case "Melee":
 		bonus = char.Attributes[AttributeStrength].Bonus
 	}
 

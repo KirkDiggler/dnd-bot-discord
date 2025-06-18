@@ -70,9 +70,9 @@ func main() {
 	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
 		log.Printf("Connecting to Redis at: %s", redisURL)
 
-		opts, err := redis.ParseURL(redisURL)
-		if err != nil {
-			log.Printf("Failed to parse Redis URL: %v", err)
+		opts, parseErr := redis.ParseURL(redisURL)
+		if parseErr != nil {
+			log.Printf("Failed to parse Redis URL: %v", parseErr)
 			log.Println("Falling back to in-memory repositories")
 		} else {
 			redisClient = redis.NewClient(opts)
@@ -81,8 +81,8 @@ func main() {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			if err := redisClient.Ping(ctx).Err(); err != nil {
-				log.Printf("Failed to connect to Redis: %v", err)
+			if pingErr := redisClient.Ping(ctx).Err(); pingErr != nil {
+				log.Printf("Failed to connect to Redis: %v", pingErr)
 				log.Println("Falling back to in-memory repositories")
 			} else {
 				log.Println("Successfully connected to Redis")

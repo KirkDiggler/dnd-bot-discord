@@ -18,13 +18,13 @@ type EnterRoomHandler struct {
 	services *services.Provider
 }
 
-func NewEnterRoomHandler(services *services.Provider) *EnterRoomHandler {
+func NewEnterRoomHandler(serviceProvider *services.Provider) *EnterRoomHandler {
 	return &EnterRoomHandler{
-		services: services,
+		services: serviceProvider,
 	}
 }
 
-func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCreate, sessionID string, roomType string) error {
+func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCreate, sessionID, roomType string) error {
 	// Get session
 	sess, err := h.services.SessionService.GetSession(context.Background(), sessionID)
 	if err != nil {
@@ -80,9 +80,10 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 			difficulty = diff
 		}
 		// Try different type assertions for roomNumber
-		if roomNum, ok := sess.Metadata["roomNumber"].(float64); ok {
+		switch roomNum := sess.Metadata["roomNumber"].(type) {
+		case float64:
 			roomNumber = int(roomNum)
-		} else if roomNum, ok := sess.Metadata["roomNumber"].(int); ok {
+		case int:
 			roomNumber = roomNum
 		}
 	}
@@ -166,7 +167,16 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 	}
 
 	// Get updated encounter
-	enc, _ = h.services.EncounterService.GetEncounter(context.Background(), enc.ID)
+	enc, err = h.services.EncounterService.GetEncounter(context.Background(), enc.ID)
+	if err != nil {
+		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: fmt.Sprintf("❌ Failed to get encounter: %v", err),
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+	}
 
 	// Build combat display
 	embed := &discordgo.MessageEmbed{

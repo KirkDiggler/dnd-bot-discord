@@ -19,9 +19,9 @@ type JoinHandler struct {
 	services *services.Provider
 }
 
-func NewJoinHandler(services *services.Provider) *JoinHandler {
+func NewJoinHandler(servicesProvider *services.Provider) *JoinHandler {
 	return &JoinHandler{
-		services: services,
+		services: servicesProvider,
 	}
 }
 

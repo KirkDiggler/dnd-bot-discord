@@ -54,8 +54,10 @@ func CreateTestRedisClient(t *testing.T, cfg *TestRedisConfig) redis.UniversalCl
 	// Register cleanup
 	t.Cleanup(func() {
 		// Clear the database after test
-		_ = client.FlushDB(context.Background()).Err()
-		_ = client.Close()
+		err := client.FlushDB(context.Background()).Err()
+		require.NoError(t, err, "Failed to flush test Redis database")
+		err = client.Close()
+		require.NoError(t, err, "Failed to close test Redis client")
 	})
 
 	return client

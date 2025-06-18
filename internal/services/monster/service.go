@@ -12,6 +12,8 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // Service defines the monster service interface
@@ -196,7 +198,7 @@ func (s *service) getHardcodedMonsters(keys ...string) []*entities.MonsterTempla
 	for _, key := range keys {
 		monsters = append(monsters, &entities.MonsterTemplate{
 			Key:  key,
-			Name: strings.Title(strings.ReplaceAll(key, "-", " ")),
+			Name: cases.Title(language.English).String(strings.ReplaceAll(key, "-", " ")),
 		})
 	}
 	return monsters

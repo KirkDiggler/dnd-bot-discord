@@ -29,6 +29,9 @@ type Damage struct {
 }
 
 func (d *Damage) Deal() int {
-	base, _ := dice.Roll(d.DiceCount, d.DiceSize, 0)
+	base, err := dice.Roll(d.DiceCount, d.DiceSize, 0)
+	if err != nil {
+		return 0
+	}
 	return base.Total + d.Bonus
 }
