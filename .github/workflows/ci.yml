@@ -202,8 +202,8 @@ jobs:
     steps:
     - name: Check if all jobs succeeded
       run: |
-        if [[ "${{ needs.quick-checks.result }}" != "success" || 
-              "${{ needs.test.result }}" != "success" || 
+        if [[ "${{ needs.quick-checks.result }}" != "success" || \
+              "${{ needs.test.result }}" != "success" || \
               "${{ needs.build.result }}" != "success" ]]; then
           echo "One or more required jobs failed"
           exit 1

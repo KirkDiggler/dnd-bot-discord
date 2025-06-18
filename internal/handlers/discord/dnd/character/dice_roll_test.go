@@ -20,7 +20,7 @@ func TestDiceRolling(t *testing.T) {
 			expected: 3, // Drop one 1, sum of three 1s
 		},
 		{
-			name:     "All sixes", 
+			name:     "All sixes",
 			dice:     []int{6, 6, 6, 6},
 			expected: 18, // Drop one 6, sum of three 6s
 		},

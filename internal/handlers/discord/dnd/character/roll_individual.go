@@ -138,11 +138,11 @@ func (h *RollIndividualHandler) Handle(req *RollIndividualRequest) error {
 		for _, d := range dice {
 			diceStr = append(diceStr, fmt.Sprintf("%d", d))
 		}
-		
+
 		sortedDice := make([]int, 4)
 		copy(sortedDice, dice)
 		sort.Ints(sortedDice)
-		
+
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   "🎲 Dice Rolled",
 			Value:  fmt.Sprintf("**Rolled:** %s\n**Dropped:** %d (lowest)\n**Total:** %d", strings.Join(diceStr, ", "), sortedDice[0], currentRoll.Value),

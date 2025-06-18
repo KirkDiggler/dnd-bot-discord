@@ -136,7 +136,6 @@ func (h *AbilityScoresHandler) Handle(req *AbilityScoresRequest) error {
 	return err
 }
 
-
 // respondWithError updates the message with an error
 func (h *AbilityScoresHandler) respondWithError(req *AbilityScoresRequest, message string) error {
 	content := fmt.Sprintf("❌ %s", message)
