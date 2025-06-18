@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package character_test
 
 import (
@@ -17,10 +20,6 @@ import (
 )
 
 func TestCharacterCreationFlow_FullIntegration(t *testing.T) {
-	// Skip if not running integration tests
-	if os.Getenv("INTEGRATION_TEST") != "true" {
-		t.Skip("Skipping integration test")
-	}
 
 	// Set up Redis client
 	redisURL := os.Getenv("REDIS_URL")
