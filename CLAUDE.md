@@ -172,6 +172,172 @@ DISCORD_TOKEN=xxx REDIS_URL=redis://localhost:6379 ./bin/dnd-bot
 - Discord interactions must be acknowledged within 3 seconds
 - Redis keys follow pattern: `character:{id}`, `session:{id}`, etc.
 
+### Project Organization (June 19, 2025)
+- **GitHub Project #6**: Main project board for organizing all issues
+  - Uses Kanban board with custom statuses: Ideas → Investigate → Backlog → Ready → In Progress → Review → Done
+- **Planning Mode**: Use well-defined issues to help future development
+- **Context Management**: Compress context takes longer over time - consider fresh sessions for new features
+
+### Workspace Structure
+The project lives in `/home/kirk/personal/` with related projects:
+- **dnd-bot-discord**: Main Discord bot (current focus)
+- **dnd5e-api**: D&D 5e API integration library
+- **ronnied**: Dice game bot project
+
+Proto files already exist in dnd-bot-discord:
+- `character.proto`, `combat.proto`, `combat_streaming.proto`, `game.proto`
+
+### Current Work: Weapon Equipping (Issue #37) - COMPLETE ✅
+- **Branch**: `implement-weapon-equipping`
+- **PR**: #44 - Ready for merge
+- **Goal**: Allow players to equip weapons from inventory for proper attack calculations
+- **Status**: ✅ UI commands implemented, ✅ Attack calculations enhanced, ✅ Persistence implemented
+
+#### What's Implemented:
+1. **Slash Commands**: `/dnd character equip`, `/dnd character unequip`, `/dnd character inventory`
+2. **Attack Calculations**: Enhanced weapon attacks with proficiency bonus calculation
+3. **Equipment System**: Character.Equip() method handles weapon slot management
+4. **Proficiency Check**: HasWeaponProficiency() method checks weapon proficiencies
+
+#### Key Files Modified:
+- `internal/handlers/discord/dnd/character/weapon.go` - New weapon management UI handlers
+- `internal/handlers/discord/handler.go` - Added weapon commands and routing
+- `internal/entities/weapon.go` - Enhanced Attack() method with proficiency bonus
+- `internal/entities/character.go` - Added HasWeaponProficiency() method
+
+#### Completed Features:
+1. **Equipment Persistence**: ✅ Fixed! Equipment changes now persist to Redis database
+   - Added UpdateEquipment method to character service
+   - Equip/unequip commands save changes immediately
+
+#### Remaining Enhancements (Future PRs):
+1. **Weapon Autocomplete**: `/dnd character equip` requires manually typing weapon keys
+   - Need autocomplete from character's weapon inventory
+2. **Combat Integration**: Need to show equipped weapon name in attack messages
+   - Attack messages should display weapon name and attack bonuses
+
+#### D&D 5e Rules Implemented:
+- **Proficiency Bonus**: +2 at level 1-4, +3 at 5-8, +4 at 9-12, etc.
+- **Attack Bonus**: Ability modifier + proficiency bonus (if proficient)
+- **Damage Bonus**: Only ability modifier applies to damage
+- **Weapon Types**: Melee uses STR, Ranged uses DEX
+- **Two-Handed Weapons**: Use TwoHandedDamage if available
+
+### Next Session GitHub Issues to Create:
+
+#### High Priority Issues:
+1. **Equipment Persistence Service** (Blocks production use)
+   - Title: "Add character equipment persistence to database"
+   - Description: Equipped weapons currently only persist in memory, reset on bot restart
+   - Tasks: Add CharacterService.SaveEquipment() method, update repository layer
+   - Acceptance: Equipment changes persist across bot restarts
+
+2. **Combat Message Enhancement** (Improves UX)
+   - Title: "Show equipped weapon name in attack messages"
+   - Description: Attack messages should display weapon name and attack bonuses
+   - Current: "Grunk attacks goblin for 8 damage"
+   - Desired: "Grunk attacks goblin with Longsword (+5 to hit) for 8 slashing damage"
+
+#### Medium Priority Issues:
+3. **Weapon Autocomplete** (Quality of life)
+   - Title: "Add weapon autocomplete to /dnd character equip command"
+   - Description: Users should see dropdown of available weapons from inventory
+   - Implementation: Discord autocomplete with character weapon inventory
+
+4. **Equipment Quick Actions** (Quality of life)
+   - Title: "Add equip/unequip buttons to character sheet"
+   - Description: Character sheet should have quick action buttons for equipment
+   - Implementation: Add buttons to character show embed
+
+#### Future Enhancement Issues:
+5. **Armor Class Calculation** (Game mechanics)
+   - Title: "Implement proper armor AC calculation with equipped gear"
+   - Description: AC should update based on equipped armor and DEX modifier limits
+
+6. **Two-Weapon Fighting** (Game mechanics)
+   - Title: "Implement two-weapon fighting bonus action attacks"
+   - Description: Characters with two light weapons should get bonus action attack
+
+### Session Summary (June 19, 2025):
+**Weapon Equipping Implementation - SUCCESSFUL** ✅
+- **Time**: ~2 hours of development
+- **Lines Added**: ~700 lines of new code + tests
+- **Features**: 3 new slash commands, enhanced attack calculations, comprehensive test suite
+- **Blockers**: Equipment persistence (memory-only currently)
+- **Ready for**: User testing in development environment
+
+**Key Learning**: The Character.Attack() method was already well-architected to use equipped weapons, making this implementation smoother than expected. The main missing piece was the UI layer and proper attack bonus calculations.
+
+### Interactive Character Sheet System (Issues #37-#43)
+
+#### Project Overview
+**GitHub Project Board**: https://github.com/users/KirkDiggler/projects/6
+- Using "Ideas" and "Investigate" statuses for planning
+- Phased approach: Discord bot → gRPC API + protos → React visualization
+
+#### Design Vision
+The interactive character sheet aims to provide a rich, real-time D&D experience through Discord:
+
+1. **Ephemeral Messages**: Character sheets use ephemeral responses to reduce channel clutter
+2. **Equipment Interaction**: Players can equip/unequip items directly from their character sheet
+3. **Encounter Actions**: During combat, character sheets show available actions based on equipped weapons and abilities
+4. **Real-time Updates**: Sheet updates reflect changes immediately (HP, conditions, equipment)
+
+#### Implementation Issues Created (June 19, 2025)
+
+**Issue #37: Interactive Character Sheet - Main View** ✅
+- Ephemeral character sheet with complete stats display
+- Equipment section with equip/unequip buttons
+- Refresh button for real-time updates
+
+**Issue #38: Character Sheet Actions Menu**
+- Action buttons based on encounter context
+- Attack, cast spell, use item options
+- Dynamic based on equipped items and abilities
+
+**Issue #39: Quick Actions Bar**
+- Frequently used actions at top of sheet
+- Customizable shortcuts for spells/abilities
+- Context-aware (combat vs exploration)
+
+**Issue #40: Equipment Management UI**
+- Interactive inventory with drag-and-drop feel
+- Quick equip/unequip toggles
+- Item details on hover/select
+
+**Issue #41: Spell Management Interface**
+- Spell slots tracking
+- Prepared spells selection
+- Quick cast buttons with targeting
+
+**Issue #42: Character Conditions Display**
+- Visual indicators for conditions (poisoned, prone, etc.)
+- Temporary HP tracking
+- Concentration management
+
+**Issue #43: Character Sheet Customization**
+- Player preferences for sheet layout
+- Collapsible sections
+- Theme/color preferences
+
+#### Technical Architecture Plan
+
+**Phase 1: Discord Bot Enhancement** (Current)
+- Implement interactive components using Discord's button/select APIs
+- Use ephemeral messages for character sheets
+- Store UI state in Redis for performance
+
+**Phase 2: gRPC API Layer**
+- Extract character management into gRPC service
+- Define protobuf schemas for all entities
+- Enable multi-client support (Discord, web, mobile)
+
+**Phase 3: React Visualization**
+- Web dashboard for campaign management
+- Real-time character sheet updates via WebSocket
+- Advanced visualizations (3D dice, battle maps)
+
 ### Contact
 - GitHub Issues: https://github.com/KirkDiggler/dnd-bot-discord/issues
+- GitHub Project: https://github.com/users/KirkDiggler/projects/6
 - This is Kirk's personal project for D&D sessions
