@@ -191,6 +191,7 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 
 	// Store room data in session metadata
 	sess.Metadata = map[string]interface{}{
+		"sessionType": "dungeon",
 		"currentRoom": room,
 		"roomNumber":  1,
 		"difficulty":  req.Difficulty,
