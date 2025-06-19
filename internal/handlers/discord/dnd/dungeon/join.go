@@ -22,9 +22,23 @@ func NewJoinPartyHandler(serviceProvider *services.Provider) *JoinPartyHandler {
 }
 
 func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCreate, sessionID string) error {
+	log.Printf("JoinParty - User %s attempting to join session %s", i.Member.User.ID, sessionID)
+	
 	// Get user's active character
 	chars, err := h.services.CharacterService.ListByOwner(i.Member.User.ID)
-	if err != nil || len(chars) == 0 {
+	if err != nil {
+		log.Printf("JoinParty - Error listing characters for user %s: %v", i.Member.User.ID, err)
+		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "❌ Failed to list characters. Please try again.",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+	}
+	
+	if len(chars) == 0 {
+		log.Printf("JoinParty - User %s has no characters", i.Member.User.ID)
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -33,17 +47,26 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 			},
 		})
 	}
+	
+	log.Printf("JoinParty - User %s has %d characters", i.Member.User.ID, len(chars))
 
 	// Find first active character
 	var playerChar *entities.Character
+	var activeCount int
 	for _, char := range chars {
+		log.Printf("JoinParty - Character: ID=%s, Name=%s, Status=%s", char.ID, char.Name, char.Status)
 		if char.Status == entities.CharacterStatusActive {
-			playerChar = char
-			break
+			activeCount++
+			if playerChar == nil { // Take first active
+				playerChar = char
+			}
 		}
 	}
+	
+	log.Printf("JoinParty - Found %d active characters", activeCount)
 
 	if playerChar == nil {
+		log.Printf("JoinParty - No active character found for user %s", i.Member.User.ID)
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -82,21 +105,40 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 		})
 	}
 
-	// Join the session
-	_, err = h.services.SessionService.JoinSession(context.Background(), sessionID, i.Member.User.ID)
+	// Check if user is already in the session
+	sess, err := h.services.SessionService.GetSession(context.Background(), sessionID)
 	if err != nil {
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Failed to join party: %v", err),
+				Content: fmt.Sprintf("❌ Failed to get session: %v", err),
 				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
 	}
+	
+	// If not in session, join it
+	if !sess.IsUserInSession(i.Member.User.ID) {
+		log.Printf("User %s not in session, joining...", i.Member.User.ID)
+		_, err = h.services.SessionService.JoinSession(context.Background(), sessionID, i.Member.User.ID)
+		if err != nil {
+			return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: fmt.Sprintf("❌ Failed to join party: %v", err),
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+		}
+	} else {
+		log.Printf("User %s already in session, updating character selection...", i.Member.User.ID)
+	}
 
 	// Select character
+	log.Printf("Selecting character %s (ID: %s) for user %s in session %s", playerChar.Name, playerChar.ID, i.Member.User.ID, sessionID)
 	err = h.services.SessionService.SelectCharacter(context.Background(), sessionID, i.Member.User.ID, playerChar.ID)
 	if err != nil {
+		log.Printf("Failed to select character: %v", err)
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -104,6 +146,26 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
+	}
+	log.Printf("Successfully selected character %s for user %s", playerChar.Name, i.Member.User.ID)
+	
+	// Verify the character was set
+	sess, getErr := h.services.SessionService.GetSession(context.Background(), sessionID)
+	if getErr == nil && sess != nil {
+		if member, exists := sess.Members[i.Member.User.ID]; exists {
+			log.Printf("JoinParty - Verified session member - UserID: %s, Role: %s, CharacterID: %s", 
+				member.UserID, member.Role, member.CharacterID)
+		} else {
+			log.Printf("JoinParty - WARNING: User %s not found in session members after join", i.Member.User.ID)
+		}
+		
+		// Log all session members for debugging
+		log.Printf("JoinParty - Current session members:")
+		for uid, m := range sess.Members {
+			log.Printf("  - UserID: %s, Role: %s, CharacterID: %s", uid, m.Role, m.CharacterID)
+		}
+	} else {
+		log.Printf("JoinParty - Could not verify session state: %v", getErr)
 	}
 
 	// Build character info

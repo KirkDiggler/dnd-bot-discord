@@ -4,6 +4,8 @@ package encounter
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
@@ -52,6 +54,9 @@ type Service interface {
 
 	// EndEncounter ends the encounter
 	EndEncounter(ctx context.Context, encounterID, userID string) error
+	
+	// LogCombatAction logs a combat action (like a miss) without damage
+	LogCombatAction(ctx context.Context, encounterID, action string) error
 }
 
 // CreateEncounterInput contains data for creating an encounter
@@ -273,6 +278,9 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 	if err != nil {
 		return nil, dnderr.Wrap(err, "failed to get character")
 	}
+	
+	// Log character details
+	log.Printf("AddPlayer - Retrieved character: ID=%s, Name=%s, OwnerID=%s", character.ID, character.Name, character.OwnerID)
 
 	// Verify character belongs to player
 	if character.OwnerID != playerID {
@@ -438,9 +446,29 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 		return dnderr.InvalidArgument("no active combatant")
 	}
 
-	// Player can end their own turn, DM can end any turn
-	if current.PlayerID != userID && encounter.CreatedBy != userID {
-		return dnderr.PermissionDenied("not your turn")
+	// Check permissions based on encounter type
+	if session, err := s.sessionService.GetSession(ctx, encounter.SessionID); err == nil {
+		if sessionType, ok := session.Metadata["sessionType"].(string); ok && sessionType == "dungeon" {
+			// In dungeon encounters:
+			// - Players can advance monster turns
+			// - Players can advance their own turn
+			// - DM (bot) can advance any turn
+			if current.Type == entities.CombatantTypeMonster {
+				// Any player can advance monster turns in dungeons
+			} else if current.PlayerID != userID && encounter.CreatedBy != userID {
+				return dnderr.PermissionDenied("not your turn")
+			}
+		} else {
+			// Regular encounter rules
+			if current.PlayerID != userID && encounter.CreatedBy != userID {
+				return dnderr.PermissionDenied("not your turn")
+			}
+		}
+	} else {
+		// Fallback to regular rules if session lookup fails
+		if current.PlayerID != userID && encounter.CreatedBy != userID {
+			return dnderr.PermissionDenied("not your turn")
+		}
 	}
 
 	// Advance turn
@@ -462,8 +490,18 @@ func (s *service) ApplyDamage(ctx context.Context, encounterID, combatantID, use
 		return dnderr.Wrap(err, "failed to get encounter")
 	}
 
-	// Check permissions (DM can always apply damage)
-	if !encounter.CanPlayerAct(userID) {
+	// Check permissions 
+	// For dungeon encounters, allow damage application regardless of turn
+	// since the bot orchestrates combat on behalf of players
+	if session, err := s.sessionService.GetSession(ctx, encounter.SessionID); err == nil {
+		if sessionType, ok := session.Metadata["sessionType"].(string); ok && sessionType == "dungeon" {
+			// Allow damage in dungeon encounters
+		} else if !encounter.CanPlayerAct(userID) {
+			// For regular encounters, check turn order
+			return dnderr.PermissionDenied("not your turn")
+		}
+	} else if !encounter.CanPlayerAct(userID) {
+		// Fallback to turn check if session lookup fails
 		return dnderr.PermissionDenied("not your turn")
 	}
 
@@ -475,6 +513,31 @@ func (s *service) ApplyDamage(ctx context.Context, encounterID, combatantID, use
 
 	// Apply damage
 	combatant.ApplyDamage(damage)
+	
+	// Add to combat log if damage was dealt
+	if damage > 0 {
+		// Find attacker name (could be current turn or explicit)
+		attackerName := "Unknown"
+		if current := encounter.GetCurrentCombatant(); current != nil {
+			attackerName = current.Name
+		}
+		encounter.AddCombatLogEntry(fmt.Sprintf("%s hit %s for %d damage", attackerName, combatant.Name, damage))
+		
+		if combatant.CurrentHP == 0 {
+			encounter.AddCombatLogEntry(fmt.Sprintf("%s was defeated!", combatant.Name))
+		}
+	}
+
+	// Check if combat should end
+	if shouldEnd, playersWon := encounter.CheckCombatEnd(); shouldEnd {
+		log.Printf("Combat ending - Players won: %v", playersWon)
+		encounter.End()
+		if playersWon {
+			encounter.AddCombatLogEntry("Victory! All enemies have been defeated!")
+		} else {
+			encounter.AddCombatLogEntry("Defeat! The party has fallen...")
+		}
+	}
 
 	// Save changes
 	if err := s.repository.Update(ctx, encounter); err != nil {
@@ -535,5 +598,24 @@ func (s *service) EndEncounter(ctx context.Context, encounterID, userID string) 
 		return dnderr.Wrap(err, "failed to update encounter")
 	}
 
+	return nil
+}
+
+// LogCombatAction logs a combat action without applying damage
+func (s *service) LogCombatAction(ctx context.Context, encounterID, action string) error {
+	// Get encounter
+	encounter, err := s.repository.Get(ctx, encounterID)
+	if err != nil {
+		return dnderr.Wrap(err, "failed to get encounter")
+	}
+	
+	// Add to combat log
+	encounter.AddCombatLogEntry(action)
+	
+	// Save changes
+	if err := s.repository.Update(ctx, encounter); err != nil {
+		return dnderr.Wrap(err, "failed to update encounter")
+	}
+	
 	return nil
 }

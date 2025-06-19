@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"strings"
 
+	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
@@ -25,9 +26,12 @@ func NewEnterRoomHandler(serviceProvider *services.Provider) *EnterRoomHandler {
 }
 
 func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCreate, sessionID, roomType string) error {
+	log.Printf("EnterRoom - User %s attempting to enter %s room in session %s", i.Member.User.ID, roomType, sessionID)
+	
 	// Get session
 	sess, err := h.services.SessionService.GetSession(context.Background(), sessionID)
 	if err != nil {
+		log.Printf("EnterRoom - Session not found: %v", err)
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -39,6 +43,7 @@ func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 
 	// Check if user is in the session
 	if !sess.IsUserInSession(i.Member.User.ID) {
+		log.Printf("EnterRoom - User %s not in session members", i.Member.User.ID)
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -46,6 +51,23 @@ func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
+	}
+	
+	// Check if user has a character selected (except for DM/bot)
+	member, exists := sess.Members[i.Member.User.ID]
+	if exists && member.Role == entities.SessionRolePlayer && member.CharacterID == "" {
+		log.Printf("EnterRoom - Player %s has no character selected", i.Member.User.ID)
+		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "❌ You need to select a character! Click 'Select Character' first.",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+	}
+	
+	if exists {
+		log.Printf("EnterRoom - User %s has role=%s, characterID=%s", i.Member.User.ID, member.Role, member.CharacterID)
 	}
 
 	// Handle based on room type
@@ -122,13 +144,20 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 	}
 
 	// Add all party members to encounter
+	log.Printf("Adding party members to encounter:")
 	for userID, member := range sess.Members {
+		log.Printf("Processing member - UserID: %s, Role: %s, CharacterID: %s", userID, member.Role, member.CharacterID)
 		if member.CharacterID != "" {
-			_, err = h.services.EncounterService.AddPlayer(context.Background(), enc.ID, userID, member.CharacterID)
+			log.Printf("Adding player - UserID: %s, CharacterID: %s", userID, member.CharacterID)
+			combatant, err := h.services.EncounterService.AddPlayer(context.Background(), enc.ID, userID, member.CharacterID)
 			if err != nil {
 				// Log but continue
-				fmt.Printf("Failed to add player %s: %v\n", userID, err)
+				log.Printf("Failed to add player %s: %v", userID, err)
+			} else if combatant != nil {
+				log.Printf("Added player combatant: Name=%s, Type=%s, HP=%d/%d, PlayerID=%s", combatant.Name, combatant.Type, combatant.CurrentHP, combatant.MaxHP, combatant.PlayerID)
 			}
+		} else {
+			log.Printf("Skipping member %s - no character ID", userID)
 		}
 	}
 
@@ -177,6 +206,75 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 			},
 		})
 	}
+	
+	// Process initial monster turns if they go first
+	var monsterActions []string
+	for enc.Status == entities.EncounterStatusActive {
+		current := enc.GetCurrentCombatant()
+		if current == nil || current.Type != entities.CombatantTypeMonster {
+			break // Stop when we reach a player's turn
+		}
+		
+		// Process monster turn
+		log.Printf("Processing initial monster turn for %s", current.Name)
+		
+		// Find a target (first active player)
+		var target *entities.Combatant
+		for _, combatant := range enc.Combatants {
+			if combatant.Type == entities.CombatantTypePlayer && combatant.IsActive {
+				target = combatant
+				break
+			}
+		}
+		
+		if target != nil && len(current.Actions) > 0 {
+			// Use first available action
+			action := current.Actions[0]
+			
+			// Roll attack
+			attackResult, _ := dice.Roll(1, 20, 0)
+			attackRoll := attackResult.Total
+			totalAttack := attackRoll + action.AttackBonus
+			
+			// Check if hit
+			hit := totalAttack >= target.AC
+			if hit && len(action.Damage) > 0 {
+				totalDamage := 0
+				for _, dmg := range action.Damage {
+					diceCount := dmg.DiceCount
+					if attackRoll == 20 { // Critical hit doubles dice
+						diceCount *= 2
+					}
+					rollResult, _ := dice.Roll(diceCount, dmg.DiceSize, dmg.Bonus)
+					totalDamage += rollResult.Total
+				}
+				
+				// Apply damage
+				err = h.services.EncounterService.ApplyDamage(context.Background(), enc.ID, target.ID, botID, totalDamage)
+				if err != nil {
+					log.Printf("Error applying initial monster damage: %v", err)
+				}
+				
+				monsterActions = append(monsterActions, fmt.Sprintf("%s attacks %s with %s for %d damage!", current.Name, target.Name, action.Name, totalDamage))
+			} else {
+				monsterActions = append(monsterActions, fmt.Sprintf("%s misses %s with %s!", current.Name, target.Name, action.Name))
+			}
+		}
+		
+		// Advance turn
+		err = h.services.EncounterService.NextTurn(context.Background(), enc.ID, botID)
+		if err != nil {
+			log.Printf("Error advancing initial monster turn: %v", err)
+			break
+		}
+		
+		// Re-get encounter for next iteration
+		enc, err = h.services.EncounterService.GetEncounter(context.Background(), enc.ID)
+		if err != nil {
+			log.Printf("Error getting encounter after monster turn: %v", err)
+			break
+		}
+	}
 
 	// Build combat display
 	embed := &discordgo.MessageEmbed{
@@ -186,11 +284,24 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		Fields:      []*discordgo.MessageEmbedField{},
 	}
 
+	// Show monster actions if any occurred
+	if len(monsterActions) > 0 {
+		var actionList strings.Builder
+		for _, action := range monsterActions {
+			actionList.WriteString("⚔️ " + action + "\n")
+		}
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "🎲 Monster Actions",
+			Value:  actionList.String(),
+			Inline: false,
+		})
+	}
+	
 	// Show enemies
 	var enemyList strings.Builder
 	for _, combatant := range enc.Combatants {
-		if combatant.Type == entities.CombatantTypeMonster {
-			enemyList.WriteString(fmt.Sprintf("• **%s** (HP: %d, AC: %d)\n", combatant.Name, combatant.MaxHP, combatant.AC))
+		if combatant.Type == entities.CombatantTypeMonster && combatant.IsActive {
+			enemyList.WriteString(fmt.Sprintf("• **%s** (HP: %d/%d, AC: %d)\n", combatant.Name, combatant.CurrentHP, combatant.MaxHP, combatant.AC))
 		}
 	}
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
@@ -201,21 +312,38 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 
 	// Show turn order
 	var turnOrder strings.Builder
+	log.Printf("Building turn order display. Total combatants: %d, Current turn: %d", len(enc.Combatants), enc.Turn)
 	for i, combatantID := range enc.TurnOrder {
-		if combatant, exists := enc.Combatants[combatantID]; exists {
+		if combatant, exists := enc.Combatants[combatantID]; exists && combatant.IsActive {
 			prefix := "  "
-			if i == 0 {
+			if i == enc.Turn {
 				prefix = "▶️"
 			}
 			turnOrder.WriteString(fmt.Sprintf("%s %s\n", prefix, combatant.Name))
 		}
 	}
+	
+	// Show whose turn it is
+	if current := enc.GetCurrentCombatant(); current != nil {
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "🎯 Current Turn",
+			Value:  fmt.Sprintf("**%s's turn** (HP: %d/%d)", current.Name, current.CurrentHP, current.MaxHP),
+			Inline: false,
+		})
+	}
+	
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 		Name:   "📋 Initiative Order",
 		Value:  turnOrder.String(),
 		Inline: false,
 	})
 
+	// Check if it's a player's turn
+	isPlayerTurn := false
+	if current := enc.GetCurrentCombatant(); current != nil && current.Type == entities.CombatantTypePlayer {
+		isPlayerTurn = true
+	}
+	
 	// Combat buttons
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
@@ -225,6 +353,7 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 					Style:    discordgo.DangerButton,
 					CustomID: fmt.Sprintf("encounter:attack:%s", enc.ID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
+					Disabled: !isPlayerTurn,
 				},
 				discordgo.Button{
 					Label:    "Next Turn",

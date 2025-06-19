@@ -2,6 +2,7 @@ package entities
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -41,6 +42,7 @@ type Encounter struct {
 	StartedAt   *time.Time            `json:"started_at"`
 	EndedAt     *time.Time            `json:"ended_at"`
 	CreatedBy   string                `json:"created_by"` // User ID who created the encounter
+	CombatLog   []string              `json:"combat_log"` // History of combat actions
 }
 
 // Combatant represents a participant in combat
@@ -85,6 +87,7 @@ func NewEncounter(id, sessionID, channelID, name, createdBy string) *Encounter {
 		TurnOrder:  []string{},
 		CreatedAt:  time.Now(),
 		CreatedBy:  createdBy,
+		CombatLog:  []string{},
 	}
 }
 
@@ -184,6 +187,31 @@ func (e *Encounter) CanPlayerAct(playerID string) bool {
 	return e.IsPlayerTurn(playerID)
 }
 
+// CheckCombatEnd checks if combat should end (all enemies or all players defeated)
+func (e *Encounter) CheckCombatEnd() (shouldEnd bool, playersWon bool) {
+	activeMonsters := 0
+	activePlayers := 0
+	
+	for _, combatant := range e.Combatants {
+		if combatant.IsActive {
+			if combatant.Type == CombatantTypeMonster {
+				activeMonsters++
+			} else if combatant.Type == CombatantTypePlayer {
+				activePlayers++
+			}
+		}
+	}
+	
+	// Combat ends if either side has no active combatants
+	if activeMonsters == 0 && activePlayers > 0 {
+		return true, true // Players won
+	} else if activePlayers == 0 && activeMonsters > 0 {
+		return true, false // Players lost
+	}
+	
+	return false, false
+}
+
 // ApplyDamage applies damage to a combatant
 func (c *Combatant) ApplyDamage(damage int) {
 	// First reduce temp HP
@@ -222,6 +250,21 @@ func (c *Combatant) AddTempHP(amount int) {
 	// Temp HP doesn't stack, take the higher value
 	if amount > c.TempHP {
 		c.TempHP = amount
+	}
+}
+
+// AddCombatLogEntry adds an entry to the combat log
+func (e *Encounter) AddCombatLogEntry(entry string) {
+	if e.CombatLog == nil {
+		e.CombatLog = []string{}
+	}
+	// Prefix with round number
+	logEntry := fmt.Sprintf("Round %d: %s", e.Round, entry)
+	e.CombatLog = append(e.CombatLog, logEntry)
+	
+	// Keep only last 20 entries to prevent unbounded growth
+	if len(e.CombatLog) > 20 {
+		e.CombatLog = e.CombatLog[len(e.CombatLog)-20:]
 	}
 }
 

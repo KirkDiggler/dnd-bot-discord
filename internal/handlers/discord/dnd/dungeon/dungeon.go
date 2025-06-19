@@ -112,19 +112,40 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 	// Get user's active character and select it
 	var characterName string
 	chars, err := h.services.CharacterService.ListByOwner(req.Interaction.Member.User.ID)
-	if err == nil && len(chars) > 0 {
+	if err != nil {
+		log.Printf("StartDungeon - Error listing characters for user %s: %v", req.Interaction.Member.User.ID, err)
+	} else {
+		log.Printf("StartDungeon - User %s has %d characters", req.Interaction.Member.User.ID, len(chars))
+		
 		// Find first active character
+		var activeCount int
 		for _, char := range chars {
 			if char.Status == entities.CharacterStatusActive {
-				// Select this character for the session
-				err = h.services.SessionService.SelectCharacter(context.Background(), sess.ID, req.Interaction.Member.User.ID, char.ID)
-				if err != nil {
-					log.Printf("Warning: Failed to auto-select character: %v", err)
-				} else {
-					characterName = char.Name
+				activeCount++
+				if characterName == "" { // Auto-select first active
+					// Select this character for the session
+					log.Printf("StartDungeon - Auto-selecting character %s (ID: %s) for user %s", 
+						char.Name, char.ID, req.Interaction.Member.User.ID)
+					err = h.services.SessionService.SelectCharacter(context.Background(), sess.ID, req.Interaction.Member.User.ID, char.ID)
+					if err != nil {
+						log.Printf("StartDungeon - WARNING: Failed to auto-select character: %v", err)
+					} else {
+						characterName = char.Name
+						
+						// Update the member's CharacterID directly since we just selected it
+						if member, exists := sess.Members[req.Interaction.Member.User.ID]; exists {
+							member.CharacterID = char.ID
+							log.Printf("StartDungeon - Updated member CharacterID to %s", char.ID)
+						}
+					}
 				}
-				break
 			}
+		}
+		
+		if activeCount > 1 {
+			log.Printf("StartDungeon - User has %d active characters, auto-selected first one", activeCount)
+		} else if activeCount == 0 {
+			log.Printf("StartDungeon - User has no active characters, will need to select one manually")
 		}
 	}
 
@@ -168,10 +189,10 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.Button{
-					Label:    "Join Party",
+					Label:    "Select Character",
 					Style:    discordgo.SuccessButton,
 					CustomID: fmt.Sprintf("dungeon:join:%s", sess.ID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "🤝"},
+					Emoji:    &discordgo.ComponentEmoji{Name: "🎭"},
 				},
 				discordgo.Button{
 					Label:    "Enter Room",
