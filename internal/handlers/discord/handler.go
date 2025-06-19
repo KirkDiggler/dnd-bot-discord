@@ -3220,17 +3220,17 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					if result.AttackResult != nil {
 						// Show dice roll details: 1d20 + bonus = total
 						rollsStr := fmt.Sprintf("%v", result.AttackResult.Rolls)
-						attackDetails = fmt.Sprintf("Roll: %s + %d = **%d**\nvs AC %d\n%s", 
-							rollsStr, 
-							result.AttackRoll - result.AttackResult.Total, // This is the bonus
+						attackDetails = fmt.Sprintf("Roll: %s + %d = **%d**\nvs AC %d\n%s",
+							rollsStr,
+							result.AttackRoll-result.AttackResult.Total, // This is the bonus
 							result.AttackRoll,
-							target.AC, 
+							target.AC,
 							hitText)
 					} else {
 						// Fallback if no detailed roll available
 						attackDetails = fmt.Sprintf("**Total:** %d vs AC %d\n%s", result.AttackRoll, target.AC, hitText)
 					}
-					
+
 					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 						Name:   fmt.Sprintf("🎲 %s Roll", attackLabel),
 						Value:  attackDetails,
@@ -3245,14 +3245,14 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							rollsStr := fmt.Sprintf("%v", result.DamageResult.Rolls)
 							damageBonus := result.DamageRoll - result.DamageResult.Total
 							if damageBonus != 0 {
-								damageDetails = fmt.Sprintf("Roll: %s + %d = **%d** %s", 
-									rollsStr, 
+								damageDetails = fmt.Sprintf("Roll: %s + %d = **%d** %s",
+									rollsStr,
 									damageBonus,
 									result.DamageRoll,
 									result.AttackType)
 							} else {
-								damageDetails = fmt.Sprintf("Roll: %s = **%d** %s", 
-									rollsStr, 
+								damageDetails = fmt.Sprintf("Roll: %s = **%d** %s",
+									rollsStr,
 									result.DamageRoll,
 									result.AttackType)
 							}
@@ -3260,7 +3260,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							// Fallback if no detailed roll available
 							damageDetails = fmt.Sprintf("**Total:** %d %s damage", result.DamageRoll, result.AttackType)
 						}
-						
+
 						embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 							Name:   "💥 Damage",
 							Value:  damageDetails,
@@ -3276,13 +3276,13 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					if len(attackResults) > 1 {
 						attackNum = fmt.Sprintf(" #%d", i+1)
 					}
-					
+
 					// Build the log entry with dice details
 					var logEntry string
 					if result.AttackResult != nil {
 						rollsStr := fmt.Sprintf("%v", result.AttackResult.Rolls)
 						bonus := result.AttackRoll - result.AttackResult.Total
-						
+
 						if result.AttackRoll >= target.AC {
 							// Hit - include damage details
 							if result.DamageResult != nil {
@@ -3314,11 +3314,11 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							logEntry = fmt.Sprintf("⚔️ **%s** misses **%s**", current.Name, target.Name)
 						}
 					}
-					
+
 					// Log to combat history
 					_ = h.ServiceProvider.EncounterService.LogCombatAction(context.Background(), encounterID, logEntry)
 				}
-				
+
 				// Apply damage if any hit
 				if totalDamageDealt > 0 {
 					log.Printf("Attack result - %s dealt %d damage to %s", current.Name, totalDamageDealt, target.Name)

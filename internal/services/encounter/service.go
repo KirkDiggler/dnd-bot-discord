@@ -390,7 +390,7 @@ func (s *service) RollInitiative(ctx context.Context, encounterID, userID string
 
 	// Clear combat log for new initiative rolls
 	encounter.CombatLog = []string{"🎲 **Rolling Initiative**"}
-	
+
 	// Roll initiative for each combatant
 	initiatives := make(map[string]int)
 	for id, combatant := range encounter.Combatants {
@@ -400,12 +400,12 @@ func (s *service) RollInitiative(ctx context.Context, encounterID, userID string
 		}
 		combatant.Initiative = rollResult.Total + combatant.InitiativeBonus
 		initiatives[id] = combatant.Initiative
-		
+
 		// Log the initiative roll
-		logEntry := fmt.Sprintf("**%s** rolls initiative: %v + %d = **%d**", 
-			combatant.Name, 
+		logEntry := fmt.Sprintf("**%s** rolls initiative: %v + %d = **%d**",
+			combatant.Name,
 			rollResult.Rolls[0], // The d20 roll
-			combatant.InitiativeBonus, 
+			combatant.InitiativeBonus,
 			combatant.Initiative)
 		encounter.CombatLog = append(encounter.CombatLog, logEntry)
 	}
