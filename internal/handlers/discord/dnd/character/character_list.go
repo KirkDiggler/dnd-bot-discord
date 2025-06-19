@@ -201,11 +201,11 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 				break
 			}
 			editButtons = append(editButtons, discordgo.Button{
-				Label:    "Edit " + char.Name,
+				Label:    "Sheet " + char.Name,
 				Style:    discordgo.PrimaryButton,
-				CustomID: fmt.Sprintf("character_manage:edit:%s", char.ID),
+				CustomID: fmt.Sprintf("character:sheet_show:%s", char.ID),
 				Emoji: &discordgo.ComponentEmoji{
-					Name: "✏️",
+					Name: "📋",
 				},
 			})
 		}

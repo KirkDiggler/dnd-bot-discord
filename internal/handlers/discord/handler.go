@@ -1762,6 +1762,36 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				log.Printf("Error responding to sheet refresh: %v", err)
 			}
 		}
+	} else if ctx == "character" && action == "sheet_show" {
+		// Show character sheet from list
+		if len(parts) >= 3 {
+			characterID := parts[2]
+			// Get the character
+			char, err := h.ServiceProvider.CharacterService.GetByID(characterID)
+			if err != nil {
+				log.Printf("Error getting character for sheet: %v", err)
+				return
+			}
+			
+			// Verify ownership
+			if char.OwnerID != i.Member.User.ID {
+				return
+			}
+			
+			// Build the sheet
+			embed := character.BuildCharacterSheetEmbed(char)
+			components := character.BuildCharacterSheetComponents(characterID)
+			
+			// Send as ephemeral follow-up
+			_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				Embeds:     []*discordgo.MessageEmbed{embed},
+				Components: components,
+				Flags:      discordgo.MessageFlagsEphemeral,
+			})
+			if err != nil {
+				log.Printf("Error sending character sheet: %v", err)
+			}
+		}
 	} else if ctx == "session_manage" {
 		// Handle session management actions
 		if len(parts) >= 3 {
