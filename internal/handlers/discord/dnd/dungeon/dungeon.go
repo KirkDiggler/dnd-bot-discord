@@ -116,7 +116,7 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 		log.Printf("StartDungeon - Error listing characters for user %s: %v", req.Interaction.Member.User.ID, err)
 	} else {
 		log.Printf("StartDungeon - User %s has %d characters", req.Interaction.Member.User.ID, len(chars))
-		
+
 		// Find first active character
 		var activeCount int
 		for _, char := range chars {
@@ -124,14 +124,14 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 				activeCount++
 				if characterName == "" { // Auto-select first active
 					// Select this character for the session
-					log.Printf("StartDungeon - Auto-selecting character %s (ID: %s) for user %s", 
+					log.Printf("StartDungeon - Auto-selecting character %s (ID: %s) for user %s",
 						char.Name, char.ID, req.Interaction.Member.User.ID)
 					err = h.services.SessionService.SelectCharacter(context.Background(), sess.ID, req.Interaction.Member.User.ID, char.ID)
 					if err != nil {
 						log.Printf("StartDungeon - WARNING: Failed to auto-select character: %v", err)
 					} else {
 						characterName = char.Name
-						
+
 						// Update the member's CharacterID directly since we just selected it
 						if member, exists := sess.Members[req.Interaction.Member.User.ID]; exists {
 							member.CharacterID = char.ID
@@ -141,7 +141,7 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 				}
 			}
 		}
-		
+
 		if activeCount > 1 {
 			log.Printf("StartDungeon - User has %d active characters, auto-selected first one", activeCount)
 		} else if activeCount == 0 {

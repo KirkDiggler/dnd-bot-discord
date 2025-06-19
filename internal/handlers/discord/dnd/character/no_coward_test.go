@@ -9,7 +9,7 @@ import (
 // TestNoCowardRules verifies that reroll options are not available
 func TestNoCowardRules(t *testing.T) {
 	// This is more of a documentation test to show our no-coward philosophy
-	
+
 	testCases := []struct {
 		name        string
 		totalScore  int

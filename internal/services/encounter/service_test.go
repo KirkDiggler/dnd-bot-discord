@@ -7,8 +7,8 @@ import (
 	"fmt"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
 	mockcharacter "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
 	mocksession "github.com/KirkDiggler/dnd-bot-discord/internal/services/session/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,7 +17,7 @@ import (
 
 // MockUUIDGenerator is a simple UUID generator for testing
 type MockUUIDGenerator struct {
-	prefix string
+	prefix  string
 	counter int
 }
 
@@ -66,10 +66,10 @@ func (m *MockRepository) Delete(_ context.Context, id string) error {
 
 func (m *MockRepository) GetActiveBySession(_ context.Context, sessionID string) (*entities.Encounter, error) {
 	for _, encounter := range m.encounters {
-		if encounter.SessionID == sessionID && 
+		if encounter.SessionID == sessionID &&
 			(encounter.Status == entities.EncounterStatusActive ||
-			 encounter.Status == entities.EncounterStatusSetup ||
-			 encounter.Status == entities.EncounterStatusRolling) {
+				encounter.Status == entities.EncounterStatusSetup ||
+				encounter.Status == entities.EncounterStatusRolling) {
 			return encounter, nil
 		}
 	}
@@ -102,7 +102,7 @@ func TestCreateEncounter_DungeonSession(t *testing.T) {
 	mockSessionService := mocksession.NewMockService(ctrl)
 	mockCharService := mockcharacter.NewMockService(ctrl)
 	mockRepo := NewMockRepository()
-	
+
 	svc := encounter.NewService(&encounter.ServiceConfig{
 		Repository:       mockRepo,
 		SessionService:   mockSessionService,
@@ -118,8 +118,8 @@ func TestCreateEncounter_DungeonSession(t *testing.T) {
 
 		// Create a session with sessionType=dungeon in metadata
 		dungeonSession := &entities.Session{
-			ID:   sessionID,
-			Name: "Test Dungeon",
+			ID:      sessionID,
+			Name:    "Test Dungeon",
 			Members: map[string]*entities.SessionMember{
 				// Bot is not a member or DM
 			},
@@ -236,7 +236,7 @@ func TestAddPlayer(t *testing.T) {
 	mockSessionService := mocksession.NewMockService(ctrl)
 	mockCharService := mockcharacter.NewMockService(ctrl)
 	mockRepo := NewMockRepository()
-	
+
 	svc := encounter.NewService(&encounter.ServiceConfig{
 		Repository:       mockRepo,
 		SessionService:   mockSessionService,
@@ -254,7 +254,7 @@ func TestAddPlayer(t *testing.T) {
 	t.Run("Successfully adds player with correct character data", func(t *testing.T) {
 		playerID := "player-123"
 		characterID := "char-123"
-		
+
 		// Create test character
 		testChar := &entities.Character{
 			ID:               characterID,
@@ -267,19 +267,19 @@ func TestAddPlayer(t *testing.T) {
 				entities.AttributeDexterity: {Score: 18, Bonus: 4},
 			},
 		}
-		
+
 		// Mock character service to return test character
 		mockCharService.EXPECT().
 			GetByID(characterID).
 			Return(testChar, nil)
-		
+
 		// Add player
 		combatant, err := svc.AddPlayer(context.Background(), encounterID, playerID, characterID)
-		
+
 		// Verify success
 		require.NoError(t, err)
 		require.NotNil(t, combatant)
-		
+
 		// Verify combatant has correct data from character
 		assert.Equal(t, "Legolas", combatant.Name)
 		assert.Equal(t, entities.CombatantTypePlayer, combatant.Type)
@@ -290,7 +290,7 @@ func TestAddPlayer(t *testing.T) {
 		assert.Equal(t, 16, combatant.AC)
 		assert.Equal(t, 4, combatant.InitiativeBonus) // From DEX bonus
 		assert.True(t, combatant.IsActive)
-		
+
 		// Verify combatant was added to encounter
 		updatedEnc, _ := mockRepo.Get(context.Background(), encounterID)
 		assert.Len(t, updatedEnc.Combatants, 1)
@@ -300,7 +300,7 @@ func TestAddPlayer(t *testing.T) {
 	t.Run("Player name different from monster names", func(t *testing.T) {
 		// Reset encounter
 		testEncounter.Combatants = make(map[string]*entities.Combatant)
-		
+
 		// Add an Orc monster first
 		orcCombatant := &entities.Combatant{
 			ID:        "orc-1",
@@ -313,11 +313,11 @@ func TestAddPlayer(t *testing.T) {
 		}
 		testEncounter.AddCombatant(orcCombatant)
 		mockRepo.Update(context.Background(), testEncounter)
-		
+
 		// Now add a player
 		playerID := "player-456"
 		characterID := "char-456"
-		
+
 		testChar := &entities.Character{
 			ID:               characterID,
 			Name:             "Aragorn", // Not "Orc"
@@ -329,19 +329,19 @@ func TestAddPlayer(t *testing.T) {
 				entities.AttributeDexterity: {Score: 14, Bonus: 2},
 			},
 		}
-		
+
 		mockCharService.EXPECT().
 			GetByID(characterID).
 			Return(testChar, nil)
-		
+
 		// Add player
 		_, err := svc.AddPlayer(context.Background(), encounterID, playerID, characterID)
 		require.NoError(t, err)
-		
+
 		// Verify both combatants exist with correct names
 		updatedEnc, _ := mockRepo.Get(context.Background(), encounterID)
 		assert.Len(t, updatedEnc.Combatants, 2)
-		
+
 		// Find each combatant and verify
 		var foundOrc, foundPlayer bool
 		for _, c := range updatedEnc.Combatants {
@@ -361,7 +361,7 @@ func TestAddPlayer(t *testing.T) {
 	t.Run("Handles player with same name as monster", func(t *testing.T) {
 		// Reset encounter
 		testEncounter.Combatants = make(map[string]*entities.Combatant)
-		
+
 		// Add a Goblin monster
 		goblinMonster := &entities.Combatant{
 			ID:        "goblin-1",
@@ -374,11 +374,11 @@ func TestAddPlayer(t *testing.T) {
 		}
 		testEncounter.AddCombatant(goblinMonster)
 		mockRepo.Update(context.Background(), testEncounter)
-		
+
 		// Add a player named "Goblin" (edge case)
 		playerID := "player-789"
 		characterID := "char-789"
-		
+
 		testChar := &entities.Character{
 			ID:               characterID,
 			Name:             "Goblin", // Same name as monster!
@@ -390,19 +390,19 @@ func TestAddPlayer(t *testing.T) {
 				entities.AttributeDexterity: {Score: 16, Bonus: 3},
 			},
 		}
-		
+
 		mockCharService.EXPECT().
 			GetByID(characterID).
 			Return(testChar, nil)
-		
+
 		// Add player
 		_, err := svc.AddPlayer(context.Background(), encounterID, playerID, characterID)
 		require.NoError(t, err)
-		
+
 		// Verify both exist and can be distinguished by Type
 		updatedEnc, _ := mockRepo.Get(context.Background(), encounterID)
 		assert.Len(t, updatedEnc.Combatants, 2)
-		
+
 		// Count each type
 		var monsterGoblins, playerGoblins int
 		for _, c := range updatedEnc.Combatants {
@@ -424,20 +424,20 @@ func TestAddPlayer(t *testing.T) {
 	t.Run("Fails when character doesn't belong to player", func(t *testing.T) {
 		playerID := "player-999"
 		characterID := "char-999"
-		
+
 		testChar := &entities.Character{
 			ID:      characterID,
 			Name:    "Gimli",
 			OwnerID: "different-player", // Not the requesting player!
 		}
-		
+
 		mockCharService.EXPECT().
 			GetByID(characterID).
 			Return(testChar, nil)
-		
+
 		// Try to add player with someone else's character
 		combatant, err := svc.AddPlayer(context.Background(), encounterID, playerID, characterID)
-		
+
 		// Should fail with permission error
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "character does not belong to player")
@@ -455,7 +455,7 @@ func TestAddPlayer(t *testing.T) {
 		}
 		testEncounter.AddCombatant(existingCombatant)
 		mockRepo.Update(context.Background(), testEncounter)
-		
+
 		// Try to add same player again
 		characterID := "char-new"
 		testChar := &entities.Character{
@@ -463,13 +463,13 @@ func TestAddPlayer(t *testing.T) {
 			Name:    "New Character",
 			OwnerID: "player-123", // Same player!
 		}
-		
+
 		mockCharService.EXPECT().
 			GetByID(characterID).
 			Return(testChar, nil)
-		
+
 		combatant, err := svc.AddPlayer(context.Background(), encounterID, "player-123", characterID)
-		
+
 		// Should fail
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "player is already in the encounter")
@@ -480,7 +480,7 @@ func TestAddPlayer(t *testing.T) {
 func TestEncounterCombatantFiltering(t *testing.T) {
 	// Test that we can properly filter combatants by type
 	encounter := entities.NewEncounter("enc-1", "session-1", "channel-1", "Mixed Combat", "dm-1")
-	
+
 	// Add various combatants
 	player1 := &entities.Combatant{
 		ID:       "p1",
@@ -489,7 +489,7 @@ func TestEncounterCombatantFiltering(t *testing.T) {
 		PlayerID: "player-1",
 		IsActive: true,
 	}
-	
+
 	player2 := &entities.Combatant{
 		ID:       "p2",
 		Name:     "Orc", // Player named Orc!
@@ -497,26 +497,26 @@ func TestEncounterCombatantFiltering(t *testing.T) {
 		PlayerID: "player-2",
 		IsActive: true,
 	}
-	
+
 	monster1 := &entities.Combatant{
 		ID:       "m1",
 		Name:     "Orc",
 		Type:     entities.CombatantTypeMonster,
 		IsActive: true,
 	}
-	
+
 	monster2 := &entities.Combatant{
 		ID:       "m2",
 		Name:     "Goblin",
 		Type:     entities.CombatantTypeMonster,
 		IsActive: true,
 	}
-	
+
 	encounter.AddCombatant(player1)
 	encounter.AddCombatant(player2)
 	encounter.AddCombatant(monster1)
 	encounter.AddCombatant(monster2)
-	
+
 	t.Run("Can filter for monsters only", func(t *testing.T) {
 		var monsters []*entities.Combatant
 		for _, c := range encounter.Combatants {
@@ -524,7 +524,7 @@ func TestEncounterCombatantFiltering(t *testing.T) {
 				monsters = append(monsters, c)
 			}
 		}
-		
+
 		assert.Len(t, monsters, 2)
 		// Both should be monsters
 		for _, m := range monsters {
@@ -532,7 +532,7 @@ func TestEncounterCombatantFiltering(t *testing.T) {
 			assert.Empty(t, m.PlayerID)
 		}
 	})
-	
+
 	t.Run("Can filter for players only", func(t *testing.T) {
 		var players []*entities.Combatant
 		for _, c := range encounter.Combatants {
@@ -540,7 +540,7 @@ func TestEncounterCombatantFiltering(t *testing.T) {
 				players = append(players, c)
 			}
 		}
-		
+
 		assert.Len(t, players, 2)
 		// Both should be players
 		for _, p := range players {
@@ -548,7 +548,7 @@ func TestEncounterCombatantFiltering(t *testing.T) {
 			assert.NotEmpty(t, p.PlayerID)
 		}
 	})
-	
+
 	t.Run("Can distinguish same-named player and monster", func(t *testing.T) {
 		var orcs []*entities.Combatant
 		for _, c := range encounter.Combatants {
@@ -556,9 +556,9 @@ func TestEncounterCombatantFiltering(t *testing.T) {
 				orcs = append(orcs, c)
 			}
 		}
-		
+
 		assert.Len(t, orcs, 2, "Should find 2 combatants named Orc")
-		
+
 		// One should be player, one should be monster
 		var foundPlayer, foundMonster bool
 		for _, orc := range orcs {

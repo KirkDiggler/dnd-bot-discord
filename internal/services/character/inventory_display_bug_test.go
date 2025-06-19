@@ -64,7 +64,7 @@ func TestInventoryDisplayBug(t *testing.T) {
 		// Create a barbarian like Standre
 		draft, err := svc.GetOrCreateDraftCharacter(ctx, "test-barbarian", "test-realm")
 		require.NoError(t, err)
-		
+
 		// Set race and class
 		raceKey := "half-orc"
 		classKey := "barbarian"
@@ -100,20 +100,20 @@ func TestInventoryDisplayBug(t *testing.T) {
 		totalItems := 0
 		weaponTypeCount := 0
 		basicEquipmentCount := 0
-		
+
 		for eqType, items := range finalChar.Inventory {
 			log.Printf("Type '%s': %d items", eqType, len(items))
 			totalItems += len(items)
-			
+
 			if eqType == entities.EquipmentTypeWeapon {
 				weaponTypeCount = len(items)
 			}
 			if eqType == "BasicEquipment" {
 				basicEquipmentCount = len(items)
 			}
-			
+
 			for _, item := range items {
-				log.Printf("  - %s (key: %s, type from GetEquipmentType(): %s)", 
+				log.Printf("  - %s (key: %s, type from GetEquipmentType(): %s)",
 					item.GetName(), item.GetKey(), item.GetEquipmentType())
 			}
 		}
@@ -125,13 +125,13 @@ func TestInventoryDisplayBug(t *testing.T) {
 		// The bug: inventory command only shows EquipmentTypeWeapon
 		// but weapons were being stored with type "Weapon" instead of "weapon"
 		assert.Equal(t, 3, totalItems, "Should have 3 total items")
-		
+
 		// This is what the inventory handler checks
 		assert.Greater(t, weaponTypeCount, 0, "Should have weapons with EquipmentTypeWeapon")
-		
+
 		// After fix: weapons should use the constant
 		for _, item := range finalChar.Inventory[entities.EquipmentTypeWeapon] {
-			assert.Equal(t, entities.EquipmentTypeWeapon, item.GetEquipmentType(), 
+			assert.Equal(t, entities.EquipmentTypeWeapon, item.GetEquipmentType(),
 				"Weapon should return EquipmentTypeWeapon constant")
 		}
 	})
@@ -139,15 +139,15 @@ func TestInventoryDisplayBug(t *testing.T) {
 	t.Run("check what types D&D API returns", func(t *testing.T) {
 		// Let's see what the API actually returns for these items
 		items := []string{"greataxe", "handaxe", "explorers-pack"}
-		
+
 		for _, key := range items {
 			equipment, err := dndClient.GetEquipment(key)
 			if err != nil {
 				log.Printf("Error getting %s: %v", key, err)
 				continue
 			}
-			
-			log.Printf("Equipment '%s': Type = %T, GetEquipmentType() = %s", 
+
+			log.Printf("Equipment '%s': Type = %T, GetEquipmentType() = %s",
 				key, equipment, equipment.GetEquipmentType())
 		}
 	})

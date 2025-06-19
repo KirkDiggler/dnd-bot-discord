@@ -154,7 +154,7 @@ func (h *RollIndividualHandler) Handle(req *RollIndividualRequest) error {
 		} else if currentRoll.Value <= 10 {
 			rollFlavor = "\n*Below average, but workable.*"
 		}
-		
+
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   "🎲 Dice Rolled",
 			Value:  fmt.Sprintf("**Rolled:** %s\n**Dropped:** %d (lowest)\n**Total:** %d%s", strings.Join(diceStr, ", "), sortedDice[0], currentRoll.Value, rollFlavor),
@@ -236,14 +236,14 @@ func (h *RollIndividualHandler) Handle(req *RollIndividualRequest) error {
 		for _, roll := range existingRolls {
 			totalScore += roll.Value
 		}
-		
+
 		flavorText := "The dice have spoken! Your fate is sealed."
 		if totalScore >= 78 { // Average of 13+ per stat
 			flavorText = "The gods smile upon you! An exceptional set of rolls."
 		} else if totalScore <= 60 { // Average of 10- per stat
 			flavorText = "The dice show no mercy... But legends are born from adversity!"
 		}
-		
+
 		embed.Title = "All Ability Scores Rolled!"
 		embed.Footer = &discordgo.MessageEmbedFooter{
 			Text: flavorText,

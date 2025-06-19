@@ -41,7 +41,7 @@ func TestInMemoryRepository_GetActiveBySession(t *testing.T) {
 	t.Run("Returns setup encounter when exists", func(t *testing.T) {
 		// Create a new session
 		sessionID2 := "test-session-456"
-		
+
 		// Create a setup encounter
 		setupEnc := entities.NewEncounter("enc-2", sessionID2, "channel-2", "Setup Encounter", "user-2")
 		setupEnc.Status = entities.EncounterStatusSetup
@@ -59,7 +59,7 @@ func TestInMemoryRepository_GetActiveBySession(t *testing.T) {
 	t.Run("Returns nil when only completed encounters exist", func(t *testing.T) {
 		// Create a new session
 		sessionID3 := "test-session-789"
-		
+
 		// Create a completed encounter
 		completedEnc := entities.NewEncounter("enc-3", sessionID3, "channel-3", "Completed Encounter", "user-3")
 		completedEnc.Status = entities.EncounterStatusCompleted

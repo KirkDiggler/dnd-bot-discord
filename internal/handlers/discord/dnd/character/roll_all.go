@@ -141,14 +141,14 @@ func (h *RollAllHandler) Handle(req *RollAllRequest) error {
 	for _, roll := range rolls {
 		totalScore += roll.Value
 	}
-	
+
 	flavorText := "The dice have spoken! Your fate is sealed."
 	if totalScore >= 78 { // Average of 13+ per stat
 		flavorText = "The gods smile upon you! An exceptional set of rolls."
 	} else if totalScore <= 60 { // Average of 10- per stat
 		flavorText = "The dice show no mercy... But legends are born from adversity!"
 	}
-	
+
 	embed.Footer = &discordgo.MessageEmbedFooter{
 		Text: flavorText,
 	}

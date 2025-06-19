@@ -1050,7 +1050,7 @@ func (s *service) StartFreshCharacterCreation(ctx context.Context, userID, realm
 			return nil, dnderr.Wrap(err, "failed to clear ability rolls").
 				WithMeta("character_id", draft.ID)
 		}
-		
+
 		// Refetch the updated draft
 		draft, err = s.GetCharacter(ctx, draft.ID)
 		if err != nil {

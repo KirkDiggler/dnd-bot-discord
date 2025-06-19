@@ -96,7 +96,7 @@ func (h *ProficiencyChoicesHandler) Handle(req *ProficiencyChoicesRequest) error
 			{"WIS", entities.AttributeWisdom},
 			{"CHA", entities.AttributeCharisma},
 		}
-		
+
 		for _, ability := range abilities {
 			if score, ok := draftChar.Attributes[ability.attr]; ok && score != nil {
 				modifier := score.Bonus
@@ -106,7 +106,7 @@ func (h *ProficiencyChoicesHandler) Handle(req *ProficiencyChoicesRequest) error
 				scoreLines = append(scoreLines, fmt.Sprintf("**%s:** -", ability.name))
 			}
 		}
-		
+
 		if len(scoreLines) > 0 {
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 				Name:   "📊 Ability Scores",

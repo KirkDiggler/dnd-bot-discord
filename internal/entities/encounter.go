@@ -191,7 +191,7 @@ func (e *Encounter) CanPlayerAct(playerID string) bool {
 func (e *Encounter) CheckCombatEnd() (shouldEnd bool, playersWon bool) {
 	activeMonsters := 0
 	activePlayers := 0
-	
+
 	for _, combatant := range e.Combatants {
 		if combatant.IsActive {
 			if combatant.Type == CombatantTypeMonster {
@@ -201,14 +201,14 @@ func (e *Encounter) CheckCombatEnd() (shouldEnd bool, playersWon bool) {
 			}
 		}
 	}
-	
+
 	// Combat ends if either side has no active combatants
 	if activeMonsters == 0 && activePlayers > 0 {
 		return true, true // Players won
 	} else if activePlayers == 0 && activeMonsters > 0 {
 		return true, false // Players lost
 	}
-	
+
 	return false, false
 }
 
@@ -261,7 +261,7 @@ func (e *Encounter) AddCombatLogEntry(entry string) {
 	// Prefix with round number
 	logEntry := fmt.Sprintf("Round %d: %s", e.Round, entry)
 	e.CombatLog = append(e.CombatLog, logEntry)
-	
+
 	// Keep only last 20 entries to prevent unbounded growth
 	if len(e.CombatLog) > 20 {
 		e.CombatLog = e.CombatLog[len(e.CombatLog)-20:]

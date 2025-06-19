@@ -218,7 +218,7 @@ func (h *WeaponHandler) HandleUnequip(s *discordgo.Session, i *discordgo.Interac
 
 	// Convert slot name to Slot type
 	slot := entities.Slot(slotName)
-	
+
 	// Check if anything is equipped in that slot
 	if char.EquippedSlots == nil || char.EquippedSlots[slot] == nil {
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{

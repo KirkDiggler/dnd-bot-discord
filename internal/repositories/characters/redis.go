@@ -85,7 +85,7 @@ func equipmentToData(eq entities.Equipment) (EquipmentData, error) {
 func dataToEquipment(data EquipmentData) (entities.Equipment, error) {
 	// Normalize type to handle legacy data
 	normalizedType := strings.ToLower(data.Type)
-	
+
 	switch normalizedType {
 	case "weapon":
 		var weapon entities.Weapon
@@ -126,7 +126,7 @@ func dataToEquipment(data EquipmentData) (entities.Equipment, error) {
 				return &armor, nil
 			}
 		}
-		
+
 		// Default to basic equipment
 		var basic entities.BasicEquipment
 		if err := json.Unmarshal(data.Equipment, &basic); err != nil {
