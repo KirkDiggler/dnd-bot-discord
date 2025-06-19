@@ -174,8 +174,18 @@ DISCORD_TOKEN=xxx REDIS_URL=redis://localhost:6379 ./bin/dnd-bot
 
 ### Project Organization (June 19, 2025)
 - **GitHub Project #6**: Main project board for organizing all issues
+  - Uses Kanban board with custom statuses: Ideas → Investigate → Backlog → Ready → In Progress → Review → Done
 - **Planning Mode**: Use well-defined issues to help future development
 - **Context Management**: Compress context takes longer over time - consider fresh sessions for new features
+
+### Workspace Structure
+The project lives in `/home/kirk/personal/` with related projects:
+- **dnd-bot-discord**: Main Discord bot (current focus)
+- **dnd5e-api**: D&D 5e API integration library
+- **ronnied**: Dice game bot project
+
+Proto files already exist in dnd-bot-discord:
+- `character.proto`, `combat.proto`, `combat_streaming.proto`, `game.proto`
 
 ### Current Work: Weapon Equipping (Issue #37) - MOSTLY COMPLETE
 - **Branch**: `implement-weapon-equipping`
@@ -253,6 +263,75 @@ DISCORD_TOKEN=xxx REDIS_URL=redis://localhost:6379 ./bin/dnd-bot
 - **Ready for**: User testing in development environment
 
 **Key Learning**: The Character.Attack() method was already well-architected to use equipped weapons, making this implementation smoother than expected. The main missing piece was the UI layer and proper attack bonus calculations.
+
+### Interactive Character Sheet System (Issues #37-#43)
+
+#### Project Overview
+**GitHub Project Board**: https://github.com/users/KirkDiggler/projects/6
+- Using "Ideas" and "Investigate" statuses for planning
+- Phased approach: Discord bot → gRPC API + protos → React visualization
+
+#### Design Vision
+The interactive character sheet aims to provide a rich, real-time D&D experience through Discord:
+
+1. **Ephemeral Messages**: Character sheets use ephemeral responses to reduce channel clutter
+2. **Equipment Interaction**: Players can equip/unequip items directly from their character sheet
+3. **Encounter Actions**: During combat, character sheets show available actions based on equipped weapons and abilities
+4. **Real-time Updates**: Sheet updates reflect changes immediately (HP, conditions, equipment)
+
+#### Implementation Issues Created (June 19, 2025)
+
+**Issue #37: Interactive Character Sheet - Main View** ✅
+- Ephemeral character sheet with complete stats display
+- Equipment section with equip/unequip buttons
+- Refresh button for real-time updates
+
+**Issue #38: Character Sheet Actions Menu**
+- Action buttons based on encounter context
+- Attack, cast spell, use item options
+- Dynamic based on equipped items and abilities
+
+**Issue #39: Quick Actions Bar**
+- Frequently used actions at top of sheet
+- Customizable shortcuts for spells/abilities
+- Context-aware (combat vs exploration)
+
+**Issue #40: Equipment Management UI**
+- Interactive inventory with drag-and-drop feel
+- Quick equip/unequip toggles
+- Item details on hover/select
+
+**Issue #41: Spell Management Interface**
+- Spell slots tracking
+- Prepared spells selection
+- Quick cast buttons with targeting
+
+**Issue #42: Character Conditions Display**
+- Visual indicators for conditions (poisoned, prone, etc.)
+- Temporary HP tracking
+- Concentration management
+
+**Issue #43: Character Sheet Customization**
+- Player preferences for sheet layout
+- Collapsible sections
+- Theme/color preferences
+
+#### Technical Architecture Plan
+
+**Phase 1: Discord Bot Enhancement** (Current)
+- Implement interactive components using Discord's button/select APIs
+- Use ephemeral messages for character sheets
+- Store UI state in Redis for performance
+
+**Phase 2: gRPC API Layer**
+- Extract character management into gRPC service
+- Define protobuf schemas for all entities
+- Enable multi-client support (Discord, web, mobile)
+
+**Phase 3: React Visualization**
+- Web dashboard for campaign management
+- Real-time character sheet updates via WebSocket
+- Advanced visualizations (3D dice, battle maps)
 
 ### Contact
 - GitHub Issues: https://github.com/KirkDiggler/dnd-bot-discord/issues
