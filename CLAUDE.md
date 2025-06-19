@@ -172,6 +172,44 @@ DISCORD_TOKEN=xxx REDIS_URL=redis://localhost:6379 ./bin/dnd-bot
 - Discord interactions must be acknowledged within 3 seconds
 - Redis keys follow pattern: `character:{id}`, `session:{id}`, etc.
 
+### Project Organization (June 19, 2025)
+- **GitHub Project #6**: Main project board for organizing all issues
+- **Planning Mode**: Use well-defined issues to help future development
+- **Context Management**: Compress context takes longer over time - consider fresh sessions for new features
+
+### Current Work: Weapon Equipping (Issue #37) - MOSTLY COMPLETE
+- **Branch**: `implement-weapon-equipping`
+- **Goal**: Allow players to equip weapons from inventory for proper attack calculations
+- **Status**: ✅ UI commands implemented, ✅ Attack calculations enhanced, ❌ Persistence missing
+
+#### What's Implemented:
+1. **Slash Commands**: `/dnd character equip`, `/dnd character unequip`, `/dnd character inventory`
+2. **Attack Calculations**: Enhanced weapon attacks with proficiency bonus calculation
+3. **Equipment System**: Character.Equip() method handles weapon slot management
+4. **Proficiency Check**: HasWeaponProficiency() method checks weapon proficiencies
+
+#### Key Files Modified:
+- `internal/handlers/discord/dnd/character/weapon.go` - New weapon management UI handlers
+- `internal/handlers/discord/handler.go` - Added weapon commands and routing
+- `internal/entities/weapon.go` - Enhanced Attack() method with proficiency bonus
+- `internal/entities/character.go` - Added HasWeaponProficiency() method
+
+#### Known Issues (GitHub Issues needed):
+1. **Equipment Persistence**: Equipped weapons don't persist to database (changes are memory-only)
+   - Need to add character equipment save service method
+   - Current limitation: Equipment changes work in session but reset on bot restart
+2. **Weapon Autocomplete**: `/dnd character equip` requires manually typing weapon keys
+   - Need autocomplete from character's weapon inventory
+3. **Combat Integration**: Need to show equipped weapon name in attack messages
+
+#### D&D 5e Rules Implemented:
+- **Proficiency Bonus**: +2 at level 1-4, +3 at 5-8, +4 at 9-12, etc.
+- **Attack Bonus**: Ability modifier + proficiency bonus (if proficient)
+- **Damage Bonus**: Only ability modifier applies to damage
+- **Weapon Types**: Melee uses STR, Ranged uses DEX
+- **Two-Handed Weapons**: Use TwoHandedDamage if available
+
 ### Contact
 - GitHub Issues: https://github.com/KirkDiggler/dnd-bot-discord/issues
+- GitHub Project: https://github.com/users/KirkDiggler/projects/6
 - This is Kirk's personal project for D&D sessions

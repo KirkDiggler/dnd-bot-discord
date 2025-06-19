@@ -17,25 +17,34 @@ type Weapon struct {
 }
 
 func (w *Weapon) Attack(char *Character) (*attack.Result, error) {
-	var bonus int
+	var abilityBonus int
 
 	switch w.WeaponRange {
 	case "Ranged":
-		bonus = char.Attributes[AttributeDexterity].Bonus
+		abilityBonus = char.Attributes[AttributeDexterity].Bonus
 	case "Melee":
-		bonus = char.Attributes[AttributeStrength].Bonus
+		abilityBonus = char.Attributes[AttributeStrength].Bonus
 	}
 
-	// TODO: check proficiency
+	// Check for weapon proficiency
+	proficiencyBonus := 0
+	if char.HasWeaponProficiency(w.Base.Key) {
+		// Base proficiency bonus is +2 at level 1-4, +3 at 5-8, +4 at 9-12, etc.
+		proficiencyBonus = 2 + ((char.Level - 1) / 4)
+	}
+
+	attackBonus := abilityBonus + proficiencyBonus
+	damageBonus := abilityBonus // Only ability modifier applies to damage
+
 	if w.IsTwoHanded() {
 		if w.TwoHandedDamage == nil {
-			return attack.RollAttack(bonus, bonus, w.Damage)
+			return attack.RollAttack(attackBonus, damageBonus, w.Damage)
 		}
 
-		return attack.RollAttack(bonus, bonus, w.TwoHandedDamage)
+		return attack.RollAttack(attackBonus, damageBonus, w.TwoHandedDamage)
 	}
 
-	return attack.RollAttack(bonus, bonus, w.Damage)
+	return attack.RollAttack(attackBonus, damageBonus, w.Damage)
 }
 
 func (w *Weapon) IsRanged() bool {

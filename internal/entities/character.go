@@ -129,6 +129,29 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 	}, nil
 }
 
+// HasWeaponProficiency checks if the character is proficient with a specific weapon
+func (c *Character) HasWeaponProficiency(weaponKey string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.Proficiencies == nil {
+		return false
+	}
+
+	weaponProficiencies, exists := c.Proficiencies[ProficiencyTypeWeapon]
+	if !exists {
+		return false
+	}
+
+	for _, prof := range weaponProficiencies {
+		if prof.Key == weaponKey {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (c *Character) improvisedMelee() (*attack.Result, error) {
 	bonus := c.Attributes[AttributeStrength].Bonus
 	attackRoll, err := dice.Roll(1, 20, 0)
