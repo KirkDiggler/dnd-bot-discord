@@ -187,10 +187,11 @@ The project lives in `/home/kirk/personal/` with related projects:
 Proto files already exist in dnd-bot-discord:
 - `character.proto`, `combat.proto`, `combat_streaming.proto`, `game.proto`
 
-### Current Work: Weapon Equipping (Issue #37) - MOSTLY COMPLETE
+### Current Work: Weapon Equipping (Issue #37) - COMPLETE ✅
 - **Branch**: `implement-weapon-equipping`
+- **PR**: #44 - Ready for merge
 - **Goal**: Allow players to equip weapons from inventory for proper attack calculations
-- **Status**: ✅ UI commands implemented, ✅ Attack calculations enhanced, ❌ Persistence missing
+- **Status**: ✅ UI commands implemented, ✅ Attack calculations enhanced, ✅ Persistence implemented
 
 #### What's Implemented:
 1. **Slash Commands**: `/dnd character equip`, `/dnd character unequip`, `/dnd character inventory`
@@ -204,13 +205,16 @@ Proto files already exist in dnd-bot-discord:
 - `internal/entities/weapon.go` - Enhanced Attack() method with proficiency bonus
 - `internal/entities/character.go` - Added HasWeaponProficiency() method
 
-#### Known Issues (GitHub Issues needed):
-1. **Equipment Persistence**: Equipped weapons don't persist to database (changes are memory-only)
-   - Need to add character equipment save service method
-   - Current limitation: Equipment changes work in session but reset on bot restart
-2. **Weapon Autocomplete**: `/dnd character equip` requires manually typing weapon keys
+#### Completed Features:
+1. **Equipment Persistence**: ✅ Fixed! Equipment changes now persist to Redis database
+   - Added UpdateEquipment method to character service
+   - Equip/unequip commands save changes immediately
+
+#### Remaining Enhancements (Future PRs):
+1. **Weapon Autocomplete**: `/dnd character equip` requires manually typing weapon keys
    - Need autocomplete from character's weapon inventory
-3. **Combat Integration**: Need to show equipped weapon name in attack messages
+2. **Combat Integration**: Need to show equipped weapon name in attack messages
+   - Attack messages should display weapon name and attack bonuses
 
 #### D&D 5e Rules Implemented:
 - **Proficiency Bonus**: +2 at level 1-4, +3 at 5-8, +4 at 9-12, etc.
