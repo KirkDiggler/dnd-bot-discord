@@ -450,6 +450,10 @@ func (r *redisRepo) toCharacterData(char *entities.Character) (*CharacterData, e
 	// Convert equipped slots
 	equippedSlots := make(map[entities.Slot]EquipmentData)
 	for slot, item := range char.EquippedSlots {
+		// Skip nil items (empty slots)
+		if item == nil {
+			continue
+		}
 		data, err := equipmentToData(item)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert equipped item: %w", err)
@@ -490,7 +494,7 @@ func (r *redisRepo) fromCharacterData(data *CharacterData) (*entities.Character,
 	for eqType, items := range data.Inventory {
 		var eqItems []entities.Equipment
 		for _, item := range items {
-			eq, err := dataToEquipment(item)
+			eq, err := DataToEquipmentWithMigration(item)
 			if err != nil {
 				return nil, fmt.Errorf("failed to convert inventory data: %w", err)
 			}
@@ -502,7 +506,7 @@ func (r *redisRepo) fromCharacterData(data *CharacterData) (*entities.Character,
 	// Convert equipped slots back
 	equippedSlots := make(map[entities.Slot]entities.Equipment)
 	for slot, item := range data.EquippedSlots {
-		eq, err := dataToEquipment(item)
+		eq, err := DataToEquipmentWithMigration(item)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert equipped data: %w", err)
 		}
