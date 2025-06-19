@@ -18,6 +18,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/help"
 	sessionHandler "github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/session"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/testcombat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/helpers"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
@@ -43,6 +44,7 @@ type Handler struct {
 	characterListHandler                  *character.ListHandler
 	characterShowHandler                  *character.ShowHandler
 	characterWeaponHandler                *character.WeaponHandler
+	characterSheetHandler                 *character.SheetHandler
 
 	// Session handlers
 	sessionCreateHandler *sessionHandler.CreateHandler
@@ -124,6 +126,7 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		characterWeaponHandler: character.NewWeaponHandler(&character.WeaponHandlerConfig{
 			ServiceProvider: cfg.ServiceProvider,
 		}),
+		characterSheetHandler: character.NewSheetHandler(cfg.ServiceProvider),
 
 		// Initialize session handlers
 		sessionCreateHandler: sessionHandler.NewCreateHandler(cfg.ServiceProvider),
@@ -232,6 +235,19 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 						{
 							Name:        "inventory",
 							Description: "View character's weapon inventory",
+							Type:        discordgo.ApplicationCommandOptionSubCommand,
+							Options: []*discordgo.ApplicationCommandOption{
+								{
+									Type:        discordgo.ApplicationCommandOptionString,
+									Name:        "character_id",
+									Description: "Character ID",
+									Required:    true,
+								},
+							},
+						},
+						{
+							Name:        "sheet",
+							Description: "View your character sheet",
 							Type:        discordgo.ApplicationCommandOptionSubCommand,
 							Options: []*discordgo.ApplicationCommandOption{
 								{
@@ -538,6 +554,10 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 		case "inventory":
 			if err := h.characterWeaponHandler.HandleInventory(s, i); err != nil {
 				log.Printf("Error handling character inventory: %v", err)
+			}
+		case "sheet":
+			if err := h.characterSheetHandler.Handle(s, i); err != nil {
+				log.Printf("Error handling character sheet: %v", err)
 			}
 		}
 	} else if subcommandGroup.Name == "session" && len(subcommandGroup.Options) > 0 {
@@ -1709,6 +1729,45 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			}
 			if err := h.characterShowHandler.Handle(req); err != nil {
 				log.Printf("Error handling character quickshow: %v", err)
+			}
+		}
+	} else if ctx == "character" && action == "sheet_refresh" {
+		// Refresh character sheet
+		if len(parts) >= 3 {
+			characterID := parts[2]
+			// Use helper function to reduce duplication
+			err := helpers.ShowCharacterSheet(s, i, characterID, i.Member.User.ID, h.ServiceProvider, true)
+			if err != nil {
+				log.Printf("Error refreshing character sheet: %v", err)
+				// Provide user feedback on error
+				if respondErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseUpdateMessage,
+					Data: &discordgo.InteractionResponseData{
+						Content:    "❌ Failed to refresh character sheet. Please try again.",
+						Components: []discordgo.MessageComponent{},
+					},
+				}); respondErr != nil {
+					log.Printf("Error sending error response: %v", respondErr)
+				}
+			}
+		}
+	} else if ctx == "character" && action == "sheet_show" {
+		// Show character sheet from list
+		if len(parts) >= 3 {
+			characterID := parts[2]
+			// Use helper function to reduce duplication
+			err := helpers.ShowCharacterSheet(s, i, characterID, i.Member.User.ID, h.ServiceProvider, false)
+			if err != nil {
+				log.Printf("Error showing character sheet: %v", err)
+				// Provide user feedback on error
+				content := "❌ Failed to display character sheet. Please try again."
+				_, respondErr := s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+					Content: content,
+					Flags:   discordgo.MessageFlagsEphemeral,
+				})
+				if respondErr != nil {
+					log.Printf("Error sending error response: %v", respondErr)
+				}
 			}
 		}
 	} else if ctx == "session_manage" {

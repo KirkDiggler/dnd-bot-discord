@@ -159,6 +159,20 @@ func (mr *MockServiceMockRecorder) HealCombatant(ctx, encounterID, combatantID, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HealCombatant", reflect.TypeOf((*MockService)(nil).HealCombatant), ctx, encounterID, combatantID, userID, amount)
 }
 
+// LogCombatAction mocks base method.
+func (m *MockService) LogCombatAction(ctx context.Context, encounterID, action string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LogCombatAction", ctx, encounterID, action)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// LogCombatAction indicates an expected call of LogCombatAction.
+func (mr *MockServiceMockRecorder) LogCombatAction(ctx, encounterID, action any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogCombatAction", reflect.TypeOf((*MockService)(nil).LogCombatAction), ctx, encounterID, action)
+}
+
 // NextTurn mocks base method.
 func (m *MockService) NextTurn(ctx context.Context, encounterID, userID string) error {
 	m.ctrl.T.Helper()
