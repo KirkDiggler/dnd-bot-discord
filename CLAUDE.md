@@ -209,6 +209,51 @@ DISCORD_TOKEN=xxx REDIS_URL=redis://localhost:6379 ./bin/dnd-bot
 - **Weapon Types**: Melee uses STR, Ranged uses DEX
 - **Two-Handed Weapons**: Use TwoHandedDamage if available
 
+### Next Session GitHub Issues to Create:
+
+#### High Priority Issues:
+1. **Equipment Persistence Service** (Blocks production use)
+   - Title: "Add character equipment persistence to database"
+   - Description: Equipped weapons currently only persist in memory, reset on bot restart
+   - Tasks: Add CharacterService.SaveEquipment() method, update repository layer
+   - Acceptance: Equipment changes persist across bot restarts
+
+2. **Combat Message Enhancement** (Improves UX)
+   - Title: "Show equipped weapon name in attack messages"
+   - Description: Attack messages should display weapon name and attack bonuses
+   - Current: "Grunk attacks goblin for 8 damage"
+   - Desired: "Grunk attacks goblin with Longsword (+5 to hit) for 8 slashing damage"
+
+#### Medium Priority Issues:
+3. **Weapon Autocomplete** (Quality of life)
+   - Title: "Add weapon autocomplete to /dnd character equip command"
+   - Description: Users should see dropdown of available weapons from inventory
+   - Implementation: Discord autocomplete with character weapon inventory
+
+4. **Equipment Quick Actions** (Quality of life)
+   - Title: "Add equip/unequip buttons to character sheet"
+   - Description: Character sheet should have quick action buttons for equipment
+   - Implementation: Add buttons to character show embed
+
+#### Future Enhancement Issues:
+5. **Armor Class Calculation** (Game mechanics)
+   - Title: "Implement proper armor AC calculation with equipped gear"
+   - Description: AC should update based on equipped armor and DEX modifier limits
+
+6. **Two-Weapon Fighting** (Game mechanics)
+   - Title: "Implement two-weapon fighting bonus action attacks"
+   - Description: Characters with two light weapons should get bonus action attack
+
+### Session Summary (June 19, 2025):
+**Weapon Equipping Implementation - SUCCESSFUL** ✅
+- **Time**: ~2 hours of development
+- **Lines Added**: ~700 lines of new code + tests
+- **Features**: 3 new slash commands, enhanced attack calculations, comprehensive test suite
+- **Blockers**: Equipment persistence (memory-only currently)
+- **Ready for**: User testing in development environment
+
+**Key Learning**: The Character.Attack() method was already well-architected to use equipped weapons, making this implementation smoother than expected. The main missing piece was the UI layer and proper attack bonus calculations.
+
 ### Contact
 - GitHub Issues: https://github.com/KirkDiggler/dnd-bot-discord/issues
 - GitHub Project: https://github.com/users/KirkDiggler/projects/6
