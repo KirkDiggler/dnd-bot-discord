@@ -2655,11 +2655,12 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 			case "select_target":
 				// Handle target selection for attack
-				if len(parts) < 3 {
+				if len(parts) < 4 {
 					log.Printf("Invalid select_target interaction: %v", parts)
 					return
 				}
-				targetID := parts[2]
+				targetID := parts[3]
+				log.Printf("Target selected: %s for encounter: %s", targetID, encounterID)
 
 				// Get encounter
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
