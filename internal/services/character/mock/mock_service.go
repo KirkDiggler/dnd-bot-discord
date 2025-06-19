@@ -370,6 +370,20 @@ func (mr *MockServiceMockRecorder) UpdateDraftCharacter(ctx, characterID, update
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDraftCharacter", reflect.TypeOf((*MockService)(nil).UpdateDraftCharacter), ctx, characterID, updates)
 }
 
+// UpdateEquipment mocks base method.
+func (m *MockService) UpdateEquipment(arg0 *entities.Character) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateEquipment", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateEquipment indicates an expected call of UpdateEquipment.
+func (mr *MockServiceMockRecorder) UpdateEquipment(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEquipment", reflect.TypeOf((*MockService)(nil).UpdateEquipment), arg0)
+}
+
 // UpdateStatus mocks base method.
 func (m *MockService) UpdateStatus(characterID string, status entities.CharacterStatus) error {
 	m.ctrl.T.Helper()
