@@ -152,6 +152,20 @@ DISCORD_TOKEN=xxx REDIS_URL=redis://localhost:6379 ./bin/dnd-bot
 - CI must pass before merge
 - Using squash and merge strategy
 
+#### IMPORTANT: PR Merge Workflow
+- **ALWAYS merge PRs before starting new features**
+- After creating a PR, ensure it's merged to main before moving to the next feature
+- This prevents regression bugs and merge conflicts
+- Workflow: Create PR → Merge PR → Update branch → Start next feature
+- If multiple PRs exist, merge them in order of creation to avoid conflicts
+
+#### Merge vs Rebase Philosophy
+- **Prefer merge over rebase** - "Rewriting history is something I cannot get back. Understanding complex merges is at least possible."
+- History preservation is more valuable than a clean linear history
+- Complex merges can be understood with tools and patience
+- Lost history from rebase cannot be recovered
+- Since we squash-and-merge PRs, the main branch stays clean anyway
+
 ### Debugging Tips
 - Check `go.mod` for dependency versions if something seems off
 - The D&D API returns polymorphic JSON - always check the actual response
