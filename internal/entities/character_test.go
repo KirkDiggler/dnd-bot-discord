@@ -11,9 +11,9 @@ func TestCharacter_AddAbilityBonus(t *testing.T) {
 		AbilityScores map[Attribute]*AbilityScore
 	}
 	type args struct {
-		abilityBonus   *AbilityBonus
-		expectedScore  int
-		expectedBonus  int
+		abilityBonus  *AbilityBonus
+		expectedScore int
+		expectedBonus int
 	}
 	tests := []struct {
 		name   string

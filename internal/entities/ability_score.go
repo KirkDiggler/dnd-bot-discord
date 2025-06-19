@@ -29,7 +29,7 @@ type AbilityBonus struct {
 func (a *AbilityScore) AddBonus(bonus int) *AbilityScore {
 	// Add the bonus to the score
 	a.Score += bonus
-	
+
 	// Recalculate the modifier based on the new score
 	a.Bonus = (a.Score - 10) / 2
 
