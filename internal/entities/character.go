@@ -8,6 +8,7 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/attack"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 )
 
 type Slot string
@@ -68,12 +69,14 @@ type Character struct {
 }
 
 func (c *Character) Attack() ([]*attack.Result, error) {
+	log.Printf("Character.Attack() called for %s, acquiring mutex...", c.Name)
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	log.Printf("Character.Attack() mutex acquired for %s", c.Name)
 
 	if c.EquippedSlots == nil {
 		// Improvised weapon range or melee
-
+		log.Printf("No equipped slots, using improvised melee")
 		a, err := c.improvisedMelee()
 		if err != nil {
 			return nil, err
@@ -85,30 +88,122 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 
 	}
 
+	log.Printf("Checking main hand slot...")
 	if c.EquippedSlots[SlotMainHand] != nil {
+		log.Printf("Main hand has equipment: %v", c.EquippedSlots[SlotMainHand])
 		if weap, ok := c.EquippedSlots[SlotMainHand].(*Weapon); ok {
+			log.Printf("Main hand weapon found: %s", weap.GetName())
 			attacks := make([]*attack.Result, 0)
-			attak1, err := weap.Attack(c)
+			
+			// Check proficiency while we have the mutex
+			isProficient := c.hasWeaponProficiencyInternal(weap.GetKey())
+			log.Printf("Weapon proficiency check: %v", isProficient)
+			
+			// Calculate ability bonus based on weapon type
+			var abilityBonus int
+			switch weap.WeaponRange {
+			case "Ranged":
+				abilityBonus = c.Attributes[AttributeDexterity].Bonus
+			case "Melee":
+				abilityBonus = c.Attributes[AttributeStrength].Bonus
+			}
+			
+			// Calculate proficiency bonus if proficient
+			proficiencyBonus := 0
+			if isProficient {
+				proficiencyBonus = 2 + ((c.Level - 1) / 4)
+			}
+			
+			attackBonus := abilityBonus + proficiencyBonus
+			damageBonus := abilityBonus // Only ability modifier applies to damage
+			
+			// Roll the attack
+			var attak1 *attack.Result
+			var err error
+			if weap.IsTwoHanded() && weap.TwoHandedDamage != nil {
+				attak1, err = attack.RollAttack(attackBonus, damageBonus, weap.TwoHandedDamage)
+			} else {
+				attak1, err = attack.RollAttack(attackBonus, damageBonus, weap.Damage)
+			}
+			
 			if err != nil {
+				log.Printf("Weapon attack error: %v", err)
 				return nil, err
 			}
+			log.Printf("Weapon attack successful")
 			attacks = append(attacks, attak1)
 
-			if offWeap, offOk := c.EquippedSlots[SlotOffHand].(*Weapon); offOk {
-				attak2, err := offWeap.Attack(c)
-				if err != nil {
-					return nil, err
+			if c.EquippedSlots[SlotOffHand] != nil {
+				if offWeap, offOk := c.EquippedSlots[SlotOffHand].(*Weapon); offOk {
+					// Same process for off-hand weapon
+					offHandProficient := c.hasWeaponProficiencyInternal(offWeap.GetKey())
+					
+					var offHandAbilityBonus int
+					switch offWeap.WeaponRange {
+					case "Ranged":
+						offHandAbilityBonus = c.Attributes[AttributeDexterity].Bonus
+					case "Melee":
+						offHandAbilityBonus = c.Attributes[AttributeStrength].Bonus
+					}
+					
+					offHandProficiencyBonus := 0
+					if offHandProficient {
+						offHandProficiencyBonus = 2 + ((c.Level - 1) / 4)
+					}
+					
+					offHandAttackBonus := offHandAbilityBonus + offHandProficiencyBonus
+					offHandDamageBonus := offHandAbilityBonus
+					
+					attak2, err := attack.RollAttack(offHandAttackBonus, offHandDamageBonus, offWeap.Damage)
+					if err != nil {
+						return nil, err
+					}
+					attacks = append(attacks, attak2)
 				}
-				attacks = append(attacks, attak2)
 			}
 
+			log.Printf("Returning %d attack results", len(attacks))
 			return attacks, nil
+		} else {
+			log.Printf("Main hand equipment is not a weapon: %T", c.EquippedSlots[SlotMainHand])
 		}
+	} else {
+		log.Printf("No main hand equipment")
 	}
 
 	if c.EquippedSlots[SlotTwoHanded] != nil {
+		log.Printf("Checking two-handed slot...")
 		if weap, ok := c.EquippedSlots[SlotTwoHanded].(*Weapon); ok {
-			a, err := weap.Attack(c)
+			// Check proficiency while we have the mutex
+			isProficient := c.hasWeaponProficiencyInternal(weap.GetKey())
+			
+			// Calculate ability bonus based on weapon type
+			var abilityBonus int
+			switch weap.WeaponRange {
+			case "Ranged":
+				abilityBonus = c.Attributes[AttributeDexterity].Bonus
+			case "Melee":
+				abilityBonus = c.Attributes[AttributeStrength].Bonus
+			}
+			
+			// Calculate proficiency bonus if proficient
+			proficiencyBonus := 0
+			if isProficient {
+				proficiencyBonus = 2 + ((c.Level - 1) / 4)
+			}
+			
+			attackBonus := abilityBonus + proficiencyBonus
+			damageBonus := abilityBonus
+			
+			// Two-handed weapons often have special damage
+			var dmg *damage.Damage
+			if weap.TwoHandedDamage != nil {
+				dmg = weap.TwoHandedDamage
+			} else {
+				dmg = weap.Damage
+			}
+			
+			a, err := attack.RollAttack(attackBonus, damageBonus, dmg)
 			if err != nil {
 				return nil, err
 			}
@@ -129,11 +224,15 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 	}, nil
 }
 
-// HasWeaponProficiency checks if the character is proficient with a specific weapon
+// HasWeaponProficiency checks if the character is proficient with a weapon (thread-safe)
 func (c *Character) HasWeaponProficiency(weaponKey string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	return c.hasWeaponProficiencyInternal(weaponKey)
+}
 
+// hasWeaponProficiencyInternal checks proficiency without locking (must be called with mutex held)
+func (c *Character) hasWeaponProficiencyInternal(weaponKey string) bool {
 	if c.Proficiencies == nil {
 		return false
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
@@ -82,7 +83,10 @@ func equipmentToData(eq entities.Equipment) (EquipmentData, error) {
 
 // dataToEquipment converts EquipmentData back to Equipment interface
 func dataToEquipment(data EquipmentData) (entities.Equipment, error) {
-	switch data.Type {
+	// Normalize type to handle legacy data
+	normalizedType := strings.ToLower(data.Type)
+	
+	switch normalizedType {
 	case "weapon":
 		var weapon entities.Weapon
 		if err := json.Unmarshal(data.Equipment, &weapon); err != nil {
@@ -95,14 +99,40 @@ func dataToEquipment(data EquipmentData) (entities.Equipment, error) {
 			return nil, fmt.Errorf("failed to unmarshal armor: %w", err)
 		}
 		return &armor, nil
-	case "basic":
+	case "basic", "basicequipment", "":
 		var basic entities.BasicEquipment
 		if err := json.Unmarshal(data.Equipment, &basic); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal basic equipment: %w", err)
 		}
 		return &basic, nil
 	default:
-		return nil, fmt.Errorf("unknown equipment type: %s", data.Type)
+		// Handle unknown types by trying to detect from JSON structure
+		var rawData map[string]interface{}
+		if err := json.Unmarshal(data.Equipment, &rawData); err == nil {
+			// Check for weapon-specific fields
+			if _, hasWeaponCategory := rawData["weapon_category"]; hasWeaponCategory {
+				var weapon entities.Weapon
+				if err := json.Unmarshal(data.Equipment, &weapon); err != nil {
+					return nil, fmt.Errorf("failed to unmarshal weapon: %w", err)
+				}
+				return &weapon, nil
+			}
+			// Check for armor-specific fields
+			if _, hasArmorCategory := rawData["armor_category"]; hasArmorCategory {
+				var armor entities.Armor
+				if err := json.Unmarshal(data.Equipment, &armor); err != nil {
+					return nil, fmt.Errorf("failed to unmarshal armor: %w", err)
+				}
+				return &armor, nil
+			}
+		}
+		
+		// Default to basic equipment
+		var basic entities.BasicEquipment
+		if err := json.Unmarshal(data.Equipment, &basic); err != nil {
+			return nil, fmt.Errorf("unknown equipment type '%s': %w", data.Type, err)
+		}
+		return &basic, nil
 	}
 }
 
