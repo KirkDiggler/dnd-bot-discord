@@ -3215,20 +3215,108 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						hitText = "❌ **MISS!**"
 					}
 
+					// Build detailed attack roll text
+					var attackDetails string
+					if result.AttackResult != nil {
+						// Show dice roll details: 1d20 + bonus = total
+						rollsStr := fmt.Sprintf("%v", result.AttackResult.Rolls)
+						attackDetails = fmt.Sprintf("Roll: %s + %d = **%d**\nvs AC %d\n%s",
+							rollsStr,
+							result.AttackRoll-result.AttackResult.Total, // This is the bonus
+							result.AttackRoll,
+							target.AC,
+							hitText)
+					} else {
+						// Fallback if no detailed roll available
+						attackDetails = fmt.Sprintf("**Total:** %d vs AC %d\n%s", result.AttackRoll, target.AC, hitText)
+					}
+
 					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 						Name:   fmt.Sprintf("🎲 %s Roll", attackLabel),
-						Value:  fmt.Sprintf("**Total:** %d vs AC %d\n%s", result.AttackRoll, target.AC, hitText),
+						Value:  attackDetails,
 						Inline: true,
 					})
 
 					if hit {
+						// Build detailed damage roll text
+						var damageDetails string
+						if result.DamageResult != nil {
+							// Show dice roll details for damage
+							rollsStr := fmt.Sprintf("%v", result.DamageResult.Rolls)
+							damageBonus := result.DamageRoll - result.DamageResult.Total
+							if damageBonus != 0 {
+								damageDetails = fmt.Sprintf("Roll: %s + %d = **%d** %s",
+									rollsStr,
+									damageBonus,
+									result.DamageRoll,
+									result.AttackType)
+							} else {
+								damageDetails = fmt.Sprintf("Roll: %s = **%d** %s",
+									rollsStr,
+									result.DamageRoll,
+									result.AttackType)
+							}
+						} else {
+							// Fallback if no detailed roll available
+							damageDetails = fmt.Sprintf("**Total:** %d %s damage", result.DamageRoll, result.AttackType)
+						}
+
 						embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 							Name:   "💥 Damage",
-							Value:  fmt.Sprintf("**Total:** %d %s damage", result.DamageRoll, result.AttackType),
+							Value:  damageDetails,
 							Inline: true,
 						})
 						totalDamageDealt += result.DamageRoll
 					}
+				}
+
+				// Log the attack to combat log
+				for i, result := range attackResults {
+					attackNum := ""
+					if len(attackResults) > 1 {
+						attackNum = fmt.Sprintf(" #%d", i+1)
+					}
+
+					// Build the log entry with dice details
+					var logEntry string
+					if result.AttackResult != nil {
+						rollsStr := fmt.Sprintf("%v", result.AttackResult.Rolls)
+						bonus := result.AttackRoll - result.AttackResult.Total
+
+						if result.AttackRoll >= target.AC {
+							// Hit - include damage details
+							if result.DamageResult != nil {
+								dmgRollsStr := fmt.Sprintf("%v", result.DamageResult.Rolls)
+								dmgBonus := result.DamageRoll - result.DamageResult.Total
+								if dmgBonus != 0 {
+									logEntry = fmt.Sprintf("⚔️ **%s** attacks **%s** with %s%s: Attack %s+%d=**%d** vs AC %d (HIT!) | Damage %s+%d=**%d**",
+										current.Name, target.Name, attackName, attackNum, rollsStr, bonus, result.AttackRoll, target.AC,
+										dmgRollsStr, dmgBonus, result.DamageRoll)
+								} else {
+									logEntry = fmt.Sprintf("⚔️ **%s** attacks **%s** with %s%s: Attack %s+%d=**%d** vs AC %d (HIT!) | Damage %s=**%d**",
+										current.Name, target.Name, attackName, attackNum, rollsStr, bonus, result.AttackRoll, target.AC,
+										dmgRollsStr, result.DamageRoll)
+								}
+							} else {
+								logEntry = fmt.Sprintf("⚔️ **%s** hits **%s** with %s%s: %s+%d=**%d** vs AC %d for %d damage",
+									current.Name, target.Name, attackName, attackNum, rollsStr, bonus, result.AttackRoll, target.AC, result.DamageRoll)
+							}
+						} else {
+							// Miss
+							logEntry = fmt.Sprintf("⚔️ **%s** attacks **%s** with %s%s: %s+%d=**%d** vs AC %d (MISS!)",
+								current.Name, target.Name, attackName, attackNum, rollsStr, bonus, result.AttackRoll, target.AC)
+						}
+					} else {
+						// Fallback without dice details
+						if result.AttackRoll >= target.AC {
+							logEntry = fmt.Sprintf("⚔️ **%s** hits **%s** for %d damage", current.Name, target.Name, result.DamageRoll)
+						} else {
+							logEntry = fmt.Sprintf("⚔️ **%s** misses **%s**", current.Name, target.Name)
+						}
+					}
+
+					// Log to combat history
+					_ = h.ServiceProvider.EncounterService.LogCombatAction(context.Background(), encounterID, logEntry)
 				}
 
 				// Apply damage if any hit
