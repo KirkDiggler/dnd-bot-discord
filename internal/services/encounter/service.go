@@ -54,7 +54,7 @@ type Service interface {
 
 	// EndEncounter ends the encounter
 	EndEncounter(ctx context.Context, encounterID, userID string) error
-	
+
 	// LogCombatAction logs a combat action (like a miss) without damage
 	LogCombatAction(ctx context.Context, encounterID, action string) error
 }
@@ -289,7 +289,7 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 	if err != nil {
 		return nil, dnderr.Wrap(err, "failed to get character")
 	}
-	
+
 	// Log character details
 	log.Printf("AddPlayer - Retrieved character: ID=%s, Name=%s, OwnerID=%s", character.ID, character.Name, character.OwnerID)
 
@@ -515,7 +515,7 @@ func (s *service) ApplyDamage(ctx context.Context, encounterID, combatantID, use
 		return dnderr.Wrap(err, "failed to get encounter")
 	}
 
-	// Check permissions 
+	// Check permissions
 	// For dungeon encounters, allow damage application regardless of turn
 	// since the bot orchestrates combat on behalf of players
 	if session, err := s.sessionService.GetSession(ctx, encounter.SessionID); err == nil {
@@ -538,7 +538,7 @@ func (s *service) ApplyDamage(ctx context.Context, encounterID, combatantID, use
 
 	// Apply damage
 	combatant.ApplyDamage(damage)
-	
+
 	// Add to combat log if damage was dealt
 	if damage > 0 {
 		// Find attacker name (could be current turn or explicit)
@@ -547,7 +547,7 @@ func (s *service) ApplyDamage(ctx context.Context, encounterID, combatantID, use
 			attackerName = current.Name
 		}
 		encounter.AddCombatLogEntry(fmt.Sprintf("%s hit %s for %d damage", attackerName, combatant.Name, damage))
-		
+
 		if combatant.CurrentHP == 0 {
 			encounter.AddCombatLogEntry(fmt.Sprintf("%s was defeated!", combatant.Name))
 		}
@@ -633,14 +633,14 @@ func (s *service) LogCombatAction(ctx context.Context, encounterID, action strin
 	if err != nil {
 		return dnderr.Wrap(err, "failed to get encounter")
 	}
-	
+
 	// Add to combat log
 	encounter.AddCombatLogEntry(action)
-	
+
 	// Save changes
 	if err := s.repository.Update(ctx, encounter); err != nil {
 		return dnderr.Wrap(err, "failed to update encounter")
 	}
-	
+
 	return nil
 }

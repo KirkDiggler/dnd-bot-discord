@@ -23,7 +23,7 @@ func NewJoinPartyHandler(serviceProvider *services.Provider) *JoinPartyHandler {
 
 func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCreate, sessionID string) error {
 	log.Printf("JoinParty - User %s attempting to join session %s", i.Member.User.ID, sessionID)
-	
+
 	// Get user's active character
 	chars, err := h.services.CharacterService.ListByOwner(i.Member.User.ID)
 	if err != nil {
@@ -36,7 +36,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 			},
 		})
 	}
-	
+
 	if len(chars) == 0 {
 		log.Printf("JoinParty - User %s has no characters", i.Member.User.ID)
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -47,7 +47,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 			},
 		})
 	}
-	
+
 	log.Printf("JoinParty - User %s has %d characters", i.Member.User.ID, len(chars))
 
 	// Find first active character
@@ -62,7 +62,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 			}
 		}
 	}
-	
+
 	log.Printf("JoinParty - Found %d active characters", activeCount)
 
 	if playerChar == nil {
@@ -116,7 +116,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 			},
 		})
 	}
-	
+
 	// If not in session, join it
 	if !sess.IsUserInSession(i.Member.User.ID) {
 		log.Printf("User %s not in session, joining...", i.Member.User.ID)
@@ -148,17 +148,17 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 		})
 	}
 	log.Printf("Successfully selected character %s for user %s", playerChar.Name, i.Member.User.ID)
-	
+
 	// Verify the character was set
 	sess, getErr := h.services.SessionService.GetSession(context.Background(), sessionID)
 	if getErr == nil && sess != nil {
 		if member, exists := sess.Members[i.Member.User.ID]; exists {
-			log.Printf("JoinParty - Verified session member - UserID: %s, Role: %s, CharacterID: %s", 
+			log.Printf("JoinParty - Verified session member - UserID: %s, Role: %s, CharacterID: %s",
 				member.UserID, member.Role, member.CharacterID)
 		} else {
 			log.Printf("JoinParty - WARNING: User %s not found in session members after join", i.Member.User.ID)
 		}
-		
+
 		// Log all session members for debugging
 		log.Printf("JoinParty - Current session members:")
 		for uid, m := range sess.Members {

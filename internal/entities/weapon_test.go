@@ -34,7 +34,7 @@ func TestWeaponAttackCalculations(t *testing.T) {
 			Damage: &damage.Damage{
 				DiceCount:  1,
 				DiceSize:   8,
-				Bonus:     0,
+				Bonus:      0,
 				DamageType: damage.TypeSlashing,
 			},
 		}
@@ -42,7 +42,7 @@ func TestWeaponAttackCalculations(t *testing.T) {
 		result, err := weapon.Attack(char)
 		require.NoError(t, err)
 		require.NotNil(t, result)
-		
+
 		// Attack bonus should be STR modifier (3) + proficiency bonus (2) = 5
 		// Note: result.AttackRoll includes the d20 roll, so we can't test exact value
 		// But we can verify the logic by checking if proficiency is detected
@@ -59,14 +59,14 @@ func TestWeaponAttackCalculations(t *testing.T) {
 			Damage: &damage.Damage{
 				DiceCount:  1,
 				DiceSize:   6,
-				Bonus:     0,
+				Bonus:      0,
 				DamageType: damage.TypePiercing,
 			},
 		}
 
 		result, err := weapon.Attack(char)
 		require.NoError(t, err)
-		
+
 		// Should use DEX modifier for ranged weapons
 		assert.NotNil(t, result)
 		assert.True(t, char.HasWeaponProficiency("shortbow"))
@@ -82,14 +82,14 @@ func TestWeaponAttackCalculations(t *testing.T) {
 			Damage: &damage.Damage{
 				DiceCount:  1,
 				DiceSize:   12,
-				Bonus:     0,
+				Bonus:      0,
 				DamageType: damage.TypeSlashing,
 			},
 		}
 
 		result, err := weapon.Attack(char)
 		require.NoError(t, err)
-		
+
 		// Should not have proficiency bonus
 		assert.False(t, char.HasWeaponProficiency("greataxe"))
 		assert.NotNil(t, result)
@@ -97,8 +97,8 @@ func TestWeaponAttackCalculations(t *testing.T) {
 
 	t.Run("Proficiency bonus scales with level", func(t *testing.T) {
 		testCases := []struct {
-			level          int
-			expectedBonus  int
+			level         int
+			expectedBonus int
 		}{
 			{1, 2},  // Level 1-4: +2
 			{4, 2},  // Level 1-4: +2
@@ -112,10 +112,10 @@ func TestWeaponAttackCalculations(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Logf("Testing level %d", tc.level)
-			
+
 			// Calculate expected proficiency bonus using same formula as weapon code
 			expectedProfBonus := 2 + ((tc.level - 1) / 4)
-			assert.Equal(t, tc.expectedBonus, expectedProfBonus, 
+			assert.Equal(t, tc.expectedBonus, expectedProfBonus,
 				"Level %d should have proficiency bonus %d", tc.level, tc.expectedBonus)
 		}
 	})

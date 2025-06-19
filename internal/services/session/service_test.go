@@ -75,7 +75,7 @@ func (m *MockRepository) ListUserSessions(_ context.Context, userID string) ([]*
 
 // MockUUIDGenerator for testing
 type MockUUIDGenerator struct {
-	prefix string
+	prefix  string
 	counter int
 }
 
@@ -90,7 +90,7 @@ func (m *MockUUIDGenerator) New() string {
 
 func TestSelectCharacter(t *testing.T) {
 	mockRepo := NewMockRepository()
-	
+
 	svc := session.NewService(&session.ServiceConfig{
 		Repository:       mockRepo,
 		UUIDGenerator:    NewMockUUIDGenerator("uuid"),
@@ -117,16 +117,16 @@ func TestSelectCharacter(t *testing.T) {
 
 	t.Run("Successfully selects character for player", func(t *testing.T) {
 		characterID := "char-123"
-		
+
 		// Select character
 		err := svc.SelectCharacter(context.Background(), sessionID, playerID, characterID)
 		require.NoError(t, err)
-		
+
 		// Verify character was set
 		sess, err := mockRepo.Get(context.Background(), sessionID)
 		require.NoError(t, err)
 		require.NotNil(t, sess)
-		
+
 		member, exists := sess.Members[playerID]
 		require.True(t, exists)
 		assert.Equal(t, characterID, member.CharacterID)
@@ -134,15 +134,15 @@ func TestSelectCharacter(t *testing.T) {
 
 	t.Run("Updates existing character selection", func(t *testing.T) {
 		newCharacterID := "char-456"
-		
+
 		// Select different character
 		err := svc.SelectCharacter(context.Background(), sessionID, playerID, newCharacterID)
 		require.NoError(t, err)
-		
+
 		// Verify character was updated
 		sess, err := mockRepo.Get(context.Background(), sessionID)
 		require.NoError(t, err)
-		
+
 		member := sess.Members[playerID]
 		assert.Equal(t, newCharacterID, member.CharacterID)
 	})
@@ -158,18 +158,18 @@ func TestSelectCharacter(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "not a member")
 	})
-	
+
 	t.Run("Preserves character selection across session updates", func(t *testing.T) {
 		// Set a character
 		characterID := "char-persistent"
 		err := svc.SelectCharacter(context.Background(), sessionID, playerID, characterID)
 		require.NoError(t, err)
-		
+
 		// Update session (simulate other operations)
 		sess, _ := mockRepo.Get(context.Background(), sessionID)
 		sess.Status = entities.SessionStatusPaused
 		mockRepo.Update(context.Background(), sess)
-		
+
 		// Character should still be set
 		updatedSess, _ := mockRepo.Get(context.Background(), sessionID)
 		member := updatedSess.Members[playerID]
@@ -179,24 +179,24 @@ func TestSelectCharacter(t *testing.T) {
 
 func TestSessionMemberCharacterPersistence(t *testing.T) {
 	// Test that character IDs persist properly in session members
-	
+
 	t.Run("Character ID set in member struct", func(t *testing.T) {
 		member := &entities.SessionMember{
 			UserID:      "user-123",
 			Role:        entities.SessionRolePlayer,
 			CharacterID: "char-123",
 		}
-		
+
 		assert.Equal(t, "char-123", member.CharacterID)
 	})
-	
+
 	t.Run("Empty character ID for new members", func(t *testing.T) {
 		member := &entities.SessionMember{
 			UserID: "user-456",
 			Role:   entities.SessionRolePlayer,
 			// CharacterID not set
 		}
-		
+
 		assert.Empty(t, member.CharacterID)
 	})
 }
