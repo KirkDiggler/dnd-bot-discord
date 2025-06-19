@@ -42,6 +42,48 @@ func (m *MockPipeliner) EXPECT() *MockPipelinerMockRecorder {
 	return m.recorder
 }
 
+// ACLCat mocks base method.
+func (m *MockPipeliner) ACLCat(ctx context.Context) *redis.StringSliceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ACLCat", ctx)
+	ret0, _ := ret[0].(*redis.StringSliceCmd)
+	return ret0
+}
+
+// ACLCat indicates an expected call of ACLCat.
+func (mr *MockPipelinerMockRecorder) ACLCat(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ACLCat", reflect.TypeOf((*MockPipeliner)(nil).ACLCat), ctx)
+}
+
+// ACLCatArgs mocks base method.
+func (m *MockPipeliner) ACLCatArgs(ctx context.Context, options *redis.ACLCatArgs) *redis.StringSliceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ACLCatArgs", ctx, options)
+	ret0, _ := ret[0].(*redis.StringSliceCmd)
+	return ret0
+}
+
+// ACLCatArgs indicates an expected call of ACLCatArgs.
+func (mr *MockPipelinerMockRecorder) ACLCatArgs(ctx, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ACLCatArgs", reflect.TypeOf((*MockPipeliner)(nil).ACLCatArgs), ctx, options)
+}
+
+// ACLDelUser mocks base method.
+func (m *MockPipeliner) ACLDelUser(ctx context.Context, username string) *redis.IntCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ACLDelUser", ctx, username)
+	ret0, _ := ret[0].(*redis.IntCmd)
+	return ret0
+}
+
+// ACLDelUser indicates an expected call of ACLDelUser.
+func (mr *MockPipelinerMockRecorder) ACLDelUser(ctx, username any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ACLDelUser", reflect.TypeOf((*MockPipeliner)(nil).ACLDelUser), ctx, username)
+}
+
 // ACLDryRun mocks base method.
 func (m *MockPipeliner) ACLDryRun(ctx context.Context, username string, command ...any) *redis.StringCmd {
 	m.ctrl.T.Helper()
@@ -59,6 +101,20 @@ func (mr *MockPipelinerMockRecorder) ACLDryRun(ctx, username any, command ...any
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, username}, command...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ACLDryRun", reflect.TypeOf((*MockPipeliner)(nil).ACLDryRun), varargs...)
+}
+
+// ACLList mocks base method.
+func (m *MockPipeliner) ACLList(ctx context.Context) *redis.StringSliceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ACLList", ctx)
+	ret0, _ := ret[0].(*redis.StringSliceCmd)
+	return ret0
+}
+
+// ACLList indicates an expected call of ACLList.
+func (mr *MockPipelinerMockRecorder) ACLList(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ACLList", reflect.TypeOf((*MockPipeliner)(nil).ACLList), ctx)
 }
 
 // ACLLog mocks base method.
@@ -87,6 +143,25 @@ func (m *MockPipeliner) ACLLogReset(ctx context.Context) *redis.StatusCmd {
 func (mr *MockPipelinerMockRecorder) ACLLogReset(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ACLLogReset", reflect.TypeOf((*MockPipeliner)(nil).ACLLogReset), ctx)
+}
+
+// ACLSetUser mocks base method.
+func (m *MockPipeliner) ACLSetUser(ctx context.Context, username string, rules ...string) *redis.StatusCmd {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, username}
+	for _, a := range rules {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ACLSetUser", varargs...)
+	ret0, _ := ret[0].(*redis.StatusCmd)
+	return ret0
+}
+
+// ACLSetUser indicates an expected call of ACLSetUser.
+func (mr *MockPipelinerMockRecorder) ACLSetUser(ctx, username any, rules ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, username}, rules...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ACLSetUser", reflect.TypeOf((*MockPipeliner)(nil).ACLSetUser), varargs...)
 }
 
 // Append mocks base method.
@@ -1455,6 +1530,20 @@ func (mr *MockPipelinerMockRecorder) ClusterMeet(ctx, host, port any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterMeet", reflect.TypeOf((*MockPipeliner)(nil).ClusterMeet), ctx, host, port)
 }
 
+// ClusterMyID mocks base method.
+func (m *MockPipeliner) ClusterMyID(ctx context.Context) *redis.StringCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClusterMyID", ctx)
+	ret0, _ := ret[0].(*redis.StringCmd)
+	return ret0
+}
+
+// ClusterMyID indicates an expected call of ClusterMyID.
+func (mr *MockPipelinerMockRecorder) ClusterMyID(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterMyID", reflect.TypeOf((*MockPipeliner)(nil).ClusterMyID), ctx)
+}
+
 // ClusterMyShardID mocks base method.
 func (m *MockPipeliner) ClusterMyShardID(ctx context.Context) *redis.StringCmd {
 	m.ctrl.T.Helper()
@@ -2116,6 +2205,413 @@ func (mr *MockPipelinerMockRecorder) FCallRo(ctx, function, keys any, args ...an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FCallRo", reflect.TypeOf((*MockPipeliner)(nil).FCallRo), varargs...)
 }
 
+// FTAggregate mocks base method.
+func (m *MockPipeliner) FTAggregate(ctx context.Context, index, query string) *redis.MapStringInterfaceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTAggregate", ctx, index, query)
+	ret0, _ := ret[0].(*redis.MapStringInterfaceCmd)
+	return ret0
+}
+
+// FTAggregate indicates an expected call of FTAggregate.
+func (mr *MockPipelinerMockRecorder) FTAggregate(ctx, index, query any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTAggregate", reflect.TypeOf((*MockPipeliner)(nil).FTAggregate), ctx, index, query)
+}
+
+// FTAggregateWithArgs mocks base method.
+func (m *MockPipeliner) FTAggregateWithArgs(ctx context.Context, index, query string, options *redis.FTAggregateOptions) *redis.AggregateCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTAggregateWithArgs", ctx, index, query, options)
+	ret0, _ := ret[0].(*redis.AggregateCmd)
+	return ret0
+}
+
+// FTAggregateWithArgs indicates an expected call of FTAggregateWithArgs.
+func (mr *MockPipelinerMockRecorder) FTAggregateWithArgs(ctx, index, query, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTAggregateWithArgs", reflect.TypeOf((*MockPipeliner)(nil).FTAggregateWithArgs), ctx, index, query, options)
+}
+
+// FTAliasAdd mocks base method.
+func (m *MockPipeliner) FTAliasAdd(ctx context.Context, index, alias string) *redis.StatusCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTAliasAdd", ctx, index, alias)
+	ret0, _ := ret[0].(*redis.StatusCmd)
+	return ret0
+}
+
+// FTAliasAdd indicates an expected call of FTAliasAdd.
+func (mr *MockPipelinerMockRecorder) FTAliasAdd(ctx, index, alias any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTAliasAdd", reflect.TypeOf((*MockPipeliner)(nil).FTAliasAdd), ctx, index, alias)
+}
+
+// FTAliasDel mocks base method.
+func (m *MockPipeliner) FTAliasDel(ctx context.Context, alias string) *redis.StatusCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTAliasDel", ctx, alias)
+	ret0, _ := ret[0].(*redis.StatusCmd)
+	return ret0
+}
+
+// FTAliasDel indicates an expected call of FTAliasDel.
+func (mr *MockPipelinerMockRecorder) FTAliasDel(ctx, alias any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTAliasDel", reflect.TypeOf((*MockPipeliner)(nil).FTAliasDel), ctx, alias)
+}
+
+// FTAliasUpdate mocks base method.
+func (m *MockPipeliner) FTAliasUpdate(ctx context.Context, index, alias string) *redis.StatusCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTAliasUpdate", ctx, index, alias)
+	ret0, _ := ret[0].(*redis.StatusCmd)
+	return ret0
+}
+
+// FTAliasUpdate indicates an expected call of FTAliasUpdate.
+func (mr *MockPipelinerMockRecorder) FTAliasUpdate(ctx, index, alias any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTAliasUpdate", reflect.TypeOf((*MockPipeliner)(nil).FTAliasUpdate), ctx, index, alias)
+}
+
+// FTAlter mocks base method.
+func (m *MockPipeliner) FTAlter(ctx context.Context, index string, skipInitialScan bool, definition []any) *redis.StatusCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTAlter", ctx, index, skipInitialScan, definition)
+	ret0, _ := ret[0].(*redis.StatusCmd)
+	return ret0
+}
+
+// FTAlter indicates an expected call of FTAlter.
+func (mr *MockPipelinerMockRecorder) FTAlter(ctx, index, skipInitialScan, definition any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTAlter", reflect.TypeOf((*MockPipeliner)(nil).FTAlter), ctx, index, skipInitialScan, definition)
+}
+
+// FTConfigGet mocks base method.
+func (m *MockPipeliner) FTConfigGet(ctx context.Context, option string) *redis.MapMapStringInterfaceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTConfigGet", ctx, option)
+	ret0, _ := ret[0].(*redis.MapMapStringInterfaceCmd)
+	return ret0
+}
+
+// FTConfigGet indicates an expected call of FTConfigGet.
+func (mr *MockPipelinerMockRecorder) FTConfigGet(ctx, option any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTConfigGet", reflect.TypeOf((*MockPipeliner)(nil).FTConfigGet), ctx, option)
+}
+
+// FTConfigSet mocks base method.
+func (m *MockPipeliner) FTConfigSet(ctx context.Context, option string, value any) *redis.StatusCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTConfigSet", ctx, option, value)
+	ret0, _ := ret[0].(*redis.StatusCmd)
+	return ret0
+}
+
+// FTConfigSet indicates an expected call of FTConfigSet.
+func (mr *MockPipelinerMockRecorder) FTConfigSet(ctx, option, value any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTConfigSet", reflect.TypeOf((*MockPipeliner)(nil).FTConfigSet), ctx, option, value)
+}
+
+// FTCreate mocks base method.
+func (m *MockPipeliner) FTCreate(ctx context.Context, index string, options *redis.FTCreateOptions, schema ...*redis.FieldSchema) *redis.StatusCmd {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, index, options}
+	for _, a := range schema {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "FTCreate", varargs...)
+	ret0, _ := ret[0].(*redis.StatusCmd)
+	return ret0
+}
+
+// FTCreate indicates an expected call of FTCreate.
+func (mr *MockPipelinerMockRecorder) FTCreate(ctx, index, options any, schema ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, index, options}, schema...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTCreate", reflect.TypeOf((*MockPipeliner)(nil).FTCreate), varargs...)
+}
+
+// FTCursorDel mocks base method.
+func (m *MockPipeliner) FTCursorDel(ctx context.Context, index string, cursorId int) *redis.StatusCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTCursorDel", ctx, index, cursorId)
+	ret0, _ := ret[0].(*redis.StatusCmd)
+	return ret0
+}
+
+// FTCursorDel indicates an expected call of FTCursorDel.
+func (mr *MockPipelinerMockRecorder) FTCursorDel(ctx, index, cursorId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTCursorDel", reflect.TypeOf((*MockPipeliner)(nil).FTCursorDel), ctx, index, cursorId)
+}
+
+// FTCursorRead mocks base method.
+func (m *MockPipeliner) FTCursorRead(ctx context.Context, index string, cursorId, count int) *redis.MapStringInterfaceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTCursorRead", ctx, index, cursorId, count)
+	ret0, _ := ret[0].(*redis.MapStringInterfaceCmd)
+	return ret0
+}
+
+// FTCursorRead indicates an expected call of FTCursorRead.
+func (mr *MockPipelinerMockRecorder) FTCursorRead(ctx, index, cursorId, count any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTCursorRead", reflect.TypeOf((*MockPipeliner)(nil).FTCursorRead), ctx, index, cursorId, count)
+}
+
+// FTDictAdd mocks base method.
+func (m *MockPipeliner) FTDictAdd(ctx context.Context, dict string, term ...any) *redis.IntCmd {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, dict}
+	for _, a := range term {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "FTDictAdd", varargs...)
+	ret0, _ := ret[0].(*redis.IntCmd)
+	return ret0
+}
+
+// FTDictAdd indicates an expected call of FTDictAdd.
+func (mr *MockPipelinerMockRecorder) FTDictAdd(ctx, dict any, term ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, dict}, term...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTDictAdd", reflect.TypeOf((*MockPipeliner)(nil).FTDictAdd), varargs...)
+}
+
+// FTDictDel mocks base method.
+func (m *MockPipeliner) FTDictDel(ctx context.Context, dict string, term ...any) *redis.IntCmd {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, dict}
+	for _, a := range term {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "FTDictDel", varargs...)
+	ret0, _ := ret[0].(*redis.IntCmd)
+	return ret0
+}
+
+// FTDictDel indicates an expected call of FTDictDel.
+func (mr *MockPipelinerMockRecorder) FTDictDel(ctx, dict any, term ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, dict}, term...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTDictDel", reflect.TypeOf((*MockPipeliner)(nil).FTDictDel), varargs...)
+}
+
+// FTDictDump mocks base method.
+func (m *MockPipeliner) FTDictDump(ctx context.Context, dict string) *redis.StringSliceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTDictDump", ctx, dict)
+	ret0, _ := ret[0].(*redis.StringSliceCmd)
+	return ret0
+}
+
+// FTDictDump indicates an expected call of FTDictDump.
+func (mr *MockPipelinerMockRecorder) FTDictDump(ctx, dict any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTDictDump", reflect.TypeOf((*MockPipeliner)(nil).FTDictDump), ctx, dict)
+}
+
+// FTDropIndex mocks base method.
+func (m *MockPipeliner) FTDropIndex(ctx context.Context, index string) *redis.StatusCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTDropIndex", ctx, index)
+	ret0, _ := ret[0].(*redis.StatusCmd)
+	return ret0
+}
+
+// FTDropIndex indicates an expected call of FTDropIndex.
+func (mr *MockPipelinerMockRecorder) FTDropIndex(ctx, index any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTDropIndex", reflect.TypeOf((*MockPipeliner)(nil).FTDropIndex), ctx, index)
+}
+
+// FTDropIndexWithArgs mocks base method.
+func (m *MockPipeliner) FTDropIndexWithArgs(ctx context.Context, index string, options *redis.FTDropIndexOptions) *redis.StatusCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTDropIndexWithArgs", ctx, index, options)
+	ret0, _ := ret[0].(*redis.StatusCmd)
+	return ret0
+}
+
+// FTDropIndexWithArgs indicates an expected call of FTDropIndexWithArgs.
+func (mr *MockPipelinerMockRecorder) FTDropIndexWithArgs(ctx, index, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTDropIndexWithArgs", reflect.TypeOf((*MockPipeliner)(nil).FTDropIndexWithArgs), ctx, index, options)
+}
+
+// FTExplain mocks base method.
+func (m *MockPipeliner) FTExplain(ctx context.Context, index, query string) *redis.StringCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTExplain", ctx, index, query)
+	ret0, _ := ret[0].(*redis.StringCmd)
+	return ret0
+}
+
+// FTExplain indicates an expected call of FTExplain.
+func (mr *MockPipelinerMockRecorder) FTExplain(ctx, index, query any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTExplain", reflect.TypeOf((*MockPipeliner)(nil).FTExplain), ctx, index, query)
+}
+
+// FTExplainWithArgs mocks base method.
+func (m *MockPipeliner) FTExplainWithArgs(ctx context.Context, index, query string, options *redis.FTExplainOptions) *redis.StringCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTExplainWithArgs", ctx, index, query, options)
+	ret0, _ := ret[0].(*redis.StringCmd)
+	return ret0
+}
+
+// FTExplainWithArgs indicates an expected call of FTExplainWithArgs.
+func (mr *MockPipelinerMockRecorder) FTExplainWithArgs(ctx, index, query, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTExplainWithArgs", reflect.TypeOf((*MockPipeliner)(nil).FTExplainWithArgs), ctx, index, query, options)
+}
+
+// FTInfo mocks base method.
+func (m *MockPipeliner) FTInfo(ctx context.Context, index string) *redis.FTInfoCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTInfo", ctx, index)
+	ret0, _ := ret[0].(*redis.FTInfoCmd)
+	return ret0
+}
+
+// FTInfo indicates an expected call of FTInfo.
+func (mr *MockPipelinerMockRecorder) FTInfo(ctx, index any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTInfo", reflect.TypeOf((*MockPipeliner)(nil).FTInfo), ctx, index)
+}
+
+// FTSearch mocks base method.
+func (m *MockPipeliner) FTSearch(ctx context.Context, index, query string) *redis.FTSearchCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTSearch", ctx, index, query)
+	ret0, _ := ret[0].(*redis.FTSearchCmd)
+	return ret0
+}
+
+// FTSearch indicates an expected call of FTSearch.
+func (mr *MockPipelinerMockRecorder) FTSearch(ctx, index, query any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTSearch", reflect.TypeOf((*MockPipeliner)(nil).FTSearch), ctx, index, query)
+}
+
+// FTSearchWithArgs mocks base method.
+func (m *MockPipeliner) FTSearchWithArgs(ctx context.Context, index, query string, options *redis.FTSearchOptions) *redis.FTSearchCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTSearchWithArgs", ctx, index, query, options)
+	ret0, _ := ret[0].(*redis.FTSearchCmd)
+	return ret0
+}
+
+// FTSearchWithArgs indicates an expected call of FTSearchWithArgs.
+func (mr *MockPipelinerMockRecorder) FTSearchWithArgs(ctx, index, query, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTSearchWithArgs", reflect.TypeOf((*MockPipeliner)(nil).FTSearchWithArgs), ctx, index, query, options)
+}
+
+// FTSpellCheck mocks base method.
+func (m *MockPipeliner) FTSpellCheck(ctx context.Context, index, query string) *redis.FTSpellCheckCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTSpellCheck", ctx, index, query)
+	ret0, _ := ret[0].(*redis.FTSpellCheckCmd)
+	return ret0
+}
+
+// FTSpellCheck indicates an expected call of FTSpellCheck.
+func (mr *MockPipelinerMockRecorder) FTSpellCheck(ctx, index, query any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTSpellCheck", reflect.TypeOf((*MockPipeliner)(nil).FTSpellCheck), ctx, index, query)
+}
+
+// FTSpellCheckWithArgs mocks base method.
+func (m *MockPipeliner) FTSpellCheckWithArgs(ctx context.Context, index, query string, options *redis.FTSpellCheckOptions) *redis.FTSpellCheckCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTSpellCheckWithArgs", ctx, index, query, options)
+	ret0, _ := ret[0].(*redis.FTSpellCheckCmd)
+	return ret0
+}
+
+// FTSpellCheckWithArgs indicates an expected call of FTSpellCheckWithArgs.
+func (mr *MockPipelinerMockRecorder) FTSpellCheckWithArgs(ctx, index, query, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTSpellCheckWithArgs", reflect.TypeOf((*MockPipeliner)(nil).FTSpellCheckWithArgs), ctx, index, query, options)
+}
+
+// FTSynDump mocks base method.
+func (m *MockPipeliner) FTSynDump(ctx context.Context, index string) *redis.FTSynDumpCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTSynDump", ctx, index)
+	ret0, _ := ret[0].(*redis.FTSynDumpCmd)
+	return ret0
+}
+
+// FTSynDump indicates an expected call of FTSynDump.
+func (mr *MockPipelinerMockRecorder) FTSynDump(ctx, index any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTSynDump", reflect.TypeOf((*MockPipeliner)(nil).FTSynDump), ctx, index)
+}
+
+// FTSynUpdate mocks base method.
+func (m *MockPipeliner) FTSynUpdate(ctx context.Context, index string, synGroupId any, terms []any) *redis.StatusCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTSynUpdate", ctx, index, synGroupId, terms)
+	ret0, _ := ret[0].(*redis.StatusCmd)
+	return ret0
+}
+
+// FTSynUpdate indicates an expected call of FTSynUpdate.
+func (mr *MockPipelinerMockRecorder) FTSynUpdate(ctx, index, synGroupId, terms any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTSynUpdate", reflect.TypeOf((*MockPipeliner)(nil).FTSynUpdate), ctx, index, synGroupId, terms)
+}
+
+// FTSynUpdateWithArgs mocks base method.
+func (m *MockPipeliner) FTSynUpdateWithArgs(ctx context.Context, index string, synGroupId any, options *redis.FTSynUpdateOptions, terms []any) *redis.StatusCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTSynUpdateWithArgs", ctx, index, synGroupId, options, terms)
+	ret0, _ := ret[0].(*redis.StatusCmd)
+	return ret0
+}
+
+// FTSynUpdateWithArgs indicates an expected call of FTSynUpdateWithArgs.
+func (mr *MockPipelinerMockRecorder) FTSynUpdateWithArgs(ctx, index, synGroupId, options, terms any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTSynUpdateWithArgs", reflect.TypeOf((*MockPipeliner)(nil).FTSynUpdateWithArgs), ctx, index, synGroupId, options, terms)
+}
+
+// FTTagVals mocks base method.
+func (m *MockPipeliner) FTTagVals(ctx context.Context, index, field string) *redis.StringSliceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FTTagVals", ctx, index, field)
+	ret0, _ := ret[0].(*redis.StringSliceCmd)
+	return ret0
+}
+
+// FTTagVals indicates an expected call of FTTagVals.
+func (mr *MockPipelinerMockRecorder) FTTagVals(ctx, index, field any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FTTagVals", reflect.TypeOf((*MockPipeliner)(nil).FTTagVals), ctx, index, field)
+}
+
+// FT_List mocks base method.
+func (m *MockPipeliner) FT_List(ctx context.Context) *redis.StringSliceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FT_List", ctx)
+	ret0, _ := ret[0].(*redis.StringSliceCmd)
+	return ret0
+}
+
+// FT_List indicates an expected call of FT_List.
+func (mr *MockPipelinerMockRecorder) FT_List(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FT_List", reflect.TypeOf((*MockPipeliner)(nil).FT_List), ctx)
+}
+
 // FlushAll mocks base method.
 func (m *MockPipeliner) FlushAll(ctx context.Context) *redis.StatusCmd {
 	m.ctrl.T.Helper()
@@ -2721,6 +3217,63 @@ func (mr *MockPipelinerMockRecorder) HGetAll(ctx, key any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HGetAll", reflect.TypeOf((*MockPipeliner)(nil).HGetAll), ctx, key)
 }
 
+// HGetDel mocks base method.
+func (m *MockPipeliner) HGetDel(ctx context.Context, key string, fields ...string) *redis.StringSliceCmd {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, key}
+	for _, a := range fields {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "HGetDel", varargs...)
+	ret0, _ := ret[0].(*redis.StringSliceCmd)
+	return ret0
+}
+
+// HGetDel indicates an expected call of HGetDel.
+func (mr *MockPipelinerMockRecorder) HGetDel(ctx, key any, fields ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, key}, fields...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HGetDel", reflect.TypeOf((*MockPipeliner)(nil).HGetDel), varargs...)
+}
+
+// HGetEX mocks base method.
+func (m *MockPipeliner) HGetEX(ctx context.Context, key string, fields ...string) *redis.StringSliceCmd {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, key}
+	for _, a := range fields {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "HGetEX", varargs...)
+	ret0, _ := ret[0].(*redis.StringSliceCmd)
+	return ret0
+}
+
+// HGetEX indicates an expected call of HGetEX.
+func (mr *MockPipelinerMockRecorder) HGetEX(ctx, key any, fields ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, key}, fields...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HGetEX", reflect.TypeOf((*MockPipeliner)(nil).HGetEX), varargs...)
+}
+
+// HGetEXWithArgs mocks base method.
+func (m *MockPipeliner) HGetEXWithArgs(ctx context.Context, key string, options *redis.HGetEXOptions, fields ...string) *redis.StringSliceCmd {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, key, options}
+	for _, a := range fields {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "HGetEXWithArgs", varargs...)
+	ret0, _ := ret[0].(*redis.StringSliceCmd)
+	return ret0
+}
+
+// HGetEXWithArgs indicates an expected call of HGetEXWithArgs.
+func (mr *MockPipelinerMockRecorder) HGetEXWithArgs(ctx, key, options any, fields ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, key, options}, fields...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HGetEXWithArgs", reflect.TypeOf((*MockPipeliner)(nil).HGetEXWithArgs), varargs...)
+}
+
 // HIncrBy mocks base method.
 func (m *MockPipeliner) HIncrBy(ctx context.Context, key, field string, incr int64) *redis.IntCmd {
 	m.ctrl.T.Helper()
@@ -3023,6 +3576,44 @@ func (mr *MockPipelinerMockRecorder) HSet(ctx, key any, values ...any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HSet", reflect.TypeOf((*MockPipeliner)(nil).HSet), varargs...)
 }
 
+// HSetEX mocks base method.
+func (m *MockPipeliner) HSetEX(ctx context.Context, key string, fieldsAndValues ...string) *redis.IntCmd {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, key}
+	for _, a := range fieldsAndValues {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "HSetEX", varargs...)
+	ret0, _ := ret[0].(*redis.IntCmd)
+	return ret0
+}
+
+// HSetEX indicates an expected call of HSetEX.
+func (mr *MockPipelinerMockRecorder) HSetEX(ctx, key any, fieldsAndValues ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, key}, fieldsAndValues...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HSetEX", reflect.TypeOf((*MockPipeliner)(nil).HSetEX), varargs...)
+}
+
+// HSetEXWithArgs mocks base method.
+func (m *MockPipeliner) HSetEXWithArgs(ctx context.Context, key string, options *redis.HSetEXOptions, fieldsAndValues ...string) *redis.IntCmd {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, key, options}
+	for _, a := range fieldsAndValues {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "HSetEXWithArgs", varargs...)
+	ret0, _ := ret[0].(*redis.IntCmd)
+	return ret0
+}
+
+// HSetEXWithArgs indicates an expected call of HSetEXWithArgs.
+func (mr *MockPipelinerMockRecorder) HSetEXWithArgs(ctx, key, options any, fieldsAndValues ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, key, options}, fieldsAndValues...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HSetEXWithArgs", reflect.TypeOf((*MockPipeliner)(nil).HSetEXWithArgs), varargs...)
+}
+
 // HSetNX mocks base method.
 func (m *MockPipeliner) HSetNX(ctx context.Context, key, field string, value any) *redis.BoolCmd {
 	m.ctrl.T.Helper()
@@ -3035,6 +3626,20 @@ func (m *MockPipeliner) HSetNX(ctx context.Context, key, field string, value any
 func (mr *MockPipelinerMockRecorder) HSetNX(ctx, key, field, value any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HSetNX", reflect.TypeOf((*MockPipeliner)(nil).HSetNX), ctx, key, field, value)
+}
+
+// HStrLen mocks base method.
+func (m *MockPipeliner) HStrLen(ctx context.Context, key, field string) *redis.IntCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HStrLen", ctx, key, field)
+	ret0, _ := ret[0].(*redis.IntCmd)
+	return ret0
+}
+
+// HStrLen indicates an expected call of HStrLen.
+func (mr *MockPipelinerMockRecorder) HStrLen(ctx, key, field any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HStrLen", reflect.TypeOf((*MockPipeliner)(nil).HStrLen), ctx, key, field)
 }
 
 // HTTL mocks base method.
@@ -5479,132 +6084,6 @@ func (mr *MockPipelinerMockRecorder) TDigestTrimmedMean(ctx, key, lowCutQuantile
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TDigestTrimmedMean", reflect.TypeOf((*MockPipeliner)(nil).TDigestTrimmedMean), ctx, key, lowCutQuantile, highCutQuantile)
 }
 
-// TFCall mocks base method.
-func (m *MockPipeliner) TFCall(ctx context.Context, libName, funcName string, numKeys int) *redis.Cmd {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TFCall", ctx, libName, funcName, numKeys)
-	ret0, _ := ret[0].(*redis.Cmd)
-	return ret0
-}
-
-// TFCall indicates an expected call of TFCall.
-func (mr *MockPipelinerMockRecorder) TFCall(ctx, libName, funcName, numKeys any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TFCall", reflect.TypeOf((*MockPipeliner)(nil).TFCall), ctx, libName, funcName, numKeys)
-}
-
-// TFCallASYNC mocks base method.
-func (m *MockPipeliner) TFCallASYNC(ctx context.Context, libName, funcName string, numKeys int) *redis.Cmd {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TFCallASYNC", ctx, libName, funcName, numKeys)
-	ret0, _ := ret[0].(*redis.Cmd)
-	return ret0
-}
-
-// TFCallASYNC indicates an expected call of TFCallASYNC.
-func (mr *MockPipelinerMockRecorder) TFCallASYNC(ctx, libName, funcName, numKeys any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TFCallASYNC", reflect.TypeOf((*MockPipeliner)(nil).TFCallASYNC), ctx, libName, funcName, numKeys)
-}
-
-// TFCallASYNCArgs mocks base method.
-func (m *MockPipeliner) TFCallASYNCArgs(ctx context.Context, libName, funcName string, numKeys int, options *redis.TFCallOptions) *redis.Cmd {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TFCallASYNCArgs", ctx, libName, funcName, numKeys, options)
-	ret0, _ := ret[0].(*redis.Cmd)
-	return ret0
-}
-
-// TFCallASYNCArgs indicates an expected call of TFCallASYNCArgs.
-func (mr *MockPipelinerMockRecorder) TFCallASYNCArgs(ctx, libName, funcName, numKeys, options any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TFCallASYNCArgs", reflect.TypeOf((*MockPipeliner)(nil).TFCallASYNCArgs), ctx, libName, funcName, numKeys, options)
-}
-
-// TFCallArgs mocks base method.
-func (m *MockPipeliner) TFCallArgs(ctx context.Context, libName, funcName string, numKeys int, options *redis.TFCallOptions) *redis.Cmd {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TFCallArgs", ctx, libName, funcName, numKeys, options)
-	ret0, _ := ret[0].(*redis.Cmd)
-	return ret0
-}
-
-// TFCallArgs indicates an expected call of TFCallArgs.
-func (mr *MockPipelinerMockRecorder) TFCallArgs(ctx, libName, funcName, numKeys, options any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TFCallArgs", reflect.TypeOf((*MockPipeliner)(nil).TFCallArgs), ctx, libName, funcName, numKeys, options)
-}
-
-// TFunctionDelete mocks base method.
-func (m *MockPipeliner) TFunctionDelete(ctx context.Context, libName string) *redis.StatusCmd {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TFunctionDelete", ctx, libName)
-	ret0, _ := ret[0].(*redis.StatusCmd)
-	return ret0
-}
-
-// TFunctionDelete indicates an expected call of TFunctionDelete.
-func (mr *MockPipelinerMockRecorder) TFunctionDelete(ctx, libName any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TFunctionDelete", reflect.TypeOf((*MockPipeliner)(nil).TFunctionDelete), ctx, libName)
-}
-
-// TFunctionList mocks base method.
-func (m *MockPipeliner) TFunctionList(ctx context.Context) *redis.MapStringInterfaceSliceCmd {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TFunctionList", ctx)
-	ret0, _ := ret[0].(*redis.MapStringInterfaceSliceCmd)
-	return ret0
-}
-
-// TFunctionList indicates an expected call of TFunctionList.
-func (mr *MockPipelinerMockRecorder) TFunctionList(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TFunctionList", reflect.TypeOf((*MockPipeliner)(nil).TFunctionList), ctx)
-}
-
-// TFunctionListArgs mocks base method.
-func (m *MockPipeliner) TFunctionListArgs(ctx context.Context, options *redis.TFunctionListOptions) *redis.MapStringInterfaceSliceCmd {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TFunctionListArgs", ctx, options)
-	ret0, _ := ret[0].(*redis.MapStringInterfaceSliceCmd)
-	return ret0
-}
-
-// TFunctionListArgs indicates an expected call of TFunctionListArgs.
-func (mr *MockPipelinerMockRecorder) TFunctionListArgs(ctx, options any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TFunctionListArgs", reflect.TypeOf((*MockPipeliner)(nil).TFunctionListArgs), ctx, options)
-}
-
-// TFunctionLoad mocks base method.
-func (m *MockPipeliner) TFunctionLoad(ctx context.Context, lib string) *redis.StatusCmd {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TFunctionLoad", ctx, lib)
-	ret0, _ := ret[0].(*redis.StatusCmd)
-	return ret0
-}
-
-// TFunctionLoad indicates an expected call of TFunctionLoad.
-func (mr *MockPipelinerMockRecorder) TFunctionLoad(ctx, lib any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TFunctionLoad", reflect.TypeOf((*MockPipeliner)(nil).TFunctionLoad), ctx, lib)
-}
-
-// TFunctionLoadArgs mocks base method.
-func (m *MockPipeliner) TFunctionLoadArgs(ctx context.Context, lib string, options *redis.TFunctionLoadOptions) *redis.StatusCmd {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TFunctionLoadArgs", ctx, lib, options)
-	ret0, _ := ret[0].(*redis.StatusCmd)
-	return ret0
-}
-
-// TFunctionLoadArgs indicates an expected call of TFunctionLoadArgs.
-func (mr *MockPipelinerMockRecorder) TFunctionLoadArgs(ctx, lib, options any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TFunctionLoadArgs", reflect.TypeOf((*MockPipeliner)(nil).TFunctionLoadArgs), ctx, lib, options)
-}
-
 // TSAdd mocks base method.
 func (m *MockPipeliner) TSAdd(ctx context.Context, key string, timestamp any, value float64) *redis.IntCmd {
 	m.ctrl.T.Helper()
@@ -6264,6 +6743,258 @@ func (mr *MockPipelinerMockRecorder) Unlink(ctx any, keys ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx}, keys...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unlink", reflect.TypeOf((*MockPipeliner)(nil).Unlink), varargs...)
+}
+
+// VAdd mocks base method.
+func (m *MockPipeliner) VAdd(ctx context.Context, key, element string, val redis.Vector) *redis.BoolCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VAdd", ctx, key, element, val)
+	ret0, _ := ret[0].(*redis.BoolCmd)
+	return ret0
+}
+
+// VAdd indicates an expected call of VAdd.
+func (mr *MockPipelinerMockRecorder) VAdd(ctx, key, element, val any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VAdd", reflect.TypeOf((*MockPipeliner)(nil).VAdd), ctx, key, element, val)
+}
+
+// VAddWithArgs mocks base method.
+func (m *MockPipeliner) VAddWithArgs(ctx context.Context, key, element string, val redis.Vector, addArgs *redis.VAddArgs) *redis.BoolCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VAddWithArgs", ctx, key, element, val, addArgs)
+	ret0, _ := ret[0].(*redis.BoolCmd)
+	return ret0
+}
+
+// VAddWithArgs indicates an expected call of VAddWithArgs.
+func (mr *MockPipelinerMockRecorder) VAddWithArgs(ctx, key, element, val, addArgs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VAddWithArgs", reflect.TypeOf((*MockPipeliner)(nil).VAddWithArgs), ctx, key, element, val, addArgs)
+}
+
+// VCard mocks base method.
+func (m *MockPipeliner) VCard(ctx context.Context, key string) *redis.IntCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VCard", ctx, key)
+	ret0, _ := ret[0].(*redis.IntCmd)
+	return ret0
+}
+
+// VCard indicates an expected call of VCard.
+func (mr *MockPipelinerMockRecorder) VCard(ctx, key any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VCard", reflect.TypeOf((*MockPipeliner)(nil).VCard), ctx, key)
+}
+
+// VClearAttributes mocks base method.
+func (m *MockPipeliner) VClearAttributes(ctx context.Context, key, element string) *redis.BoolCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VClearAttributes", ctx, key, element)
+	ret0, _ := ret[0].(*redis.BoolCmd)
+	return ret0
+}
+
+// VClearAttributes indicates an expected call of VClearAttributes.
+func (mr *MockPipelinerMockRecorder) VClearAttributes(ctx, key, element any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VClearAttributes", reflect.TypeOf((*MockPipeliner)(nil).VClearAttributes), ctx, key, element)
+}
+
+// VDim mocks base method.
+func (m *MockPipeliner) VDim(ctx context.Context, key string) *redis.IntCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VDim", ctx, key)
+	ret0, _ := ret[0].(*redis.IntCmd)
+	return ret0
+}
+
+// VDim indicates an expected call of VDim.
+func (mr *MockPipelinerMockRecorder) VDim(ctx, key any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VDim", reflect.TypeOf((*MockPipeliner)(nil).VDim), ctx, key)
+}
+
+// VEmb mocks base method.
+func (m *MockPipeliner) VEmb(ctx context.Context, key, element string, raw bool) *redis.SliceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VEmb", ctx, key, element, raw)
+	ret0, _ := ret[0].(*redis.SliceCmd)
+	return ret0
+}
+
+// VEmb indicates an expected call of VEmb.
+func (mr *MockPipelinerMockRecorder) VEmb(ctx, key, element, raw any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VEmb", reflect.TypeOf((*MockPipeliner)(nil).VEmb), ctx, key, element, raw)
+}
+
+// VGetAttr mocks base method.
+func (m *MockPipeliner) VGetAttr(ctx context.Context, key, element string) *redis.StringCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VGetAttr", ctx, key, element)
+	ret0, _ := ret[0].(*redis.StringCmd)
+	return ret0
+}
+
+// VGetAttr indicates an expected call of VGetAttr.
+func (mr *MockPipelinerMockRecorder) VGetAttr(ctx, key, element any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VGetAttr", reflect.TypeOf((*MockPipeliner)(nil).VGetAttr), ctx, key, element)
+}
+
+// VInfo mocks base method.
+func (m *MockPipeliner) VInfo(ctx context.Context, key string) *redis.MapStringInterfaceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VInfo", ctx, key)
+	ret0, _ := ret[0].(*redis.MapStringInterfaceCmd)
+	return ret0
+}
+
+// VInfo indicates an expected call of VInfo.
+func (mr *MockPipelinerMockRecorder) VInfo(ctx, key any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VInfo", reflect.TypeOf((*MockPipeliner)(nil).VInfo), ctx, key)
+}
+
+// VLinks mocks base method.
+func (m *MockPipeliner) VLinks(ctx context.Context, key, element string) *redis.StringSliceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VLinks", ctx, key, element)
+	ret0, _ := ret[0].(*redis.StringSliceCmd)
+	return ret0
+}
+
+// VLinks indicates an expected call of VLinks.
+func (mr *MockPipelinerMockRecorder) VLinks(ctx, key, element any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VLinks", reflect.TypeOf((*MockPipeliner)(nil).VLinks), ctx, key, element)
+}
+
+// VLinksWithScores mocks base method.
+func (m *MockPipeliner) VLinksWithScores(ctx context.Context, key, element string) *redis.VectorScoreSliceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VLinksWithScores", ctx, key, element)
+	ret0, _ := ret[0].(*redis.VectorScoreSliceCmd)
+	return ret0
+}
+
+// VLinksWithScores indicates an expected call of VLinksWithScores.
+func (mr *MockPipelinerMockRecorder) VLinksWithScores(ctx, key, element any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VLinksWithScores", reflect.TypeOf((*MockPipeliner)(nil).VLinksWithScores), ctx, key, element)
+}
+
+// VRandMember mocks base method.
+func (m *MockPipeliner) VRandMember(ctx context.Context, key string) *redis.StringCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VRandMember", ctx, key)
+	ret0, _ := ret[0].(*redis.StringCmd)
+	return ret0
+}
+
+// VRandMember indicates an expected call of VRandMember.
+func (mr *MockPipelinerMockRecorder) VRandMember(ctx, key any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VRandMember", reflect.TypeOf((*MockPipeliner)(nil).VRandMember), ctx, key)
+}
+
+// VRandMemberCount mocks base method.
+func (m *MockPipeliner) VRandMemberCount(ctx context.Context, key string, count int) *redis.StringSliceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VRandMemberCount", ctx, key, count)
+	ret0, _ := ret[0].(*redis.StringSliceCmd)
+	return ret0
+}
+
+// VRandMemberCount indicates an expected call of VRandMemberCount.
+func (mr *MockPipelinerMockRecorder) VRandMemberCount(ctx, key, count any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VRandMemberCount", reflect.TypeOf((*MockPipeliner)(nil).VRandMemberCount), ctx, key, count)
+}
+
+// VRem mocks base method.
+func (m *MockPipeliner) VRem(ctx context.Context, key, element string) *redis.BoolCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VRem", ctx, key, element)
+	ret0, _ := ret[0].(*redis.BoolCmd)
+	return ret0
+}
+
+// VRem indicates an expected call of VRem.
+func (mr *MockPipelinerMockRecorder) VRem(ctx, key, element any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VRem", reflect.TypeOf((*MockPipeliner)(nil).VRem), ctx, key, element)
+}
+
+// VSetAttr mocks base method.
+func (m *MockPipeliner) VSetAttr(ctx context.Context, key, element string, attr any) *redis.BoolCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VSetAttr", ctx, key, element, attr)
+	ret0, _ := ret[0].(*redis.BoolCmd)
+	return ret0
+}
+
+// VSetAttr indicates an expected call of VSetAttr.
+func (mr *MockPipelinerMockRecorder) VSetAttr(ctx, key, element, attr any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VSetAttr", reflect.TypeOf((*MockPipeliner)(nil).VSetAttr), ctx, key, element, attr)
+}
+
+// VSim mocks base method.
+func (m *MockPipeliner) VSim(ctx context.Context, key string, val redis.Vector) *redis.StringSliceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VSim", ctx, key, val)
+	ret0, _ := ret[0].(*redis.StringSliceCmd)
+	return ret0
+}
+
+// VSim indicates an expected call of VSim.
+func (mr *MockPipelinerMockRecorder) VSim(ctx, key, val any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VSim", reflect.TypeOf((*MockPipeliner)(nil).VSim), ctx, key, val)
+}
+
+// VSimWithArgs mocks base method.
+func (m *MockPipeliner) VSimWithArgs(ctx context.Context, key string, val redis.Vector, args *redis.VSimArgs) *redis.StringSliceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VSimWithArgs", ctx, key, val, args)
+	ret0, _ := ret[0].(*redis.StringSliceCmd)
+	return ret0
+}
+
+// VSimWithArgs indicates an expected call of VSimWithArgs.
+func (mr *MockPipelinerMockRecorder) VSimWithArgs(ctx, key, val, args any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VSimWithArgs", reflect.TypeOf((*MockPipeliner)(nil).VSimWithArgs), ctx, key, val, args)
+}
+
+// VSimWithArgsWithScores mocks base method.
+func (m *MockPipeliner) VSimWithArgsWithScores(ctx context.Context, key string, val redis.Vector, args *redis.VSimArgs) *redis.VectorScoreSliceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VSimWithArgsWithScores", ctx, key, val, args)
+	ret0, _ := ret[0].(*redis.VectorScoreSliceCmd)
+	return ret0
+}
+
+// VSimWithArgsWithScores indicates an expected call of VSimWithArgsWithScores.
+func (mr *MockPipelinerMockRecorder) VSimWithArgsWithScores(ctx, key, val, args any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VSimWithArgsWithScores", reflect.TypeOf((*MockPipeliner)(nil).VSimWithArgsWithScores), ctx, key, val, args)
+}
+
+// VSimWithScores mocks base method.
+func (m *MockPipeliner) VSimWithScores(ctx context.Context, key string, val redis.Vector) *redis.VectorScoreSliceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VSimWithScores", ctx, key, val)
+	ret0, _ := ret[0].(*redis.VectorScoreSliceCmd)
+	return ret0
+}
+
+// VSimWithScores indicates an expected call of VSimWithScores.
+func (mr *MockPipelinerMockRecorder) VSimWithScores(ctx, key, val any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VSimWithScores", reflect.TypeOf((*MockPipeliner)(nil).VSimWithScores), ctx, key, val)
 }
 
 // XAck mocks base method.

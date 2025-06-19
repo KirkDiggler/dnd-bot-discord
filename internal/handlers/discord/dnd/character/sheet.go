@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/utils"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
 )
@@ -24,15 +25,8 @@ func NewSheetHandler(serviceProvider *services.Provider) *SheetHandler {
 
 // Handle processes the character sheet command
 func (h *SheetHandler) Handle(s *discordgo.Session, i *discordgo.InteractionCreate) error {
-	// Get character ID from options
-	var characterID string
-	for _, option := range i.ApplicationCommandData().Options[0].Options[0].Options {
-		if option.Name == "character_id" {
-			characterID = option.StringValue()
-			break
-		}
-	}
-
+	// Get character ID from options safely
+	characterID := utils.GetStringOption(i, "character_id")
 	if characterID == "" {
 		return respondWithError(s, i, "Character ID is required")
 	}
@@ -170,7 +164,7 @@ func buildEquipmentDisplay(char *entities.Character) []string {
 	if armor := char.EquippedSlots[entities.SlotBody]; armor != nil {
 		lines = append(lines, fmt.Sprintf("**Armor:** %s", armor.GetName()))
 	} else {
-		lines = append(lines, "**Armor:** None")
+		lines = append(lines, "**Armor:** Empty")
 	}
 
 	return lines

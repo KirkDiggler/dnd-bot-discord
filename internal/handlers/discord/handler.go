@@ -18,6 +18,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/help"
 	sessionHandler "github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/session"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/testcombat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/helpers"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
@@ -1734,62 +1735,39 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 		// Refresh character sheet
 		if len(parts) >= 3 {
 			characterID := parts[2]
-			// Get the character and rebuild the sheet
-			char, err := h.ServiceProvider.CharacterService.GetByID(characterID)
+			// Use helper function to reduce duplication
+			err := helpers.ShowCharacterSheet(s, i, characterID, i.Member.User.ID, h.ServiceProvider, true)
 			if err != nil {
-				log.Printf("Error getting character for refresh: %v", err)
-				return
-			}
-
-			// Verify ownership
-			if char.OwnerID != i.Member.User.ID {
-				return
-			}
-
-			// Import the sheet building functions
-			embed := character.BuildCharacterSheetEmbed(char)
-			components := character.BuildCharacterSheetComponents(characterID)
-
-			// Update the message
-			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseUpdateMessage,
-				Data: &discordgo.InteractionResponseData{
-					Embeds:     []*discordgo.MessageEmbed{embed},
-					Components: components,
-				},
-			})
-			if err != nil {
-				log.Printf("Error responding to sheet refresh: %v", err)
+				log.Printf("Error refreshing character sheet: %v", err)
+				// Provide user feedback on error
+				if respondErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseUpdateMessage,
+					Data: &discordgo.InteractionResponseData{
+						Content:    "❌ Failed to refresh character sheet. Please try again.",
+						Components: []discordgo.MessageComponent{},
+					},
+				}); respondErr != nil {
+					log.Printf("Error sending error response: %v", respondErr)
+				}
 			}
 		}
 	} else if ctx == "character" && action == "sheet_show" {
 		// Show character sheet from list
 		if len(parts) >= 3 {
 			characterID := parts[2]
-			// Get the character
-			char, err := h.ServiceProvider.CharacterService.GetByID(characterID)
+			// Use helper function to reduce duplication
+			err := helpers.ShowCharacterSheet(s, i, characterID, i.Member.User.ID, h.ServiceProvider, false)
 			if err != nil {
-				log.Printf("Error getting character for sheet: %v", err)
-				return
-			}
-
-			// Verify ownership
-			if char.OwnerID != i.Member.User.ID {
-				return
-			}
-
-			// Build the sheet
-			embed := character.BuildCharacterSheetEmbed(char)
-			components := character.BuildCharacterSheetComponents(characterID)
-
-			// Send as ephemeral follow-up
-			_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-				Embeds:     []*discordgo.MessageEmbed{embed},
-				Components: components,
-				Flags:      discordgo.MessageFlagsEphemeral,
-			})
-			if err != nil {
-				log.Printf("Error sending character sheet: %v", err)
+				log.Printf("Error showing character sheet: %v", err)
+				// Provide user feedback on error
+				content := "❌ Failed to display character sheet. Please try again."
+				_, respondErr := s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+					Content: content,
+					Flags:   discordgo.MessageFlagsEphemeral,
+				})
+				if respondErr != nil {
+					log.Printf("Error sending error response: %v", respondErr)
+				}
 			}
 		}
 	} else if ctx == "session_manage" {
