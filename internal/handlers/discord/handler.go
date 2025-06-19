@@ -3019,6 +3019,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					log.Printf("Error showing target selection: %v", err)
 				}
 			case "select_target":
+				log.Printf("=== ENTERING select_target handler ===")
 				// Handle target selection for attack
 				if len(parts) < 4 {
 					log.Printf("Invalid select_target interaction: %v", parts)
@@ -3101,12 +3102,20 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 				if current.Type == entities.CombatantTypePlayer && current.CharacterID != "" {
 					// Get character for player attacks
+					log.Printf("Getting character for attack - CharacterID: %s", current.CharacterID)
 					char, charErr := h.ServiceProvider.CharacterService.GetByID(current.CharacterID)
-					if charErr == nil && char != nil {
+					if charErr != nil {
+						log.Printf("ERROR: Failed to get character %s: %v", current.CharacterID, charErr)
+					} else if char == nil {
+						log.Printf("ERROR: Character %s returned nil", current.CharacterID)
+					} else {
+						log.Printf("Character retrieved successfully: %s", char.Name)
 						// Use character's Attack method
 						attackResults, err = char.Attack()
 						if err != nil {
 							log.Printf("Error performing character attack: %v", err)
+						} else {
+							log.Printf("Attack executed successfully, got %d results", len(attackResults))
 						}
 						// Get primary weapon name
 						if char.EquippedSlots[entities.SlotMainHand] != nil {
@@ -3177,6 +3186,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 
 				// Build result embed
+				log.Printf("Building attack embed - Attack results count: %d, Attack name: %s", len(attackResults), attackName)
 				embed := &discordgo.MessageEmbed{
 					Title:       fmt.Sprintf("⚔️ %s attacks %s!", current.Name, target.Name),
 					Description: fmt.Sprintf("**Attack:** %s", attackName),
@@ -4180,8 +4190,9 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 					},
 				}
 
+				log.Printf("Sending attack response - Embed fields: %d, Components: %d", len(embed.Fields), len(components))
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Type: discordgo.InteractionResponseUpdateMessage,
 					Data: &discordgo.InteractionResponseData{
 						Embeds:     []*discordgo.MessageEmbed{embed},
 						Components: components,
@@ -4189,6 +4200,8 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				})
 				if err != nil {
 					log.Printf("Error responding to attack: %v", err)
+				} else {
+					log.Printf("Attack response sent successfully")
 				}
 			}
 		}
