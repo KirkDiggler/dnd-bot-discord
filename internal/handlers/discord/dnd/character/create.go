@@ -89,6 +89,17 @@ func (h *CreateHandler) Handle(req *CreateRequest) error {
 		},
 	}
 
+	// Clear any existing ability rolls for a fresh start
+	_, err = h.characterService.StartFreshCharacterCreation(
+		context.Background(),
+		req.Interaction.Member.User.ID,
+		req.Interaction.GuildID,
+	)
+	if err != nil {
+		// Non-fatal, continue anyway
+		fmt.Printf("Failed to clear draft character rolls: %v\n", err)
+	}
+
 	// Create the embed
 	embed := &discordgo.MessageEmbed{
 		Title:       "Create New Character",

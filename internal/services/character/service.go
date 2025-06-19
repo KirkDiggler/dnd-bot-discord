@@ -91,6 +91,9 @@ type Service interface {
 
 	// GetCharacterFromSession gets the character associated with a session
 	GetCharacterFromSession(ctx context.Context, sessionID string) (*entities.Character, error)
+
+	// StartFreshCharacterCreation gets or creates a draft and clears ability rolls
+	StartFreshCharacterCreation(ctx context.Context, userID, realmID string) (*entities.Character, error)
 }
 
 // CreateCharacterInput contains all data needed to create a character
@@ -599,8 +602,8 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		char.Features = newFeatures
 	}
 
-	// Update ability rolls if provided
-	if len(updates.AbilityRolls) > 0 {
+	// Update ability rolls if provided (including clearing with empty slice)
+	if updates.AbilityRolls != nil {
 		char.AbilityRolls = updates.AbilityRolls
 	}
 
@@ -609,7 +612,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		char.AbilityAssignments = updates.AbilityAssignments
 
 		// Also update the actual ability scores based on assignments
-		if len(char.AbilityRolls) > 0 {
+		if len(char.AbilityRolls) > 0 && len(updates.AbilityAssignments) > 0 {
 			// Create a map of roll ID to value for easy lookup
 			rollValues := make(map[string]int)
 			for _, roll := range char.AbilityRolls {
@@ -1004,4 +1007,32 @@ func stringToAttribute(s string) entities.Attribute {
 	default:
 		return entities.AttributeNone
 	}
+}
+
+// StartFreshCharacterCreation gets or creates a draft and clears ability rolls
+func (s *service) StartFreshCharacterCreation(ctx context.Context, userID, realmID string) (*entities.Character, error) {
+	draft, err := s.GetOrCreateDraftCharacter(ctx, userID, realmID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Clear ability rolls and assignments if they exist
+	if len(draft.AbilityRolls) > 0 || len(draft.AbilityAssignments) > 0 {
+		_, err = s.UpdateDraftCharacter(ctx, draft.ID, &UpdateDraftInput{
+			AbilityRolls:       []entities.AbilityRoll{},
+			AbilityAssignments: map[string]string{},
+		})
+		if err != nil {
+			return nil, dnderr.Wrap(err, "failed to clear ability rolls").
+				WithMeta("character_id", draft.ID)
+		}
+		
+		// Refetch the updated draft
+		draft, err = s.GetCharacter(ctx, draft.ID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return draft, nil
 }

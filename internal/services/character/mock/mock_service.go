@@ -326,6 +326,21 @@ func (mr *MockServiceMockRecorder) StartCharacterCreation(ctx, userID, guildID a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartCharacterCreation", reflect.TypeOf((*MockService)(nil).StartCharacterCreation), ctx, userID, guildID)
 }
 
+// StartFreshCharacterCreation mocks base method.
+func (m *MockService) StartFreshCharacterCreation(ctx context.Context, userID, realmID string) (*entities.Character, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartFreshCharacterCreation", ctx, userID, realmID)
+	ret0, _ := ret[0].(*entities.Character)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StartFreshCharacterCreation indicates an expected call of StartFreshCharacterCreation.
+func (mr *MockServiceMockRecorder) StartFreshCharacterCreation(ctx, userID, realmID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartFreshCharacterCreation", reflect.TypeOf((*MockService)(nil).StartFreshCharacterCreation), ctx, userID, realmID)
+}
+
 // UpdateCharacterCreationSession mocks base method.
 func (m *MockService) UpdateCharacterCreationSession(ctx context.Context, sessionID, step string) error {
 	m.ctrl.T.Helper()

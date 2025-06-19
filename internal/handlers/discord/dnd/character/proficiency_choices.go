@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
 )
@@ -75,12 +76,52 @@ func (h *ProficiencyChoicesHandler) Handle(req *ProficiencyChoicesRequest) error
 		Fields:      []*discordgo.MessageEmbedField{},
 	}
 
-	// Show stubbed ability scores
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-		Name:   "📊 Ability Scores",
-		Value:  "**STR:** 15 (+2)\n**DEX:** 14 (+2)\n**CON:** 13 (+1)\n**INT:** 12 (+1)\n**WIS:** 10 (+0)\n**CHA:** 8 (-1)",
-		Inline: true,
-	})
+	// Get the draft character to show actual ability scores
+	draftChar, err := h.characterService.GetOrCreateDraftCharacter(
+		context.Background(),
+		req.Interaction.Member.User.ID,
+		req.Interaction.GuildID,
+	)
+	if err == nil && draftChar.Attributes != nil {
+		// Build ability score display from actual character
+		scoreLines := []string{}
+		abilities := []struct {
+			name string
+			attr entities.Attribute
+		}{
+			{"STR", entities.AttributeStrength},
+			{"DEX", entities.AttributeDexterity},
+			{"CON", entities.AttributeConstitution},
+			{"INT", entities.AttributeIntelligence},
+			{"WIS", entities.AttributeWisdom},
+			{"CHA", entities.AttributeCharisma},
+		}
+		
+		for _, ability := range abilities {
+			if score, ok := draftChar.Attributes[ability.attr]; ok && score != nil {
+				modifier := score.Bonus
+				modStr := fmt.Sprintf("%+d", modifier)
+				scoreLines = append(scoreLines, fmt.Sprintf("**%s:** %d (%s)", ability.name, score.Score, modStr))
+			} else {
+				scoreLines = append(scoreLines, fmt.Sprintf("**%s:** -", ability.name))
+			}
+		}
+		
+		if len(scoreLines) > 0 {
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "📊 Ability Scores",
+				Value:  strings.Join(scoreLines, "\n"),
+				Inline: true,
+			})
+		}
+	} else {
+		// Fallback if we can't get character data
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "📊 Ability Scores",
+			Value:  "*Ability scores will be shown here*",
+			Inline: true,
+		})
+	}
 
 	// Show class proficiencies (automatic)
 	if len(class.Proficiencies) > 0 {
