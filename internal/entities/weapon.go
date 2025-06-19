@@ -75,7 +75,7 @@ func (w *Weapon) hasProperty(prop string) bool {
 }
 
 func (w *Weapon) GetEquipmentType() EquipmentType {
-	return "Weapon"
+	return EquipmentTypeWeapon
 }
 
 func (w *Weapon) GetName() string {

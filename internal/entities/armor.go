@@ -25,7 +25,7 @@ type Armor struct {
 }
 
 func (e *Armor) GetEquipmentType() EquipmentType {
-	return "Armor"
+	return EquipmentTypeArmor
 }
 
 func (e *Armor) GetName() string {
