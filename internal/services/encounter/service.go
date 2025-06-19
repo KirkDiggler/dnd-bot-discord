@@ -152,9 +152,12 @@ func (s *service) CreateEncounter(ctx context.Context, input *CreateEncounterInp
 	// Check if there's already an active encounter
 	activeEncounter, err := s.repository.GetActiveBySession(ctx, input.SessionID)
 	if err != nil {
-		return nil, dnderr.Wrap(err, "failed to get active encounter")
-	}
-	if activeEncounter != nil {
+		// It's OK if no active encounter exists - that's what we want
+		if !strings.Contains(err.Error(), "no active encounter") {
+			return nil, dnderr.Wrap(err, "failed to get active encounter")
+		}
+		// No active encounter, we can proceed
+	} else if activeEncounter != nil {
 		return nil, dnderr.InvalidArgument("session already has an active encounter")
 	}
 
