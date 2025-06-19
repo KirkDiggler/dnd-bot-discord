@@ -269,7 +269,7 @@ func (h *AssignAbilitiesHandler) buildAssignmentUI(req *AssignAbilitiesRequest, 
 	// Create embed
 	embed := &discordgo.MessageEmbed{
 		Title:       "Create New Character - Assign Abilities",
-		Description: fmt.Sprintf("**Race:** %s\n**Class:** %s\n\nAssign your rolled scores to each ability.", race.Name, class.Name),
+		Description: fmt.Sprintf("**Race:** %s\n**Class:** %s\n\nAssign your rolled scores to each ability.\n\n💡 **Tip:** Numbers in [brackets] are your d20 roll modifiers", race.Name, class.Name),
 		Color:       0x5865F2,
 		Fields:      []*discordgo.MessageEmbedField{},
 	}
@@ -316,7 +316,7 @@ func (h *AssignAbilitiesHandler) buildAssignmentUI(req *AssignAbilitiesRequest, 
 					if racialBonus > 0 {
 						line += fmt.Sprintf(" (+%d) = %d [%s]", racialBonus, total, modStr)
 					} else {
-						line += fmt.Sprintf(" [%s]", modStr)
+						line += fmt.Sprintf(" = %d [%s]", total, modStr)
 					}
 				} else {
 					line = fmt.Sprintf("**%s:** _Error_", ability)
