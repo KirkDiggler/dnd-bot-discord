@@ -8,9 +8,9 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 )
 
-// dataToEquipmentWithMigration converts EquipmentData back to Equipment interface
+// DataToEquipmentWithMigration converts EquipmentData back to Equipment interface
 // with support for legacy data formats
-func dataToEquipmentWithMigration(data EquipmentData) (entities.Equipment, error) {
+func DataToEquipmentWithMigration(data EquipmentData) (entities.Equipment, error) {
 	// Normalize the type to lowercase for legacy compatibility
 	normalizedType := strings.ToLower(data.Type)
 
