@@ -75,6 +75,30 @@
   - Added MonsterService and LootService to provider
   - Services properly inject dependencies
 
+#### Recent Fixes (June 19, 2025)
+- **Attack Flow Implementation (Issue #27)**:
+  - Implemented automatic weapon selection from character's equipped items
+  - Added target selection UI showing all combatants with HP/AC
+  - Execute attacks using character's Attack() method
+  - Added comprehensive logging throughout attack flow
+  - Fixed CustomID parsing for select_target (parts[3] not parts[2])
+  - Simplified attack flow to execute immediately after target selection (Discord 100 char limit)
+- **Dungeon Encounter Regression Fixes**:
+  - Fixed "only the DM can create encounters" error by checking sessionType="dungeon"
+  - Fixed SaveSession vs UpdateSession to persist bot as DM
+  - Fixed "no active encounter in session" by returning nil,nil instead of error
+  - Added comprehensive tests to prevent regression
+- **Player Not in Encounter Fix**:
+  - Root cause: Player had no CharacterID set in session (hadn't selected character)
+  - Fixed by adding validation in enter_room to require character selection
+  - Fixed join handler to handle users already in session
+  - Added comprehensive logging to track session member states
+- **Workflow Enforcement**:
+  - Players must select character before entering dungeon rooms
+  - Join handler now handles both new joins and character selection for existing members
+  - Changed button label from "Join Party" to "Select Character" for clarity
+  - Added comprehensive unit tests for workflow validation
+
 #### Known Issues (Fix as we touch the code)
 - ~10 unchecked errors (errcheck)
 - Shadow variable declarations
@@ -82,11 +106,13 @@
 - Using math/rand instead of crypto/rand in places
 
 #### Next Priorities
-1. Implement dungeon repository for Redis persistence
-2. Test dungeon flow end-to-end with Discord integration
-3. Implement features selection step (SelectFeaturesStep)
-4. Create end-to-end Discord bot tests
-5. Add more Redis integration tests
+1. Continue monitoring logs to discover edge cases in dungeon workflow
+2. Add more strategic logging points as issues arise
+3. Implement dungeon repository for Redis persistence
+4. Test dungeon flow end-to-end with Discord integration
+5. Implement features selection step (SelectFeaturesStep)
+6. Create end-to-end Discord bot tests
+7. Add more Redis integration tests
 
 ### Development Commands
 
@@ -125,6 +151,20 @@ DISCORD_TOKEN=xxx REDIS_URL=redis://localhost:6379 ./bin/dnd-bot
 - Main branch has branch protection
 - CI must pass before merge
 - Using squash and merge strategy
+
+#### IMPORTANT: PR Merge Workflow
+- **ALWAYS merge PRs before starting new features**
+- After creating a PR, ensure it's merged to main before moving to the next feature
+- This prevents regression bugs and merge conflicts
+- Workflow: Create PR → Merge PR → Update branch → Start next feature
+- If multiple PRs exist, merge them in order of creation to avoid conflicts
+
+#### Merge vs Rebase Philosophy
+- **Prefer merge over rebase** - "Rewriting history is something I cannot get back. Understanding complex merges is at least possible."
+- History preservation is more valuable than a clean linear history
+- Complex merges can be understood with tools and patience
+- Lost history from rebase cannot be recovered
+- Since we squash-and-merge PRs, the main branch stays clean anyway
 
 ### Debugging Tips
 - Check `go.mod` for dependency versions if something seems off
