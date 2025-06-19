@@ -73,7 +73,7 @@ func TestBuildCharacterSheetEmbed(t *testing.T) {
 
 	// Verify fields
 	require.Len(t, embed.Fields, 3)
-	
+
 	// Check ability scores field
 	assert.Equal(t, "📊 Ability Scores", embed.Fields[0].Name)
 	assert.Contains(t, embed.Fields[0].Value, "**STR:** 16 (+3)")
@@ -95,7 +95,7 @@ func TestBuildCharacterSheetComponents(t *testing.T) {
 	components := BuildCharacterSheetComponents(characterID)
 
 	require.Len(t, components, 1)
-	
+
 	// Check that we have an action row
 	actionRow, ok := components[0].(discordgo.ActionsRow)
 	require.True(t, ok)
@@ -104,10 +104,10 @@ func TestBuildCharacterSheetComponents(t *testing.T) {
 	// Verify button custom IDs
 	button1 := actionRow.Components[0].(discordgo.Button)
 	assert.Equal(t, "character:inventory:test-char-123", button1.CustomID)
-	
+
 	button2 := actionRow.Components[1].(discordgo.Button)
 	assert.Equal(t, "character:details:test-char-123", button2.CustomID)
-	
+
 	button3 := actionRow.Components[2].(discordgo.Button)
 	assert.Equal(t, "character:sheet_refresh:test-char-123", button3.CustomID)
 }

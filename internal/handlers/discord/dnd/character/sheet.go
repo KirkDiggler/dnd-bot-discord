@@ -51,7 +51,7 @@ func (h *SheetHandler) Handle(s *discordgo.Session, i *discordgo.InteractionCrea
 
 	// Build the character sheet embed (pure presentation logic)
 	embed := BuildCharacterSheetEmbed(character)
-	
+
 	// Build interactive components
 	components := BuildCharacterSheetComponents(characterID)
 
@@ -75,9 +75,9 @@ func BuildCharacterSheetEmbed(char *entities.Character) *discordgo.MessageEmbed 
 	}
 
 	// Build HP/AC line
-	hpAcLine := fmt.Sprintf("**HP:** %d/%d | **AC:** %d", 
+	hpAcLine := fmt.Sprintf("**HP:** %d/%d | **AC:** %d",
 		char.CurrentHitPoints, char.MaxHitPoints, char.AC)
-	
+
 	// Calculate initiative bonus
 	initiativeBonus := 0
 	if dex, exists := char.Attributes[entities.AttributeDexterity]; exists {

@@ -1740,16 +1740,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				log.Printf("Error getting character for refresh: %v", err)
 				return
 			}
-			
+
 			// Verify ownership
 			if char.OwnerID != i.Member.User.ID {
 				return
 			}
-			
+
 			// Import the sheet building functions
 			embed := character.BuildCharacterSheetEmbed(char)
 			components := character.BuildCharacterSheetComponents(characterID)
-			
+
 			// Update the message
 			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseUpdateMessage,
@@ -1772,16 +1772,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				log.Printf("Error getting character for sheet: %v", err)
 				return
 			}
-			
+
 			// Verify ownership
 			if char.OwnerID != i.Member.User.ID {
 				return
 			}
-			
+
 			// Build the sheet
 			embed := character.BuildCharacterSheetEmbed(char)
 			components := character.BuildCharacterSheetComponents(characterID)
-			
+
 			// Send as ephemeral follow-up
 			_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 				Embeds:     []*discordgo.MessageEmbed{embed},
