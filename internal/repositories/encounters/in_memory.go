@@ -146,7 +146,7 @@ func (r *inMemoryRepository) GetActiveBySession(ctx context.Context, sessionID s
 		}
 	}
 
-	return nil, fmt.Errorf("no active encounter in session: %s", sessionID)
+	return nil, nil
 }
 
 // GetByMessage retrieves an encounter by Discord message ID

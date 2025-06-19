@@ -66,11 +66,14 @@ func (m *MockRepository) Delete(_ context.Context, id string) error {
 
 func (m *MockRepository) GetActiveBySession(_ context.Context, sessionID string) (*entities.Encounter, error) {
 	for _, encounter := range m.encounters {
-		if encounter.SessionID == sessionID && encounter.Status == entities.EncounterStatusActive {
+		if encounter.SessionID == sessionID && 
+			(encounter.Status == entities.EncounterStatusActive ||
+			 encounter.Status == entities.EncounterStatusSetup ||
+			 encounter.Status == entities.EncounterStatusRolling) {
 			return encounter, nil
 		}
 	}
-	return nil, nil
+	return nil, nil // Important: return nil, nil when no active encounter exists
 }
 
 func (m *MockRepository) GetBySession(_ context.Context, sessionID string) ([]*entities.Encounter, error) {
