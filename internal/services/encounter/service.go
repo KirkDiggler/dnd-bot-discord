@@ -140,7 +140,10 @@ func (s *service) CreateEncounter(ctx context.Context, input *CreateEncounterInp
 	// Check if user is DM
 	member, exists := session.Members[input.UserID]
 	if !exists || member.Role != entities.SessionRoleDM {
-		return nil, dnderr.PermissionDenied("only the DM can create encounters")
+		// Allow system/bot to create encounters for dungeons
+		if sessionType, ok := session.Metadata["sessionType"].(string); !ok || sessionType != "dungeon" {
+			return nil, dnderr.PermissionDenied("only the DM can create encounters")
+		}
 	}
 
 	// Check if there's already an active encounter

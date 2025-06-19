@@ -191,6 +191,7 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 
 	// Store room data in session metadata
 	sess.Metadata = map[string]interface{}{
+		"sessionType": "dungeon",
 		"currentRoom": room,
 		"roomNumber":  1,
 		"difficulty":  req.Difficulty,
@@ -198,11 +199,8 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 
 	log.Printf("Dungeon started with difficulty: %s, bot ID: %s as DM", req.Difficulty, botID)
 
-	// We need to update the session to save the metadata and bot as DM
-	updateInput := &session.UpdateSessionInput{
-		Name: &sess.Name, // Just update with same name to trigger save
-	}
-	_, err = h.services.SessionService.UpdateSession(context.Background(), sess.ID, updateInput)
+	// We need to save the session to persist the metadata and bot as DM
+	err = h.services.SessionService.SaveSession(context.Background(), sess)
 	if err != nil {
 		log.Printf("Warning: Failed to save session updates: %v", err)
 	}
