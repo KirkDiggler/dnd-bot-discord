@@ -2524,6 +2524,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					log.Printf("Error showing end combat: %v", err)
 				}
 			case "attack":
+				log.Printf("Attack button pressed for encounter: %s by user: %s", encounterID, i.Member.User.ID)
 				// Simple attack handler for testing
 				// Get encounter
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
@@ -2589,9 +2590,11 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				for id, combatant := range encounter.Combatants {
 					// Don't show self as target
 					if combatant.ID == current.ID || !combatant.IsActive {
+						log.Printf("Skipping combatant %s (ID: %s): self=%v, active=%v", combatant.Name, id, combatant.ID == current.ID, combatant.IsActive)
 						continue
 					}
 
+					log.Printf("Adding target button for %s (ID: %s)", combatant.Name, id)
 					// Create button for this target
 					emoji := "🧑"
 					if combatant.Type == entities.CombatantTypeMonster {
@@ -2692,6 +2695,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 				// Get target
 				target, exists := encounter.Combatants[targetID]
+				log.Printf("Looking for target %s in combatants: %+v", targetID, encounter.Combatants)
 				if !exists {
 					content := "❌ Target not found!"
 					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
