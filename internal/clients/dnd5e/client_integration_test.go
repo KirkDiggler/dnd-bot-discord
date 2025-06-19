@@ -33,7 +33,7 @@ func TestClient_ListEquipment_Integration(t *testing.T) {
 	for _, equip := range equipment {
 		assert.NotEmpty(t, equip.GetKey(), "Equipment should have a key")
 		assert.NotEmpty(t, equip.GetName(), "Equipment should have a name")
-		
+
 		if equip.GetEquipmentType() == "Weapon" {
 			foundWeapon = true
 		}

@@ -53,10 +53,10 @@ func TestCharacterCreation_AbilityAssignmentFlow(t *testing.T) {
 	repo := characters.NewRedisRepository(&characters.RedisRepoConfig{
 		Client: redisClient,
 	})
-	
+
 	// Create mock DND client
 	mockDNDClient := mockdnd5e.NewMockClient(ctrl)
-	
+
 	// Setup expectations for race and class
 	mockDNDClient.EXPECT().GetRace("half-orc").Return(&entities.Race{
 		Key:  "half-orc",
@@ -67,13 +67,13 @@ func TestCharacterCreation_AbilityAssignmentFlow(t *testing.T) {
 		},
 		Speed: 30,
 	}, nil).AnyTimes()
-	
+
 	mockDNDClient.EXPECT().GetClass("barbarian").Return(&entities.Class{
 		Key:    "barbarian",
 		Name:   "Barbarian",
 		HitDie: 12,
 	}, nil).AnyTimes()
-	
+
 	charService := characterService.NewService(&characterService.ServiceConfig{
 		Repository: repo,
 		DNDClient:  mockDNDClient,
@@ -141,7 +141,7 @@ func TestCharacterCreation_AbilityAssignmentFlow(t *testing.T) {
 	// Create a minimal Discord session for testing
 	// We only need it to satisfy the type requirement
 	session := &discordgo.Session{}
-	
+
 	req := &character.AssignAbilitiesRequest{
 		Session:     session,
 		Interaction: interaction,
@@ -269,7 +269,7 @@ func TestCharacterCreation_AutoAssign(t *testing.T) {
 	// Create a minimal Discord session for testing
 	// We only need it to satisfy the type requirement
 	session := &discordgo.Session{}
-	
+
 	req := &character.AssignAbilitiesRequest{
 		Session:     session,
 		Interaction: interaction,
