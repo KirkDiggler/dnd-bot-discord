@@ -98,3 +98,9 @@ dev-test: redis-start test-all redis-stop
 
 # CI/CD simulation
 ci: lint test-all
+
+# Format targets
+format fmt:
+	@echo "Formatting Go code..."
+	@gofmt -w .
+	@go mod tidy

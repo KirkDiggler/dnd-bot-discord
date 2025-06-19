@@ -113,15 +113,15 @@ func TestDataToEquipmentWithMigration(t *testing.T) {
 func TestEquipmentNilHandling(t *testing.T) {
 	// This test verifies that nil equipment is properly handled
 	// in the toCharacterData function
-	
+
 	char := &entities.Character{
 		ID:      "test-char",
 		OwnerID: "test-user",
 		RealmID: "test-realm",
 		Name:    "Test Character",
 		EquippedSlots: map[entities.Slot]entities.Equipment{
-			entities.SlotMainHand:  nil, // Nil equipment
-			entities.SlotOffHand:   nil,
+			entities.SlotMainHand: nil, // Nil equipment
+			entities.SlotOffHand:  nil,
 			entities.SlotTwoHanded: &entities.Weapon{
 				Base: entities.BasicEquipment{
 					Key:  "longsword",
