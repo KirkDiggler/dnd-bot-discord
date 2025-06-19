@@ -110,10 +110,17 @@ func (h *WeaponHandler) HandleEquip(s *discordgo.Session, i *discordgo.Interacti
 		})
 	}
 
-	// TODO: Need to implement character save method for equipped weapons
-	// The character is modified in memory but changes won't persist until we add
-	// a service method to save equipment changes
-	log.Printf("TODO: Implement character equipment save - weapon equipped in memory only")
+	// Save the equipment changes
+	if err := h.ServiceProvider.CharacterService.UpdateEquipment(char); err != nil {
+		log.Printf("Failed to save equipment changes for character %s: %v", characterID, err)
+		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "⚠️ Weapon equipped but failed to save changes. Changes may be lost on restart.",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+	}
 
 	// Success response with equipped weapon info
 	embed := &discordgo.MessageEmbed{
@@ -229,10 +236,17 @@ func (h *WeaponHandler) HandleUnequip(s *discordgo.Session, i *discordgo.Interac
 	// Unequip the item
 	char.EquippedSlots[slot] = nil
 
-	// TODO: Need to implement character save method for equipped weapons
-	// The character is modified in memory but changes won't persist until we add
-	// a service method to save equipment changes
-	log.Printf("TODO: Implement character equipment save - weapon unequipped in memory only")
+	// Save the equipment changes
+	if err := h.ServiceProvider.CharacterService.UpdateEquipment(char); err != nil {
+		log.Printf("Failed to save equipment changes for character %s: %v", characterID, err)
+		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "⚠️ Item unequipped but failed to save changes. Changes may be lost on restart.",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+	}
 
 	// Success response
 	embed := &discordgo.MessageEmbed{

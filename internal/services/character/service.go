@@ -64,6 +64,9 @@ type Service interface {
 	// UpdateStatus updates a character's status
 	UpdateStatus(characterID string, status entities.CharacterStatus) error
 
+	// UpdateEquipment saves equipment changes for a character
+	UpdateEquipment(character *entities.Character) error
+
 	// Delete deletes a character
 	Delete(characterID string) error
 
@@ -934,6 +937,27 @@ func (s *service) UpdateStatus(characterID string, status entities.CharacterStat
 		return dnderr.Wrap(err, "failed to update character status").
 			WithMeta("character_id", characterID).
 			WithMeta("status", string(status))
+	}
+
+	return nil
+}
+
+// UpdateEquipment saves equipment changes for a character
+func (s *service) UpdateEquipment(character *entities.Character) error {
+	if character == nil {
+		return dnderr.InvalidArgument("character is required")
+	}
+
+	if strings.TrimSpace(character.ID) == "" {
+		return dnderr.InvalidArgument("character ID is required")
+	}
+
+	ctx := context.Background()
+
+	// Save the character with updated equipment
+	if err := s.repository.Update(ctx, character); err != nil {
+		return dnderr.Wrap(err, "failed to update character equipment").
+			WithMeta("character_id", character.ID)
 	}
 
 	return nil
