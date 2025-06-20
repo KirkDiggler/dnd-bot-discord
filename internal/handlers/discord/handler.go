@@ -175,63 +175,6 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 							Description: "List all your characters",
 							Type:        discordgo.ApplicationCommandOptionSubCommand,
 						},
-						{
-							Name:        "equip",
-							Description: "Equip a weapon from inventory",
-							Type:        discordgo.ApplicationCommandOptionSubCommand,
-							Options: []*discordgo.ApplicationCommandOption{
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "character_id",
-									Description: "Character ID",
-									Required:    true,
-								},
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "weapon",
-									Description: "Weapon key to equip",
-									Required:    true,
-								},
-							},
-						},
-						{
-							Name:        "unequip",
-							Description: "Unequip an item from a slot",
-							Type:        discordgo.ApplicationCommandOptionSubCommand,
-							Options: []*discordgo.ApplicationCommandOption{
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "character_id",
-									Description: "Character ID",
-									Required:    true,
-								},
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "slot",
-									Description: "Slot to unequip from",
-									Required:    true,
-									Choices: []*discordgo.ApplicationCommandOptionChoice{
-										{Name: "Main Hand", Value: "main-hand"},
-										{Name: "Off Hand", Value: "off-hand"},
-										{Name: "Two Handed", Value: "two-handed"},
-										{Name: "Body", Value: "body"},
-									},
-								},
-							},
-						},
-						{
-							Name:        "inventory",
-							Description: "View character's weapon inventory",
-							Type:        discordgo.ApplicationCommandOptionSubCommand,
-							Options: []*discordgo.ApplicationCommandOption{
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "character_id",
-									Description: "Character ID",
-									Required:    true,
-								},
-							},
-						},
 					},
 				},
 				{
@@ -499,18 +442,6 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 			}
 			if err := h.characterListHandler.Handle(req); err != nil {
 				log.Printf("Error handling character list: %v", err)
-			}
-		case "equip":
-			if err := h.characterWeaponHandler.HandleEquip(s, i); err != nil {
-				log.Printf("Error handling character equip: %v", err)
-			}
-		case "unequip":
-			if err := h.characterWeaponHandler.HandleUnequip(s, i); err != nil {
-				log.Printf("Error handling character unequip: %v", err)
-			}
-		case "inventory":
-			if err := h.characterWeaponHandler.HandleInventory(s, i); err != nil {
-				log.Printf("Error handling character inventory: %v", err)
 			}
 		}
 	} else if subcommandGroup.Name == "session" && len(subcommandGroup.Options) > 0 {
