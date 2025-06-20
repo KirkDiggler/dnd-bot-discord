@@ -320,7 +320,7 @@ func (c *Character) calculateAC() {
 
 	// First, check for body armor which sets the base AC
 	if bodyArmor := c.EquippedSlots[SlotBody]; bodyArmor != nil {
-		if bodyArmor.GetEquipmentType() == "Armor" {
+		if bodyArmor.GetEquipmentType() == EquipmentTypeArmor {
 			armor, ok := bodyArmor.(*Armor)
 			if !ok {
 				log.Printf("Invalid body armor: %v", bodyArmor)
@@ -341,7 +341,7 @@ func (c *Character) calculateAC() {
 			continue
 		}
 
-		if e.GetEquipmentType() == "Armor" {
+		if e.GetEquipmentType() == EquipmentTypeArmor {
 			armor, ok := e.(*Armor)
 			if !ok {
 				continue

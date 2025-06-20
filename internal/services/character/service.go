@@ -954,6 +954,9 @@ func (s *service) UpdateEquipment(character *entities.Character) error {
 
 	ctx := context.Background()
 
+	// Recalculate AC with the features calculator
+	character.AC = features.CalculateAC(character)
+
 	// Save the character with updated equipment
 	if err := s.repository.Update(ctx, character); err != nil {
 		return dnderr.Wrap(err, "failed to update character equipment").

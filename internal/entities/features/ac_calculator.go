@@ -32,12 +32,16 @@ func CalculateAC(character *entities.Character) int {
 	// Check equipped slots for armor
 	if character.EquippedSlots != nil {
 		for slot, item := range character.EquippedSlots {
-			if item != nil && slot == entities.SlotBody && item.GetEquipmentType() == "Armor" {
+			if item != nil && slot == entities.SlotBody && item.GetEquipmentType() == entities.EquipmentTypeArmor {
 				hasArmor = true
 				// Try to cast to Armor type to get AC values
 				if armor, ok := item.(*entities.Armor); ok && armor.ArmorClass != nil {
 					baseAC = armor.ArmorClass.Base
-					if !armor.ArmorClass.DexBonus {
+					// Special handling for leather armor - D&D 5e API may incorrectly set DexBonus to false
+					if item.GetKey() == "leather-armor" || item.GetKey() == "studded-leather-armor" {
+						// Light armor always uses full DEX bonus
+						// Keep dexMod as is
+					} else if !armor.ArmorClass.DexBonus {
 						dexMod = 0 // Heavy armor doesn't use DEX
 					} else if armor.ArmorClass.MaxBonus > 0 {
 						// Limit dex bonus for medium armor
@@ -45,6 +49,7 @@ func CalculateAC(character *entities.Character) int {
 							dexMod = armor.ArmorClass.MaxBonus
 						}
 					}
+					// Note: If we reach here with valid ArmorClass data, we use it
 				} else {
 					// Fallback for armor without proper AC data
 					switch item.GetKey() {
@@ -64,6 +69,16 @@ func CalculateAC(character *entities.Character) int {
 						}
 					case "scale-mail":
 						baseAC = 14
+						if dexMod > 2 {
+							dexMod = 2
+						}
+					case "breastplate":
+						baseAC = 14
+						if dexMod > 2 {
+							dexMod = 2
+						}
+					case "half-plate", "half-plate-armor":
+						baseAC = 15
 						if dexMod > 2 {
 							dexMod = 2
 						}

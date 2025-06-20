@@ -263,10 +263,11 @@ func apiArmorToArmor(input *apiEntities.Armor) *entities.Armor {
 			Weight: input.Weight,
 			Cost:   apiCostToCost(input.Cost),
 		},
-
 		ArmorClass: &entities.ArmorClass{
 			Base:     input.ArmorClass.Base,
 			DexBonus: input.ArmorClass.DexBonus,
+			// MaxBonus is not available from the API, so medium armor limits
+			// are handled in the AC calculator fallback logic
 		},
 		StealthDisadvantage: input.StealthDisadvantage,
 	}
