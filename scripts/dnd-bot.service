@@ -1,0 +1,21 @@
+[Unit]
+Description=D&D Discord Bot
+After=network.target redis.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/dnd-bot
+ExecStart=/home/pi/dnd-bot/dnd-bot
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+EnvironmentFile=/home/pi/dnd-bot/.env
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

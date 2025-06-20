@@ -104,3 +104,47 @@ format fmt:
 	@echo "Formatting Go code..."
 	@gofmt -w .
 	@go mod tidy
+
+# Raspberry Pi deployment
+PI_HOST = pi@10.0.0.129
+PI_DIR = /home/pi/dnd-bot
+
+.PHONY: deploy
+deploy:
+	@echo "🚀 Deploying to Raspberry Pi..."
+	@echo "📦 Building for ARM64..."
+	@GOOS=linux GOARCH=arm64 go build -o dnd-bot-arm64 ./cmd/bot
+	@echo "📤 Copying files to Pi..."
+	@ssh $(PI_HOST) "mkdir -p $(PI_DIR)"
+	@scp dnd-bot-arm64 $(PI_HOST):$(PI_DIR)/dnd-bot
+	@scp .env.production $(PI_HOST):$(PI_DIR)/.env 2>/dev/null || echo "⚠️  No .env.production found, using existing .env on Pi"
+	@echo "🔄 Restarting service..."
+	@ssh $(PI_HOST) "sudo systemctl restart dnd-bot" || echo "⚠️  Service not set up yet. Run 'make setup-pi' first"
+	@rm dnd-bot-arm64
+	@echo "✅ Deployment complete!"
+
+.PHONY: setup-pi
+setup-pi:
+	@echo "🔧 Setting up systemd service on Pi..."
+	@scp scripts/dnd-bot.service $(PI_HOST):/tmp/
+	@ssh $(PI_HOST) "sudo mv /tmp/dnd-bot.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable dnd-bot"
+	@echo "✅ Service installed and enabled!"
+
+.PHONY: logs
+logs:
+	@echo "📜 Showing bot logs (Ctrl+C to exit)..."
+	@ssh $(PI_HOST) "sudo journalctl -fu dnd-bot"
+
+.PHONY: status
+status:
+	@ssh $(PI_HOST) "sudo systemctl status dnd-bot --no-pager"
+
+.PHONY: stop
+stop:
+	@echo "🛑 Stopping bot..."
+	@ssh $(PI_HOST) "sudo systemctl stop dnd-bot"
+
+.PHONY: start
+start:
+	@echo "▶️  Starting bot..."
+	@ssh $(PI_HOST) "sudo systemctl start dnd-bot"
