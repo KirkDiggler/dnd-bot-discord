@@ -176,19 +176,6 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 							Type:        discordgo.ApplicationCommandOptionSubCommand,
 						},
 						{
-							Name:        "show",
-							Description: "Show details of a character",
-							Type:        discordgo.ApplicationCommandOptionSubCommand,
-							Options: []*discordgo.ApplicationCommandOption{
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "id",
-									Description: "Character ID to show",
-									Required:    true,
-								},
-							},
-						},
-						{
 							Name:        "equip",
 							Description: "Equip a weapon from inventory",
 							Type:        discordgo.ApplicationCommandOptionSubCommand,
@@ -235,19 +222,6 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 						{
 							Name:        "inventory",
 							Description: "View character's weapon inventory",
-							Type:        discordgo.ApplicationCommandOptionSubCommand,
-							Options: []*discordgo.ApplicationCommandOption{
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "character_id",
-									Description: "Character ID",
-									Required:    true,
-								},
-							},
-						},
-						{
-							Name:        "sheet",
-							Description: "View your character sheet",
 							Type:        discordgo.ApplicationCommandOptionSubCommand,
 							Options: []*discordgo.ApplicationCommandOption{
 								{
@@ -526,23 +500,6 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 			if err := h.characterListHandler.Handle(req); err != nil {
 				log.Printf("Error handling character list: %v", err)
 			}
-		case "show":
-			// Get character ID from options
-			var characterID string
-			for _, opt := range subcommand.Options {
-				if opt.Name == "id" {
-					characterID = opt.StringValue()
-					break
-				}
-			}
-			req := &character.ShowRequest{
-				Session:     s,
-				Interaction: i,
-				CharacterID: characterID,
-			}
-			if err := h.characterShowHandler.Handle(req); err != nil {
-				log.Printf("Error handling character show: %v", err)
-			}
 		case "equip":
 			if err := h.characterWeaponHandler.HandleEquip(s, i); err != nil {
 				log.Printf("Error handling character equip: %v", err)
@@ -554,10 +511,6 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 		case "inventory":
 			if err := h.characterWeaponHandler.HandleInventory(s, i); err != nil {
 				log.Printf("Error handling character inventory: %v", err)
-			}
-		case "sheet":
-			if err := h.characterSheetHandler.Handle(s, i); err != nil {
-				log.Printf("Error handling character sheet: %v", err)
 			}
 		}
 	} else if subcommandGroup.Name == "session" && len(subcommandGroup.Options) > 0 {
@@ -1716,19 +1669,6 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						log.Printf("Error showing draft character: %v", err)
 					}
 				}
-			}
-		}
-	} else if ctx == "character" && action == "quickshow" {
-		// Quick show character from list
-		if len(parts) >= 3 {
-			characterID := parts[2]
-			req := &character.ShowRequest{
-				Session:     s,
-				Interaction: i,
-				CharacterID: characterID,
-			}
-			if err := h.characterShowHandler.Handle(req); err != nil {
-				log.Printf("Error handling character quickshow: %v", err)
 			}
 		}
 	} else if ctx == "character" && action == "sheet_refresh" {
