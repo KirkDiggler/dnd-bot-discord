@@ -3640,16 +3640,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					// Get the session to check if user is already in it
 					sess, err := h.ServiceProvider.SessionService.GetSession(context.Background(), sessionID)
 					if err != nil {
-						content := fmt.Sprintf("❌ Failed to get session: %v", err)
-						if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseUpdateMessage,
-							Data: &discordgo.InteractionResponseData{
-								Content:    content,
-								Components: []discordgo.MessageComponent{},
-							},
-						}); responseErr != nil {
-							log.Printf("Failed to respond with error message: %v", responseErr)
-						}
+						respondWithUpdateError(s, i, fmt.Sprintf("Failed to get session: %v", err))
 						return
 					}
 
@@ -3658,16 +3649,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						log.Printf("User %s not in session, joining...", i.Member.User.ID)
 						_, joinErr := h.ServiceProvider.SessionService.JoinSession(context.Background(), sessionID, i.Member.User.ID)
 						if joinErr != nil {
-							content := fmt.Sprintf("❌ Failed to join party: %v", joinErr)
-							if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-								Type: discordgo.InteractionResponseUpdateMessage,
-								Data: &discordgo.InteractionResponseData{
-									Content:    content,
-									Components: []discordgo.MessageComponent{},
-								},
-							}); responseErr != nil {
-								log.Printf("Failed to respond with error message: %v", responseErr)
-							}
+							respondWithUpdateError(s, i, fmt.Sprintf("Failed to join party: %v", joinErr))
 							return
 						}
 					}
@@ -3675,32 +3657,14 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					// Select the character
 					err = h.ServiceProvider.SessionService.SelectCharacter(context.Background(), sessionID, i.Member.User.ID, characterID)
 					if err != nil {
-						content := fmt.Sprintf("❌ Failed to select character: %v", err)
-						if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseUpdateMessage,
-							Data: &discordgo.InteractionResponseData{
-								Content:    content,
-								Components: []discordgo.MessageComponent{},
-							},
-						}); responseErr != nil {
-							log.Printf("Failed to respond with error message: %v", responseErr)
-						}
+						respondWithUpdateError(s, i, fmt.Sprintf("Failed to select character: %v", err))
 						return
 					}
 
 					// Get character details for confirmation
 					char, charErr := h.ServiceProvider.CharacterService.GetByID(characterID)
 					if charErr != nil {
-						content := fmt.Sprintf("❌ Failed to get character: %v", charErr)
-						if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseUpdateMessage,
-							Data: &discordgo.InteractionResponseData{
-								Content:    content,
-								Components: []discordgo.MessageComponent{},
-							},
-						}); responseErr != nil {
-							log.Printf("Failed to respond with error message: %v", responseErr)
-						}
+						respondWithUpdateError(s, i, fmt.Sprintf("Failed to get character: %v", charErr))
 						return
 					}
 
@@ -4458,5 +4422,18 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				}
 			}
 		}
+	}
+}
+
+// respondWithUpdateError is a helper function to respond with an error message using UpdateMessage
+func respondWithUpdateError(s *discordgo.Session, i *discordgo.InteractionCreate, message string) {
+	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Content:    fmt.Sprintf("❌ %s", message),
+			Components: []discordgo.MessageComponent{},
+		},
+	}); err != nil {
+		log.Printf("Failed to respond with error message: %v", err)
 	}
 }

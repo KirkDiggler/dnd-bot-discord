@@ -74,31 +74,12 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 
 	// If user has multiple active characters, show selection menu
 	if len(activeChars) > 1 {
-		options := make([]discordgo.SelectMenuOption, 0, len(activeChars))
-		for _, char := range activeChars {
-			options = append(options, discordgo.SelectMenuOption{
-				Label:       fmt.Sprintf("%s - %s", char.Name, char.GetDisplayInfo()),
-				Description: fmt.Sprintf("Level %d | HP: %d/%d | AC: %d", char.Level, char.CurrentHitPoints, char.MaxHitPoints, char.AC),
-				Value:       char.ID,
-			})
-		}
-
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "🎭 Select your character for this dungeon:",
-				Flags:   discordgo.MessageFlagsEphemeral,
-				Components: []discordgo.MessageComponent{
-					discordgo.ActionsRow{
-						Components: []discordgo.MessageComponent{
-							discordgo.SelectMenu{
-								CustomID:    fmt.Sprintf("dungeon:select_character:%s", sessionID),
-								Placeholder: "Choose your character...",
-								Options:     options,
-							},
-						},
-					},
-				},
+				Content:    "🎭 Select your character for this dungeon:",
+				Flags:      discordgo.MessageFlagsEphemeral,
+				Components: buildCharacterSelectMenu(activeChars, sessionID),
 			},
 		})
 	}
@@ -232,4 +213,28 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 			Flags:  discordgo.MessageFlagsEphemeral,
 		},
 	})
+}
+
+// buildCharacterSelectMenu creates a dropdown menu for character selection
+func buildCharacterSelectMenu(characters []*entities.Character, sessionID string) []discordgo.MessageComponent {
+	options := make([]discordgo.SelectMenuOption, 0, len(characters))
+	for _, char := range characters {
+		options = append(options, discordgo.SelectMenuOption{
+			Label:       fmt.Sprintf("%s - %s", char.Name, char.GetDisplayInfo()),
+			Description: fmt.Sprintf("Level %d | HP: %d/%d | AC: %d", char.Level, char.CurrentHitPoints, char.MaxHitPoints, char.AC),
+			Value:       char.ID,
+		})
+	}
+
+	return []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.SelectMenu{
+					CustomID:    fmt.Sprintf("dungeon:select_character:%s", sessionID),
+					Placeholder: "Choose your character...",
+					Options:     options,
+				},
+			},
+		},
+	}
 }
