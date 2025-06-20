@@ -32,7 +32,7 @@ func CalculateAC(character *entities.Character) int {
 	// Check equipped slots for armor
 	if character.EquippedSlots != nil {
 		for slot, item := range character.EquippedSlots {
-			if item != nil && slot == entities.SlotBody && item.GetEquipmentType() == "Armor" {
+			if item != nil && slot == entities.SlotBody && item.GetEquipmentType() == entities.EquipmentTypeArmor {
 				hasArmor = true
 				// Try to cast to Armor type to get AC values
 				if armor, ok := item.(*entities.Armor); ok && armor.ArmorClass != nil {
@@ -45,6 +45,7 @@ func CalculateAC(character *entities.Character) int {
 							dexMod = armor.ArmorClass.MaxBonus
 						}
 					}
+					// Note: If we reach here with valid ArmorClass data, we use it
 				} else {
 					// Fallback for armor without proper AC data
 					switch item.GetKey() {
