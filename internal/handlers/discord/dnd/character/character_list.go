@@ -165,13 +165,13 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 
 	// Add footer with helpful commands
 	embed.Footer = &discordgo.MessageEmbedFooter{
-		Text: "Use /dnd character show <id> to view details | /dnd character select <id> to set as active",
+		Text: "Click a character button to view their sheet | Use /dnd character create to make a new character",
 	}
 
 	// Add components for quick actions
 	components := []discordgo.MessageComponent{}
 
-	// Add show/edit buttons for active characters
+	// Add sheet view buttons for active characters
 	if len(activeChars) > 0 {
 		var buttons []discordgo.MessageComponent
 		for i, char := range activeChars {
@@ -181,27 +181,6 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 			}
 			buttons = append(buttons, discordgo.Button{
 				Label:    char.Name,
-				Style:    discordgo.SecondaryButton,
-				CustomID: fmt.Sprintf("character:quickshow:%s", char.ID),
-				Emoji: &discordgo.ComponentEmoji{
-					Name: "👁️",
-				},
-			})
-		}
-		if len(buttons) > 0 {
-			components = append(components, discordgo.ActionsRow{
-				Components: buttons,
-			})
-		}
-
-		// Add second row for edit buttons if we have any characters
-		var editButtons []discordgo.MessageComponent
-		for i, char := range activeChars {
-			if i >= 5 {
-				break
-			}
-			editButtons = append(editButtons, discordgo.Button{
-				Label:    "View " + char.Name,
 				Style:    discordgo.PrimaryButton,
 				CustomID: fmt.Sprintf("character:sheet_show:%s", char.ID),
 				Emoji: &discordgo.ComponentEmoji{
@@ -209,9 +188,9 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 				},
 			})
 		}
-		if len(editButtons) > 0 {
+		if len(buttons) > 0 {
 			components = append(components, discordgo.ActionsRow{
-				Components: editButtons,
+				Components: buttons,
 			})
 		}
 	}
