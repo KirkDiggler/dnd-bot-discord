@@ -256,16 +256,6 @@ func apiDamageTypeToDamageType(input *apiEntities.ReferenceItem) damage.Type {
 }
 
 func apiArmorToArmor(input *apiEntities.Armor) *entities.Armor {
-	armorClass := &entities.ArmorClass{
-		Base:     input.ArmorClass.Base,
-		DexBonus: input.ArmorClass.DexBonus,
-	}
-
-	// Set MaxBonus if it exists in the API response
-	if input.ArmorClass.MaxBonus != nil {
-		armorClass.MaxBonus = *input.ArmorClass.MaxBonus
-	}
-
 	return &entities.Armor{
 		Base: entities.BasicEquipment{
 			Key:    input.Key,
@@ -273,7 +263,12 @@ func apiArmorToArmor(input *apiEntities.Armor) *entities.Armor {
 			Weight: input.Weight,
 			Cost:   apiCostToCost(input.Cost),
 		},
-		ArmorClass:          armorClass,
+		ArmorClass: &entities.ArmorClass{
+			Base:     input.ArmorClass.Base,
+			DexBonus: input.ArmorClass.DexBonus,
+			// MaxBonus is not available from the API, so medium armor limits
+			// are handled in the AC calculator fallback logic
+		},
 		StealthDisadvantage: input.StealthDisadvantage,
 	}
 }
