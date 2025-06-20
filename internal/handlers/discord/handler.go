@@ -1700,10 +1700,12 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			if err != nil {
 				log.Printf("Error showing character sheet: %v", err)
 				// Provide user feedback on error
-				content := "❌ Failed to display character sheet. Please try again."
-				_, respondErr := s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-					Content: content,
-					Flags:   discordgo.MessageFlagsEphemeral,
+				respondErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "❌ Failed to display character sheet. Please try again.",
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
 				})
 				if respondErr != nil {
 					log.Printf("Error sending error response: %v", respondErr)

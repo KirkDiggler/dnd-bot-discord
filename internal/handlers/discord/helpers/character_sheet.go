@@ -39,12 +39,14 @@ func ShowCharacterSheet(s *discordgo.Session, i *discordgo.InteractionCreate, ch
 			},
 		})
 	} else {
-		// Send as ephemeral follow-up
-		_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-			Embeds:     []*discordgo.MessageEmbed{embed},
-			Components: components,
-			Flags:      discordgo.MessageFlagsEphemeral,
+		// Send new ephemeral response
+		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Embeds:     []*discordgo.MessageEmbed{embed},
+				Components: components,
+				Flags:      discordgo.MessageFlagsEphemeral,
+			},
 		})
-		return err
 	}
 }
