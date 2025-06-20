@@ -50,22 +50,18 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 
 	log.Printf("JoinParty - User %s has %d characters", i.Member.User.ID, len(chars))
 
-	// Find first active character
-	var playerChar *entities.Character
-	var activeCount int
+	// Find all active characters
+	var activeChars []*entities.Character
 	for _, char := range chars {
 		log.Printf("JoinParty - Character: ID=%s, Name=%s, Status=%s", char.ID, char.Name, char.Status)
 		if char.Status == entities.CharacterStatusActive {
-			activeCount++
-			if playerChar == nil { // Take first active
-				playerChar = char
-			}
+			activeChars = append(activeChars, char)
 		}
 	}
 
-	log.Printf("JoinParty - Found %d active characters", activeCount)
+	log.Printf("JoinParty - Found %d active characters", len(activeChars))
 
-	if playerChar == nil {
+	if len(activeChars) == 0 {
 		log.Printf("JoinParty - No active character found for user %s", i.Member.User.ID)
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -75,6 +71,21 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 			},
 		})
 	}
+
+	// If user has multiple active characters, show selection menu
+	if len(activeChars) > 1 {
+		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content:    "🎭 Select your character for this dungeon:",
+				Flags:      discordgo.MessageFlagsEphemeral,
+				Components: buildCharacterSelectMenu(activeChars, sessionID),
+			},
+		})
+	}
+
+	// If only one active character, use it
+	playerChar := activeChars[0]
 
 	// Check if character is complete
 	if !playerChar.IsComplete() {
@@ -202,4 +213,28 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 			Flags:  discordgo.MessageFlagsEphemeral,
 		},
 	})
+}
+
+// buildCharacterSelectMenu creates a dropdown menu for character selection
+func buildCharacterSelectMenu(characters []*entities.Character, sessionID string) []discordgo.MessageComponent {
+	options := make([]discordgo.SelectMenuOption, 0, len(characters))
+	for _, char := range characters {
+		options = append(options, discordgo.SelectMenuOption{
+			Label:       fmt.Sprintf("%s - %s", char.Name, char.GetDisplayInfo()),
+			Description: fmt.Sprintf("Level %d | HP: %d/%d | AC: %d", char.Level, char.CurrentHitPoints, char.MaxHitPoints, char.AC),
+			Value:       char.ID,
+		})
+	}
+
+	return []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.SelectMenu{
+					CustomID:    fmt.Sprintf("dungeon:select_character:%s", sessionID),
+					Placeholder: "Choose your character...",
+					Options:     options,
+				},
+			},
+		},
+	}
 }

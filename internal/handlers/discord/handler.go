@@ -3632,6 +3632,76 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				if err := h.dungeonJoinHandler.HandleButton(s, i, sessionID); err != nil {
 					log.Printf("Error handling dungeon join: %v", err)
 				}
+			case "select_character":
+				// Handle character selection for dungeon
+				if len(i.MessageComponentData().Values) > 0 {
+					characterID := i.MessageComponentData().Values[0]
+
+					// Get the session to check if user is already in it
+					sess, err := h.ServiceProvider.SessionService.GetSession(context.Background(), sessionID)
+					if err != nil {
+						respondWithUpdateError(s, i, fmt.Sprintf("Failed to get session: %v", err))
+						return
+					}
+
+					// If not in session, join it first
+					if !sess.IsUserInSession(i.Member.User.ID) {
+						log.Printf("User %s not in session, joining...", i.Member.User.ID)
+						_, joinErr := h.ServiceProvider.SessionService.JoinSession(context.Background(), sessionID, i.Member.User.ID)
+						if joinErr != nil {
+							respondWithUpdateError(s, i, fmt.Sprintf("Failed to join party: %v", joinErr))
+							return
+						}
+					}
+
+					// Select the character
+					err = h.ServiceProvider.SessionService.SelectCharacter(context.Background(), sessionID, i.Member.User.ID, characterID)
+					if err != nil {
+						respondWithUpdateError(s, i, fmt.Sprintf("Failed to select character: %v", err))
+						return
+					}
+
+					// Get character details for confirmation
+					char, charErr := h.ServiceProvider.CharacterService.GetByID(characterID)
+					if charErr != nil {
+						respondWithUpdateError(s, i, fmt.Sprintf("Failed to get character: %v", charErr))
+						return
+					}
+
+					// Success response
+					embed := &discordgo.MessageEmbed{
+						Title:       "🎉 Joined the Party!",
+						Description: fmt.Sprintf("**%s** has joined the dungeon delve!", char.Name),
+						Color:       0x2ecc71, // Green
+						Fields: []*discordgo.MessageEmbedField{
+							{
+								Name:   "Character",
+								Value:  fmt.Sprintf("%s (Level %d)", char.GetDisplayInfo(), char.Level),
+								Inline: true,
+							},
+							{
+								Name:   "HP",
+								Value:  fmt.Sprintf("%d/%d", char.CurrentHitPoints, char.MaxHitPoints),
+								Inline: true,
+							},
+							{
+								Name:   "AC",
+								Value:  fmt.Sprintf("%d", char.AC),
+								Inline: true,
+							},
+						},
+					}
+
+					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseUpdateMessage,
+						Data: &discordgo.InteractionResponseData{
+							Embeds:     []*discordgo.MessageEmbed{embed},
+							Components: []discordgo.MessageComponent{},
+						},
+					}); responseErr != nil {
+						log.Printf("Failed to respond with success message: %v", responseErr)
+					}
+				}
 			case "enter":
 				if len(parts) >= 4 {
 					roomType := parts[3]
@@ -4352,5 +4422,18 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				}
 			}
 		}
+	}
+}
+
+// respondWithUpdateError is a helper function to respond with an error message using UpdateMessage
+func respondWithUpdateError(s *discordgo.Session, i *discordgo.InteractionCreate, message string) {
+	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Content:    fmt.Sprintf("❌ %s", message),
+			Components: []discordgo.MessageComponent{},
+		},
+	}); err != nil {
+		log.Printf("Failed to respond with error message: %v", err)
 	}
 }
