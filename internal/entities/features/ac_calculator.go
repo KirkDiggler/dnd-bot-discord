@@ -37,7 +37,11 @@ func CalculateAC(character *entities.Character) int {
 				// Try to cast to Armor type to get AC values
 				if armor, ok := item.(*entities.Armor); ok && armor.ArmorClass != nil {
 					baseAC = armor.ArmorClass.Base
-					if !armor.ArmorClass.DexBonus {
+					// Special handling for leather armor - D&D 5e API may incorrectly set DexBonus to false
+					if item.GetKey() == "leather-armor" || item.GetKey() == "studded-leather-armor" {
+						// Light armor always uses full DEX bonus
+						// Keep dexMod as is
+					} else if !armor.ArmorClass.DexBonus {
 						dexMod = 0 // Heavy armor doesn't use DEX
 					} else if armor.ArmorClass.MaxBonus > 0 {
 						// Limit dex bonus for medium armor
