@@ -58,6 +58,51 @@ func TestCalculateAC_LeatherArmorWithDex(t *testing.T) {
 	assert.Equal(t, 15, ac, "AC with leather armor (fallback) and +4 DEX should be 15")
 }
 
+func TestCalculateAC_MediumArmorLimitsDex(t *testing.T) {
+	// Create a character with +4 DEX bonus
+	char := &entities.Character{
+		ID:      "test-char",
+		OwnerID: "test-owner",
+		Name:    "Test Fighter",
+		Level:   1,
+		Attributes: map[entities.Attribute]*entities.AbilityScore{
+			entities.AttributeDexterity: {
+				Score: 18, // +4 bonus
+				Bonus: 4,
+			},
+		},
+		EquippedSlots: make(map[entities.Slot]entities.Equipment),
+	}
+
+	// Test hide armor (medium) WITHOUT ArmorClass data (fallback)
+	hideArmor := &entities.Armor{
+		Base: entities.BasicEquipment{
+			Key:  "hide-armor",
+			Name: "Hide Armor",
+		},
+		ArmorCategory: entities.ArmorCategoryMedium,
+		ArmorClass:    nil,
+	}
+	char.EquippedSlots[entities.SlotBody] = hideArmor
+
+	ac := features.CalculateAC(char)
+	assert.Equal(t, 14, ac, "AC with hide armor should be 14 (12 base + 2 max DEX)")
+
+	// Test scale mail (medium) WITHOUT ArmorClass data
+	scaleMail := &entities.Armor{
+		Base: entities.BasicEquipment{
+			Key:  "scale-mail",
+			Name: "Scale Mail",
+		},
+		ArmorCategory: entities.ArmorCategoryMedium,
+		ArmorClass:    nil,
+	}
+	char.EquippedSlots[entities.SlotBody] = scaleMail
+
+	ac = features.CalculateAC(char)
+	assert.Equal(t, 16, ac, "AC with scale mail should be 16 (14 base + 2 max DEX)")
+}
+
 func TestCalculateAC_ChainMailIgnoresDex(t *testing.T) {
 	// Create a character with +4 DEX bonus
 	char := &entities.Character{

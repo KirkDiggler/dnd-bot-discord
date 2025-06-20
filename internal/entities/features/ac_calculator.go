@@ -72,6 +72,16 @@ func CalculateAC(character *entities.Character) int {
 						if dexMod > 2 {
 							dexMod = 2
 						}
+					case "breastplate":
+						baseAC = 14
+						if dexMod > 2 {
+							dexMod = 2
+						}
+					case "half-plate", "half-plate-armor":
+						baseAC = 15
+						if dexMod > 2 {
+							dexMod = 2
+						}
 					case "chain-mail":
 						baseAC = 16
 						dexMod = 0 // Heavy armor doesn't use DEX
