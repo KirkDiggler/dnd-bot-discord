@@ -1770,6 +1770,726 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 			}
 		}
+	} else if ctx == "character" && action == "inventory" {
+		// Show inventory management interface
+		if len(parts) >= 3 {
+			characterID := parts[2]
+
+			// Get the character
+			char, err := h.ServiceProvider.CharacterService.GetByID(characterID)
+			if err != nil {
+				respondWithUpdateError(s, i, fmt.Sprintf("Failed to get character: %v", err))
+				return
+			}
+
+			// Verify ownership
+			if char.OwnerID != i.Member.User.ID {
+				respondWithUpdateError(s, i, "You can only manage your own character's inventory!")
+				return
+			}
+
+			// Build equipment category select menu
+			embed := &discordgo.MessageEmbed{
+				Title:       fmt.Sprintf("🎒 %s's Equipment", char.Name),
+				Description: "Select a category to view and manage your equipment:",
+				Color:       0x3498db,
+			}
+
+			components := []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.SelectMenu{
+							CustomID:    fmt.Sprintf("character:equipment_category:%s", characterID),
+							Placeholder: "Choose equipment category...",
+							Options: []discordgo.SelectMenuOption{
+								{
+									Label:       "Weapons",
+									Description: "View and equip weapons",
+									Value:       "weapons",
+									Emoji:       &discordgo.ComponentEmoji{Name: "⚔️"},
+								},
+								{
+									Label:       "Armor",
+									Description: "View and equip armor",
+									Value:       "armor",
+									Emoji:       &discordgo.ComponentEmoji{Name: "🛡️"},
+								},
+								{
+									Label:       "All Items",
+									Description: "View all inventory items",
+									Value:       "all",
+									Emoji:       &discordgo.ComponentEmoji{Name: "📦"},
+								},
+							},
+						},
+					},
+				},
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							Label:    "Back to Sheet",
+							Style:    discordgo.SecondaryButton,
+							CustomID: fmt.Sprintf("character:sheet_refresh:%s", characterID),
+							Emoji:    &discordgo.ComponentEmoji{Name: "⬅️"},
+						},
+					},
+				},
+			}
+
+			// Update the message
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseUpdateMessage,
+				Data: &discordgo.InteractionResponseData{
+					Embeds:     []*discordgo.MessageEmbed{embed},
+					Components: components,
+				},
+			})
+			if err != nil {
+				log.Printf("Error showing inventory menu: %v", err)
+			}
+		}
+	} else if ctx == "character" && action == "equipment_category" {
+		// Handle equipment category selection
+		if len(parts) >= 3 && len(i.MessageComponentData().Values) > 0 {
+			characterID := parts[2]
+			category := i.MessageComponentData().Values[0]
+
+			// Get the character
+			char, err := h.ServiceProvider.CharacterService.GetByID(characterID)
+			if err != nil {
+				respondWithUpdateError(s, i, fmt.Sprintf("Failed to get character: %v", err))
+				return
+			}
+
+			// Verify ownership
+			if char.OwnerID != i.Member.User.ID {
+				respondWithUpdateError(s, i, "You can only manage your own character's inventory!")
+				return
+			}
+
+			// Build equipment list based on category
+			var items []entities.Equipment
+			var categoryName string
+
+			switch category {
+			case "weapons":
+				categoryName = "Weapons"
+				for _, equipList := range char.Inventory {
+					for _, equip := range equipList {
+						if weapon, ok := equip.(*entities.Weapon); ok {
+							items = append(items, weapon)
+						}
+					}
+				}
+			case "armor":
+				categoryName = "Armor"
+				for _, equipList := range char.Inventory {
+					for _, equip := range equipList {
+						if armor, ok := equip.(*entities.Armor); ok {
+							items = append(items, armor)
+						}
+					}
+				}
+			case "all":
+				categoryName = "All Equipment"
+				for _, equipList := range char.Inventory {
+					for _, equip := range equipList {
+						items = append(items, equip)
+					}
+				}
+			}
+
+			// Build the embed
+			embed := &discordgo.MessageEmbed{
+				Title:       fmt.Sprintf("⚔️ %s - %s", char.Name, categoryName),
+				Description: fmt.Sprintf("You have %d item(s) in this category.", len(items)),
+				Color:       0x3498db,
+				Fields:      []*discordgo.MessageEmbedField{},
+			}
+
+			// Add currently equipped items info
+			equippedInfo := "**Currently Equipped:**\n"
+			hasEquipped := false
+
+			if weapon := char.EquippedSlots[entities.SlotMainHand]; weapon != nil {
+				equippedInfo += fmt.Sprintf("Main Hand: %s\n", weapon.GetName())
+				hasEquipped = true
+			}
+			if item := char.EquippedSlots[entities.SlotOffHand]; item != nil {
+				equippedInfo += fmt.Sprintf("Off Hand: %s\n", item.GetName())
+				hasEquipped = true
+			}
+			if armor := char.EquippedSlots[entities.SlotBody]; armor != nil {
+				equippedInfo += fmt.Sprintf("Armor: %s\n", armor.GetName())
+				hasEquipped = true
+			}
+
+			if !hasEquipped {
+				equippedInfo += "*Nothing equipped*"
+			}
+
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "🛡️ Current Equipment",
+				Value:  equippedInfo,
+				Inline: false,
+			})
+
+			// Build components - start with category select and back button
+			components := []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.SelectMenu{
+							CustomID:    fmt.Sprintf("character:equipment_category:%s", characterID),
+							Placeholder: "Choose equipment category...",
+							Options: []discordgo.SelectMenuOption{
+								{
+									Label:       "Weapons",
+									Description: "View and equip weapons",
+									Value:       "weapons",
+									Emoji:       &discordgo.ComponentEmoji{Name: "⚔️"},
+									Default:     category == "weapons",
+								},
+								{
+									Label:       "Armor",
+									Description: "View and equip armor",
+									Value:       "armor",
+									Emoji:       &discordgo.ComponentEmoji{Name: "🛡️"},
+									Default:     category == "armor",
+								},
+								{
+									Label:       "All Items",
+									Description: "View all inventory items",
+									Value:       "all",
+									Emoji:       &discordgo.ComponentEmoji{Name: "📦"},
+									Default:     category == "all",
+								},
+							},
+						},
+					},
+				},
+			}
+
+			// Add item selection if there are items
+			if len(items) > 0 {
+				options := []discordgo.SelectMenuOption{}
+				for i, item := range items {
+					if i >= 25 { // Discord limit
+						break
+					}
+
+					// Build item description
+					desc := ""
+					if weapon, ok := item.(*entities.Weapon); ok {
+						desc = fmt.Sprintf("Damage: %dd%d", weapon.Damage.DiceCount, weapon.Damage.DiceSize)
+						if weapon.Damage.Bonus > 0 {
+							desc += fmt.Sprintf("+%d", weapon.Damage.Bonus)
+						}
+					} else if armor, ok := item.(*entities.Armor); ok {
+						if armor.ArmorClass != nil {
+							desc = fmt.Sprintf("AC: %d", armor.ArmorClass.Base)
+							if armor.ArmorClass.MaxBonus > 0 {
+								desc += fmt.Sprintf(" (max Dex: %d)", armor.ArmorClass.MaxBonus)
+							}
+						} else {
+							desc = fmt.Sprintf("Type: %s", armor.ArmorCategory)
+						}
+					}
+
+					// Check if equipped
+					isEquipped := false
+					for _, equipped := range char.EquippedSlots {
+						if equipped != nil && equipped.GetKey() == item.GetKey() {
+							isEquipped = true
+							break
+						}
+					}
+
+					label := item.GetName()
+					if isEquipped {
+						label += " (Equipped)"
+					}
+
+					options = append(options, discordgo.SelectMenuOption{
+						Label:       label,
+						Description: desc,
+						Value:       item.GetKey(),
+					})
+				}
+
+				if len(options) > 0 {
+					components = append(components, discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.SelectMenu{
+								CustomID:    fmt.Sprintf("character:select_item:%s:%s", characterID, category),
+								Placeholder: "Select an item to view details...",
+								Options:     options,
+							},
+						},
+					})
+				}
+			} else {
+				embed.Description = fmt.Sprintf("You don't have any %s in your inventory.", strings.ToLower(categoryName))
+			}
+
+			// Add back button
+			components = append(components, discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.Button{
+						Label:    "Back to Sheet",
+						Style:    discordgo.SecondaryButton,
+						CustomID: fmt.Sprintf("character:sheet_refresh:%s", characterID),
+						Emoji:    &discordgo.ComponentEmoji{Name: "⬅️"},
+					},
+				},
+			})
+
+			// Update the message
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseUpdateMessage,
+				Data: &discordgo.InteractionResponseData{
+					Embeds:     []*discordgo.MessageEmbed{embed},
+					Components: components,
+				},
+			})
+			if err != nil {
+				log.Printf("Error showing equipment category: %v", err)
+			}
+		}
+	} else if ctx == "character" && action == "select_item" {
+		// Handle item selection for details and equip/unequip
+		if len(parts) >= 4 && len(i.MessageComponentData().Values) > 0 {
+			characterID := parts[2]
+			category := parts[3]
+			itemKey := i.MessageComponentData().Values[0]
+
+			// Get the character
+			char, err := h.ServiceProvider.CharacterService.GetByID(characterID)
+			if err != nil {
+				respondWithUpdateError(s, i, fmt.Sprintf("Failed to get character: %v", err))
+				return
+			}
+
+			// Verify ownership
+			if char.OwnerID != i.Member.User.ID {
+				respondWithUpdateError(s, i, "You can only manage your own character's inventory!")
+				return
+			}
+
+			// Find the item in inventory
+			var selectedItem entities.Equipment
+			for _, equipList := range char.Inventory {
+				for _, equip := range equipList {
+					if equip.GetKey() == itemKey {
+						selectedItem = equip
+						break
+					}
+				}
+				if selectedItem != nil {
+					break
+				}
+			}
+
+			if selectedItem == nil {
+				respondWithUpdateError(s, i, "Item not found in inventory!")
+				return
+			}
+
+			// Check if item is equipped
+			isEquipped := false
+			var equippedSlot entities.Slot
+			for slot, equipped := range char.EquippedSlots {
+				if equipped != nil && equipped.GetKey() == itemKey {
+					isEquipped = true
+					equippedSlot = slot
+					break
+				}
+			}
+
+			// Build item details embed
+			embed := &discordgo.MessageEmbed{
+				Title:  fmt.Sprintf("📋 %s", selectedItem.GetName()),
+				Color:  0x3498db,
+				Fields: []*discordgo.MessageEmbedField{},
+			}
+
+			// Add item-specific details
+			if weapon, ok := selectedItem.(*entities.Weapon); ok {
+				embed.Fields = append(embed.Fields,
+					&discordgo.MessageEmbedField{
+						Name: "⚔️ Weapon Details",
+						Value: fmt.Sprintf("**Damage:** %dd%d+%d %s\n**Properties:** %s",
+							weapon.Damage.DiceCount,
+							weapon.Damage.DiceSize,
+							weapon.Damage.Bonus,
+							weapon.Damage.DamageType,
+							getWeaponPropertiesString(weapon)),
+						Inline: false,
+					},
+				)
+
+				// Add two-handed damage if applicable
+				if weapon.TwoHandedDamage != nil {
+					embed.Fields = append(embed.Fields,
+						&discordgo.MessageEmbedField{
+							Name: "💪 Two-Handed",
+							Value: fmt.Sprintf("**Damage:** %dd%d+%d",
+								weapon.TwoHandedDamage.DiceCount,
+								weapon.TwoHandedDamage.DiceSize,
+								weapon.TwoHandedDamage.Bonus),
+							Inline: false,
+						},
+					)
+				}
+			} else if armor, ok := selectedItem.(*entities.Armor); ok {
+				armorInfo := fmt.Sprintf("**Type:** %s", armor.ArmorCategory)
+				if armor.ArmorClass != nil {
+					armorInfo = fmt.Sprintf("**Base AC:** %d\n%s", armor.ArmorClass.Base, armorInfo)
+					if armor.ArmorClass.MaxBonus > 0 {
+						armorInfo += fmt.Sprintf("\n**Max Dex Bonus:** %d", armor.ArmorClass.MaxBonus)
+					}
+				}
+				if armor.StrMin > 0 {
+					armorInfo += fmt.Sprintf("\n**Min Strength:** %d", armor.StrMin)
+				}
+				if armor.StealthDisadvantage {
+					armorInfo += "\n**Stealth:** Disadvantage"
+				}
+
+				embed.Fields = append(embed.Fields,
+					&discordgo.MessageEmbedField{
+						Name:   "🛡️ Armor Details",
+						Value:  armorInfo,
+						Inline: false,
+					},
+				)
+			}
+
+			// Add equipment status
+			statusValue := "Not equipped"
+			if isEquipped {
+				statusValue = fmt.Sprintf("Equipped in: **%s**", equippedSlot)
+			}
+			embed.Fields = append(embed.Fields,
+				&discordgo.MessageEmbedField{
+					Name:   "📍 Status",
+					Value:  statusValue,
+					Inline: false,
+				},
+			)
+
+			// Build action buttons
+			components := []discordgo.MessageComponent{}
+
+			if isEquipped {
+				// Show unequip button
+				components = append(components, discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							Label:    "Unequip",
+							Style:    discordgo.DangerButton,
+							CustomID: fmt.Sprintf("character:unequip:%s:%s", characterID, itemKey),
+							Emoji:    &discordgo.ComponentEmoji{Name: "❌"},
+						},
+					},
+				})
+			} else {
+				// Show equip buttons based on item type
+				buttons := []discordgo.MessageComponent{}
+
+				if weapon, ok := selectedItem.(*entities.Weapon); ok {
+					// Check if it's two-handed
+					isTwoHanded := false
+					for _, prop := range weapon.Properties {
+						if prop != nil && strings.ToLower(prop.Key) == "two-handed" {
+							isTwoHanded = true
+							break
+						}
+					}
+
+					if isTwoHanded {
+						buttons = append(buttons, discordgo.Button{
+							Label:    "Equip (Two-Handed)",
+							Style:    discordgo.SuccessButton,
+							CustomID: fmt.Sprintf("character:equip:%s:%s:two-handed", characterID, itemKey),
+							Emoji:    &discordgo.ComponentEmoji{Name: "🗡️"},
+						})
+					} else {
+						buttons = append(buttons,
+							discordgo.Button{
+								Label:    "Equip Main Hand",
+								Style:    discordgo.SuccessButton,
+								CustomID: fmt.Sprintf("character:equip:%s:%s:main-hand", characterID, itemKey),
+								Emoji:    &discordgo.ComponentEmoji{Name: "✋"},
+							},
+							discordgo.Button{
+								Label:    "Equip Off Hand",
+								Style:    discordgo.SuccessButton,
+								CustomID: fmt.Sprintf("character:equip:%s:%s:off-hand", characterID, itemKey),
+								Emoji:    &discordgo.ComponentEmoji{Name: "🤚"},
+							},
+						)
+					}
+				} else if _, ok := selectedItem.(*entities.Armor); ok {
+					buttons = append(buttons, discordgo.Button{
+						Label:    "Equip Armor",
+						Style:    discordgo.SuccessButton,
+						CustomID: fmt.Sprintf("character:equip:%s:%s:body", characterID, itemKey),
+						Emoji:    &discordgo.ComponentEmoji{Name: "🛡️"},
+					})
+				}
+
+				if len(buttons) > 0 {
+					components = append(components, discordgo.ActionsRow{
+						Components: buttons,
+					})
+				}
+			}
+
+			// Add back button
+			components = append(components, discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.Button{
+						Label:    fmt.Sprintf("Back to %s", strings.Title(category)),
+						Style:    discordgo.SecondaryButton,
+						CustomID: fmt.Sprintf("character:equipment_category:%s", characterID),
+						Emoji:    &discordgo.ComponentEmoji{Name: "⬅️"},
+					},
+					discordgo.Button{
+						Label:    "Back to Sheet",
+						Style:    discordgo.SecondaryButton,
+						CustomID: fmt.Sprintf("character:sheet_refresh:%s", characterID),
+						Emoji:    &discordgo.ComponentEmoji{Name: "📋"},
+					},
+				},
+			})
+
+			// Update the message
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseUpdateMessage,
+				Data: &discordgo.InteractionResponseData{
+					Embeds:     []*discordgo.MessageEmbed{embed},
+					Components: components,
+				},
+			})
+			if err != nil {
+				log.Printf("Error showing item details: %v", err)
+			}
+		}
+	} else if ctx == "character" && action == "equip" {
+		// Handle equipping an item
+		if len(parts) >= 5 {
+			characterID := parts[2]
+			itemKey := parts[3]
+			slotType := parts[4]
+
+			// Get the character
+			char, err := h.ServiceProvider.CharacterService.GetByID(characterID)
+			if err != nil {
+				respondWithUpdateError(s, i, fmt.Sprintf("Failed to get character: %v", err))
+				return
+			}
+
+			// Verify ownership
+			if char.OwnerID != i.Member.User.ID {
+				respondWithUpdateError(s, i, "You can only manage your own character's inventory!")
+				return
+			}
+
+			// Find the item in inventory
+			var selectedItem entities.Equipment
+			for _, equipList := range char.Inventory {
+				for _, equip := range equipList {
+					if equip.GetKey() == itemKey {
+						selectedItem = equip
+						break
+					}
+				}
+				if selectedItem != nil {
+					break
+				}
+			}
+
+			if selectedItem == nil {
+				respondWithUpdateError(s, i, "Item not found in inventory!")
+				return
+			}
+
+			// The Character.Equip method handles slot assignment internally based on the item
+			// We just need to verify the slot type matches the item type
+			switch slotType {
+			case "main-hand", "off-hand", "two-handed":
+				// Verify it's a weapon
+				if _, ok := selectedItem.(*entities.Weapon); !ok {
+					respondWithUpdateError(s, i, "This item cannot be equipped as a weapon!")
+					return
+				}
+			case "body":
+				// Verify it's armor
+				if _, ok := selectedItem.(*entities.Armor); !ok {
+					respondWithUpdateError(s, i, "This item cannot be equipped as armor!")
+					return
+				}
+			default:
+				respondWithUpdateError(s, i, "Invalid equipment slot!")
+				return
+			}
+
+			// Equip the item using its key
+			success := char.Equip(itemKey)
+			if !success {
+				respondWithUpdateError(s, i, "Failed to equip item!")
+				return
+			}
+
+			// Save the character equipment changes
+			err = h.ServiceProvider.CharacterService.UpdateEquipment(char)
+			if err != nil {
+				respondWithUpdateError(s, i, fmt.Sprintf("Failed to save equipment: %v", err))
+				return
+			}
+
+			// Show success message and refresh inventory
+			embed := &discordgo.MessageEmbed{
+				Title:       "✅ Item Equipped!",
+				Description: fmt.Sprintf("**%s** has been equipped!", selectedItem.GetName()),
+				Color:       0x2ecc71,
+			}
+
+			// Add updated equipment info
+			equippedInfo := "**Currently Equipped:**\n"
+			if weapon := char.EquippedSlots[entities.SlotMainHand]; weapon != nil {
+				equippedInfo += fmt.Sprintf("Main Hand: %s\n", weapon.GetName())
+			}
+			if item := char.EquippedSlots[entities.SlotOffHand]; item != nil {
+				equippedInfo += fmt.Sprintf("Off Hand: %s\n", item.GetName())
+			}
+			if weapon := char.EquippedSlots[entities.SlotTwoHanded]; weapon != nil {
+				equippedInfo += fmt.Sprintf("Two-Handed: %s\n", weapon.GetName())
+			}
+			if armor := char.EquippedSlots[entities.SlotBody]; armor != nil {
+				equippedInfo += fmt.Sprintf("Armor: %s\n", armor.GetName())
+			}
+
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "🛡️ Current Equipment",
+				Value:  equippedInfo,
+				Inline: false,
+			})
+
+			// Show buttons to continue
+			components := []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							Label:    "View Inventory",
+							Style:    discordgo.PrimaryButton,
+							CustomID: fmt.Sprintf("character:inventory:%s", characterID),
+							Emoji:    &discordgo.ComponentEmoji{Name: "🎒"},
+						},
+						discordgo.Button{
+							Label:    "Back to Sheet",
+							Style:    discordgo.SecondaryButton,
+							CustomID: fmt.Sprintf("character:sheet_refresh:%s", characterID),
+							Emoji:    &discordgo.ComponentEmoji{Name: "📋"},
+						},
+					},
+				},
+			}
+
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseUpdateMessage,
+				Data: &discordgo.InteractionResponseData{
+					Embeds:     []*discordgo.MessageEmbed{embed},
+					Components: components,
+				},
+			})
+			if err != nil {
+				log.Printf("Error showing equip success: %v", err)
+			}
+		}
+	} else if ctx == "character" && action == "unequip" {
+		// Handle unequipping an item
+		if len(parts) >= 4 {
+			characterID := parts[2]
+			itemKey := parts[3]
+
+			// Get the character
+			char, err := h.ServiceProvider.CharacterService.GetByID(characterID)
+			if err != nil {
+				respondWithUpdateError(s, i, fmt.Sprintf("Failed to get character: %v", err))
+				return
+			}
+
+			// Verify ownership
+			if char.OwnerID != i.Member.User.ID {
+				respondWithUpdateError(s, i, "You can only manage your own character's inventory!")
+				return
+			}
+
+			// Find which slot has the item and unequip it
+			var foundSlot entities.Slot
+			var foundItem entities.Equipment
+			for slot, equipped := range char.EquippedSlots {
+				if equipped != nil && equipped.GetKey() == itemKey {
+					foundSlot = slot
+					foundItem = equipped
+					break
+				}
+			}
+
+			if foundItem == nil {
+				respondWithUpdateError(s, i, "Item is not equipped!")
+				return
+			}
+
+			// Unequip the item by setting the slot to nil
+			char.EquippedSlots[foundSlot] = nil
+
+			// Save the character equipment changes
+			err = h.ServiceProvider.CharacterService.UpdateEquipment(char)
+			if err != nil {
+				respondWithUpdateError(s, i, fmt.Sprintf("Failed to save equipment: %v", err))
+				return
+			}
+
+			// Show success message
+			embed := &discordgo.MessageEmbed{
+				Title:       "✅ Item Unequipped!",
+				Description: fmt.Sprintf("**%s** has been unequipped from **%s**", foundItem.GetName(), foundSlot),
+				Color:       0x2ecc71,
+			}
+
+			// Show buttons to continue
+			components := []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							Label:    "View Inventory",
+							Style:    discordgo.PrimaryButton,
+							CustomID: fmt.Sprintf("character:inventory:%s", characterID),
+							Emoji:    &discordgo.ComponentEmoji{Name: "🎒"},
+						},
+						discordgo.Button{
+							Label:    "Back to Sheet",
+							Style:    discordgo.SecondaryButton,
+							CustomID: fmt.Sprintf("character:sheet_refresh:%s", characterID),
+							Emoji:    &discordgo.ComponentEmoji{Name: "📋"},
+						},
+					},
+				},
+			}
+
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseUpdateMessage,
+				Data: &discordgo.InteractionResponseData{
+					Embeds:     []*discordgo.MessageEmbed{embed},
+					Components: components,
+				},
+			})
+			if err != nil {
+				log.Printf("Error showing unequip success: %v", err)
+			}
+		}
 	} else if ctx == "session_manage" {
 		// Handle session management actions
 		if len(parts) >= 3 {
@@ -4436,4 +5156,24 @@ func respondWithUpdateError(s *discordgo.Session, i *discordgo.InteractionCreate
 	}); err != nil {
 		log.Printf("Failed to respond with error message: %v", err)
 	}
+}
+
+// getWeaponPropertiesString converts weapon properties to a comma-separated string
+func getWeaponPropertiesString(weapon *entities.Weapon) string {
+	if len(weapon.Properties) == 0 {
+		return "None"
+	}
+
+	var props []string
+	for _, prop := range weapon.Properties {
+		if prop != nil {
+			props = append(props, prop.Name)
+		}
+	}
+
+	if len(props) == 0 {
+		return "None"
+	}
+
+	return strings.Join(props, ", ")
 }
