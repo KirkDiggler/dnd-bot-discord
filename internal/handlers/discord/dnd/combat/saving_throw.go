@@ -32,9 +32,9 @@ func NewSavingThrowHandler(cfg *SavingThrowHandlerConfig) *SavingThrowHandler {
 }
 
 // ShowSavingThrowPrompt displays a prompt for a player to make a saving throw
-func (h *SavingThrowHandler) ShowSavingThrowPrompt(s *discordgo.Session, i *discordgo.InteractionCreate, 
+func (h *SavingThrowHandler) ShowSavingThrowPrompt(s *discordgo.Session, i *discordgo.InteractionCreate,
 	character *entities.Character, attribute entities.Attribute, dc int, reason string) error {
-	
+
 	// Calculate the bonus
 	bonus := character.GetSavingThrowBonus(attribute)
 	profIndicator := ""
@@ -59,7 +59,7 @@ func (h *SavingThrowHandler) ShowSavingThrowPrompt(s *discordgo.Session, i *disc
 			},
 			{
 				Name:   "Need to Roll",
-				Value:  fmt.Sprintf("%d or higher", dc - bonus),
+				Value:  fmt.Sprintf("%d or higher", dc-bonus),
 				Inline: true,
 			},
 		},
@@ -91,9 +91,9 @@ func (h *SavingThrowHandler) ShowSavingThrowPrompt(s *discordgo.Session, i *disc
 }
 
 // HandleSavingThrowRoll processes a saving throw roll
-func (h *SavingThrowHandler) HandleSavingThrowRoll(s *discordgo.Session, i *discordgo.InteractionCreate, 
+func (h *SavingThrowHandler) HandleSavingThrowRoll(s *discordgo.Session, i *discordgo.InteractionCreate,
 	characterID string, attribute entities.Attribute, dc int) error {
-	
+
 	// Get the character
 	char, err := h.characterService.GetByID(characterID)
 	if err != nil {

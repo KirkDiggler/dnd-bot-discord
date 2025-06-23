@@ -67,9 +67,9 @@ func TestCharacterSavingThrows(t *testing.T) {
 		assert.Equal(t, 4, char.GetSavingThrowBonus(AttributeConstitution)) // 1 + 3
 
 		// Without proficiency: just ability mod
-		assert.Equal(t, 2, char.GetSavingThrowBonus(AttributeDexterity))    // 2 + 0
-		assert.Equal(t, 1, char.GetSavingThrowBonus(AttributeWisdom))       // 1 + 0
-		assert.Equal(t, -1, char.GetSavingThrowBonus(AttributeCharisma))    // -1 + 0
+		assert.Equal(t, 2, char.GetSavingThrowBonus(AttributeDexterity)) // 2 + 0
+		assert.Equal(t, 1, char.GetSavingThrowBonus(AttributeWisdom))    // 1 + 0
+		assert.Equal(t, -1, char.GetSavingThrowBonus(AttributeCharisma)) // -1 + 0
 	})
 
 	t.Run("RollSavingThrow", func(t *testing.T) {
@@ -77,7 +77,7 @@ func TestCharacterSavingThrows(t *testing.T) {
 		roll, total, err := char.RollSavingThrow(AttributeStrength)
 		require.NoError(t, err)
 		require.NotNil(t, roll)
-		
+
 		// Total should be roll result + bonus (6)
 		expectedMin := 1 + 6  // Natural 1 + bonus
 		expectedMax := 20 + 6 // Natural 20 + bonus
@@ -91,9 +91,9 @@ func TestCharacterSkillChecks(t *testing.T) {
 	char := &Character{
 		Level: 5, // +3 proficiency bonus
 		Attributes: map[Attribute]*AbilityScore{
-			AttributeStrength:     {Score: 16, Bonus: 3},
-			AttributeDexterity:    {Score: 14, Bonus: 2},
-			AttributeWisdom:       {Score: 12, Bonus: 1},
+			AttributeStrength:  {Score: 16, Bonus: 3},
+			AttributeDexterity: {Score: 14, Bonus: 2},
+			AttributeWisdom:    {Score: 12, Bonus: 1},
 		},
 		Proficiencies: map[ProficiencyType][]*Proficiency{
 			ProficiencyTypeSkill: {
@@ -128,7 +128,7 @@ func TestCharacterSkillChecks(t *testing.T) {
 		roll, total, err := char.RollSkillCheck("skill-athletics", AttributeStrength)
 		require.NoError(t, err)
 		require.NotNil(t, roll)
-		
+
 		// Total should be roll result + bonus (6)
 		expectedMin := 1 + 6  // Natural 1 + bonus
 		expectedMax := 20 + 6 // Natural 20 + bonus

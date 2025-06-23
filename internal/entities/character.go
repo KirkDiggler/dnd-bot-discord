@@ -769,7 +769,7 @@ func (c *Character) GetSavingThrowBonus(attribute Attribute) int {
 // RollSavingThrow rolls a saving throw for the given attribute
 func (c *Character) RollSavingThrow(attribute Attribute) (*dice.RollResult, int, error) {
 	bonus := c.GetSavingThrowBonus(attribute)
-	
+
 	// Roll 1d20
 	result, err := dice.Roll(1, 20, bonus)
 	if err != nil {
@@ -830,7 +830,7 @@ func (c *Character) GetSkillBonus(skillKey string, attribute Attribute) int {
 // RollSkillCheck rolls a skill check
 func (c *Character) RollSkillCheck(skillKey string, attribute Attribute) (*dice.RollResult, int, error) {
 	bonus := c.GetSkillBonus(skillKey, attribute)
-	
+
 	// Roll 1d20
 	result, err := dice.Roll(1, 20, bonus)
 	if err != nil {
