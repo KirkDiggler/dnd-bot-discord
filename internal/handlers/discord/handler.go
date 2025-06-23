@@ -2739,11 +2739,25 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					}
 				}
 
+				// Get initiative roll details from combat log
+				var rollDetails strings.Builder
+				if len(encounter.CombatLog) > 0 {
+					// Skip the first entry which is "Rolling Initiative" header
+					for i := 1; i < len(encounter.CombatLog) && i <= len(encounter.Combatants)+1; i++ {
+						rollDetails.WriteString(encounter.CombatLog[i] + "\n")
+					}
+				}
+
 				embed := &discordgo.MessageEmbed{
 					Title:       "🎲 Initiative Rolled!",
 					Description: "Combat order has been determined:",
 					Color:       0x2ecc71, // Green
 					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:   "🎯 Initiative Rolls",
+							Value:  rollDetails.String(),
+							Inline: false,
+						},
 						{
 							Name:   "⚔️ Turn Order",
 							Value:  initiativeList.String(),
