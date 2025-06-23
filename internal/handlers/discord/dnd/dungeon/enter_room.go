@@ -284,6 +284,24 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		Fields:      []*discordgo.MessageEmbedField{},
 	}
 
+	// Show initiative rolls from combat log
+	if len(enc.CombatLog) > 0 {
+		var initiativeRolls strings.Builder
+		// Skip the first entry which is "Rolling Initiative" header
+		for i := 1; i < len(enc.CombatLog) && i <= len(enc.Combatants)+1; i++ {
+			if i < len(enc.CombatLog) {
+				initiativeRolls.WriteString(enc.CombatLog[i] + "\n")
+			}
+		}
+		if initiativeRolls.Len() > 0 {
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "🎲 Initiative Rolls",
+				Value:  initiativeRolls.String(),
+				Inline: false,
+			})
+		}
+	}
+
 	// Show monster actions if any occurred
 	if len(monsterActions) > 0 {
 		var actionList strings.Builder

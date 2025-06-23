@@ -1,5 +1,7 @@
 package encounters
 
+//go:generate mockgen -destination=mock/mock_repository.go -package=mockencrepo -source=repository.go
+
 import (
 	"context"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
