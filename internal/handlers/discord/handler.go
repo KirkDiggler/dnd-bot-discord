@@ -2744,9 +2744,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				if len(encounter.CombatLog) > 0 {
 					// Skip the first entry which is "Rolling Initiative" header
 					for i := 1; i < len(encounter.CombatLog) && i <= len(encounter.Combatants)+1; i++ {
-						if i < len(encounter.CombatLog) {
-							rollDetails.WriteString(encounter.CombatLog[i] + "\n")
-						}
+						rollDetails.WriteString(encounter.CombatLog[i] + "\n")
 					}
 				}
 

@@ -289,9 +289,7 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		var initiativeRolls strings.Builder
 		// Skip the first entry which is "Rolling Initiative" header
 		for i := 1; i < len(enc.CombatLog) && i <= len(enc.Combatants)+1; i++ {
-			if i < len(enc.CombatLog) {
-				initiativeRolls.WriteString(enc.CombatLog[i] + "\n")
-			}
+			initiativeRolls.WriteString(enc.CombatLog[i] + "\n")
 		}
 		if initiativeRolls.Len() > 0 {
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
