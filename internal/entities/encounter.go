@@ -73,6 +73,16 @@ type Combatant struct {
 	Actions    []*MonsterAction `json:"actions,omitempty"`     // Available actions
 }
 
+// IsAlive returns true if the combatant has more than 0 HP
+func (c *Combatant) IsAlive() bool {
+	return c.CurrentHP > 0
+}
+
+// CanAct returns true if the combatant is alive and has actions available
+func (c *Combatant) CanAct() bool {
+	return c.IsAlive() && len(c.Actions) > 0
+}
+
 // NewEncounter creates a new encounter
 func NewEncounter(id, sessionID, channelID, name, createdBy string) *Encounter {
 	return &Encounter{
