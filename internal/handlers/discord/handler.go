@@ -3826,11 +3826,26 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					return
 				}
 
-				// Create embed for target selection
+				// Update the action controller with target selection
 				embed := &discordgo.MessageEmbed{
-					Title:       fmt.Sprintf("⚔️ %s's Attack", current.Name),
-					Description: "Select your target:",
-					Color:       0xe74c3c,
+					Title:       fmt.Sprintf("🎮 %s's Action Controller", current.Name),
+					Description: "**Select your target:**",
+					Color:       0xe74c3c, // Red for attack mode
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:   "📊 Your Status",
+							Value:  fmt.Sprintf("HP: %d/%d | AC: %d", current.CurrentHP, current.MaxHP, current.AC),
+							Inline: false,
+						},
+					},
+				}
+
+				// Target buttons with back button
+				backButton := discordgo.Button{
+					Label:    "Back to Actions",
+					Style:    discordgo.SecondaryButton,
+					CustomID: fmt.Sprintf("encounter:my_turn:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "⬅️"},
 				}
 
 				components := []discordgo.MessageComponent{
@@ -3839,16 +3854,31 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					},
 				}
 
+				// Add back button if there's room
+				if len(targetButtons) < 5 {
+					// Append to existing buttons
+					targetButtons = append(targetButtons, backButton)
+					components = []discordgo.MessageComponent{
+						discordgo.ActionsRow{
+							Components: targetButtons,
+						},
+					}
+				} else {
+					// Add as second row if first is full
+					components = append(components, discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{backButton},
+					})
+				}
+
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Type: discordgo.InteractionResponseUpdateMessage,
 					Data: &discordgo.InteractionResponseData{
 						Embeds:     []*discordgo.MessageEmbed{embed},
 						Components: components,
-						Flags:      discordgo.MessageFlagsEphemeral,
 					},
 				})
 				if err != nil {
-					log.Printf("Error showing target selection: %v", err)
+					log.Printf("Error updating to target selection: %v", err)
 				}
 			case "select_target":
 				log.Printf("=== ENTERING select_target handler ===")
@@ -3860,15 +3890,17 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				targetID := parts[3]
 				log.Printf("Target selected: %s for encounter: %s", targetID, encounterID)
 
-				// Defer the response to give us time to process
+				// Update the message immediately with a loading state
 				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+					Type: discordgo.InteractionResponseUpdateMessage,
 					Data: &discordgo.InteractionResponseData{
-						Flags: discordgo.MessageFlagsEphemeral,
+						Content: "⏳ Processing attack...",
+						Embeds:  []*discordgo.MessageEmbed{},
+						Components: []discordgo.MessageComponent{},
 					},
 				})
 				if err != nil {
-					log.Printf("Failed to defer response: %v", err)
+					log.Printf("Failed to update with loading state: %v", err)
 					return
 				}
 
@@ -4029,13 +4061,19 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					}}
 				}
 
-				// Build result embed
+				// Build result embed for the action controller
 				log.Printf("Building attack embed - Attack results count: %d, Attack name: %s", len(attackResults), attackName)
 				embed := &discordgo.MessageEmbed{
-					Title:       fmt.Sprintf("⚔️ %s attacks %s!", current.Name, target.Name),
-					Description: fmt.Sprintf("**Attack:** %s", attackName),
-					Color:       0xe74c3c,
-					Fields:      []*discordgo.MessageEmbedField{},
+					Title:       fmt.Sprintf("🎮 %s's Action Controller", current.Name),
+					Description: fmt.Sprintf("**Attack Result:** %s vs %s", attackName, target.Name),
+					Color:       0x2ecc71, // Green for success
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:   "📊 Your Status",
+							Value:  fmt.Sprintf("HP: %d/%d | AC: %d", current.CurrentHP, current.MaxHP, current.AC),
+							Inline: false,
+						},
+					},
 				}
 
 				totalDamageDealt := 0
@@ -4362,10 +4400,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					}
 				}
 
-				// Add combat control buttons
+				// Return to action controller buttons
 				components := []discordgo.MessageComponent{
 					discordgo.ActionsRow{
 						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label:    "Back to Actions",
+								Style:    discordgo.PrimaryButton,
+								CustomID: fmt.Sprintf("encounter:my_turn:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "🎮"},
+							},
 							discordgo.Button{
 								Label:    "Attack Again",
 								Style:    discordgo.DangerButton,
@@ -4374,29 +4418,19 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 								Disabled: !isPlayerTurn,
 							},
 							discordgo.Button{
-								Label:    "Next Turn",
-								Style:    discordgo.PrimaryButton,
+								Label:    "End Turn",
+								Style:    discordgo.SecondaryButton,
 								CustomID: fmt.Sprintf("encounter:next_turn:%s", encounterID),
 								Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
-							},
-							discordgo.Button{
-								Label:    "View Status",
-								Style:    discordgo.SecondaryButton,
-								CustomID: fmt.Sprintf("encounter:view:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
-							},
-							discordgo.Button{
-								Label:    "History",
-								Style:    discordgo.SecondaryButton,
-								CustomID: fmt.Sprintf("encounter:history:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "📜"},
 							},
 						},
 					},
 				}
 
-				// Use InteractionResponseEdit since we deferred the response
+				// Edit the original interaction message
+				emptyContent := ""
 				_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+					Content:    &emptyContent, // Clear loading message
 					Embeds:     &[]*discordgo.MessageEmbed{embed},
 					Components: &components,
 				})
