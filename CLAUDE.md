@@ -124,6 +124,12 @@ make test-integration
 # Run linter
 make lint
 
+# Format code
+make fmt
+
+# Pre-commit checks (ALWAYS run before committing!)
+make pre-commit
+
 # Build
 make build
 
@@ -133,6 +139,15 @@ make generate-mocks
 # Run locally (needs Redis and Discord token)
 DISCORD_TOKEN=xxx REDIS_URL=redis://localhost:6379 ./bin/dnd-bot
 ```
+
+#### Pre-Commit Workflow
+**IMPORTANT**: Always run `make pre-commit` before committing code. This will:
+1. Format all Go code with `go fmt`
+2. Tidy module dependencies with `go mod tidy`
+3. Run the linter to catch common issues
+4. Run unit tests to ensure nothing is broken
+
+If any step fails, fix the issues before committing.
 
 #### Mock Generation
 - mockgen is installed at `/home/kirk/go/bin/mockgen`
