@@ -15,6 +15,10 @@ help:
 	@echo "  make fmt            - Format code and tidy modules"
 	@echo "  make pre-commit     - Run all pre-commit checks (fmt, lint, test)"
 	@echo "  make install-tools  - Install development tools"
+	@echo ""
+	@echo "GitHub workflow:"
+	@echo "  make start-issue ISSUE=<num> - Start working on an issue"
+	@echo "  make create-pr ISSUE=<num> TITLE=\"<title>\" - Create PR for an issue"
 
 # Test targets
 test: test-unit
@@ -120,3 +124,21 @@ pre-commit:
 	@echo "→ Running unit tests..."
 	@go test ./... -short -race
 	@echo "✓ All pre-commit checks passed!"
+
+# GitHub workflow helpers
+.PHONY: start-issue create-pr
+start-issue:
+	@if [ -z "$(ISSUE)" ]; then \
+		echo "Usage: make start-issue ISSUE=<number>"; \
+		echo "Example: make start-issue ISSUE=57"; \
+		exit 1; \
+	fi
+	@./scripts/start-issue.sh $(ISSUE)
+
+create-pr:
+	@if [ -z "$(ISSUE)" ] || [ -z "$(TITLE)" ]; then \
+		echo "Usage: make create-pr ISSUE=<number> TITLE=\"<title>\""; \
+		echo "Example: make create-pr ISSUE=57 TITLE=\"Refactor attack logic\""; \
+		exit 1; \
+	fi
+	@./scripts/create-pr.sh $(ISSUE) "$(TITLE)"
