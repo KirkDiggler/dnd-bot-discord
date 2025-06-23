@@ -705,3 +705,137 @@ func (c *Character) Clone() *Character {
 
 	return clone
 }
+
+// GetProficiencyBonus returns the character's proficiency bonus based on level
+func (c *Character) GetProficiencyBonus() int {
+	if c.Level == 0 {
+		return 2 // Default for level 1
+	}
+	return 2 + ((c.Level - 1) / 4)
+}
+
+// HasSavingThrowProficiency checks if the character is proficient in a saving throw
+func (c *Character) HasSavingThrowProficiency(attribute Attribute) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.Proficiencies == nil || c.Proficiencies[ProficiencyTypeSavingThrow] == nil {
+		return false
+	}
+
+	// Convert attribute to the expected saving throw key format
+	savingThrowKey := fmt.Sprintf("saving-throw-%s", strings.ToLower(string(attribute)))
+
+	for _, prof := range c.Proficiencies[ProficiencyTypeSavingThrow] {
+		if strings.ToLower(prof.Key) == savingThrowKey {
+			return true
+		}
+	}
+
+	return false
+}
+
+// GetSavingThrowBonus calculates the total saving throw bonus for an attribute
+func (c *Character) GetSavingThrowBonus(attribute Attribute) int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Get ability modifier
+	modifier := 0
+	if abilityScore, exists := c.Attributes[attribute]; exists && abilityScore != nil {
+		modifier = abilityScore.Bonus
+	}
+
+	// Check proficiency without locking again
+	isProficient := false
+	if c.Proficiencies != nil && c.Proficiencies[ProficiencyTypeSavingThrow] != nil {
+		savingThrowKey := fmt.Sprintf("saving-throw-%s", strings.ToLower(string(attribute)))
+		for _, prof := range c.Proficiencies[ProficiencyTypeSavingThrow] {
+			if strings.ToLower(prof.Key) == savingThrowKey {
+				isProficient = true
+				break
+			}
+		}
+	}
+
+	// Add proficiency bonus if proficient
+	if isProficient {
+		modifier += c.GetProficiencyBonus()
+	}
+
+	return modifier
+}
+
+// RollSavingThrow rolls a saving throw for the given attribute
+func (c *Character) RollSavingThrow(attribute Attribute) (*dice.RollResult, int, error) {
+	bonus := c.GetSavingThrowBonus(attribute)
+
+	// Roll 1d20
+	result, err := dice.Roll(1, 20, bonus)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to roll saving throw: %w", err)
+	}
+
+	return result, result.Total, nil
+}
+
+// HasSkillProficiency checks if the character is proficient in a skill
+func (c *Character) HasSkillProficiency(skillKey string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.Proficiencies == nil || c.Proficiencies[ProficiencyTypeSkill] == nil {
+		return false
+	}
+
+	for _, prof := range c.Proficiencies[ProficiencyTypeSkill] {
+		if strings.EqualFold(prof.Key, skillKey) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// GetSkillBonus calculates the total skill bonus
+func (c *Character) GetSkillBonus(skillKey string, attribute Attribute) int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Get ability modifier
+	modifier := 0
+	if abilityScore, exists := c.Attributes[attribute]; exists && abilityScore != nil {
+		modifier = abilityScore.Bonus
+	}
+
+	// Check proficiency without locking again
+	isProficient := false
+	if c.Proficiencies != nil && c.Proficiencies[ProficiencyTypeSkill] != nil {
+		for _, prof := range c.Proficiencies[ProficiencyTypeSkill] {
+			if strings.EqualFold(prof.Key, skillKey) {
+				isProficient = true
+				break
+			}
+		}
+	}
+
+	// Add proficiency bonus if proficient
+	if isProficient {
+		modifier += c.GetProficiencyBonus()
+	}
+
+	return modifier
+}
+
+// RollSkillCheck rolls a skill check
+func (c *Character) RollSkillCheck(skillKey string, attribute Attribute) (*dice.RollResult, int, error) {
+	bonus := c.GetSkillBonus(skillKey, attribute)
+
+	// Roll 1d20
+	result, err := dice.Roll(1, 20, bonus)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to roll skill check: %w", err)
+	}
+
+	return result, result.Total, nil
+}
