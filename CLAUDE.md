@@ -341,3 +341,43 @@ The interactive character sheet aims to provide a rich, real-time D&D experience
 - GitHub Issues: https://github.com/KirkDiggler/dnd-bot-discord/issues
 - GitHub Project: https://github.com/users/KirkDiggler/projects/6
 - This is Kirk's personal project for D&D sessions
+
+## Session Summary - December 20, 2024
+
+### Major Accomplishments
+1. **Interactive Equipment Management** (PR #64) ✅
+   - Added "View Inventory" button to character sheet
+   - Category-based equipment browsing (Weapons, Armor, All)
+   - Equip/unequip functionality with visual feedback
+   - Proper persistence with UpdateEquipment service method
+
+2. **AC Calculation Fixes** (PR #65) ✅
+   - Fixed armor not applying to AC (was comparing string "Armor" instead of constant)
+   - Fixed DEX bonus not applying to armor
+   - Added AC recalculation on equipment changes
+   - Added comprehensive tests for light/medium/heavy armor
+
+3. **Character List Usability** (PR #67) ✅
+   - Consolidated to single row of character buttons
+   - Removed confusing dual view options
+   - Removed redundant commands: show, sheet, equip, unequip, inventory
+   - Fixed interaction error with proper response handling
+
+4. **Raspberry Pi Deployment** (Issue #68, PR pending)
+   - Created deployment infrastructure in Makefile
+   - Added systemd service configuration
+   - Discovered Pi running EOL Ubuntu 23.10
+   - Recommendation: Install Ubuntu Server 24.04 LTS
+   - Pi IP: 10.0.0.129, Architecture: aarch64
+
+### Current State
+- All equipment management through interactive UI
+- Character sheets fully functional with proper AC calculations
+- Cleaner command structure (only create/list remain)
+- Deployment ready once Pi has SSH + Redis
+
+### Next Session TODO
+1. Finish Pi deployment once Ubuntu Server installed
+2. Run `make setup-pi` then `make deploy`
+3. Consider equipment autocomplete enhancement
+4. Address difficulty balance in dungeons (Issue #61)
