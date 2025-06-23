@@ -3557,27 +3557,52 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					Fields:      []*discordgo.MessageEmbedField{},
 				}
 
-				// Show recent combat log
+				// Show full combat log grouped by type
 				if len(encounter.CombatLog) > 0 {
-					var logText strings.Builder
-					// Show last 10 entries
-					start := 0
-					if len(encounter.CombatLog) > 10 {
-						start = len(encounter.CombatLog) - 10
+					var initiativeRolls strings.Builder
+					var combatActions strings.Builder
+					
+					for _, entry := range encounter.CombatLog {
+						if strings.Contains(entry, "rolls initiative:") || strings.Contains(entry, "Rolling Initiative") {
+							initiativeRolls.WriteString(entry + "\n")
+						} else {
+							combatActions.WriteString(entry + "\n")
+						}
 					}
 
-					for i := start; i < len(encounter.CombatLog); i++ {
-						logText.WriteString(encounter.CombatLog[i] + "\n")
+					// Show initiative rolls first
+					if initiativeRolls.Len() > 0 {
+						embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+							Name:   "🎲 Initiative Rolls",
+							Value:  initiativeRolls.String(),
+							Inline: false,
+						})
 					}
 
-					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-						Name:   "Recent Actions",
-						Value:  logText.String(),
-						Inline: false,
-					})
+					// Then show combat actions
+					if combatActions.Len() > 0 {
+						// Split into chunks if too long
+						actions := combatActions.String()
+						if len(actions) > 1000 {
+							// Show most recent actions that fit
+							lines := strings.Split(actions, "\n")
+							recent := strings.Join(lines[max(0, len(lines)-15):], "\n")
+							embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+								Name:   "⚔️ Combat Actions (Recent)",
+								Value:  recent,
+								Inline: false,
+							})
+						} else {
+							embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+								Name:   "⚔️ Combat Actions",
+								Value:  actions,
+								Inline: false,
+							})
+						}
+					}
 				} else {
 					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-						Name:   "Recent Actions",
+						Name:   "Combat Log",
 						Value:  "*No combat actions yet*",
 						Inline: false,
 					})
@@ -3720,6 +3745,73 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				})
 				if err != nil {
 					log.Printf("Error showing action controller: %v", err)
+				}
+			case "continue_round":
+				// Handle continuing to the next round
+				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					if err != nil {
+						log.Printf("Error responding with error: %v", err)
+					}
+					return
+				}
+
+				// Advance to the next turn (which will trigger NextRound if at end of turn order)
+				err = h.ServiceProvider.EncounterService.NextTurn(context.Background(), encounterID, i.Member.User.ID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to advance round: %v", err)
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					if err != nil {
+						log.Printf("Error responding with error: %v", err)
+					}
+					return
+				}
+
+				// Acknowledge the interaction
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: fmt.Sprintf("⏭️ Continuing to Round %d!", encounter.Round),
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				})
+				if err != nil {
+					log.Printf("Error responding to continue round: %v", err)
+				}
+
+				// Update the combat log if we have the message ID
+				if encounter.MessageID != "" && encounter.ChannelID != "" {
+					// Get updated encounter after turn advancement
+					encounter, err = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+					if err == nil {
+						// Process monster turns at the start of the new round
+						h.processMonsterTurns(s, encounter, i.ChannelID)
+						
+						// Get room info (we might need to adjust this based on your dungeon structure)
+						room := &dungeon.Room{
+							Name: encounter.Name,
+							Description: encounter.Description,
+						}
+						
+						// Update the combat log
+						if updateErr := dungeon.UpdateCombatLogMessage(s, encounter.ChannelID, encounter.MessageID, room, encounter); updateErr != nil {
+							log.Printf("Failed to update combat log after round continue: %v", updateErr)
+						}
+					}
 				}
 			case "attack":
 				log.Printf("Attack button pressed for encounter: %s by user: %s", encounterID, i.Member.User.ID)
@@ -5332,4 +5424,96 @@ func getWeaponPropertiesString(weapon *entities.Weapon) string {
 	}
 
 	return strings.Join(props, ", ")
+}
+
+// processMonsterTurns processes monster turns at the start of a round
+func (h *Handler) processMonsterTurns(s *discordgo.Session, enc *entities.Encounter, channelID string) {
+	botID := s.State.User.ID
+	
+	// Process monster turns until we reach a player
+	for enc.Status == entities.EncounterStatusActive {
+		current := enc.GetCurrentCombatant()
+		if current == nil || current.Type == entities.CombatantTypePlayer {
+			break // Stop when we reach a player's turn or no current combatant
+		}
+		
+		// Process monster turn
+		log.Printf("Processing monster turn for %s in round %d", current.Name, enc.Round)
+		
+		// Find a target (first active player)
+		var target *entities.Combatant
+		for _, combatant := range enc.Combatants {
+			if combatant.Type == entities.CombatantTypePlayer && combatant.IsActive {
+				target = combatant
+				break
+			}
+		}
+		
+		if target != nil && len(current.Actions) > 0 {
+			// Use first available action
+			action := current.Actions[0]
+			
+			// Roll attack
+			attackResult, _ := dice.Roll(1, 20, 0)
+			attackRoll := attackResult.Total
+			totalAttack := attackRoll + action.AttackBonus
+			
+			// Check if hit
+			hit := totalAttack >= target.AC
+			if hit && len(action.Damage) > 0 {
+				totalDamage := 0
+				for _, dmg := range action.Damage {
+					diceCount := dmg.DiceCount
+					if attackRoll == 20 { // Critical hit doubles dice
+						diceCount *= 2
+					}
+					rollResult, _ := dice.Roll(diceCount, dmg.DiceSize, dmg.Bonus)
+					totalDamage += rollResult.Total
+				}
+				
+				// Apply damage
+				err := h.ServiceProvider.EncounterService.ApplyDamage(context.Background(), enc.ID, target.ID, botID, totalDamage)
+				if err != nil {
+					log.Printf("Error applying monster damage: %v", err)
+				}
+				
+				// Log the action
+				logEntry := fmt.Sprintf("%s attacks %s with %s for %d damage!", current.Name, target.Name, action.Name, totalDamage)
+				if logErr := h.ServiceProvider.EncounterService.LogCombatAction(context.Background(), enc.ID, logEntry); logErr != nil {
+					log.Printf("Error logging combat action: %v", logErr)
+				}
+			} else {
+				// Log the miss
+				logEntry := fmt.Sprintf("%s misses %s with %s!", current.Name, target.Name, action.Name)
+				if logErr := h.ServiceProvider.EncounterService.LogCombatAction(context.Background(), enc.ID, logEntry); logErr != nil {
+					log.Printf("Error logging combat action: %v", logErr)
+				}
+			}
+		}
+		
+		// Advance turn
+		err := h.ServiceProvider.EncounterService.NextTurn(context.Background(), enc.ID, botID)
+		if err != nil {
+			log.Printf("Error advancing monster turn: %v", err)
+			break
+		}
+		
+		// Re-get encounter for next iteration
+		enc, err = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), enc.ID)
+		if err != nil {
+			log.Printf("Error getting encounter after monster turn: %v", err)
+			break
+		}
+		
+		// Update the combat log after each monster action
+		if enc.MessageID != "" && enc.ChannelID != "" {
+			room := &dungeon.Room{
+				Name: enc.Name,
+				Description: enc.Description,
+			}
+			if updateErr := dungeon.UpdateCombatLogMessage(s, enc.ChannelID, enc.MessageID, room, enc); updateErr != nil {
+				log.Printf("Failed to update combat log after monster turn: %v", updateErr)
+			}
+		}
+	}
 }

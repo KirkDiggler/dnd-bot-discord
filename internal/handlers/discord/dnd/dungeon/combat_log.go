@@ -100,7 +100,45 @@ func buildCombatLogEmbed(room *Room, enc *entities.Encounter) *discordgo.Message
 
 	// Show current turn if active
 	if enc.Status == entities.EncounterStatusActive {
-		if current := enc.GetCurrentCombatant(); current != nil {
+		// Check if we're at the end of a round
+		if enc.Turn >= len(enc.TurnOrder)-1 && len(enc.TurnOrder) > 0 {
+			// Show round summary
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "🏁 Round Complete",
+				Value:  fmt.Sprintf("**Round %d Complete!** Click continue to start Round %d.", enc.Round, enc.Round+1),
+				Inline: false,
+			})
+			
+			// Show round summary stats
+			var roundSummary strings.Builder
+			roundSummary.WriteString(fmt.Sprintf("📊 **Round %d Summary:**\n", enc.Round))
+			
+			// Count damage dealt this round
+			knockouts := 0
+			
+			// Parse combat log for this round's actions
+			for _, entry := range enc.CombatLog {
+				if strings.HasPrefix(entry, fmt.Sprintf("Round %d:", enc.Round)) {
+					if strings.Contains(entry, "damage") {
+						// Simple damage parsing - could be improved
+						if strings.Contains(entry, "defeated") {
+							knockouts++
+						}
+					}
+				}
+			}
+			
+			if knockouts > 0 {
+				roundSummary.WriteString(fmt.Sprintf("💀 Combatants defeated: %d\n", knockouts))
+			}
+			roundSummary.WriteString(fmt.Sprintf("⏱️ Turns taken: %d", len(enc.TurnOrder)))
+			
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "📜 Round Details",
+				Value:  roundSummary.String(),
+				Inline: false,
+			})
+		} else if current := enc.GetCurrentCombatant(); current != nil {
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 				Name:   "🎯 Current Turn",
 				Value:  fmt.Sprintf("**%s's turn** (Round %d)", current.Name, enc.Round),
@@ -146,6 +184,24 @@ func buildCombatLogComponents(enc *entities.Encounter) []discordgo.MessageCompon
 	// No buttons if combat is completed
 	if enc.Status != entities.EncounterStatusActive {
 		return nil
+	}
+
+	// Check if we need to show round continue button
+	// This happens when we're at the end of the turn order (about to start new round)
+	if enc.Turn >= len(enc.TurnOrder)-1 && len(enc.TurnOrder) > 0 {
+		// Show continue button for next round
+		return []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.Button{
+						Label:    fmt.Sprintf("Continue to Round %d", enc.Round+1),
+						Style:    discordgo.SuccessButton,
+						CustomID: fmt.Sprintf("encounter:continue_round:%s", enc.ID),
+						Emoji:    &discordgo.ComponentEmoji{Name: "▶️"},
+					},
+				},
+			},
+		}
 	}
 
 	// Get current combatant
@@ -195,6 +251,9 @@ func CreateCombatEndMessage(s *discordgo.Session, channelID string, room *Room, 
 	embed := &discordgo.MessageEmbed{
 		Title:  fmt.Sprintf("⚔️ Combat Complete - %s", room.Name),
 		Fields: []*discordgo.MessageEmbedField{},
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: fmt.Sprintf("Combat ID: %s | Use /dnd encounter history to view full details", enc.ID),
+		},
 	}
 
 	if playersWon {
@@ -261,6 +320,23 @@ func CreateCombatEndMessage(s *discordgo.Session, channelID string, room *Room, 
 		Inline: false,
 	})
 
-	_, err := s.ChannelMessageSendEmbed(channelID, embed)
+	// Add button to view full history
+	components := []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.Button{
+					Label:    "View Full Combat History",
+					Style:    discordgo.SecondaryButton,
+					CustomID: fmt.Sprintf("encounter:history:%s", enc.ID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "📜"},
+				},
+			},
+		},
+	}
+
+	_, err := s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
+		Embed:      embed,
+		Components: components,
+	})
 	return err
 }
