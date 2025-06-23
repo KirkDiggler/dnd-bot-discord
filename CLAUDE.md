@@ -162,10 +162,37 @@ If any step fails, fix the issues before committing.
 - Empty draft characters (no name/race/class) are hidden from list
 
 ### Git Workflow
-- PR branch: `comprehensive-tests` 
 - Main branch has branch protection
 - CI must pass before merge
 - Using squash and merge strategy
+
+#### Issue and PR Best Practices
+1. **Before Starting Work**:
+   - Check if an issue exists, if not create one
+   - Add issue to project board: `gh issue edit <number> --add-project "Co Op Dungeon Adventure Start"`
+   - Assign yourself: `gh issue edit <number> --assignee @me`
+
+2. **Branch Naming**:
+   - Use descriptive branch names: `fix-<issue-number>-<short-description>`
+   - Example: `fix-59-dead-monsters-attacking`
+
+3. **Commit Messages**:
+   - Reference issues: `Fix dead monsters attacking (#59)`
+   - Use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`
+
+4. **Pull Request**:
+   - **ALWAYS include `Fixes #<issue-number>`** in PR description
+   - This automatically closes the issue when PR is merged
+   - Example: `Fixes #59` or `Partially addresses #74`
+
+5. **Quick Commands**:
+   ```bash
+   # Add issue to project
+   gh issue edit <number> --add-project "Co Op Dungeon Adventure Start"
+   
+   # Create PR with fixes
+   gh pr create --title "Fix: Dead monsters continue to attack" --body "Fixes #59"
+   ```
 
 #### IMPORTANT: PR Merge Workflow
 - **ALWAYS merge PRs before starting new features**
