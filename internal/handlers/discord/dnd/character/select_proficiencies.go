@@ -220,7 +220,7 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 			Components: []discordgo.MessageComponent{
 				discordgo.SelectMenu{
 					CustomID:    fmt.Sprintf("character_create:confirm_proficiency:%s:%s:%s:%d", req.RaceKey, req.ClassKey, req.ChoiceType, req.ChoiceIndex),
-					Placeholder: fmt.Sprintf("Select %d %s", currentChoice.Count, currentChoice.Name),
+					Placeholder: truncatePlaceholder(formatSelectPlaceholder(currentChoice.Count)),
 					Options:     selectOptions,
 					MinValues:   &currentChoice.Count,
 					MaxValues:   currentChoice.Count,
@@ -237,6 +237,27 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 	})
 
 	return err
+}
+
+// formatSelectPlaceholder returns properly formatted placeholder text with correct singular/plural form
+func formatSelectPlaceholder(count int) string {
+	if count == 1 {
+		return "Select 1 skill"
+	}
+	return fmt.Sprintf("Select %d skills", count)
+}
+
+// truncatePlaceholder ensures placeholder text doesn't exceed Discord's 150 character limit
+func truncatePlaceholder(text string) string {
+	const maxLength = 150
+	if len(text) <= maxLength {
+		return text
+	}
+	// Truncate and add ellipsis to indicate truncation
+	if maxLength > 3 {
+		return text[:maxLength-3] + "..."
+	}
+	return text[:maxLength]
 }
 
 // getOptionName extracts the display name from an option
