@@ -27,4 +27,8 @@ type MonsterAction struct {
 	AttackBonus int              `json:"attack_bonus"`
 	Description string           `json:"desc"`
 	Damage      []*damage.Damage `json:"damage"`
+	
+	// For abilities that require saving throws
+	SaveDC        int       `json:"save_dc,omitempty"`        // DC for the saving throw
+	SaveAttribute Attribute `json:"save_attribute,omitempty"` // Which attribute to save against (STR, DEX, etc.)
 }

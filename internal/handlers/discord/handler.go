@@ -13,6 +13,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/attack"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/combat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/dungeon"
 	encounterHandler "github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/encounter"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/help"
@@ -68,6 +69,10 @@ type Handler struct {
 
 	// Help handler
 	helpHandler *help.HelpHandler
+
+	// Combat handlers
+	savingThrowHandler *combat.SavingThrowHandler
+	skillCheckHandler  *combat.SkillCheckHandler
 }
 
 // HandlerConfig holds configuration for the Discord handler
@@ -150,6 +155,15 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 
 		// Initialize help handler
 		helpHandler: help.NewHelpHandler(),
+
+		// Initialize combat handlers
+		savingThrowHandler: combat.NewSavingThrowHandler(&combat.SavingThrowHandlerConfig{
+			CharacterService: cfg.ServiceProvider.CharacterService,
+			EncounterService: cfg.ServiceProvider.EncounterService,
+		}),
+		skillCheckHandler: combat.NewSkillCheckHandler(&combat.SkillCheckHandlerConfig{
+			CharacterService: cfg.ServiceProvider.CharacterService,
+		}),
 	}
 }
 
@@ -4376,6 +4390,30 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				})
 				if err != nil {
 					log.Printf("Error showing party status: %v", err)
+				}
+			}
+		}
+	} else if ctx == "saving_throw" {
+		// Handle saving throw rolls
+		if len(parts) >= 4 {
+			characterID := parts[1]
+			attribute := entities.Attribute(parts[2])
+			dc, err := strconv.Atoi(parts[3])
+			if err == nil {
+				if err := h.savingThrowHandler.HandleSavingThrowRoll(s, i, characterID, attribute, dc); err != nil {
+					log.Printf("Error handling saving throw: %v", err)
+				}
+			}
+		}
+	} else if ctx == "skill_check" {
+		// Handle skill check rolls
+		if len(parts) >= 4 {
+			characterID := parts[1]
+			skillKey := parts[2]
+			dc, err := strconv.Atoi(parts[3])
+			if err == nil {
+				if err := h.skillCheckHandler.HandleSkillCheckRoll(s, i, characterID, skillKey, dc); err != nil {
+					log.Printf("Error handling skill check: %v", err)
 				}
 			}
 		}
