@@ -28,6 +28,7 @@ import (
 // Handler handles all Discord interactions
 type Handler struct {
 	ServiceProvider                       *services.Provider
+	combatLogUpdater                      *CombatLogUpdater
 	characterCreateHandler                *character.CreateHandler
 	characterRaceSelectHandler            *character.RaceSelectHandler
 	characterShowClassesHandler           *character.ShowClassesHandler
@@ -82,7 +83,7 @@ type HandlerConfig struct {
 
 // NewHandler creates a new Discord handler
 func NewHandler(cfg *HandlerConfig) *Handler {
-	return &Handler{
+	h := &Handler{
 		ServiceProvider: cfg.ServiceProvider,
 		characterCreateHandler: character.NewCreateHandler(&character.CreateHandlerConfig{
 			CharacterService: cfg.ServiceProvider.CharacterService,
@@ -165,6 +166,11 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
 	}
+
+	// combatLogUpdater needs session, which we don't have yet during initialization
+	// It will be created when needed in the interaction handlers
+
+	return h
 }
 
 // RegisterCommands registers all slash commands with Discord
@@ -3213,6 +3219,11 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							if err != nil {
 								log.Printf("Error applying monster damage: %v", err)
 							} else {
+								// Update public combat log
+								combatLogUpdater := NewCombatLogUpdater(s, h.ServiceProvider.EncounterService)
+								if updateErr := combatLogUpdater.UpdateCombatLog(context.Background(), encounterID); updateErr != nil {
+									log.Printf("Failed to update combat log: %v", updateErr)
+								}
 								target.CurrentHP -= totalDamage
 								if target.CurrentHP < 0 {
 									target.CurrentHP = 0
@@ -3238,6 +3249,12 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 								fmt.Sprintf("%s missed %s", current.Name, target.Name))
 							if err != nil {
 								log.Printf("Error logging miss: %v", err)
+							} else {
+								// Update public combat log
+								combatLogUpdater := NewCombatLogUpdater(s, h.ServiceProvider.EncounterService)
+								if updateErr := combatLogUpdater.UpdateCombatLog(context.Background(), encounterID); updateErr != nil {
+									log.Printf("Failed to update combat log: %v", updateErr)
+								}
 							}
 						}
 					} else if target == nil {
@@ -3591,6 +3608,119 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				if err != nil {
 					log.Printf("Error showing combat history: %v", err)
 				}
+			case "my_turn":
+				// Show ephemeral action controller for the player
+				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					if err != nil {
+						log.Printf("Error responding with error: %v", err)
+					}
+					return
+				}
+
+				// Verify it's the player's turn
+				current := encounter.GetCurrentCombatant()
+				if current == nil || current.PlayerID != i.Member.User.ID {
+					content := "❌ It's not your turn!"
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: content,
+							Flags:   discordgo.MessageFlagsEphemeral,
+						},
+					})
+					if err != nil {
+						log.Printf("Error responding with not your turn: %v", err)
+					}
+					return
+				}
+
+				// Build action controller embed
+				embed := &discordgo.MessageEmbed{
+					Title:       fmt.Sprintf("🎮 %s's Action Controller", current.Name),
+					Description: fmt.Sprintf("It's your turn! Choose an action:"),
+					Color:       0x2ecc71, // Green
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:   "📊 Your Status",
+							Value:  fmt.Sprintf("HP: %d/%d | AC: %d", current.CurrentHP, current.MaxHP, current.AC),
+							Inline: false,
+						},
+					},
+				}
+
+				// Build action buttons
+				components := []discordgo.MessageComponent{
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label:    "Attack",
+								Style:    discordgo.DangerButton,
+								CustomID: fmt.Sprintf("encounter:attack:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
+							},
+							discordgo.Button{
+								Label:    "Cast Spell",
+								Style:    discordgo.PrimaryButton,
+								CustomID: fmt.Sprintf("encounter:cast_spell:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "✨"},
+								Disabled: true, // Not implemented yet
+							},
+							discordgo.Button{
+								Label:    "Use Item",
+								Style:    discordgo.PrimaryButton,
+								CustomID: fmt.Sprintf("encounter:use_item:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "🧪"},
+								Disabled: true, // Not implemented yet
+							},
+						},
+					},
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label:    "Move",
+								Style:    discordgo.SecondaryButton,
+								CustomID: fmt.Sprintf("encounter:move:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "🏃"},
+								Disabled: true, // Not implemented yet
+							},
+							discordgo.Button{
+								Label:    "Dodge",
+								Style:    discordgo.SecondaryButton,
+								CustomID: fmt.Sprintf("encounter:dodge:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "🛡️"},
+								Disabled: true, // Not implemented yet
+							},
+							discordgo.Button{
+								Label:    "End Turn",
+								Style:    discordgo.SecondaryButton,
+								CustomID: fmt.Sprintf("encounter:next_turn:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
+							},
+						},
+					},
+				}
+
+				// Send ephemeral action controller
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Embeds:     []*discordgo.MessageEmbed{embed},
+						Components: components,
+						Flags:      discordgo.MessageFlagsEphemeral,
+					},
+				})
+				if err != nil {
+					log.Printf("Error showing action controller: %v", err)
+				}
 			case "attack":
 				log.Printf("Attack button pressed for encounter: %s by user: %s", encounterID, i.Member.User.ID)
 				// Simple attack handler for testing
@@ -3729,6 +3859,18 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 				targetID := parts[3]
 				log.Printf("Target selected: %s for encounter: %s", targetID, encounterID)
+
+				// Defer the response to give us time to process
+				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Flags: discordgo.MessageFlagsEphemeral,
+					},
+				})
+				if err != nil {
+					log.Printf("Failed to defer response: %v", err)
+					return
+				}
 
 				// Get encounter
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
@@ -4029,6 +4171,11 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					if err != nil {
 						log.Printf("Error applying damage: %v", err)
 					} else {
+						// Update public combat log
+						combatLogUpdater := NewCombatLogUpdater(s, h.ServiceProvider.EncounterService)
+						if updateErr := combatLogUpdater.UpdateCombatLog(context.Background(), encounterID); updateErr != nil {
+							log.Printf("Failed to update combat log: %v", updateErr)
+						}
 						// Re-get encounter to get updated HP values
 						encounter, err = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 						if err == nil {
@@ -4078,6 +4225,12 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						fmt.Sprintf("%s missed %s", current.Name, target.Name))
 					if err != nil {
 						log.Printf("Error logging miss: %v", err)
+					} else {
+						// Update public combat log after miss
+						combatLogUpdater := NewCombatLogUpdater(s, h.ServiceProvider.EncounterService)
+						if updateErr := combatLogUpdater.UpdateCombatLog(context.Background(), encounterID); updateErr != nil {
+							log.Printf("Failed to update combat log: %v", updateErr)
+						}
 					}
 				}
 
@@ -4088,6 +4241,11 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					if err != nil {
 						log.Printf("Error auto-advancing player turn: %v", err)
 					} else {
+						// Update public combat log after turn change
+						combatLogUpdater := NewCombatLogUpdater(s, h.ServiceProvider.EncounterService)
+						if updateErr := combatLogUpdater.UpdateCombatLog(context.Background(), encounterID); updateErr != nil {
+							log.Printf("Failed to update combat log: %v", updateErr)
+						}
 						// Re-get encounter to process monster turns
 						encounter, err = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 						if err == nil {
@@ -4135,6 +4293,12 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 										err = h.ServiceProvider.EncounterService.ApplyDamage(context.Background(), encounterID, monsterTarget.ID, i.Member.User.ID, totalDamage)
 										if err != nil {
 											log.Printf("Error applying monster damage: %v", err)
+										} else {
+											// Update public combat log after monster damage
+											combatLogUpdater := NewCombatLogUpdater(s, h.ServiceProvider.EncounterService)
+											if updateErr := combatLogUpdater.UpdateCombatLog(context.Background(), encounterID); updateErr != nil {
+												log.Printf("Failed to update combat log: %v", updateErr)
+											}
 										}
 
 										// Add to display
@@ -4148,6 +4312,13 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 										// Log miss
 										err = h.ServiceProvider.EncounterService.LogCombatAction(context.Background(), encounterID,
 											fmt.Sprintf("%s missed %s", nextCombatant.Name, monsterTarget.Name))
+										if err == nil {
+											// Update public combat log after monster miss
+											combatLogUpdater := NewCombatLogUpdater(s, h.ServiceProvider.EncounterService)
+											if updateErr := combatLogUpdater.UpdateCombatLog(context.Background(), encounterID); updateErr != nil {
+												log.Printf("Failed to update combat log: %v", updateErr)
+											}
+										}
 
 										// Add to display
 										embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
@@ -4164,6 +4335,12 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 								if err != nil {
 									log.Printf("Error advancing monster turn: %v", err)
 									break
+								} else {
+									// Update public combat log after monster turn
+									combatLogUpdater := NewCombatLogUpdater(s, h.ServiceProvider.EncounterService)
+									if updateErr := combatLogUpdater.UpdateCombatLog(context.Background(), encounterID); updateErr != nil {
+										log.Printf("Failed to update combat log: %v", updateErr)
+									}
 								}
 
 								// Re-get encounter for next iteration
@@ -4218,12 +4395,10 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					},
 				}
 
-				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseUpdateMessage,
-					Data: &discordgo.InteractionResponseData{
-						Embeds:     []*discordgo.MessageEmbed{embed},
-						Components: components,
-					},
+				// Use InteractionResponseEdit since we deferred the response
+				_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+					Embeds:     &[]*discordgo.MessageEmbed{embed},
+					Components: &components,
 				})
 				if err != nil {
 					log.Printf("Error showing attack result: %v", err)

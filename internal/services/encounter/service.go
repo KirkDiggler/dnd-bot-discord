@@ -57,6 +57,9 @@ type Service interface {
 
 	// LogCombatAction logs a combat action (like a miss) without damage
 	LogCombatAction(ctx context.Context, encounterID, action string) error
+
+	// UpdateEncounterMessage updates the Discord message ID for the encounter
+	UpdateEncounterMessage(ctx context.Context, encounterID, messageID, channelID string) error
 }
 
 // CreateEncounterInput contains data for creating an encounter
@@ -647,6 +650,26 @@ func (s *service) LogCombatAction(ctx context.Context, encounterID, action strin
 
 	// Add to combat log
 	encounter.AddCombatLogEntry(action)
+
+	// Save changes
+	if err := s.repository.Update(ctx, encounter); err != nil {
+		return dnderr.Wrap(err, "failed to update encounter")
+	}
+
+	return nil
+}
+
+// UpdateEncounterMessage updates the Discord message ID for the encounter
+func (s *service) UpdateEncounterMessage(ctx context.Context, encounterID, messageID, channelID string) error {
+	// Get encounter
+	encounter, err := s.repository.Get(ctx, encounterID)
+	if err != nil {
+		return dnderr.Wrap(err, "failed to get encounter")
+	}
+
+	// Update message and channel IDs
+	encounter.MessageID = messageID
+	encounter.ChannelID = channelID
 
 	// Save changes
 	if err := s.repository.Update(ctx, encounter); err != nil {

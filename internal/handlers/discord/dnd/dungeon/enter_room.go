@@ -354,46 +354,33 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		Inline: false,
 	})
 
-	// Check if it's a player's turn
-	isPlayerTurn := false
-	if current := enc.GetCurrentCombatant(); current != nil && current.Type == entities.CombatantTypePlayer {
-		isPlayerTurn = true
-	}
-
-	// Combat buttons
-	components := []discordgo.MessageComponent{
-		discordgo.ActionsRow{
-			Components: []discordgo.MessageComponent{
-				discordgo.Button{
-					Label:    "Attack",
-					Style:    discordgo.DangerButton,
-					CustomID: fmt.Sprintf("encounter:attack:%s", enc.ID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
-					Disabled: !isPlayerTurn,
-				},
-				discordgo.Button{
-					Label:    "Next Turn",
-					Style:    discordgo.PrimaryButton,
-					CustomID: fmt.Sprintf("encounter:next_turn:%s", enc.ID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
-				},
-				discordgo.Button{
-					Label:    "Status",
-					Style:    discordgo.SecondaryButton,
-					CustomID: fmt.Sprintf("encounter:view:%s", enc.ID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
-				},
-			},
-		},
-	}
-
-	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	// Send initial response (ephemeral to avoid clutter)
+	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Embeds:     []*discordgo.MessageEmbed{embed},
-			Components: components,
+			Content: "⚔️ Entering combat room...",
+			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
+	if err != nil {
+		return err
+	}
+
+	// Create public combat log message
+	combatLogMsg, err := CreateCombatLogMessage(s, i.ChannelID, room, enc)
+	if err != nil {
+		log.Printf("Failed to create combat log message: %v", err)
+		// Don't fail the whole interaction, just log the error
+	} else {
+		// Update encounter with message ID
+		enc.MessageID = combatLogMsg.ID
+		enc.ChannelID = i.ChannelID
+		if updateErr := h.services.EncounterService.UpdateEncounterMessage(context.Background(), enc.ID, combatLogMsg.ID, i.ChannelID); updateErr != nil {
+			log.Printf("Failed to update encounter with message ID: %v", updateErr)
+		}
+	}
+
+	return nil
 }
 
 func (h *EnterRoomHandler) handlePuzzleRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *entities.Session) error {
