@@ -795,7 +795,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					i.Member.User.ID,
 					i.GuildID,
 				)
-				
+
 				// If we already have ability scores, skip parsing and go straight to proficiencies
 				if err == nil && draftChar.Attributes != nil && len(draftChar.Attributes) == 6 {
 					log.Printf("Ability scores already saved, moving to proficiencies")
@@ -810,7 +810,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					}
 					return
 				}
-				
+
 				// Parse ability scores from the current message embed
 				abilityScores := make(map[string]int)
 				if i.Message != nil && len(i.Message.Embeds) > 0 {
