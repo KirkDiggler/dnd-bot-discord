@@ -3109,9 +3109,9 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 				// Process any monster turns
 				monsterActed := false
-				if current := encounter.GetCurrentCombatant(); current != nil && current.Type == entities.CombatantTypeMonster && len(current.Actions) > 0 {
+				if current := encounter.GetCurrentCombatant(); current != nil && current.Type == entities.CombatantTypeMonster && current.CanAct() {
 					monsterActed = true
-					log.Printf("Processing monster turn for %s", current.Name)
+					log.Printf("Processing monster turn for %s (HP: %d/%d)", current.Name, current.CurrentHP, current.MaxHP)
 
 					// Find a target (first active player)
 					var target *entities.Combatant
@@ -4066,11 +4066,11 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							// Process any monster turns that follow
 							for encounter.Status == entities.EncounterStatusActive {
 								nextCombatant := encounter.GetCurrentCombatant()
-								if nextCombatant == nil || nextCombatant.Type != entities.CombatantTypeMonster {
-									break // Stop when we reach a player's turn or end
+								if nextCombatant == nil || nextCombatant.Type != entities.CombatantTypeMonster || !nextCombatant.IsAlive() {
+									break // Stop when we reach a player's turn, end, or dead monster
 								}
 
-								log.Printf("Processing monster turn for %s after player attack", nextCombatant.Name)
+								log.Printf("Processing monster turn for %s after player attack (HP: %d/%d)", nextCombatant.Name, nextCombatant.CurrentHP, nextCombatant.MaxHP)
 
 								// Find a target (first active player)
 								var monsterTarget *entities.Combatant
