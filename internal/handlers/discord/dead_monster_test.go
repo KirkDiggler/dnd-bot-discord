@@ -87,10 +87,10 @@ func TestDeadMonsterShouldNotAct(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Check the condition we use in the handler
-			canAct := tt.combatant != nil &&
-				tt.combatant.Type == entities.CombatantTypeMonster &&
-				tt.combatant.CurrentHP > 0 &&
-				len(tt.combatant.Actions) > 0
+			canAct := false
+			if tt.combatant != nil && tt.combatant.Type == entities.CombatantTypeMonster {
+				canAct = tt.combatant.CanAct()
+			}
 
 			assert.Equal(t, tt.shouldAct, canAct, tt.reason)
 		})
@@ -135,9 +135,7 @@ func TestDeadMonsterInEncounter(t *testing.T) {
 	assert.Equal(t, "skeleton-1", current.ID)
 
 	// Verify dead monster check
-	shouldProcessTurn := current.Type == entities.CombatantTypeMonster &&
-		current.CurrentHP > 0 &&
-		len(current.Actions) > 0
+	shouldProcessTurn := current.Type == entities.CombatantTypeMonster && current.CanAct()
 
 	assert.False(t, shouldProcessTurn, "Dead skeleton should not process turn")
 
