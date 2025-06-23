@@ -686,12 +686,27 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 			char.Proficiencies = make(map[entities.ProficiencyType][]*entities.Proficiency)
 		}
 
-		// Add selected proficiencies
+		// Separate proficiencies by type
+		skillProficiencies := []*entities.Proficiency{}
+
+		// Get proficiency objects and filter by type
 		for _, profKey := range updates.Proficiencies {
 			proficiency, err := s.dndClient.GetProficiency(profKey)
 			if err == nil && proficiency != nil {
-				char.AddProficiency(proficiency)
+				// Only handle skill proficiencies as replacements
+				// Other types (armor, weapon, etc) should accumulate
+				if proficiency.Type == entities.ProficiencyTypeSkill {
+					skillProficiencies = append(skillProficiencies, proficiency)
+				} else {
+					// For non-skill proficiencies, add normally (with duplicate check)
+					char.AddProficiency(proficiency)
+				}
 			}
+		}
+
+		// Replace all skill proficiencies with the new set
+		if len(skillProficiencies) > 0 {
+			char.SetProficiencies(entities.ProficiencyTypeSkill, skillProficiencies)
 		}
 
 	}

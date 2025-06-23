@@ -420,12 +420,33 @@ func (c *Character) AddProficiency(p *Proficiency) {
 		c.Proficiencies = make(map[ProficiencyType][]*Proficiency)
 	}
 	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if c.Proficiencies[p.Type] == nil {
 		c.Proficiencies[p.Type] = make([]*Proficiency, 0)
 	}
 
+	// Check for duplicates
+	for _, existing := range c.Proficiencies[p.Type] {
+		if existing.Key == p.Key {
+			return // Already have this proficiency
+		}
+	}
+
 	c.Proficiencies[p.Type] = append(c.Proficiencies[p.Type], p)
-	c.mu.Unlock()
+}
+
+// SetProficiencies replaces all proficiencies of a given type
+// This is used when selecting proficiencies during character creation
+func (c *Character) SetProficiencies(profType ProficiencyType, proficiencies []*Proficiency) {
+	if c.Proficiencies == nil {
+		c.Proficiencies = make(map[ProficiencyType][]*Proficiency)
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Replace all proficiencies of this type
+	c.Proficiencies[profType] = proficiencies
 }
 
 func (c *Character) AddAbilityScoreBonus(attr Attribute, bonus int) {
