@@ -12,6 +12,8 @@ help:
 	@echo "  make run            - Run the bot"
 	@echo "  make clean          - Clean build artifacts"
 	@echo "  make lint           - Run linters"
+	@echo "  make fmt            - Format code and tidy modules"
+	@echo "  make pre-commit     - Run all pre-commit checks (fmt, lint, test)"
 	@echo "  make install-tools  - Install development tools"
 
 # Test targets
@@ -102,5 +104,19 @@ ci: lint test-all
 # Format targets
 format fmt:
 	@echo "Formatting Go code..."
-	@gofmt -w .
+	@go fmt ./...
 	@go mod tidy
+
+# Pre-commit checks
+.PHONY: pre-commit
+pre-commit:
+	@echo "Running pre-commit checks..."
+	@echo "→ Formatting code..."
+	@go fmt ./...
+	@echo "→ Tidying modules..."
+	@go mod tidy
+	@echo "→ Running linter..."
+	@golangci-lint run ./...
+	@echo "→ Running unit tests..."
+	@go test ./... -short -race
+	@echo "✓ All pre-commit checks passed!"
