@@ -789,6 +789,28 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 		case "confirm_abilities":
 			// Save ability scores to draft character before moving to proficiency choices
 			if len(parts) >= 4 {
+				// First check if we already have ability scores saved
+				draftChar, err := h.ServiceProvider.CharacterService.GetOrCreateDraftCharacter(
+					context.Background(),
+					i.Member.User.ID,
+					i.GuildID,
+				)
+
+				// If we already have ability scores, skip parsing and go straight to proficiencies
+				if err == nil && draftChar.Attributes != nil && len(draftChar.Attributes) == 6 {
+					log.Printf("Ability scores already saved, moving to proficiencies")
+					req := &character.ProficiencyChoicesRequest{
+						Session:     s,
+						Interaction: i,
+						RaceKey:     parts[2],
+						ClassKey:    parts[3],
+					}
+					if err := h.characterProficiencyChoicesHandler.Handle(req); err != nil {
+						log.Printf("Error handling confirm abilities: %v", err)
+					}
+					return
+				}
+
 				// Parse ability scores from the current message embed
 				abilityScores := make(map[string]int)
 				if i.Message != nil && len(i.Message.Embeds) > 0 {
