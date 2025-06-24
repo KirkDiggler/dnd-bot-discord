@@ -30,7 +30,7 @@ func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 	
 	// Defer the response immediately for long operations
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		Type: discordgo.InteractionResponseDeferredMessageUpdate,
 	})
 	if err != nil {
 		log.Printf("EnterRoom - Failed to defer response: %v", err)
@@ -197,7 +197,7 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		return editErr
 	}
 
-	// Get updated encounter
+	// Get updated encounter after all setup is complete
 	enc, err = h.services.EncounterService.GetEncounter(context.Background(), enc.ID)
 	if err != nil {
 		content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
@@ -205,6 +205,12 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 			Content: &content,
 		})
 		return editErr
+	}
+
+	// Log the combat log for debugging
+	log.Printf("Combat log after setup (%d entries):", len(enc.CombatLog))
+	for i, entry := range enc.CombatLog {
+		log.Printf("  [%d] %s", i, entry)
 	}
 
 	// Process initial monster turns if they go first
@@ -276,10 +282,10 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		}
 	}
 
-	// Build combat display
+	// Build detailed combat display
 	embed := &discordgo.MessageEmbed{
-		Title:       fmt.Sprintf("⚔️ Combat: %s", room.Name),
-		Description: "The party engages in battle!",
+		Title:       fmt.Sprintf("⚔️ %s", enc.Name),
+		Description: fmt.Sprintf("**%s**\n\n**Status:** %s | **Round:** %d", room.Description, enc.Status, enc.Round),
 		Color:       0xe74c3c, // Red
 		Fields:      []*discordgo.MessageEmbedField{},
 	}
@@ -308,59 +314,54 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		}
 	}
 
-	// Show monster actions if any occurred
-	if len(monsterActions) > 0 {
-		var actionList strings.Builder
-		for _, action := range monsterActions {
-			actionList.WriteString("⚔️ " + action + "\n")
-		}
-		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:   "🎲 Monster Actions",
-			Value:  actionList.String(),
-			Inline: false,
-		})
-	}
-
-	// Show enemies
-	var enemyList strings.Builder
-	for _, combatant := range enc.Combatants {
-		if combatant.Type == entities.CombatantTypeMonster && combatant.IsActive {
-			enemyList.WriteString(fmt.Sprintf("• **%s** (HP: %d/%d, AC: %d)\n", combatant.Name, combatant.CurrentHP, combatant.MaxHP, combatant.AC))
-		}
-	}
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-		Name:   "🐉 Enemies",
-		Value:  enemyList.String(),
-		Inline: false,
-	})
-
-	// Show turn order
+	// Turn order with details
 	var turnOrder strings.Builder
-	log.Printf("Building turn order display. Total combatants: %d, Current turn: %d", len(enc.Combatants), enc.Turn)
-	for i, combatantID := range enc.TurnOrder {
-		if combatant, exists := enc.Combatants[combatantID]; exists && combatant.IsActive {
+	for i, id := range enc.TurnOrder {
+		if c, exists := enc.Combatants[id]; exists && c.IsActive {
 			prefix := "  "
 			if i == enc.Turn {
 				prefix = "▶️"
 			}
-			turnOrder.WriteString(fmt.Sprintf("%s %s\n", prefix, combatant.Name))
+			turnOrder.WriteString(fmt.Sprintf("%s %s (Init: %d)\n", prefix, c.Name, c.Initiative))
 		}
 	}
-
-	// Show whose turn it is
-	if current := enc.GetCurrentCombatant(); current != nil {
+	
+	if turnOrder.Len() > 0 {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:   "🎯 Current Turn",
-			Value:  fmt.Sprintf("**%s's turn** (HP: %d/%d)", current.Name, current.CurrentHP, current.MaxHP),
+			Name:   "📋 Initiative Order",
+			Value:  turnOrder.String(),
 			Inline: false,
 		})
 	}
 
+	// All combatants with details (like View Status)
+	var combatantList strings.Builder
+	for _, c := range enc.Combatants {
+		if c.IsActive {
+			hpBar := getHPBar(c.CurrentHP, c.MaxHP)
+			status := fmt.Sprintf("%s %d/%d HP | AC %d", hpBar, c.CurrentHP, c.MaxHP, c.AC)
+			combatantList.WriteString(fmt.Sprintf("**%s**\n%s\n\n", c.Name, status))
+		}
+	}
+
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-		Name:   "📋 Initiative Order",
-		Value:  turnOrder.String(),
+		Name:   "⚔️ Combatants",
+		Value:  combatantList.String(),
 		Inline: false,
 	})
+
+	// Show monster actions if any occurred
+	if len(monsterActions) > 0 {
+		var recentActions strings.Builder
+		for _, action := range monsterActions {
+			recentActions.WriteString("• " + action + "\n")
+		}
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "📜 Recent Actions",
+			Value:  recentActions.String(),
+			Inline: false,
+		})
+	}
 
 	// Check if it's a player's turn
 	isPlayerTurn := false
@@ -390,6 +391,12 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 					Style:    discordgo.SecondaryButton,
 					CustomID: fmt.Sprintf("combat:view:%s", enc.ID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
+				},
+				discordgo.Button{
+					Label:    "History",
+					Style:    discordgo.SecondaryButton,
+					CustomID: fmt.Sprintf("combat:history:%s", enc.ID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "📜"},
 				},
 			},
 		},
@@ -648,4 +655,20 @@ func (h *EnterRoomHandler) generateCombatRoom(difficulty string, roomNumber int)
 		Monsters:    monsters,
 		Challenge:   fmt.Sprintf("Defeat all %d enemies!", len(monsters)),
 	}
+}
+
+// getHPBar returns an emoji HP indicator
+func getHPBar(current, max int) string {
+	if max == 0 {
+		return "💀"
+	}
+	percent := float64(current) / float64(max)
+	if percent > 0.5 {
+		return "🟢"
+	} else if percent > 0.25 {
+		return "🟡"
+	} else if current > 0 {
+		return "🔴"
+	}
+	return "💀"
 }

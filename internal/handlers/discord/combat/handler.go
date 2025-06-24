@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
@@ -37,6 +38,8 @@ func (h *Handler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCre
 		return h.handleView(s, i, encounterID)
 	case "continue_round":
 		return h.handleContinueRound(s, i, encounterID)
+	case "history":
+		return h.handleHistory(s, i, encounterID)
 	default:
 		return fmt.Errorf("unknown combat action: %s", action)
 	}
@@ -44,10 +47,17 @@ func (h *Handler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCre
 
 // handleAttack shows target selection UI
 func (h *Handler) handleAttack(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string) error {
+	// Defer response for processing
+	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredMessageUpdate,
+	}); err != nil {
+		log.Printf("Failed to defer response: %v", err)
+	}
+
 	// Get encounter to build target list
 	enc, err := h.encounterService.GetEncounter(context.Background(), encounterID)
 	if err != nil {
-		return respondError(s, i, "Failed to get encounter", err)
+		return respondEditError(s, i, "Failed to get encounter", err)
 	}
 
 	// Find attacker - player who clicked or current turn for DM
@@ -65,7 +75,7 @@ func (h *Handler) handleAttack(s *discordgo.Session, i *discordgo.InteractionCre
 	}
 
 	if attacker == nil || !attacker.IsActive {
-		return respondError(s, i, "No active character found", nil)
+		return respondEditError(s, i, "No active character found", nil)
 	}
 
 	// Build target buttons
@@ -93,7 +103,7 @@ func (h *Handler) handleAttack(s *discordgo.Session, i *discordgo.InteractionCre
 	}
 
 	if len(buttons) == 0 {
-		return respondError(s, i, "No valid targets available", nil)
+		return respondEditError(s, i, "No valid targets available", nil)
 	}
 
 	embed := &discordgo.MessageEmbed{
@@ -102,16 +112,13 @@ func (h *Handler) handleAttack(s *discordgo.Session, i *discordgo.InteractionCre
 		Color:       0xe74c3c,
 	}
 
-	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds: []*discordgo.MessageEmbed{embed},
-			Components: []discordgo.MessageComponent{
-				discordgo.ActionsRow{Components: buttons},
-			},
-			Flags: discordgo.MessageFlagsEphemeral,
+	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Embeds: &[]*discordgo.MessageEmbed{embed},
+		Components: &[]discordgo.MessageComponent{
+			discordgo.ActionsRow{Components: buttons},
 		},
 	})
+	return err
 }
 
 // handleSelectTarget executes the attack
@@ -140,8 +147,33 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 		return respondEditError(s, i, "Failed to execute attack", err)
 	}
 
-	// Build result embed
-	embed := buildAttackResultEmbed(result)
+	// Get updated encounter for detailed view
+	enc, err := h.encounterService.GetEncounter(context.Background(), encounterID)
+	if err != nil {
+		return respondEditError(s, i, "Failed to get updated encounter", err)
+	}
+
+	// Build detailed combat embed (like view status)
+	embed := buildDetailedCombatEmbed(enc)
+
+	// Add attack result summary at the top
+	if result.PlayerAttack != nil {
+		attack := result.PlayerAttack
+		attackSummary := fmt.Sprintf("**%s attacked %s!**\n", attack.AttackerName, attack.TargetName)
+		if attack.Hit {
+			if attack.Critical {
+				attackSummary += fmt.Sprintf("🎆 CRITICAL HIT! %d damage!", attack.Damage)
+			} else {
+				attackSummary += fmt.Sprintf("✅ Hit for %d damage!", attack.Damage)
+			}
+			if attack.TargetDefeated {
+				attackSummary += " 💀 **DEFEATED!**"
+			}
+		} else {
+			attackSummary += "❌ **MISS!**"
+		}
+		embed.Description = attackSummary + "\n\n" + embed.Description
+	}
 
 	// Build components based on state
 	components := buildCombatComponents(encounterID, result)
@@ -155,15 +187,22 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 
 // handleNextTurn advances the turn
 func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string) error {
+	// Defer response for processing
+	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredMessageUpdate,
+	}); err != nil {
+		log.Printf("Failed to defer response: %v", err)
+	}
+
 	// Advance turn
 	if err := h.encounterService.NextTurn(context.Background(), encounterID, i.Member.User.ID); err != nil {
-		return respondError(s, i, "Failed to advance turn", err)
+		return respondEditError(s, i, "Failed to advance turn", err)
 	}
 
 	// Get updated encounter
 	enc, err := h.encounterService.GetEncounter(context.Background(), encounterID)
 	if err != nil {
-		return respondError(s, i, "Failed to get encounter", err)
+		return respondEditError(s, i, "Failed to get encounter", err)
 	}
 
 	// Check if round is complete
@@ -180,8 +219,21 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 		enc, _ = h.encounterService.GetEncounter(context.Background(), encounterID)
 	}
 
-	// Build combat status embed
-	embed := buildCombatStatusEmbed(enc, monsterResults)
+	// Build detailed combat embed (like view status)
+	embed := buildDetailedCombatEmbed(enc)
+
+	// Add monster actions summary if any
+	if len(monsterResults) > 0 {
+		var monsterSummary strings.Builder
+		for _, ma := range monsterResults {
+			if ma.Hit {
+				monsterSummary.WriteString(fmt.Sprintf("👹 **%s** attacked %s for %d damage!\n", ma.AttackerName, ma.TargetName, ma.Damage))
+			} else {
+				monsterSummary.WriteString(fmt.Sprintf("👹 **%s** missed %s!\n", ma.AttackerName, ma.TargetName))
+			}
+		}
+		embed.Description = monsterSummary.String() + "\n" + embed.Description
+	}
 
 	// Check whose turn it is now
 	isPlayerTurn := false
@@ -212,24 +264,36 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 					CustomID: fmt.Sprintf("combat:view:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
 				},
+				discordgo.Button{
+					Label:    "History",
+					Style:    discordgo.SecondaryButton,
+					CustomID: fmt.Sprintf("combat:history:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "📜"},
+				},
 			},
 		},
 	}
 
-	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds:     []*discordgo.MessageEmbed{embed},
-			Components: components,
-		},
+	// Update the original message
+	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Embeds:     &[]*discordgo.MessageEmbed{embed},
+		Components: &components,
 	})
+	return err
 }
 
 // handleView shows current encounter status
 func (h *Handler) handleView(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string) error {
+	// Defer response for processing
+	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredMessageUpdate,
+	}); err != nil {
+		log.Printf("Failed to defer response: %v", err)
+	}
+
 	enc, err := h.encounterService.GetEncounter(context.Background(), encounterID)
 	if err != nil {
-		return respondError(s, i, "Failed to get encounter", err)
+		return respondEditError(s, i, "Failed to get encounter", err)
 	}
 
 	embed := buildDetailedCombatEmbed(enc)
@@ -261,22 +325,26 @@ func (h *Handler) handleView(s *discordgo.Session, i *discordgo.InteractionCreat
 		},
 	}
 
-	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds:     []*discordgo.MessageEmbed{embed},
-			Components: components,
-			Flags:      discordgo.MessageFlagsEphemeral,
-		},
+	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Embeds:     &[]*discordgo.MessageEmbed{embed},
+		Components: &components,
 	})
+	return err
 }
 
 // handleContinueRound starts the next round
 func (h *Handler) handleContinueRound(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string) error {
+	// Defer response for processing
+	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredMessageUpdate,
+	}); err != nil {
+		log.Printf("Failed to defer response: %v", err)
+	}
+
 	// Start next round
 	enc, err := h.encounterService.GetEncounter(context.Background(), encounterID)
 	if err != nil {
-		return respondError(s, i, "Failed to get encounter", err)
+		return respondEditError(s, i, "Failed to get encounter", err)
 	}
 
 	// Reset round
@@ -291,9 +359,21 @@ func (h *Handler) handleContinueRound(s *discordgo.Session, i *discordgo.Interac
 		enc, _ = h.encounterService.GetEncounter(context.Background(), encounterID)
 	}
 
-	// Build status embed
-	embed := buildCombatStatusEmbed(enc, monsterResults)
-	embed.Title = fmt.Sprintf("⚔️ Round %d Begins!", enc.Round)
+	// Build detailed combat embed
+	embed := buildDetailedCombatEmbed(enc)
+	
+	// Add round start and monster actions if any
+	roundSummary := fmt.Sprintf("🔄 **Round %d Begins!**\n\n", enc.Round)
+	if len(monsterResults) > 0 {
+		for _, ma := range monsterResults {
+			if ma.Hit {
+				roundSummary += fmt.Sprintf("👹 **%s** attacked %s for %d damage!\n", ma.AttackerName, ma.TargetName, ma.Damage)
+			} else {
+				roundSummary += fmt.Sprintf("👹 **%s** missed %s!\n", ma.AttackerName, ma.TargetName)
+			}
+		}
+	}
+	embed.Description = roundSummary + "\n" + embed.Description
 
 	// Check whose turn it is
 	isPlayerTurn := false
@@ -323,20 +403,25 @@ func (h *Handler) handleContinueRound(s *discordgo.Session, i *discordgo.Interac
 					CustomID: fmt.Sprintf("combat:view:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
 				},
+				discordgo.Button{
+					Label:    "History",
+					Style:    discordgo.SecondaryButton,
+					CustomID: fmt.Sprintf("combat:history:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "📜"},
+				},
 			},
 		},
 	}
 
-	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds:     []*discordgo.MessageEmbed{embed},
-			Components: components,
-		},
+	// Update the message (we're already deferred from handleNextTurn)
+	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Embeds:     &[]*discordgo.MessageEmbed{embed},
+		Components: &components,
 	})
+	return err
 }
 
-// showRoundComplete shows the round complete UI
+// showRoundComplete shows the round complete UI (updates the message)
 func (h *Handler) showRoundComplete(s *discordgo.Session, i *discordgo.InteractionCreate, enc *entities.Encounter) error {
 	embed := &discordgo.MessageEmbed{
 		Title:       fmt.Sprintf("🔄 Round %d Complete!", enc.Round),
@@ -383,11 +468,77 @@ func (h *Handler) showRoundComplete(s *discordgo.Session, i *discordgo.Interacti
 		},
 	}
 
+	// Update the message (we're already deferred from handleNextTurn)
+	_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Embeds:     &[]*discordgo.MessageEmbed{embed},
+		Components: &components,
+	})
+	return err
+}
+
+// handleHistory shows the full combat log
+func (h *Handler) handleHistory(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string) error {
+	enc, err := h.encounterService.GetEncounter(context.Background(), encounterID)
+	if err != nil {
+		return respondError(s, i, "Failed to get encounter", err)
+	}
+
+	// Build history embed
+	embed := &discordgo.MessageEmbed{
+		Title:       "📜 Combat History",
+		Description: fmt.Sprintf("**%s** - Round %d", enc.Name, enc.Round),
+		Color:       0x9b59b6, // Purple
+		Fields:      []*discordgo.MessageEmbedField{},
+	}
+
+	// Show all combat log entries
+	if len(enc.CombatLog) > 0 {
+		// Discord has a 1024 character limit per field, so we may need multiple fields
+		const maxFieldLength = 1024
+		var currentField strings.Builder
+		fieldNum := 1
+
+		for _, entry := range enc.CombatLog {
+			line := fmt.Sprintf("• %s\n", entry)
+			if currentField.Len()+len(line) > maxFieldLength {
+				// Add current field and start a new one
+				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+					Name:   fmt.Sprintf("Page %d", fieldNum),
+					Value:  currentField.String(),
+					Inline: false,
+				})
+				currentField.Reset()
+				fieldNum++
+			}
+			currentField.WriteString(line)
+		}
+
+		// Add the last field
+		if currentField.Len() > 0 {
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   fmt.Sprintf("Page %d", fieldNum),
+				Value:  currentField.String(),
+				Inline: false,
+			})
+		}
+	} else {
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "No History",
+			Value:  "No combat actions have been recorded yet.",
+			Inline: false,
+		})
+	}
+
+	// Add footer with return button info
+	embed.Footer = &discordgo.MessageEmbedFooter{
+		Text: "Use the View Status button to return to combat",
+	}
+
 	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Embeds:     []*discordgo.MessageEmbed{embed},
-			Components: components,
+			Embeds: []*discordgo.MessageEmbed{embed},
+			Flags:  discordgo.MessageFlagsEphemeral,
 		},
 	})
 }

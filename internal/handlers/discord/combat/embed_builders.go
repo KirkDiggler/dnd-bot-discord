@@ -168,6 +168,23 @@ func buildCombatStatusEmbed(enc *entities.Encounter, monsterActions []*encounter
 		})
 	}
 
+	// Add combat history - last 5 entries
+	if len(enc.CombatLog) > 0 {
+		var history strings.Builder
+		start := len(enc.CombatLog) - 5
+		if start < 0 {
+			start = 0
+		}
+		for i := start; i < len(enc.CombatLog); i++ {
+			history.WriteString("• " + enc.CombatLog[i] + "\n")
+		}
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "📜 Recent Actions",
+			Value:  history.String(),
+			Inline: false,
+		})
+	}
+
 	return embed
 }
 
@@ -277,6 +294,12 @@ func buildCombatComponents(encounterID string, result *encounter.ExecuteAttackRe
 					Style:    discordgo.SecondaryButton,
 					CustomID: fmt.Sprintf("combat:view:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
+				},
+				discordgo.Button{
+					Label:    "History",
+					Style:    discordgo.SecondaryButton,
+					CustomID: fmt.Sprintf("combat:history:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "📜"},
 				},
 			},
 		},
