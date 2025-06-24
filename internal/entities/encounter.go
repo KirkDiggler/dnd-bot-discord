@@ -3,6 +3,7 @@ package entities
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -27,22 +28,23 @@ const (
 
 // Encounter represents a combat encounter in a session
 type Encounter struct {
-	ID          string                `json:"id"`
-	SessionID   string                `json:"session_id"`
-	MessageID   string                `json:"message_id"` // Discord message ID for the encounter
-	ChannelID   string                `json:"channel_id"` // Discord channel ID
-	Name        string                `json:"name"`
-	Description string                `json:"description"`
-	Status      EncounterStatus       `json:"status"`
-	Round       int                   `json:"round"`      // Current round number
-	Turn        int                   `json:"turn"`       // Current turn index
-	Combatants  map[string]*Combatant `json:"combatants"` // ID -> Combatant
-	TurnOrder   []string              `json:"turn_order"` // Ordered list of combatant IDs
-	CreatedAt   time.Time             `json:"created_at"`
-	StartedAt   *time.Time            `json:"started_at"`
-	EndedAt     *time.Time            `json:"ended_at"`
-	CreatedBy   string                `json:"created_by"` // User ID who created the encounter
-	CombatLog   []string              `json:"combat_log"` // History of combat actions
+	ID           string                `json:"id"`
+	SessionID    string                `json:"session_id"`
+	MessageID    string                `json:"message_id"` // Discord message ID for the encounter
+	ChannelID    string                `json:"channel_id"` // Discord channel ID
+	Name         string                `json:"name"`
+	Description  string                `json:"description"`
+	Status       EncounterStatus       `json:"status"`
+	Round        int                   `json:"round"`         // Current round number
+	Turn         int                   `json:"turn"`          // Current turn index
+	RoundPending bool                  `json:"round_pending"` // True when waiting for round continuation
+	Combatants   map[string]*Combatant `json:"combatants"`    // ID -> Combatant
+	TurnOrder    []string              `json:"turn_order"`    // Ordered list of combatant IDs
+	CreatedAt    time.Time             `json:"created_at"`
+	StartedAt    *time.Time            `json:"started_at"`
+	EndedAt      *time.Time            `json:"ended_at"`
+	CreatedBy    string                `json:"created_by"` // User ID who created the encounter
+	CombatLog    []string              `json:"combat_log"` // History of combat actions
 }
 
 // Combatant represents a participant in combat
@@ -148,9 +150,29 @@ func (e *Encounter) NextTurn() {
 
 	e.Turn++
 
-	// Check if round is complete
-	if e.Turn >= len(e.TurnOrder) {
-		e.NextRound()
+	// Skip inactive combatants
+	for e.Turn < len(e.TurnOrder) {
+		if combatant, exists := e.Combatants[e.TurnOrder[e.Turn]]; exists && combatant.IsActive {
+			// Found an active combatant, stop here
+			return
+		}
+		e.Turn++
+	}
+
+	// If we've gone through all combatants, check if round is complete
+	// by seeing if all active combatants have acted
+	allActiveHaveActed := true
+	for _, combatantID := range e.TurnOrder {
+		if combatant, exists := e.Combatants[combatantID]; exists && combatant.IsActive && !combatant.HasActed {
+			allActiveHaveActed = false
+			break
+		}
+	}
+
+	if allActiveHaveActed {
+		// Set flag to pause before advancing to next round
+		e.RoundPending = true
+		// Don't automatically advance - wait for continue button
 	}
 }
 
@@ -158,19 +180,42 @@ func (e *Encounter) NextTurn() {
 func (e *Encounter) NextRound() {
 	e.Round++
 	e.Turn = 0
+	e.RoundPending = false // Clear the pending flag
 
 	// Reset all combatants' HasActed flag
 	for _, combatant := range e.Combatants {
 		combatant.HasActed = false
 	}
+
+	// Skip to the first active combatant
+	for e.Turn < len(e.TurnOrder) {
+		if combatant, exists := e.Combatants[e.TurnOrder[e.Turn]]; exists && combatant.IsActive {
+			// Found an active combatant, stop here
+			break
+		}
+		e.Turn++
+	}
 }
 
 // GetCurrentCombatant returns the combatant whose turn it is
 func (e *Encounter) GetCurrentCombatant() *Combatant {
+	// If round is pending, no one's turn
+	if e.RoundPending {
+		return nil
+	}
 	if e.Turn < len(e.TurnOrder) {
 		return e.Combatants[e.TurnOrder[e.Turn]]
 	}
 	return nil
+}
+
+// ContinueRound advances to the next round when RoundPending is true
+func (e *Encounter) ContinueRound() bool {
+	if !e.RoundPending || e.Status != EncounterStatusActive {
+		return false
+	}
+	e.NextRound()
+	return true
 }
 
 // End concludes the encounter
@@ -268,13 +313,19 @@ func (e *Encounter) AddCombatLogEntry(entry string) {
 	if e.CombatLog == nil {
 		e.CombatLog = []string{}
 	}
-	// Prefix with round number
-	logEntry := fmt.Sprintf("Round %d: %s", e.Round, entry)
+	// Don't prefix initiative rolls or round announcements with round number
+	var logEntry string
+	if strings.Contains(entry, "rolls initiative:") || strings.Contains(entry, "Round") || strings.Contains(entry, "Rolling Initiative") {
+		logEntry = entry
+	} else {
+		// Prefix combat actions with round number
+		logEntry = fmt.Sprintf("Round %d: %s", e.Round, entry)
+	}
 	e.CombatLog = append(e.CombatLog, logEntry)
 
-	// Keep only last 20 entries to prevent unbounded growth
-	if len(e.CombatLog) > 20 {
-		e.CombatLog = e.CombatLog[len(e.CombatLog)-20:]
+	// Keep only last 50 entries to show more history
+	if len(e.CombatLog) > 50 {
+		e.CombatLog = e.CombatLog[len(e.CombatLog)-50:]
 	}
 }
 

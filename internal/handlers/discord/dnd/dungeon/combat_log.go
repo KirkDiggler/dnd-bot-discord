@@ -2,6 +2,7 @@ package dungeon
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
@@ -98,9 +99,16 @@ func buildCombatLogEmbed(room *Room, enc *entities.Encounter) *discordgo.Message
 		})
 	}
 
-	// Show current turn if active
+	// Show current turn or round pending status
 	if enc.Status == entities.EncounterStatusActive {
-		if current := enc.GetCurrentCombatant(); current != nil {
+		if enc.RoundPending {
+			// Show round complete message
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "🏁 Round Complete!",
+				Value:  fmt.Sprintf("**Round %d has ended.** Click 'Continue to Round %d' to proceed.", enc.Round, enc.Round+1),
+				Inline: false,
+			})
+		} else if current := enc.GetCurrentCombatant(); current != nil {
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 				Name:   "🎯 Current Turn",
 				Value:  fmt.Sprintf("**%s's turn** (Round %d)", current.Name, enc.Round),
@@ -109,25 +117,41 @@ func buildCombatLogEmbed(room *Room, enc *entities.Encounter) *discordgo.Message
 		}
 	}
 
-	// Show recent combat actions (last 5)
+	// Show combat log entries for current round
 	if len(enc.CombatLog) > 0 {
-		var recentActions strings.Builder
+		var initiativeSection strings.Builder
+		var currentRoundActions strings.Builder
 
-		// Skip initiative rolls, focus on combat actions
-		actionCount := 0
-		for i := len(enc.CombatLog) - 1; i >= 0 && actionCount < 5; i-- {
-			entry := enc.CombatLog[i]
-			// Skip initiative-related entries
-			if !strings.Contains(entry, "Rolling Initiative") && !strings.Contains(entry, "rolls initiative:") {
-				recentActions.WriteString("⚔️ " + entry + "\n")
-				actionCount++
+		// First, show initiative rolls if we're in round 1
+		if enc.Round == 1 {
+			for _, entry := range enc.CombatLog {
+				if strings.Contains(entry, "rolls initiative:") {
+					initiativeSection.WriteString("🎲 " + entry + "\n")
+				}
+			}
+
+			if initiativeSection.Len() > 0 {
+				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+					Name:   "📋 Initiative Order",
+					Value:  initiativeSection.String(),
+					Inline: false,
+				})
 			}
 		}
 
-		if recentActions.Len() > 0 {
+		// Show actions from current round
+		for _, entry := range enc.CombatLog {
+			if strings.HasPrefix(entry, fmt.Sprintf("Round %d:", enc.Round)) {
+				// Remove the "Round X: " prefix for cleaner display
+				action := strings.TrimPrefix(entry, fmt.Sprintf("Round %d: ", enc.Round))
+				currentRoundActions.WriteString("⚔️ " + action + "\n")
+			}
+		}
+
+		if currentRoundActions.Len() > 0 {
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-				Name:   "📜 Recent Actions",
-				Value:  recentActions.String(),
+				Name:   fmt.Sprintf("🗡️ Round %d Actions", enc.Round),
+				Value:  currentRoundActions.String(),
 				Inline: false,
 			})
 		}
@@ -148,6 +172,23 @@ func buildCombatLogComponents(enc *entities.Encounter) []discordgo.MessageCompon
 		return nil
 	}
 
+	// Check if round is pending
+	if enc.RoundPending {
+		// Show continue button
+		return []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.Button{
+						Label:    fmt.Sprintf("Continue to Round %d", enc.Round+1),
+						Style:    discordgo.SuccessButton,
+						CustomID: fmt.Sprintf("encounter:continue_round:%s", enc.ID),
+						Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
+					},
+				},
+			},
+		}
+	}
+
 	// Get current combatant
 	current := enc.GetCurrentCombatant()
 	if current == nil || current.Type != entities.CombatantTypePlayer {
@@ -156,6 +197,8 @@ func buildCombatLogComponents(enc *entities.Encounter) []discordgo.MessageCompon
 	}
 
 	// Single "My Turn" button that opens the action controller
+	log.Printf("Creating My Turn button for encounter %s, current player: %s (ID: %s)\n",
+		enc.ID, current.Name, current.PlayerID)
 	return []discordgo.MessageComponent{
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{

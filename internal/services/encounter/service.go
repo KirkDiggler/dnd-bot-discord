@@ -60,6 +60,9 @@ type Service interface {
 
 	// UpdateEncounterMessage updates the Discord message ID for the encounter
 	UpdateEncounterMessage(ctx context.Context, encounterID, messageID, channelID string) error
+
+	// ContinueRound advances to the next round when pending
+	ContinueRound(ctx context.Context, encounterID, userID string) error
 }
 
 // CreateEncounterInput contains data for creating an encounter
@@ -670,6 +673,35 @@ func (s *service) UpdateEncounterMessage(ctx context.Context, encounterID, messa
 	// Update message and channel IDs
 	encounter.MessageID = messageID
 	encounter.ChannelID = channelID
+
+	// Save changes
+	if err := s.repository.Update(ctx, encounter); err != nil {
+		return dnderr.Wrap(err, "failed to update encounter")
+	}
+
+	return nil
+}
+
+// ContinueRound advances to the next round when pending
+func (s *service) ContinueRound(ctx context.Context, encounterID, userID string) error {
+	// Get encounter
+	encounter, err := s.repository.Get(ctx, encounterID)
+	if err != nil {
+		return dnderr.Wrap(err, "failed to get encounter")
+	}
+
+	// Check if round is actually pending
+	if !encounter.RoundPending {
+		return dnderr.InvalidArgument("round is not pending")
+	}
+
+	// Continue to next round
+	if !encounter.ContinueRound() {
+		return dnderr.InvalidArgument("failed to continue round")
+	}
+
+	// Add to combat log
+	encounter.AddCombatLogEntry(fmt.Sprintf("🏁 **Round %d begins!**", encounter.Round))
 
 	// Save changes
 	if err := s.repository.Update(ctx, encounter); err != nil {

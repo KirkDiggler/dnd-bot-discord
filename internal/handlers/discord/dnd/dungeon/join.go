@@ -47,6 +47,14 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 	})
 	if err != nil {
 		log.Printf("Failed to defer interaction: %v", err)
+		// If we can't defer, the interaction is already expired
+		if strings.Contains(err.Error(), "Unknown interaction") {
+			// The interaction has expired, send a new message
+			_, msgErr := s.ChannelMessageSend(i.ChannelID, "⚠️ This button has expired. Please use `/dnd dungeon start` to begin a new dungeon.")
+			if msgErr != nil {
+				log.Printf("Failed to send expiry message: %v", msgErr)
+			}
+		}
 		return err
 	}
 

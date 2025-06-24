@@ -10,8 +10,6 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/attack"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/combat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/dungeon"
@@ -67,6 +65,7 @@ type Handler struct {
 	dungeonStartHandler     *dungeon.StartDungeonHandler
 	dungeonJoinHandler      *dungeon.JoinPartyHandler
 	dungeonEnterRoomHandler *dungeon.EnterRoomHandler
+	combatController        *dungeon.CombatController
 
 	// Help handler
 	helpHandler *help.HelpHandler
@@ -153,6 +152,7 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		dungeonStartHandler:     dungeon.NewStartDungeonHandler(cfg.ServiceProvider),
 		dungeonJoinHandler:      dungeon.NewJoinPartyHandler(cfg.ServiceProvider),
 		dungeonEnterRoomHandler: dungeon.NewEnterRoomHandler(cfg.ServiceProvider),
+		// combatController will be initialized after handler creation
 
 		// Initialize help handler
 		helpHandler: help.NewHelpHandler(),
@@ -167,8 +167,13 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		}),
 	}
 
-	// combatLogUpdater needs session, which we don't have yet during initialization
-	// It will be created when needed in the interaction handlers
+	// Initialize combat controller with a function that uses the combat log updater
+	h.combatController = dungeon.NewCombatController(cfg.ServiceProvider, func(ctx context.Context, encounterID string) error {
+		if h.combatLogUpdater != nil {
+			return h.combatLogUpdater.UpdateCombatLog(ctx, encounterID)
+		}
+		return nil
+	})
 
 	return h
 }
@@ -358,6 +363,11 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 
 // HandleInteraction handles all Discord interactions
 func (h *Handler) HandleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	// Initialize combat log updater if not already done
+	if h.combatLogUpdater == nil {
+		h.combatLogUpdater = NewCombatLogUpdater(s, h.ServiceProvider.EncounterService)
+	}
+	
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		h.handleCommand(s, i)
@@ -3117,6 +3127,13 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					return
 				}
 
+				// Update the public combat log (which will show continue button if round is pending)
+				if h.combatLogUpdater != nil {
+					if updateErr := h.combatLogUpdater.UpdateCombatLog(context.Background(), encounterID); updateErr != nil {
+						log.Printf("Failed to update combat log after next turn: %v", updateErr)
+					}
+				}
+
 				// Get updated encounter
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
@@ -3561,7 +3578,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				if len(encounter.CombatLog) > 0 {
 					var initiativeRolls strings.Builder
 					var combatActions strings.Builder
-					
+
 					for _, entry := range encounter.CombatLog {
 						if strings.Contains(entry, "rolls initiative:") || strings.Contains(entry, "Rolling Initiative") {
 							initiativeRolls.WriteString(entry + "\n")
@@ -3634,984 +3651,35 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					log.Printf("Error showing combat history: %v", err)
 				}
 			case "my_turn":
-				// Determine response type based on whether this is from the public log or ephemeral message
-				responseType := discordgo.InteractionResponseChannelMessageWithSource
-				if i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral != 0 {
-					// This is from an ephemeral message, update it
-					responseType = discordgo.InteractionResponseUpdateMessage
-				}
-				
-				// Show ephemeral action controller for the player
-				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
-				if err != nil {
-					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
-					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: responseType,
-						Data: &discordgo.InteractionResponseData{
-							Content: content,
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
-					if err != nil {
-						log.Printf("Error responding with error: %v", err)
-					}
-					return
-				}
-
-				// Verify it's the player's turn
-				current := encounter.GetCurrentCombatant()
-				if current == nil || current.PlayerID != i.Member.User.ID {
-					content := "❌ It's not your turn!"
-					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: responseType,
-						Data: &discordgo.InteractionResponseData{
-							Content: content,
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
-					if err != nil {
-						log.Printf("Error responding with not your turn: %v", err)
-					}
-					return
-				}
-
-				// Build action controller embed
-				embed := &discordgo.MessageEmbed{
-					Title:       fmt.Sprintf("🎮 %s's Action Controller", current.Name),
-					Description: fmt.Sprintf("It's your turn! Choose an action:"),
-					Color:       0x2ecc71, // Green
-					Fields: []*discordgo.MessageEmbedField{
-						{
-							Name:   "📊 Your Status",
-							Value:  fmt.Sprintf("HP: %d/%d | AC: %d", current.CurrentHP, current.MaxHP, current.AC),
-							Inline: false,
-						},
-					},
-				}
-
-				// Build action buttons
-				components := []discordgo.MessageComponent{
-					discordgo.ActionsRow{
-						Components: []discordgo.MessageComponent{
-							discordgo.Button{
-								Label:    "Attack",
-								Style:    discordgo.DangerButton,
-								CustomID: fmt.Sprintf("encounter:attack:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
-							},
-							discordgo.Button{
-								Label:    "Cast Spell",
-								Style:    discordgo.PrimaryButton,
-								CustomID: fmt.Sprintf("encounter:cast_spell:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "✨"},
-								Disabled: true, // Not implemented yet
-							},
-							discordgo.Button{
-								Label:    "Use Item",
-								Style:    discordgo.PrimaryButton,
-								CustomID: fmt.Sprintf("encounter:use_item:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "🧪"},
-								Disabled: true, // Not implemented yet
-							},
-						},
-					},
-					discordgo.ActionsRow{
-						Components: []discordgo.MessageComponent{
-							discordgo.Button{
-								Label:    "Move",
-								Style:    discordgo.SecondaryButton,
-								CustomID: fmt.Sprintf("encounter:move:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "🏃"},
-								Disabled: true, // Not implemented yet
-							},
-							discordgo.Button{
-								Label:    "Dodge",
-								Style:    discordgo.SecondaryButton,
-								CustomID: fmt.Sprintf("encounter:dodge:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "🛡️"},
-								Disabled: true, // Not implemented yet
-							},
-							discordgo.Button{
-								Label:    "End Turn",
-								Style:    discordgo.SecondaryButton,
-								CustomID: fmt.Sprintf("encounter:next_turn:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
-							},
-						},
-					},
-				}
-
-				// Send ephemeral action controller
-				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: responseType,
-					Data: &discordgo.InteractionResponseData{
-						Embeds:     []*discordgo.MessageEmbed{embed},
-						Components: components,
-						Flags:      discordgo.MessageFlagsEphemeral,
-					},
-				})
-				if err != nil {
-					log.Printf("Error showing action controller: %v", err)
+				// Use the cleaner combat controller
+				if err := h.combatController.HandleMyTurn(s, i, encounterID); err != nil {
+					log.Printf("Error handling my turn: %v", err)
 				}
 			case "continue_round":
-				// Simply show the action controller which will display the correct UI for the current turn
-				log.Printf("Continue round button clicked for encounter: %s", encounterID)
-				
-				// Update message to show loading
-				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseUpdateMessage,
-					Data: &discordgo.InteractionResponseData{
-						Content: "⏳ Starting new round...",
-						Embeds:  []*discordgo.MessageEmbed{},
-						Components: []discordgo.MessageComponent{},
-					},
-				})
-				if err != nil {
-					log.Printf("Failed to update with loading state: %v", err)
-					return
-				}
-				
-				// Get the encounter
-				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
-				if err != nil {
-					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
-					_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-						Content: &content,
-					})
-					if editErr != nil {
-						log.Printf("Failed to edit response: %v", editErr)
-					}
-					return
-				}
-				
-				// Show the appropriate UI for the current turn
-				current := encounter.GetCurrentCombatant()
-				if current != nil && current.PlayerID == i.Member.User.ID {
-					// It's this player's turn - show action controller
-					embed := &discordgo.MessageEmbed{
-						Title:       fmt.Sprintf("🎮 %s's Action Controller", current.Name),
-						Description: fmt.Sprintf("Round %d - It's your turn! Choose an action:", encounter.Round),
-						Color:       0x2ecc71, // Green
-						Fields: []*discordgo.MessageEmbedField{
-							{
-								Name:   "📊 Your Status",
-								Value:  fmt.Sprintf("HP: %d/%d | AC: %d", current.CurrentHP, current.MaxHP, current.AC),
-								Inline: false,
-							},
-						},
-					}
-
-					// Build action buttons
-					components := []discordgo.MessageComponent{
-						discordgo.ActionsRow{
-							Components: []discordgo.MessageComponent{
-								discordgo.Button{
-									Label:    "Attack",
-									Style:    discordgo.DangerButton,
-									CustomID: fmt.Sprintf("encounter:attack:%s", encounterID),
-									Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
-								},
-								discordgo.Button{
-									Label:    "Cast Spell",
-									Style:    discordgo.PrimaryButton,
-									CustomID: fmt.Sprintf("encounter:cast_spell:%s", encounterID),
-									Emoji:    &discordgo.ComponentEmoji{Name: "✨"},
-									Disabled: true, // Not implemented yet
-								},
-								discordgo.Button{
-									Label:    "Use Item",
-									Style:    discordgo.PrimaryButton,
-									CustomID: fmt.Sprintf("encounter:use_item:%s", encounterID),
-									Emoji:    &discordgo.ComponentEmoji{Name: "🧪"},
-									Disabled: true, // Not implemented yet
-								},
-								discordgo.Button{
-									Label:    "End Turn",
-									Style:    discordgo.SecondaryButton,
-									CustomID: fmt.Sprintf("encounter:next_turn:%s", encounterID),
-									Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
-								},
-							},
-						},
-					}
-					
-					emptyContent := ""
-					_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-						Content:    &emptyContent,
-						Embeds:     &[]*discordgo.MessageEmbed{embed},
-						Components: &components,
-					})
-					if err != nil {
-						log.Printf("Error showing action controller after round continue: %v", err)
-					}
-				} else {
-					// Not this player's turn
-					content := fmt.Sprintf("⏭️ Round %d has begun! It's %s's turn.", encounter.Round, current.Name)
-					_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-						Content: &content,
-						Embeds:  &[]*discordgo.MessageEmbed{},
-						Components: &[]discordgo.MessageComponent{},
-					})
-					if err != nil {
-						log.Printf("Error showing round start message: %v", err)
-					}
+				// Use the cleaner combat controller
+				if err := h.combatController.HandleContinueRound(s, i, encounterID); err != nil {
+					log.Printf("Error handling continue round: %v", err)
 				}
 			case "attack":
-				log.Printf("Attack button pressed for encounter: %s by user: %s", encounterID, i.Member.User.ID)
-				// Simple attack handler for testing
-				// Get encounter
-				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
-				if err != nil {
-					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
-					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: content,
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					}); responseErr != nil {
-						log.Printf("Failed to respond with error message: %v", responseErr)
-					}
-					return
-				}
-
-				// Find the attacker - the player who clicked attack
-				var current *entities.Combatant
-				attackerID := i.Member.User.ID
-
-				// Find the player's combatant
-				log.Printf("Looking for attacker with PlayerID=%s among %d combatants", attackerID, len(encounter.Combatants))
-				for id, combatant := range encounter.Combatants {
-					log.Printf("Checking combatant %s: Name=%s, Type=%s, PlayerID=%s", id, combatant.Name, combatant.Type, combatant.PlayerID)
-					if combatant.PlayerID == attackerID {
-						current = combatant
-						log.Printf("Found player %s attacking as %s", attackerID, combatant.Name)
-						break
-					}
-				}
-
-				// If player has no combatant, check if they're the DM
-				if current == nil && encounter.CreatedBy == attackerID {
-					// DM can control current turn's combatant
-					current = encounter.GetCurrentCombatant()
-					if current != nil {
-						log.Printf("DM controlling %s for attack", current.Name)
-					}
-				}
-
-				if current == nil {
-					content := "❌ You don't have a character in this encounter!"
-					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: content,
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					}); responseErr != nil {
-						log.Printf("Failed to respond with error message: %v", responseErr)
-					}
-					return
-				}
-
-				// Show target selection
-				// Build target list from encounter combatants
-				var targetButtons []discordgo.MessageComponent
-				targetCount := 0
-
-				for id, combatant := range encounter.Combatants {
-					// Don't show self as target, inactive combatants, or defeated enemies
-					if combatant.ID == current.ID || !combatant.IsActive || combatant.CurrentHP <= 0 {
-						log.Printf("Skipping combatant %s (ID: %s): self=%v, active=%v, HP=%d/%d",
-							combatant.Name, id, combatant.ID == current.ID, combatant.IsActive, combatant.CurrentHP, combatant.MaxHP)
-						continue
-					}
-
-					log.Printf("Adding target button for %s (ID: %s)", combatant.Name, id)
-					// Create button for this target
-					emoji := "🧑"
-					if combatant.Type == entities.CombatantTypeMonster {
-						emoji = "👹"
-					}
-
-					targetButtons = append(targetButtons, discordgo.Button{
-						Label:    fmt.Sprintf("%s (HP: %d/%d)", combatant.Name, combatant.CurrentHP, combatant.MaxHP),
-						Style:    discordgo.PrimaryButton,
-						CustomID: fmt.Sprintf("encounter:select_target:%s:%s", encounterID, id),
-						Emoji:    &discordgo.ComponentEmoji{Name: emoji},
-					})
-					targetCount++
-
-					// Discord limits 5 buttons per row
-					if targetCount >= 5 {
-						break
-					}
-				}
-
-				if len(targetButtons) == 0 {
-					content := "❌ No valid targets available!"
-					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: content,
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					}); responseErr != nil {
-						log.Printf("Failed to respond with error message: %v", responseErr)
-					}
-					return
-				}
-
-				// Update the action controller with target selection
-				embed := &discordgo.MessageEmbed{
-					Title:       fmt.Sprintf("🎮 %s's Action Controller", current.Name),
-					Description: "**Select your target:**",
-					Color:       0xe74c3c, // Red for attack mode
-					Fields: []*discordgo.MessageEmbedField{
-						{
-							Name:   "📊 Your Status",
-							Value:  fmt.Sprintf("HP: %d/%d | AC: %d", current.CurrentHP, current.MaxHP, current.AC),
-							Inline: false,
-						},
-					},
-				}
-
-				// Target buttons with back button
-				backButton := discordgo.Button{
-					Label:    "Back to Actions",
-					Style:    discordgo.SecondaryButton,
-					CustomID: fmt.Sprintf("encounter:my_turn:%s", encounterID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "⬅️"},
-				}
-
-				components := []discordgo.MessageComponent{
-					discordgo.ActionsRow{
-						Components: targetButtons,
-					},
-				}
-
-				// Add back button if there's room
-				if len(targetButtons) < 5 {
-					// Append to existing buttons
-					targetButtons = append(targetButtons, backButton)
-					components = []discordgo.MessageComponent{
-						discordgo.ActionsRow{
-							Components: targetButtons,
-						},
-					}
-				} else {
-					// Add as second row if first is full
-					components = append(components, discordgo.ActionsRow{
-						Components: []discordgo.MessageComponent{backButton},
-					})
-				}
-
-				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseUpdateMessage,
-					Data: &discordgo.InteractionResponseData{
-						Embeds:     []*discordgo.MessageEmbed{embed},
-						Components: components,
-					},
-				})
-				if err != nil {
-					log.Printf("Error updating to target selection: %v", err)
+				// Use the cleaner combat controller
+				if err := h.combatController.HandleAttack(s, i, encounterID); err != nil {
+					log.Printf("Error handling attack: %v", err)
 				}
 			case "select_target":
-				log.Printf("=== ENTERING select_target handler ===")
 				// Handle target selection for attack
 				if len(parts) < 4 {
 					log.Printf("Invalid select_target interaction: %v", parts)
 					return
 				}
 				targetID := parts[3]
-				log.Printf("Target selected: %s for encounter: %s", targetID, encounterID)
-
-				// Defer the response since processing might take time
-				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseDeferredMessageUpdate,
-				})
-				if err != nil {
-					log.Printf("Failed to defer interaction: %v", err)
-					return
+				// Use the cleaner combat controller
+				if err := h.combatController.HandleSelectTarget(s, i, encounterID, targetID); err != nil {
+					log.Printf("Error handling select target: %v", err)
 				}
-
-				// Get encounter
-				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
-				if err != nil {
-					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
-					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseUpdateMessage,
-						Data: &discordgo.InteractionResponseData{
-							Content: content,
-							Embeds:  []*discordgo.MessageEmbed{},
-						},
-					}); responseErr != nil {
-						log.Printf("Failed to respond with error message: %v", responseErr)
-					}
-					return
-				}
-
-				// Find the attacker - should be the player who clicked, not necessarily current turn
-				var current *entities.Combatant
-				attackerID := i.Member.User.ID
-
-				// First, try to find the player's combatant
-				for _, combatant := range encounter.Combatants {
-					if combatant.PlayerID == attackerID {
-						current = combatant
-						log.Printf("Found player's combatant: %s", combatant.Name)
-						break
-					}
-				}
-
-				// If not found, fall back to current turn (for DM controlling monsters)
-				if current == nil {
-					current = encounter.GetCurrentCombatant()
-					if current == nil {
-						content := "❌ No active combatant!"
-						if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseUpdateMessage,
-							Data: &discordgo.InteractionResponseData{
-								Content: content,
-								Embeds:  []*discordgo.MessageEmbed{},
-							},
-						}); responseErr != nil {
-							log.Printf("Failed to respond with error message: %v", responseErr)
-						}
-						return
-					}
-				}
-
-				// Get target
-				target, exists := encounter.Combatants[targetID]
-				log.Printf("Looking for target %s in combatants: %+v", targetID, encounter.Combatants)
-				if !exists {
-					content := "❌ Target not found!"
-					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseUpdateMessage,
-						Data: &discordgo.InteractionResponseData{
-							Content: content,
-							Embeds:  []*discordgo.MessageEmbed{},
-						},
-					}); responseErr != nil {
-						log.Printf("Failed to respond with error message: %v", responseErr)
-					}
-					return
-				}
-
-				// For now, let's execute a simple attack directly without weapon selection
-				// This avoids the CustomID length issue
-				log.Printf("Executing simple attack from %s to %s", current.Name, target.Name)
-
-				// Perform the attack
-				var attackResults []*attack.Result
-				var attackName string
-
-				if current.Type == entities.CombatantTypePlayer && current.CharacterID != "" {
-					// Get character for player attacks
-					log.Printf("Getting character for attack - CharacterID: %s", current.CharacterID)
-					char, charErr := h.ServiceProvider.CharacterService.GetByID(current.CharacterID)
-					if charErr != nil {
-						log.Printf("ERROR: Failed to get character %s: %v", current.CharacterID, charErr)
-					} else if char == nil {
-						log.Printf("ERROR: Character %s returned nil", current.CharacterID)
-					} else {
-						log.Printf("Character retrieved successfully: %s", char.Name)
-						// Use character's Attack method
-						attackResults, err = char.Attack()
-						if err != nil {
-							log.Printf("Error performing character attack: %v", err)
-						} else {
-							log.Printf("Attack executed successfully, got %d results", len(attackResults))
-						}
-						// Get primary weapon name
-						if char.EquippedSlots[entities.SlotMainHand] != nil {
-							attackName = char.EquippedSlots[entities.SlotMainHand].GetName()
-						} else if char.EquippedSlots[entities.SlotTwoHanded] != nil {
-							attackName = char.EquippedSlots[entities.SlotTwoHanded].GetName()
-						} else {
-							attackName = "Unarmed Strike"
-						}
-					}
-				} else if current.Type == entities.CombatantTypeMonster {
-					// Monster attacks - use first action
-					if len(current.Actions) > 0 {
-						action := current.Actions[0]
-						attackName = action.Name
-						// Roll attack
-						attackRoll, rollErr := dice.Roll(1, 20, 0)
-						if rollErr != nil {
-							log.Printf("Error rolling attack: %v", rollErr)
-							attackRoll = &dice.RollResult{Total: 10} // Default
-						}
-						totalAttack := attackRoll.Total + action.AttackBonus
-						// Roll damage
-						totalDamage := 0
-						damageType := damage.TypeBludgeoning // Default
-						for _, dmg := range action.Damage {
-							dmgRoll, rollErr := dice.Roll(dmg.DiceCount, dmg.DiceSize, dmg.Bonus)
-							if rollErr != nil {
-								log.Printf("Error rolling damage: %v", rollErr)
-								continue
-							}
-							totalDamage += dmgRoll.Total
-							// Use the first damage type found
-							if damageType == damage.TypeBludgeoning && dmg.DamageType != "" {
-								damageType = dmg.DamageType
-							}
-						}
-						attackResults = []*attack.Result{{
-							AttackRoll:   totalAttack,
-							DamageRoll:   totalDamage,
-							AttackType:   damageType,
-							AttackResult: attackRoll,
-						}}
-					}
-				}
-
-				// If no attack results, use a basic unarmed strike
-				if len(attackResults) == 0 {
-					attackName = "Unarmed Strike"
-					bonus := 0
-					attackRoll, rollErr := dice.Roll(1, 20, 0)
-					if rollErr != nil {
-						log.Printf("Error rolling attack: %v", rollErr)
-						attackRoll = &dice.RollResult{Total: 10} // Default
-					}
-					damageRoll, rollErr := dice.Roll(1, 4, 0)
-					if rollErr != nil {
-						log.Printf("Error rolling damage: %v", rollErr)
-						damageRoll = &dice.RollResult{Total: 1} // Default
-					}
-					attackResults = []*attack.Result{{
-						AttackRoll:   attackRoll.Total + bonus,
-						DamageRoll:   damageRoll.Total + bonus,
-						AttackType:   damage.TypeBludgeoning,
-						AttackResult: attackRoll,
-						DamageResult: damageRoll,
-					}}
-				}
-
-				// Build result embed for the action controller
-				log.Printf("Building attack embed - Attack results count: %d, Attack name: %s", len(attackResults), attackName)
-				embed := &discordgo.MessageEmbed{
-					Title:       fmt.Sprintf("🎮 %s's Action Controller", current.Name),
-					Description: fmt.Sprintf("**Attack Result:** %s vs %s", attackName, target.Name),
-					Color:       0x2ecc71, // Green for success
-					Fields: []*discordgo.MessageEmbedField{
-						{
-							Name:   "📊 Your Status",
-							Value:  fmt.Sprintf("HP: %d/%d | AC: %d", current.CurrentHP, current.MaxHP, current.AC),
-							Inline: false,
-						},
-					},
-				}
-
-				totalDamageDealt := 0
-				for i, result := range attackResults {
-					attackLabel := "Attack"
-					if len(attackResults) > 1 {
-						attackLabel = fmt.Sprintf("Attack %d", i+1)
-					}
-
-					// Check if hit
-					hit := result.AttackRoll >= target.AC
-					var hitText string
-					if result.AttackResult != nil && result.AttackResult.Total == 20 {
-						hitText = "🎆 **CRITICAL HIT!**"
-					} else if result.AttackResult != nil && result.AttackResult.Total == 1 {
-						hitText = "⚠️ **CRITICAL MISS!**"
-						hit = false
-					} else if hit {
-						hitText = "✅ **HIT!**"
-					} else {
-						hitText = "❌ **MISS!**"
-					}
-
-					// Build detailed attack roll text
-					var attackDetails string
-					if result.AttackResult != nil {
-						// Show dice roll details: 1d20 + bonus = total
-						rollsStr := fmt.Sprintf("%v", result.AttackResult.Rolls)
-						attackDetails = fmt.Sprintf("Roll: %s + %d = **%d**\nvs AC %d\n%s",
-							rollsStr,
-							result.AttackRoll-result.AttackResult.Total, // This is the bonus
-							result.AttackRoll,
-							target.AC,
-							hitText)
-					} else {
-						// Fallback if no detailed roll available
-						attackDetails = fmt.Sprintf("**Total:** %d vs AC %d\n%s", result.AttackRoll, target.AC, hitText)
-					}
-
-					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-						Name:   fmt.Sprintf("🎲 %s Roll", attackLabel),
-						Value:  attackDetails,
-						Inline: true,
-					})
-
-					if hit {
-						// Build detailed damage roll text
-						var damageDetails string
-						if result.DamageResult != nil {
-							// Show dice roll details for damage
-							rollsStr := fmt.Sprintf("%v", result.DamageResult.Rolls)
-							damageBonus := result.DamageRoll - result.DamageResult.Total
-							if damageBonus != 0 {
-								damageDetails = fmt.Sprintf("Roll: %s + %d = **%d** %s",
-									rollsStr,
-									damageBonus,
-									result.DamageRoll,
-									result.AttackType)
-							} else {
-								damageDetails = fmt.Sprintf("Roll: %s = **%d** %s",
-									rollsStr,
-									result.DamageRoll,
-									result.AttackType)
-							}
-						} else {
-							// Fallback if no detailed roll available
-							damageDetails = fmt.Sprintf("**Total:** %d %s damage", result.DamageRoll, result.AttackType)
-						}
-
-						embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-							Name:   "💥 Damage",
-							Value:  damageDetails,
-							Inline: true,
-						})
-						totalDamageDealt += result.DamageRoll
-					}
-				}
-
-				// Log the attack to combat log
-				for i, result := range attackResults {
-					attackNum := ""
-					if len(attackResults) > 1 {
-						attackNum = fmt.Sprintf(" #%d", i+1)
-					}
-
-					// Build the log entry with dice details
-					var logEntry string
-					if result.AttackResult != nil {
-						rollsStr := fmt.Sprintf("%v", result.AttackResult.Rolls)
-						bonus := result.AttackRoll - result.AttackResult.Total
-
-						if result.AttackRoll >= target.AC {
-							// Hit - include damage details
-							if result.DamageResult != nil {
-								dmgRollsStr := fmt.Sprintf("%v", result.DamageResult.Rolls)
-								dmgBonus := result.DamageRoll - result.DamageResult.Total
-								if dmgBonus != 0 {
-									logEntry = fmt.Sprintf("⚔️ **%s** attacks **%s** with %s%s: Attack %s+%d=**%d** vs AC %d (HIT!) | Damage %s+%d=**%d**",
-										current.Name, target.Name, attackName, attackNum, rollsStr, bonus, result.AttackRoll, target.AC,
-										dmgRollsStr, dmgBonus, result.DamageRoll)
-								} else {
-									logEntry = fmt.Sprintf("⚔️ **%s** attacks **%s** with %s%s: Attack %s+%d=**%d** vs AC %d (HIT!) | Damage %s=**%d**",
-										current.Name, target.Name, attackName, attackNum, rollsStr, bonus, result.AttackRoll, target.AC,
-										dmgRollsStr, result.DamageRoll)
-								}
-							} else {
-								logEntry = fmt.Sprintf("⚔️ **%s** hits **%s** with %s%s: %s+%d=**%d** vs AC %d for %d damage",
-									current.Name, target.Name, attackName, attackNum, rollsStr, bonus, result.AttackRoll, target.AC, result.DamageRoll)
-							}
-						} else {
-							// Miss
-							logEntry = fmt.Sprintf("⚔️ **%s** attacks **%s** with %s%s: %s+%d=**%d** vs AC %d (MISS!)",
-								current.Name, target.Name, attackName, attackNum, rollsStr, bonus, result.AttackRoll, target.AC)
-						}
-					} else {
-						// Fallback without dice details
-						if result.AttackRoll >= target.AC {
-							logEntry = fmt.Sprintf("⚔️ **%s** hits **%s** for %d damage", current.Name, target.Name, result.DamageRoll)
-						} else {
-							logEntry = fmt.Sprintf("⚔️ **%s** misses **%s**", current.Name, target.Name)
-						}
-					}
-
-					// Log to combat history
-					_ = h.ServiceProvider.EncounterService.LogCombatAction(context.Background(), encounterID, logEntry)
-				}
-
-				// Apply damage if any hit
-				if totalDamageDealt > 0 {
-					log.Printf("Attack result - %s dealt %d damage to %s", current.Name, totalDamageDealt, target.Name)
-
-					err = h.ServiceProvider.EncounterService.ApplyDamage(context.Background(), encounterID, targetID, i.Member.User.ID, totalDamageDealt)
-					if err != nil {
-						log.Printf("Error applying damage: %v", err)
-					} else {
-						// Update public combat log
-						combatLogUpdater := NewCombatLogUpdater(s, h.ServiceProvider.EncounterService)
-						if updateErr := combatLogUpdater.UpdateCombatLog(context.Background(), encounterID); updateErr != nil {
-							log.Printf("Failed to update combat log: %v", updateErr)
-						}
-						// Re-get encounter to get updated HP values
-						encounter, err = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
-						if err == nil {
-							// Find the updated target
-							if updatedTarget, exists := encounter.Combatants[targetID]; exists {
-								log.Printf("Target %s HP after damage: %d/%d", updatedTarget.Name, updatedTarget.CurrentHP, updatedTarget.MaxHP)
-								embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-									Name:   "🩸 Target Status",
-									Value:  fmt.Sprintf("%s now has **%d/%d HP**", updatedTarget.Name, updatedTarget.CurrentHP, updatedTarget.MaxHP),
-									Inline: false,
-								})
-
-								if updatedTarget.CurrentHP == 0 {
-									embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-										Name:   "💀 Defeated!",
-										Value:  fmt.Sprintf("%s has been defeated!", updatedTarget.Name),
-										Inline: false,
-									})
-
-									// Check if combat ended
-									if encounter.Status == entities.EncounterStatusCompleted {
-										_, playersWon := encounter.CheckCombatEnd()
-										if playersWon {
-											embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-												Name:   "🎉 Victory!",
-												Value:  "All enemies have been defeated!",
-												Inline: false,
-											})
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-
-				// Show total damage summary
-				if totalDamageDealt > 0 {
-					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-						Name:   "💥 Total Damage",
-						Value:  fmt.Sprintf("**%d** damage dealt", totalDamageDealt),
-						Inline: false,
-					})
-				} else if len(attackResults) > 0 {
-					// All attacks missed - log it
-					err = h.ServiceProvider.EncounterService.LogCombatAction(context.Background(), encounterID,
-						fmt.Sprintf("%s missed %s", current.Name, target.Name))
-					if err != nil {
-						log.Printf("Error logging miss: %v", err)
-					} else {
-						// Update public combat log after miss
-						combatLogUpdater := NewCombatLogUpdater(s, h.ServiceProvider.EncounterService)
-						if updateErr := combatLogUpdater.UpdateCombatLog(context.Background(), encounterID); updateErr != nil {
-							log.Printf("Failed to update combat log: %v", updateErr)
-						}
-					}
-				}
-
-				// Track the current round for detecting transitions
-				currentRound := encounter.Round
-				
-				// Auto-advance turn after player attack
-				if current.Type == entities.CombatantTypePlayer {
-					log.Printf("Auto-advancing turn after player attack")
-					err = h.ServiceProvider.EncounterService.NextTurn(context.Background(), encounterID, i.Member.User.ID)
-					if err != nil {
-						log.Printf("Error auto-advancing player turn: %v", err)
-					} else {
-						// Update public combat log after turn change
-						combatLogUpdater := NewCombatLogUpdater(s, h.ServiceProvider.EncounterService)
-						if updateErr := combatLogUpdater.UpdateCombatLog(context.Background(), encounterID); updateErr != nil {
-							log.Printf("Failed to update combat log: %v", updateErr)
-						}
-						// Re-get encounter to process monster turns
-						encounter, err = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
-						if err == nil {
-							// Process any monster turns that follow
-							for encounter.Status == entities.EncounterStatusActive {
-								nextCombatant := encounter.GetCurrentCombatant()
-								if nextCombatant == nil || nextCombatant.Type != entities.CombatantTypeMonster || !nextCombatant.IsAlive() {
-									break // Stop when we reach a player's turn, end, or dead monster
-								}
-
-								log.Printf("Processing monster turn for %s after player attack (HP: %d/%d)", nextCombatant.Name, nextCombatant.CurrentHP, nextCombatant.MaxHP)
-
-								// Find a target (first active player)
-								var monsterTarget *entities.Combatant
-								for _, combatant := range encounter.Combatants {
-									if combatant.Type == entities.CombatantTypePlayer && combatant.IsActive {
-										monsterTarget = combatant
-										break
-									}
-								}
-
-								if monsterTarget != nil && len(nextCombatant.Actions) > 0 {
-									// Use first available action
-									action := nextCombatant.Actions[0]
-
-									// Roll attack
-									attackResult, _ := dice.Roll(1, 20, 0)
-									attackRoll := attackResult.Total
-									totalAttack := attackRoll + action.AttackBonus
-
-									// Check if hit
-									hit := totalAttack >= monsterTarget.AC
-									if hit && len(action.Damage) > 0 {
-										totalDamage := 0
-										for _, dmg := range action.Damage {
-											diceCount := dmg.DiceCount
-											if attackRoll == 20 { // Critical hit doubles dice
-												diceCount *= 2
-											}
-											rollResult, _ := dice.Roll(diceCount, dmg.DiceSize, dmg.Bonus)
-											totalDamage += rollResult.Total
-										}
-
-										// Apply damage
-										err = h.ServiceProvider.EncounterService.ApplyDamage(context.Background(), encounterID, monsterTarget.ID, i.Member.User.ID, totalDamage)
-										if err != nil {
-											log.Printf("Error applying monster damage: %v", err)
-										} else {
-											// Update public combat log after monster damage
-											combatLogUpdater := NewCombatLogUpdater(s, h.ServiceProvider.EncounterService)
-											if updateErr := combatLogUpdater.UpdateCombatLog(context.Background(), encounterID); updateErr != nil {
-												log.Printf("Failed to update combat log: %v", updateErr)
-											}
-										}
-
-										// Add to display
-										embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-											Name: fmt.Sprintf("🐉 %s's Turn", nextCombatant.Name),
-											Value: fmt.Sprintf("%s attacks %s with %s!\n🎲 Attack: %d vs AC %d - **HIT!**\n💥 Damage: **%d**",
-												nextCombatant.Name, monsterTarget.Name, action.Name, totalAttack, monsterTarget.AC, totalDamage),
-											Inline: false,
-										})
-									} else {
-										// Log miss
-										err = h.ServiceProvider.EncounterService.LogCombatAction(context.Background(), encounterID,
-											fmt.Sprintf("%s missed %s", nextCombatant.Name, monsterTarget.Name))
-										if err == nil {
-											// Update public combat log after monster miss
-											combatLogUpdater := NewCombatLogUpdater(s, h.ServiceProvider.EncounterService)
-											if updateErr := combatLogUpdater.UpdateCombatLog(context.Background(), encounterID); updateErr != nil {
-												log.Printf("Failed to update combat log: %v", updateErr)
-											}
-										}
-
-										// Add to display
-										embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-											Name: fmt.Sprintf("🐉 %s's Turn", nextCombatant.Name),
-											Value: fmt.Sprintf("%s attacks %s with %s!\n🎲 Attack: %d vs AC %d - **MISS!**",
-												nextCombatant.Name, monsterTarget.Name, action.Name, totalAttack, monsterTarget.AC),
-											Inline: false,
-										})
-									}
-								}
-
-								// Advance to next turn
-								err = h.ServiceProvider.EncounterService.NextTurn(context.Background(), encounterID, i.Member.User.ID)
-								if err != nil {
-									log.Printf("Error advancing monster turn: %v", err)
-									break
-								} else {
-									// Update public combat log after monster turn
-									combatLogUpdater := NewCombatLogUpdater(s, h.ServiceProvider.EncounterService)
-									if updateErr := combatLogUpdater.UpdateCombatLog(context.Background(), encounterID); updateErr != nil {
-										log.Printf("Failed to update combat log: %v", updateErr)
-									}
-								}
-
-								// Re-get encounter for next iteration
-								encounter, err = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
-								if err != nil {
-									break
-								}
-							}
-							
-							// Check if we've transitioned to a new round
-							if encounter.Round > currentRound {
-								log.Printf("Round transition detected: Round %d -> Round %d", currentRound, encounter.Round)
-								
-								// Add round summary to the embed
-								embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-									Name:   "🏁 Round Complete!",
-									Value:  fmt.Sprintf("**Round %d has ended.** Click 'Continue to Round %d' to proceed.", currentRound, encounter.Round),
-									Inline: false,
-								})
-								
-								// Show round statistics
-								var roundStats strings.Builder
-								roundStats.WriteString(fmt.Sprintf("📊 **Round %d Summary:**\n", currentRound))
-								roundStats.WriteString(fmt.Sprintf("⏱️ Actions taken: %d\n", len(encounter.TurnOrder)))
-								roundStats.WriteString("Ready for the next round of combat!")
-								
-								embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-									Name:   "📜 Round Statistics",
-									Value:  roundStats.String(),
-									Inline: false,
-								})
-							}
-						}
-					}
-				}
-
-				// Re-get encounter to check turn and round status
-				encounter, _ = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
-				roundChanged := encounter != nil && encounter.Round > currentRound
-				isPlayerTurn := false
-				if encounter != nil && encounter.Status == entities.EncounterStatusActive {
-					if current := encounter.GetCurrentCombatant(); current != nil {
-						isPlayerTurn = current.PlayerID == i.Member.User.ID
-					}
-				}
-
-				// Return appropriate buttons based on round state
-				var components []discordgo.MessageComponent
-				if roundChanged {
-					// Show continue to next round button
-					components = []discordgo.MessageComponent{
-						discordgo.ActionsRow{
-							Components: []discordgo.MessageComponent{
-								discordgo.Button{
-									Label:    fmt.Sprintf("Continue to Round %d", encounter.Round),
-									Style:    discordgo.SuccessButton,
-									CustomID: fmt.Sprintf("encounter:continue_round:%s", encounterID),
-									Emoji:    &discordgo.ComponentEmoji{Name: "▶️"},
-								},
-							},
-						},
-					}
-				} else {
-					// Normal action controller buttons
-					components = []discordgo.MessageComponent{
-						discordgo.ActionsRow{
-							Components: []discordgo.MessageComponent{
-								discordgo.Button{
-									Label:    "Back to Actions",
-									Style:    discordgo.PrimaryButton,
-									CustomID: fmt.Sprintf("encounter:my_turn:%s", encounterID),
-									Emoji:    &discordgo.ComponentEmoji{Name: "🎮"},
-								},
-								discordgo.Button{
-									Label:    "Attack Again",
-									Style:    discordgo.DangerButton,
-									CustomID: fmt.Sprintf("encounter:attack:%s", encounterID),
-									Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
-									Disabled: !isPlayerTurn,
-								},
-								discordgo.Button{
-									Label:    "End Turn",
-									Style:    discordgo.SecondaryButton,
-									CustomID: fmt.Sprintf("encounter:next_turn:%s", encounterID),
-									Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
-								},
-							},
-						},
-					}
-				}
-
-				// Edit the original interaction message
-				emptyContent := ""
-				_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-					Content:    &emptyContent, // Clear loading message
-					Embeds:     &[]*discordgo.MessageEmbed{embed},
-					Components: &components,
-				})
-				if err != nil {
-					log.Printf("Error showing attack result: %v", err)
+			case "end_turn":
+				// Use the cleaner combat controller
+				if err := h.combatController.HandleEndTurn(s, i, encounterID); err != nil {
+					log.Printf("Error handling end turn: %v", err)
 				}
 			default:
 				log.Printf("Unknown encounter action: %s", action)
@@ -4665,10 +3733,25 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				if len(i.MessageComponentData().Values) > 0 {
 					characterID := i.MessageComponentData().Values[0]
 
+					// Defer the response immediately to avoid timeout
+					err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseDeferredMessageUpdate,
+					})
+					if err != nil {
+						log.Printf("Failed to defer interaction: %v", err)
+						return
+					}
+
 					// Get the session to check if user is already in it
 					sess, err := h.ServiceProvider.SessionService.GetSession(context.Background(), sessionID)
 					if err != nil {
-						respondWithUpdateError(s, i, fmt.Sprintf("Failed to get session: %v", err))
+						content := fmt.Sprintf("Failed to get session: %v", err)
+						_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+							Content: &content,
+						})
+						if editErr != nil {
+							log.Printf("Failed to edit response: %v", editErr)
+						}
 						return
 					}
 
@@ -4677,7 +3760,13 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						log.Printf("User %s not in session, joining...", i.Member.User.ID)
 						_, joinErr := h.ServiceProvider.SessionService.JoinSession(context.Background(), sessionID, i.Member.User.ID)
 						if joinErr != nil {
-							respondWithUpdateError(s, i, fmt.Sprintf("Failed to join party: %v", joinErr))
+							content := fmt.Sprintf("Failed to join party: %v", joinErr)
+							_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+								Content: &content,
+							})
+							if editErr != nil {
+								log.Printf("Failed to edit response: %v", editErr)
+							}
 							return
 						}
 					}
@@ -4685,14 +3774,26 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					// Select the character
 					err = h.ServiceProvider.SessionService.SelectCharacter(context.Background(), sessionID, i.Member.User.ID, characterID)
 					if err != nil {
-						respondWithUpdateError(s, i, fmt.Sprintf("Failed to select character: %v", err))
+						content := fmt.Sprintf("Failed to select character: %v", err)
+						_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+							Content: &content,
+						})
+						if editErr != nil {
+							log.Printf("Failed to edit response: %v", editErr)
+						}
 						return
 					}
 
 					// Get character details for confirmation
 					char, charErr := h.ServiceProvider.CharacterService.GetByID(characterID)
 					if charErr != nil {
-						respondWithUpdateError(s, i, fmt.Sprintf("Failed to get character: %v", charErr))
+						content := fmt.Sprintf("Failed to get character: %v", charErr)
+						_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+							Content: &content,
+						})
+						if editErr != nil {
+							log.Printf("Failed to edit response: %v", editErr)
+						}
 						return
 					}
 
@@ -4720,14 +3821,12 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						},
 					}
 
-					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseUpdateMessage,
-						Data: &discordgo.InteractionResponseData{
-							Embeds:     []*discordgo.MessageEmbed{embed},
-							Components: []discordgo.MessageComponent{},
-						},
-					}); responseErr != nil {
-						log.Printf("Failed to respond with success message: %v", responseErr)
+					_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+						Embeds:     &[]*discordgo.MessageEmbed{embed},
+						Components: &[]discordgo.MessageComponent{},
+					})
+					if editErr != nil {
+						log.Printf("Failed to respond with success message: %v", editErr)
 					}
 				}
 			case "enter":
@@ -5509,4 +4608,3 @@ func getWeaponPropertiesString(weapon *entities.Weapon) string {
 
 	return strings.Join(props, ", ")
 }
-
