@@ -3,6 +3,7 @@ package encounters
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
@@ -33,6 +34,7 @@ func (r *inMemoryRepository) Create(ctx context.Context, encounter *entities.Enc
 		return fmt.Errorf("encounter with ID %s already exists", encounter.ID)
 	}
 
+	log.Printf("Creating encounter %s: %s for session %s", encounter.ID, encounter.Name, encounter.SessionID)
 	r.encounters[encounter.ID] = encounter
 
 	// Add to session index
@@ -48,13 +50,21 @@ func (r *inMemoryRepository) Create(ctx context.Context, encounter *entities.Enc
 
 // Get retrieves an encounter by ID
 func (r *inMemoryRepository) Get(ctx context.Context, id string) (*entities.Encounter, error) {
+	log.Printf("InMemoryRepository.Get called for encounter ID: %s", id)
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	encounter, exists := r.encounters[id]
 	if !exists {
+		// List all encounter IDs for debugging
+		var ids []string
+		for k := range r.encounters {
+			ids = append(ids, k)
+		}
+		log.Printf("Encounter %s not found. Available encounters: %v", id, ids)
 		return nil, fmt.Errorf("encounter not found: %s", id)
 	}
+	log.Printf("Found encounter %s: %s", id, encounter.Name)
 
 	return encounter, nil
 }

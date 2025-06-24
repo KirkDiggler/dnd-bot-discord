@@ -28,42 +28,52 @@ func NewEnterRoomHandler(serviceProvider *services.Provider) *EnterRoomHandler {
 func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCreate, sessionID, roomType string) error {
 	log.Printf("EnterRoom - User %s attempting to enter %s room in session %s", i.Member.User.ID, roomType, sessionID)
 
-	// Get session
-	sess, err := h.services.SessionService.GetSession(context.Background(), sessionID)
+	// Defer the response immediately for long operations
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredMessageUpdate,
+	})
 	if err != nil {
-		log.Printf("EnterRoom - Session not found: %v", err)
+		log.Printf("EnterRoom - Failed to defer response: %v", err)
+		// Try to respond normally if defer fails
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "❌ Session not found!",
+				Content: "❌ Failed to process room entry. Please try again.",
 				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
 	}
 
+	// Get session
+	sess, err := h.services.SessionService.GetSession(context.Background(), sessionID)
+	if err != nil {
+		log.Printf("EnterRoom - Session not found: %v", err)
+		content := "❌ Session not found!"
+		_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
+		})
+		return editErr
+	}
+
 	// Check if user is in the session
 	if !sess.IsUserInSession(i.Member.User.ID) {
 		log.Printf("EnterRoom - User %s not in session members", i.Member.User.ID)
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ You need to join the party first!",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		content := "❌ You need to join the party first!"
+		_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
 		})
+		return editErr
 	}
 
 	// Check if user has a character selected (except for DM/bot)
 	member, exists := sess.Members[i.Member.User.ID]
 	if exists && member.Role == entities.SessionRolePlayer && member.CharacterID == "" {
 		log.Printf("EnterRoom - Player %s has no character selected", i.Member.User.ID)
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ You need to select a character! Click 'Select Character' first.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		content := "❌ You need to select a character! Click 'Select Character' first."
+		_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
 		})
+		return editErr
 	}
 
 	if exists {
@@ -83,13 +93,11 @@ func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 	case RoomTypeRest:
 		return h.handleRestRoom(s, i, sess)
 	default:
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ Unknown room type!",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		content := "❌ Unknown room type!"
+		_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
 		})
+		return editErr
 	}
 }
 
@@ -134,13 +142,11 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 
 	enc, err := h.services.EncounterService.CreateEncounter(context.Background(), encounterInput)
 	if err != nil {
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Failed to create encounter: %v", err),
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		content := fmt.Sprintf("❌ Failed to create encounter: %v", err)
+		_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
 		})
+		return editErr
 	}
 
 	// Add all party members to encounter
@@ -174,37 +180,37 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 	// Roll initiative
 	err = h.services.EncounterService.RollInitiative(context.Background(), enc.ID, botID)
 	if err != nil {
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Failed to roll initiative: %v", err),
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		content := fmt.Sprintf("❌ Failed to roll initiative: %v", err)
+		_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
 		})
+		return editErr
 	}
 
 	// Start combat
 	err = h.services.EncounterService.StartEncounter(context.Background(), enc.ID, botID)
 	if err != nil {
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Failed to start combat: %v", err),
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		content := fmt.Sprintf("❌ Failed to start combat: %v", err)
+		_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
 		})
+		return editErr
 	}
 
-	// Get updated encounter
+	// Get updated encounter after all setup is complete
 	enc, err = h.services.EncounterService.GetEncounter(context.Background(), enc.ID)
 	if err != nil {
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Failed to get encounter: %v", err),
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
+		_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
 		})
+		return editErr
+	}
+
+	// Log the combat log for debugging
+	log.Printf("Combat log after setup (%d entries):", len(enc.CombatLog))
+	for i, entry := range enc.CombatLog {
+		log.Printf("  [%d] %s", i, entry)
 	}
 
 	// Process initial monster turns if they go first
@@ -276,83 +282,86 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		}
 	}
 
-	// Build combat display
+	// Build detailed combat display
 	embed := &discordgo.MessageEmbed{
-		Title:       fmt.Sprintf("⚔️ Combat: %s", room.Name),
-		Description: "The party engages in battle!",
+		Title:       fmt.Sprintf("⚔️ %s", enc.Name),
+		Description: fmt.Sprintf("**%s**\n\n**Status:** %s | **Round:** %d", room.Description, enc.Status, enc.Round),
 		Color:       0xe74c3c, // Red
 		Fields:      []*discordgo.MessageEmbedField{},
 	}
 
-	// Show initiative rolls from combat log
-	if len(enc.CombatLog) > 0 {
+	// Show initiative rolls sorted by turn order
+	if len(enc.CombatLog) > 0 && len(enc.TurnOrder) > 0 {
 		var initiativeRolls strings.Builder
-		// Skip the first entry which is "Rolling Initiative" header
-		for i := 1; i < len(enc.CombatLog) && i <= len(enc.Combatants)+1; i++ {
-			initiativeRolls.WriteString(enc.CombatLog[i] + "\n")
+		// Show initiative rolls in turn order (highest to lowest)
+		for position, combatantID := range enc.TurnOrder {
+			if combatant, exists := enc.Combatants[combatantID]; exists {
+				// Find the log entry for this combatant
+				for _, logEntry := range enc.CombatLog {
+					if strings.Contains(logEntry, combatant.Name) && strings.Contains(logEntry, "rolls initiative:") {
+						initiativeRolls.WriteString(fmt.Sprintf("%d. %s\n", position+1, logEntry))
+						break
+					}
+				}
+			}
 		}
 		if initiativeRolls.Len() > 0 {
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-				Name:   "🎲 Initiative Rolls",
+				Name:   "🎲 Initiative Rolls (Sorted by Turn Order)",
 				Value:  initiativeRolls.String(),
 				Inline: false,
 			})
 		}
 	}
 
-	// Show monster actions if any occurred
-	if len(monsterActions) > 0 {
-		var actionList strings.Builder
-		for _, action := range monsterActions {
-			actionList.WriteString("⚔️ " + action + "\n")
-		}
-		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:   "🎲 Monster Actions",
-			Value:  actionList.String(),
-			Inline: false,
-		})
-	}
-
-	// Show enemies
-	var enemyList strings.Builder
-	for _, combatant := range enc.Combatants {
-		if combatant.Type == entities.CombatantTypeMonster && combatant.IsActive {
-			enemyList.WriteString(fmt.Sprintf("• **%s** (HP: %d/%d, AC: %d)\n", combatant.Name, combatant.CurrentHP, combatant.MaxHP, combatant.AC))
-		}
-	}
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-		Name:   "🐉 Enemies",
-		Value:  enemyList.String(),
-		Inline: false,
-	})
-
-	// Show turn order
+	// Turn order with details
 	var turnOrder strings.Builder
-	log.Printf("Building turn order display. Total combatants: %d, Current turn: %d", len(enc.Combatants), enc.Turn)
-	for i, combatantID := range enc.TurnOrder {
-		if combatant, exists := enc.Combatants[combatantID]; exists && combatant.IsActive {
+	for i, id := range enc.TurnOrder {
+		if c, exists := enc.Combatants[id]; exists && c.IsActive {
 			prefix := "  "
 			if i == enc.Turn {
 				prefix = "▶️"
 			}
-			turnOrder.WriteString(fmt.Sprintf("%s %s\n", prefix, combatant.Name))
+			turnOrder.WriteString(fmt.Sprintf("%s %s (Init: %d)\n", prefix, c.Name, c.Initiative))
 		}
 	}
 
-	// Show whose turn it is
-	if current := enc.GetCurrentCombatant(); current != nil {
+	if turnOrder.Len() > 0 {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:   "🎯 Current Turn",
-			Value:  fmt.Sprintf("**%s's turn** (HP: %d/%d)", current.Name, current.CurrentHP, current.MaxHP),
+			Name:   "📋 Initiative Order",
+			Value:  turnOrder.String(),
 			Inline: false,
 		})
 	}
 
+	// All combatants with details (like View Status)
+	var combatantList strings.Builder
+	for _, c := range enc.Combatants {
+		if c.IsActive {
+			hpBar := getHPBar(c.CurrentHP, c.MaxHP)
+			status := fmt.Sprintf("%s %d/%d HP | AC %d", hpBar, c.CurrentHP, c.MaxHP, c.AC)
+			combatantList.WriteString(fmt.Sprintf("**%s**\n%s\n\n", c.Name, status))
+		}
+	}
+
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-		Name:   "📋 Initiative Order",
-		Value:  turnOrder.String(),
+		Name:   "⚔️ Combatants",
+		Value:  combatantList.String(),
 		Inline: false,
 	})
+
+	// Show monster actions if any occurred
+	if len(monsterActions) > 0 {
+		var recentActions strings.Builder
+		for _, action := range monsterActions {
+			recentActions.WriteString("• " + action + "\n")
+		}
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "📜 Recent Actions",
+			Value:  recentActions.String(),
+			Inline: false,
+		})
+	}
 
 	// Check if it's a player's turn
 	isPlayerTurn := false
@@ -367,33 +376,37 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 				discordgo.Button{
 					Label:    "Attack",
 					Style:    discordgo.DangerButton,
-					CustomID: fmt.Sprintf("encounter:attack:%s", enc.ID),
+					CustomID: fmt.Sprintf("combat:attack:%s", enc.ID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
 					Disabled: !isPlayerTurn,
 				},
 				discordgo.Button{
 					Label:    "Next Turn",
 					Style:    discordgo.PrimaryButton,
-					CustomID: fmt.Sprintf("encounter:next_turn:%s", enc.ID),
+					CustomID: fmt.Sprintf("combat:next_turn:%s", enc.ID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
 				},
 				discordgo.Button{
 					Label:    "Status",
 					Style:    discordgo.SecondaryButton,
-					CustomID: fmt.Sprintf("encounter:view:%s", enc.ID),
+					CustomID: fmt.Sprintf("combat:view:%s", enc.ID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
+				},
+				discordgo.Button{
+					Label:    "History",
+					Style:    discordgo.SecondaryButton,
+					CustomID: fmt.Sprintf("combat:history:%s", enc.ID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "📜"},
 				},
 			},
 		},
 	}
 
-	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds:     []*discordgo.MessageEmbed{embed},
-			Components: components,
-		},
+	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Embeds:     &[]*discordgo.MessageEmbed{embed},
+		Components: &components,
 	})
+	return err
 }
 
 func (h *EnterRoomHandler) handlePuzzleRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *entities.Session) error {
@@ -411,12 +424,10 @@ func (h *EnterRoomHandler) handlePuzzleRoom(s *discordgo.Session, i *discordgo.I
 		},
 	}
 
-	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds: []*discordgo.MessageEmbed{embed},
-		},
+	_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Embeds: &[]*discordgo.MessageEmbed{embed},
 	})
+	return err
 }
 
 func (h *EnterRoomHandler) handleTrapRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *entities.Session) error {
@@ -434,12 +445,10 @@ func (h *EnterRoomHandler) handleTrapRoom(s *discordgo.Session, i *discordgo.Int
 		},
 	}
 
-	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds: []*discordgo.MessageEmbed{embed},
-		},
+	_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Embeds: &[]*discordgo.MessageEmbed{embed},
 	})
+	return err
 }
 
 func (h *EnterRoomHandler) handleTreasureRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *entities.Session) error {
@@ -457,12 +466,10 @@ func (h *EnterRoomHandler) handleTreasureRoom(s *discordgo.Session, i *discordgo
 		},
 	}
 
-	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds: []*discordgo.MessageEmbed{embed},
-		},
+	_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Embeds: &[]*discordgo.MessageEmbed{embed},
 	})
+	return err
 }
 
 func (h *EnterRoomHandler) handleRestRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *entities.Session) error {
@@ -480,12 +487,10 @@ func (h *EnterRoomHandler) handleRestRoom(s *discordgo.Session, i *discordgo.Int
 		},
 	}
 
-	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds: []*discordgo.MessageEmbed{embed},
-		},
+	_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Embeds: &[]*discordgo.MessageEmbed{embed},
 	})
+	return err
 }
 
 // getMonster returns a predefined monster by name
@@ -650,4 +655,20 @@ func (h *EnterRoomHandler) generateCombatRoom(difficulty string, roomNumber int)
 		Monsters:    monsters,
 		Challenge:   fmt.Sprintf("Defeat all %d enemies!", len(monsters)),
 	}
+}
+
+// getHPBar returns an emoji HP indicator
+func getHPBar(current, max int) string {
+	if max == 0 {
+		return "💀"
+	}
+	percent := float64(current) / float64(max)
+	if percent > 0.5 {
+		return "🟢"
+	} else if percent > 0.25 {
+		return "🟡"
+	} else if current > 0 {
+		return "🔴"
+	}
+	return "💀"
 }
