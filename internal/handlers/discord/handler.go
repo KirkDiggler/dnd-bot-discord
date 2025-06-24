@@ -25,6 +25,11 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+// Helper function to convert string to *string
+func stringPtr(s string) *string {
+	return &s
+}
+
 // Handler handles all Discord interactions
 type Handler struct {
 	ServiceProvider                       *services.Provider
@@ -3751,9 +3756,21 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 			case "select_target":
 				log.Printf("=== ENTERING select_target handler ===")
+				// Defer the response immediately to avoid timeout
+				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+				})
+				if err != nil {
+					log.Printf("Error deferring select_target response: %v", err)
+					return
+				}
+				
 				// Handle target selection for attack
 				if len(parts) < 4 {
 					log.Printf("Invalid select_target interaction: %v", parts)
+					_, _ = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+						Content: stringPtr("❌ Invalid target selection"),
+					})
 					return
 				}
 				targetID := parts[3]
@@ -3763,14 +3780,12 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
-					if responseErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseUpdateMessage,
-						Data: &discordgo.InteractionResponseData{
-							Content: content,
-							Embeds:  []*discordgo.MessageEmbed{},
-						},
-					}); responseErr != nil {
-						log.Printf("Failed to respond with error message: %v", responseErr)
+					_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+						Content: &content,
+						Embeds:  &[]*discordgo.MessageEmbed{},
+					})
+					if editErr != nil {
+						log.Printf("Failed to edit response with error message: %v", editErr)
 					}
 					return
 				}
@@ -4247,12 +4262,9 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					},
 				}
 
-				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseUpdateMessage,
-					Data: &discordgo.InteractionResponseData{
-						Embeds:     []*discordgo.MessageEmbed{embed},
-						Components: components,
-					},
+				_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+					Embeds:     &[]*discordgo.MessageEmbed{embed},
+					Components: &components,
 				})
 				if err != nil {
 					log.Printf("Error showing attack result: %v", err)
