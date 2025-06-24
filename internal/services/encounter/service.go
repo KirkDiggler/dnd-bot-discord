@@ -48,6 +48,9 @@ type Service interface {
 	// NextTurn advances to the next turn
 	NextTurn(ctx context.Context, encounterID, userID string) error
 
+	// PerformAttack executes an attack from one combatant to another
+	PerformAttack(ctx context.Context, input *AttackInput) (*AttackResult, error)
+
 	// ApplyDamage applies damage to a combatant
 	ApplyDamage(ctx context.Context, encounterID, combatantID, userID string, damage int) error
 
@@ -83,6 +86,47 @@ type AddMonsterInput struct {
 	MonsterRef      string // D&D API reference
 	Abilities       map[string]int
 	Actions         []*entities.MonsterAction
+}
+
+// AttackInput contains data for performing an attack
+type AttackInput struct {
+	EncounterID string
+	AttackerID  string
+	TargetID    string
+	UserID      string // User requesting the attack
+	ActionIndex int    // For monsters with multiple attacks (0 = first action)
+}
+
+// AttackResult contains the results of an attack
+type AttackResult struct {
+	// Roll information
+	AttackRoll  int
+	AttackBonus int
+	TotalAttack int
+	DiceRolls   []int // Individual dice rolls for transparency
+
+	// Hit/Miss information
+	TargetAC int
+	Hit      bool
+	Critical bool
+
+	// Damage information
+	Damage      int
+	DamageType  string
+	DamageRolls []int // Individual damage dice rolls
+	DamageBonus int
+
+	// Combatant information
+	AttackerName string
+	TargetName   string
+	WeaponName   string
+
+	// Results
+	TargetNewHP    int
+	TargetDefeated bool
+
+	// Combat log entry
+	LogEntry string
 }
 
 type service struct {
@@ -534,6 +578,253 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 	}
 
 	return nil
+}
+
+// PerformAttack executes an attack from one combatant to another
+func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*AttackResult, error) {
+	if input == nil {
+		return nil, dnderr.InvalidArgument("input cannot be nil")
+	}
+
+	// Get encounter
+	encounter, err := s.repository.Get(ctx, input.EncounterID)
+	if err != nil {
+		return nil, dnderr.Wrap(err, "failed to get encounter")
+	}
+
+	// Validate encounter is active
+	if encounter.Status != entities.EncounterStatusActive {
+		return nil, dnderr.InvalidArgument("encounter is not active")
+	}
+
+	// Get attacker
+	attacker, exists := encounter.Combatants[input.AttackerID]
+	if !exists {
+		return nil, dnderr.NotFound("attacker not found")
+	}
+	if !attacker.IsActive {
+		return nil, dnderr.InvalidArgument("attacker is not active")
+	}
+
+	// Get target
+	target, exists := encounter.Combatants[input.TargetID]
+	if !exists {
+		return nil, dnderr.NotFound("target not found")
+	}
+	if !target.IsActive {
+		return nil, dnderr.InvalidArgument("target is not active")
+	}
+
+	// Check permissions
+	current := encounter.GetCurrentCombatant()
+	if current == nil || current.ID != input.AttackerID {
+		// Special handling for dungeon encounters
+		if session, err := s.sessionService.GetSession(ctx, encounter.SessionID); err == nil {
+			if sessionType, ok := session.Metadata["sessionType"].(string); ok && sessionType == "dungeon" {
+				// In dungeon encounters, bot orchestrates combat
+			} else {
+				return nil, dnderr.PermissionDenied("not attacker's turn")
+			}
+		}
+	}
+
+	result := &AttackResult{
+		AttackerName: attacker.Name,
+		TargetName:   target.Name,
+		TargetAC:     target.AC,
+	}
+
+	// Handle different attacker types
+	if attacker.Type == entities.CombatantTypePlayer && attacker.CharacterID != "" {
+		// Player attack using character
+		char, err := s.characterService.GetByID(attacker.CharacterID)
+		if err != nil {
+			return nil, dnderr.Wrap(err, "failed to get character")
+		}
+
+		// Use character's attack method
+		attackResults, err := char.Attack()
+		if err != nil {
+			return nil, dnderr.Wrap(err, "failed to perform character attack")
+		}
+
+		if len(attackResults) == 0 {
+			return nil, dnderr.InvalidArgument("no attack results")
+		}
+
+		// Use first attack result
+		attackResult := attackResults[0]
+		result.AttackRoll = attackResult.AttackResult.Rolls[0]
+		result.AttackBonus = attackResult.AttackRoll - result.AttackRoll
+		result.TotalAttack = attackResult.AttackRoll
+		result.DiceRolls = attackResult.AttackResult.Rolls
+
+		// Get weapon name
+		if char.EquippedSlots[entities.SlotMainHand] != nil {
+			result.WeaponName = char.EquippedSlots[entities.SlotMainHand].GetName()
+		} else if char.EquippedSlots[entities.SlotTwoHanded] != nil {
+			result.WeaponName = char.EquippedSlots[entities.SlotTwoHanded].GetName()
+		} else {
+			result.WeaponName = "Unarmed Strike"
+		}
+
+		// Check hit
+		result.Hit = result.TotalAttack >= target.AC
+		result.Critical = result.AttackRoll == 20
+
+		if result.Hit {
+			result.Damage = attackResult.DamageRoll
+			result.DamageType = string(attackResult.AttackType)
+			if attackResult.DamageResult != nil {
+				result.DamageRolls = attackResult.DamageResult.Rolls
+				result.DamageBonus = attackResult.DamageRoll - attackResult.DamageResult.Total
+			}
+		}
+
+	} else if attacker.Type == entities.CombatantTypeMonster && len(attacker.Actions) > 0 && input.ActionIndex >= 0 && input.ActionIndex < len(attacker.Actions) {
+		// Monster attack with valid action
+		action := attacker.Actions[input.ActionIndex]
+		result.WeaponName = action.Name
+
+		// Roll attack
+		attackTotal, attackRolls, err := s.diceRoller.Roll(1, 20, action.AttackBonus)
+		if err != nil {
+			return nil, dnderr.Wrap(err, "failed to roll attack")
+		}
+
+		result.AttackRoll = attackRolls[0]
+		result.AttackBonus = action.AttackBonus
+		result.TotalAttack = attackTotal
+		result.DiceRolls = attackRolls
+
+		// Check hit
+		result.Hit = result.TotalAttack >= target.AC
+		result.Critical = result.AttackRoll == 20
+
+		if result.Hit {
+			// Roll damage for each damage component
+			totalDamage := 0
+			var allDamageRolls []int
+
+			for _, dmg := range action.Damage {
+				damageTotal, damageRolls, err := s.diceRoller.Roll(dmg.DiceCount, dmg.DiceSize, dmg.Bonus)
+				if err != nil {
+					log.Printf("Error rolling damage: %v", err)
+					continue
+				}
+
+				// Double dice on critical
+				if result.Critical {
+					critTotal, critRolls, err := s.diceRoller.Roll(dmg.DiceCount, dmg.DiceSize, 0)
+					if err == nil {
+						damageTotal += critTotal
+						damageRolls = append(damageRolls, critRolls...)
+					}
+				}
+
+				totalDamage += damageTotal
+				allDamageRolls = append(allDamageRolls, damageRolls...)
+
+				// Use first damage type found
+				if result.DamageType == "" && dmg.DamageType != "" {
+					result.DamageType = string(dmg.DamageType)
+				}
+			}
+
+			result.Damage = totalDamage
+			result.DamageRolls = allDamageRolls
+		}
+
+	} else {
+		// Unarmed strike fallback
+		result.WeaponName = "Unarmed Strike"
+
+		// Roll attack
+		attackTotal, attackRolls, err := s.diceRoller.Roll(1, 20, 0)
+		if err != nil {
+			return nil, dnderr.Wrap(err, "failed to roll attack")
+		}
+
+		result.AttackRoll = attackRolls[0]
+		result.AttackBonus = 0
+		result.TotalAttack = attackTotal
+		result.DiceRolls = attackRolls
+
+		// Check hit
+		result.Hit = result.TotalAttack >= target.AC
+		result.Critical = result.AttackRoll == 20
+
+		if result.Hit {
+			// Roll damage
+			damageTotal, damageRolls, err := s.diceRoller.Roll(1, 4, 0)
+			if err != nil {
+				return nil, dnderr.Wrap(err, "failed to roll damage")
+			}
+
+			if result.Critical {
+				critTotal, critRolls, err := s.diceRoller.Roll(1, 4, 0)
+				if err == nil {
+					damageTotal += critTotal
+					damageRolls = append(damageRolls, critRolls...)
+				}
+			}
+
+			result.Damage = damageTotal
+			result.DamageRolls = damageRolls
+			result.DamageType = "bludgeoning"
+		}
+	}
+
+	// Apply damage if hit
+	if result.Hit && result.Damage > 0 {
+		target.CurrentHP -= result.Damage
+		if target.CurrentHP < 0 {
+			target.CurrentHP = 0
+		}
+		result.TargetNewHP = target.CurrentHP
+
+		// Check if defeated
+		if target.CurrentHP == 0 {
+			target.IsActive = false
+			result.TargetDefeated = true
+		}
+
+		// Update encounter
+		if err := s.repository.Update(ctx, encounter); err != nil {
+			return nil, dnderr.Wrap(err, "failed to update encounter")
+		}
+	}
+
+	// Generate log entry
+	if result.Hit {
+		if result.Critical {
+			result.LogEntry = fmt.Sprintf("⚔️ **CRITICAL HIT!** %s attacks %s with %s: %d + %d = **%d** vs AC %d - **HIT** for %d %s damage!",
+				result.AttackerName, result.TargetName, result.WeaponName,
+				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
+				result.Damage, result.DamageType)
+		} else {
+			result.LogEntry = fmt.Sprintf("⚔️ %s attacks %s with %s: %d + %d = **%d** vs AC %d - **HIT** for %d %s damage",
+				result.AttackerName, result.TargetName, result.WeaponName,
+				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
+				result.Damage, result.DamageType)
+		}
+
+		if result.TargetDefeated {
+			result.LogEntry += fmt.Sprintf("\n💀 **%s has been defeated!**", result.TargetName)
+		}
+	} else {
+		result.LogEntry = fmt.Sprintf("⚔️ %s attacks %s with %s: %d + %d = **%d** vs AC %d - **MISS**",
+			result.AttackerName, result.TargetName, result.WeaponName,
+			result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC)
+	}
+
+	// Add to combat log
+	encounter.CombatLog = append(encounter.CombatLog, result.LogEntry)
+	if err := s.repository.Update(ctx, encounter); err != nil {
+		log.Printf("Error updating combat log: %v", err)
+	}
+
+	return result, nil
 }
 
 // ApplyDamage applies damage to a combatant
