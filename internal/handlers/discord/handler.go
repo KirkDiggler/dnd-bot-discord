@@ -3634,12 +3634,19 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					log.Printf("Error showing combat history: %v", err)
 				}
 			case "my_turn":
+				// Determine response type based on whether this is from the public log or ephemeral message
+				responseType := discordgo.InteractionResponseChannelMessageWithSource
+				if i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral != 0 {
+					// This is from an ephemeral message, update it
+					responseType = discordgo.InteractionResponseUpdateMessage
+				}
+				
 				// Show ephemeral action controller for the player
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
 					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Type: responseType,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
@@ -3656,7 +3663,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				if current == nil || current.PlayerID != i.Member.User.ID {
 					content := "❌ It's not your turn!"
 					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Type: responseType,
 						Data: &discordgo.InteractionResponseData{
 							Content: content,
 							Flags:   discordgo.MessageFlagsEphemeral,
@@ -3736,7 +3743,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 				// Send ephemeral action controller
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Type: responseType,
 					Data: &discordgo.InteractionResponseData{
 						Embeds:     []*discordgo.MessageEmbed{embed},
 						Components: components,
@@ -4018,17 +4025,12 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				targetID := parts[3]
 				log.Printf("Target selected: %s for encounter: %s", targetID, encounterID)
 
-				// Update the message immediately with a loading state
+				// Defer the response since processing might take time
 				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseUpdateMessage,
-					Data: &discordgo.InteractionResponseData{
-						Content: "⏳ Processing attack...",
-						Embeds:  []*discordgo.MessageEmbed{},
-						Components: []discordgo.MessageComponent{},
-					},
+					Type: discordgo.InteractionResponseDeferredMessageUpdate,
 				})
 				if err != nil {
-					log.Printf("Failed to update with loading state: %v", err)
+					log.Printf("Failed to defer interaction: %v", err)
 					return
 				}
 
