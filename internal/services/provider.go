@@ -2,6 +2,7 @@ package services
 
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/interfaces"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/dungeons"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
@@ -22,6 +23,7 @@ type Provider struct {
 	DungeonService   dungeonService.Service
 	MonsterService   monsterService.Service
 	LootService      lootService.Service
+	DiceRoller       interfaces.DiceRoller
 }
 
 // ProviderConfig holds configuration for creating services
@@ -31,6 +33,7 @@ type ProviderConfig struct {
 	SessionRepository   gamesessions.Repository
 	EncounterRepository encounters.Repository
 	DungeonRepository   dungeons.Repository
+	DiceRoller          interfaces.DiceRoller
 }
 
 // NewProvider creates a new service provider with all services initialized
@@ -73,6 +76,7 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 		Repository:       encounterRepo,
 		SessionService:   sessService,
 		CharacterService: charService,
+		DiceRoller:       cfg.DiceRoller,
 	})
 
 	// Create monster service
@@ -101,5 +105,6 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 		DungeonService:   dungService,
 		MonsterService:   monstService,
 		LootService:      ltService,
+		DiceRoller:       cfg.DiceRoller,
 	}
 }
