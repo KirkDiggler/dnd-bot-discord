@@ -3337,6 +3337,35 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							},
 						},
 					}
+				} else if encounter.IsRoundComplete() {
+					// Round is complete - show continue button
+					embed.Title = "🔄 Round Complete!"
+					embed.Fields = append([]*discordgo.MessageEmbedField{
+						{
+							Name:   "📊 Round Summary",
+							Value:  fmt.Sprintf("Round %d has ended. All combatants have acted.", encounter.Round),
+							Inline: false,
+						},
+					}, embed.Fields...)
+					
+					components = []discordgo.MessageComponent{
+						discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								discordgo.Button{
+									Label:    "Continue to Next Round",
+									Style:    discordgo.SuccessButton,
+									CustomID: fmt.Sprintf("encounter:next_turn:%s", encounterID),
+									Emoji:    &discordgo.ComponentEmoji{Name: "▶️"},
+								},
+								discordgo.Button{
+									Label:    "View Status",
+									Style:    discordgo.SecondaryButton,
+									CustomID: fmt.Sprintf("encounter:view_full:%s", encounterID),
+									Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
+								},
+							},
+						},
+					}
 				} else {
 					// Combat ongoing - show normal buttons
 					// Check if it's the player's turn

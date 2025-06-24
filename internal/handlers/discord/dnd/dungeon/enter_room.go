@@ -15,6 +15,11 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+// Helper function to convert string to *string
+func stringPtr(s string) *string {
+	return &s
+}
+
 type EnterRoomHandler struct {
 	services *services.Provider
 }
@@ -94,6 +99,15 @@ func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 }
 
 func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *entities.Session) error {
+	// Acknowledge immediately to avoid timeout
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+	})
+	if err != nil {
+		log.Printf("Error deferring response: %v", err)
+		return err
+	}
+
 	// Get difficulty and room number from session metadata
 	difficulty := "medium"
 	roomNumber := 1
@@ -134,13 +148,13 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 
 	enc, err := h.services.EncounterService.CreateEncounter(context.Background(), encounterInput)
 	if err != nil {
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Failed to create encounter: %v", err),
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: stringPtr(fmt.Sprintf("❌ Failed to create encounter: %v", err)),
 		})
+		if editErr != nil {
+			log.Printf("Error editing response: %v", editErr)
+		}
+		return err
 	}
 
 	// Add all party members to encounter
@@ -174,37 +188,37 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 	// Roll initiative
 	err = h.services.EncounterService.RollInitiative(context.Background(), enc.ID, botID)
 	if err != nil {
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Failed to roll initiative: %v", err),
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: stringPtr(fmt.Sprintf("❌ Failed to roll initiative: %v", err)),
 		})
+		if editErr != nil {
+			log.Printf("Error editing response: %v", editErr)
+		}
+		return err
 	}
 
 	// Start combat
 	err = h.services.EncounterService.StartEncounter(context.Background(), enc.ID, botID)
 	if err != nil {
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Failed to start combat: %v", err),
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: stringPtr(fmt.Sprintf("❌ Failed to start combat: %v", err)),
 		})
+		if editErr != nil {
+			log.Printf("Error editing response: %v", editErr)
+		}
+		return err
 	}
 
 	// Get updated encounter
 	enc, err = h.services.EncounterService.GetEncounter(context.Background(), enc.ID)
 	if err != nil {
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Failed to get encounter: %v", err),
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: stringPtr(fmt.Sprintf("❌ Failed to get encounter: %v", err)),
 		})
+		if editErr != nil {
+			log.Printf("Error editing response: %v", editErr)
+		}
+		return err
 	}
 
 	// Process initial monster turns if they go first
@@ -287,9 +301,11 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 	// Show initiative rolls from combat log
 	if len(enc.CombatLog) > 0 {
 		var initiativeRolls strings.Builder
-		// Skip the first entry which is "Rolling Initiative" header
-		for i := 1; i < len(enc.CombatLog) && i <= len(enc.Combatants)+1; i++ {
-			initiativeRolls.WriteString(enc.CombatLog[i] + "\n")
+		// Find all initiative roll entries (they contain "rolls initiative:")
+		for _, logEntry := range enc.CombatLog {
+			if strings.Contains(logEntry, "rolls initiative:") {
+				initiativeRolls.WriteString(logEntry + "\n")
+			}
 		}
 		if initiativeRolls.Len() > 0 {
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
@@ -387,13 +403,12 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		},
 	}
 
-	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds:     []*discordgo.MessageEmbed{embed},
-			Components: components,
-		},
+	// Edit the deferred response
+	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Embeds:     &[]*discordgo.MessageEmbed{embed},
+		Components: &components,
 	})
+	return err
 }
 
 func (h *EnterRoomHandler) handlePuzzleRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *entities.Session) error {

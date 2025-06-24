@@ -278,6 +278,16 @@ func (e *Encounter) AddCombatLogEntry(entry string) {
 	}
 }
 
+// IsRoundComplete checks if all active combatants have acted this round
+func (e *Encounter) IsRoundComplete() bool {
+	for _, combatant := range e.Combatants {
+		if combatant.IsActive && !combatant.HasActed {
+			return false
+		}
+	}
+	return true
+}
+
 // MarshalJSON implements json.Marshaler
 func (e *Encounter) MarshalJSON() ([]byte, error) {
 	type Alias Encounter
