@@ -10,8 +10,8 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
 	oldcombat "github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/combat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/dungeon"
 	encounterHandler "github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/encounter"
@@ -3362,7 +3362,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							Inline: false,
 						},
 					}, embed.Fields...)
-					
+
 					components = []discordgo.MessageComponent{
 						discordgo.ActionsRow{
 							Components: []discordgo.MessageComponent{
@@ -3643,7 +3643,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				if err != nil {
 					// For dungeon encounters, try to find the active encounter for the channel
 					log.Printf("Failed to get encounter %s, looking for active encounter in channel", encounterID)
-					
+
 					// Try to get session from channel metadata or find active encounter
 					// This is a workaround for stale encounter IDs in old Discord messages
 					content := fmt.Sprintf("❌ This encounter has expired. Please start a new room!")
@@ -3785,7 +3785,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 				targetID := parts[3]
 				log.Printf("Target selected: %s for encounter: %s", targetID, encounterID)
-				
+
 				// Defer the response immediately since attack processing can take time
 				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseDeferredMessageUpdate,

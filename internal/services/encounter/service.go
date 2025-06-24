@@ -149,15 +149,15 @@ type ExecuteAttackInput struct {
 type ExecuteAttackResult struct {
 	// The initial attack result
 	PlayerAttack *AttackResult
-	
+
 	// Any monster attacks that followed
 	MonsterAttacks []*AttackResult
-	
+
 	// Updated encounter state
-	IsPlayerTurn   bool
-	CurrentTurn    *entities.Combatant
-	CombatEnded    bool
-	PlayersWon     bool
+	IsPlayerTurn bool
+	CurrentTurn  *entities.Combatant
+	CombatEnded  bool
+	PlayersWon   bool
 }
 
 type service struct {
@@ -1101,7 +1101,7 @@ func (s *service) ExecuteAttackWithTarget(ctx context.Context, input *ExecuteAtt
 
 	// Find the attacker - could be the player who clicked or current turn (for DM)
 	var attacker *entities.Combatant
-	
+
 	// First, try to find the player's combatant
 	for _, combatant := range encounter.Combatants {
 		if combatant.PlayerID == input.UserID && combatant.IsActive {
@@ -1109,7 +1109,7 @@ func (s *service) ExecuteAttackWithTarget(ctx context.Context, input *ExecuteAtt
 			break
 		}
 	}
-	
+
 	// If not found, use current turn (for DM controlling monsters)
 	if attacker == nil {
 		attacker = encounter.GetCurrentCombatant()
@@ -1126,7 +1126,7 @@ func (s *service) ExecuteAttackWithTarget(ctx context.Context, input *ExecuteAtt
 		UserID:      input.UserID,
 		ActionIndex: 0, // Default to first action
 	}
-	
+
 	result.PlayerAttack, err = s.PerformAttack(ctx, attackInput)
 	if err != nil {
 		return nil, dnderr.Wrap(err, "failed to perform attack")
@@ -1158,7 +1158,7 @@ func (s *service) ExecuteAttackWithTarget(ctx context.Context, input *ExecuteAtt
 			result.CurrentTurn = current
 			result.IsPlayerTurn = current.PlayerID == input.UserID
 		}
-		
+
 		// Check if combat ended
 		if encounter.Status == entities.EncounterStatusCompleted {
 			result.CombatEnded = true

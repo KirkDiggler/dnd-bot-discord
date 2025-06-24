@@ -27,7 +27,7 @@ func NewEnterRoomHandler(serviceProvider *services.Provider) *EnterRoomHandler {
 
 func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCreate, sessionID, roomType string) error {
 	log.Printf("EnterRoom - User %s attempting to enter %s room in session %s", i.Member.User.ID, roomType, sessionID)
-	
+
 	// Defer the response immediately for long operations
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredMessageUpdate,
@@ -325,7 +325,7 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 			turnOrder.WriteString(fmt.Sprintf("%s %s (Init: %d)\n", prefix, c.Name, c.Initiative))
 		}
 	}
-	
+
 	if turnOrder.Len() > 0 {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   "📋 Initiative Order",

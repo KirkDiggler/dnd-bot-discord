@@ -29,7 +29,7 @@ func buildAttackResultEmbed(result *encounter.ExecuteAttackResult) *discordgo.Me
 
 	attackRoll := fmt.Sprintf("Roll: %v + %d = **%d** vs AC %d\n%s",
 		attack.DiceRolls, attack.AttackBonus, attack.TotalAttack, attack.TargetAC, hitText)
-	
+
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 		Name:   "🎲 Attack Roll",
 		Value:  attackRoll,
@@ -43,7 +43,7 @@ func buildAttackResultEmbed(result *encounter.ExecuteAttackResult) *discordgo.Me
 			damageText += fmt.Sprintf(" + %d", attack.DamageBonus)
 		}
 		damageText += fmt.Sprintf(" = **%d** %s", attack.Damage, attack.DamageType)
-		
+
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   "💥 Damage",
 			Value:  damageText,
@@ -65,8 +65,8 @@ func buildAttackResultEmbed(result *encounter.ExecuteAttackResult) *discordgo.Me
 	// Monster turns if any
 	if len(result.MonsterAttacks) > 0 {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:  "━━━━━━━━━━━━━━━",
-			Value: "**Monster Turns**",
+			Name:   "━━━━━━━━━━━━━━━",
+			Value:  "**Monster Turns**",
 			Inline: false,
 		})
 
@@ -82,7 +82,7 @@ func buildAttackResultEmbed(result *encounter.ExecuteAttackResult) *discordgo.Me
 					"Roll: %d vs AC %d - **MISS!**",
 					ma.TargetName, ma.WeaponName, ma.TotalAttack, ma.TargetAC)
 			}
-			
+
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 				Name:   fmt.Sprintf("🐉 %s's Turn", ma.AttackerName),
 				Value:  value,
@@ -106,11 +106,11 @@ func buildAttackResultEmbed(result *encounter.ExecuteAttackResult) *discordgo.Me
 // buildCombatStatusEmbed creates a status embed with optional monster actions
 func buildCombatStatusEmbed(enc *entities.Encounter, monsterActions []*encounter.AttackResult) *discordgo.MessageEmbed {
 	current := enc.GetCurrentCombatant()
-	
+
 	embed := &discordgo.MessageEmbed{
-		Title:       fmt.Sprintf("⚔️ Combat - Round %d", enc.Round),
-		Color:       0x3498db,
-		Fields:      []*discordgo.MessageEmbedField{},
+		Title:  fmt.Sprintf("⚔️ Combat - Round %d", enc.Round),
+		Color:  0x3498db,
+		Fields: []*discordgo.MessageEmbedField{},
 	}
 
 	// Current turn
@@ -141,10 +141,10 @@ func buildCombatStatusEmbed(enc *entities.Encounter, monsterActions []*encounter
 		if !c.IsActive {
 			continue
 		}
-		
+
 		hpBar := getHPBar(c.CurrentHP, c.MaxHP)
 		line := fmt.Sprintf("%s **%s** - %d/%d HP\n", hpBar, c.Name, c.CurrentHP, c.MaxHP)
-		
+
 		if c.Type == entities.CombatantTypeMonster {
 			enemies.WriteString(line)
 		} else {
@@ -208,7 +208,7 @@ func buildDetailedCombatEmbed(enc *entities.Encounter) *discordgo.MessageEmbed {
 			turnOrder.WriteString(fmt.Sprintf("%s %s (Init: %d)\n", prefix, c.Name, c.Initiative))
 		}
 	}
-	
+
 	if turnOrder.Len() > 0 {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   "📋 Initiative Order",

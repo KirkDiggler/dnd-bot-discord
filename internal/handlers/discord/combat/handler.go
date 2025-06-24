@@ -214,7 +214,7 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 	var monsterResults []*encounter.AttackResult
 	if current := enc.GetCurrentCombatant(); current != nil && current.Type == entities.CombatantTypeMonster {
 		monsterResults, _ = h.encounterService.ProcessAllMonsterTurns(context.Background(), encounterID)
-		
+
 		// Re-get encounter after monster turns
 		enc, _ = h.encounterService.GetEncounter(context.Background(), encounterID)
 	}
@@ -297,7 +297,7 @@ func (h *Handler) handleView(s *discordgo.Session, i *discordgo.InteractionCreat
 	}
 
 	embed := buildDetailedCombatEmbed(enc)
-	
+
 	// Check whose turn it is
 	isPlayerTurn := false
 	if current := enc.GetCurrentCombatant(); current != nil {
@@ -349,19 +349,19 @@ func (h *Handler) handleContinueRound(s *discordgo.Session, i *discordgo.Interac
 
 	// Reset round
 	enc.NextRound()
-	
+
 	// Process any monster turns at start of round
 	var monsterResults []*encounter.AttackResult
 	if current := enc.GetCurrentCombatant(); current != nil && current.Type == entities.CombatantTypeMonster {
 		monsterResults, _ = h.encounterService.ProcessAllMonsterTurns(context.Background(), encounterID)
-		
+
 		// Re-get encounter
 		enc, _ = h.encounterService.GetEncounter(context.Background(), encounterID)
 	}
 
 	// Build detailed combat embed
 	embed := buildDetailedCombatEmbed(enc)
-	
+
 	// Add round start and monster actions if any
 	roundSummary := fmt.Sprintf("🔄 **Round %d Begins!**\n\n", enc.Round)
 	if len(monsterResults) > 0 {
