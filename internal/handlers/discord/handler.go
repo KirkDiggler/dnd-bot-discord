@@ -3757,20 +3757,25 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			case "select_target":
 				log.Printf("=== ENTERING select_target handler ===")
 				// Defer the response immediately to avoid timeout
+				deferred := false
 				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 				})
 				if err != nil {
 					log.Printf("Error deferring select_target response: %v", err)
-					return
+					// Continue anyway, we'll use UpdateMessage instead
+				} else {
+					deferred = true
 				}
 				
 				// Handle target selection for attack
 				if len(parts) < 4 {
 					log.Printf("Invalid select_target interaction: %v", parts)
-					_, _ = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-						Content: stringPtr("❌ Invalid target selection"),
-					})
+					if deferred {
+						_, _ = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+							Content: stringPtr("❌ Invalid target selection"),
+						})
+					}
 					return
 				}
 				targetID := parts[3]
@@ -3780,12 +3785,22 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
-					_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-						Content: &content,
-						Embeds:  &[]*discordgo.MessageEmbed{},
-					})
-					if editErr != nil {
-						log.Printf("Failed to edit response with error message: %v", editErr)
+					if deferred {
+						_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+							Content: &content,
+							Embeds:  &[]*discordgo.MessageEmbed{},
+						})
+						if editErr != nil {
+							log.Printf("Failed to edit response with error message: %v", editErr)
+						}
+					} else {
+						_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+							Type: discordgo.InteractionResponseUpdateMessage,
+							Data: &discordgo.InteractionResponseData{
+								Content: content,
+								Embeds:  []*discordgo.MessageEmbed{},
+							},
+						})
 					}
 					return
 				}
@@ -4262,12 +4277,25 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					},
 				}
 
-				_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-					Embeds:     &[]*discordgo.MessageEmbed{embed},
-					Components: &components,
-				})
-				if err != nil {
-					log.Printf("Error showing attack result: %v", err)
+				if deferred {
+					_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+						Embeds:     &[]*discordgo.MessageEmbed{embed},
+						Components: &components,
+					})
+					if err != nil {
+						log.Printf("Error showing attack result: %v", err)
+					}
+				} else {
+					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseUpdateMessage,
+						Data: &discordgo.InteractionResponseData{
+							Embeds:     []*discordgo.MessageEmbed{embed},
+							Components: components,
+						},
+					})
+					if err != nil {
+						log.Printf("Error showing attack result: %v", err)
+					}
 				}
 			default:
 				log.Printf("Unknown encounter action: %s", action)
