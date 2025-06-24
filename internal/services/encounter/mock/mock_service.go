@@ -115,6 +115,21 @@ func (mr *MockServiceMockRecorder) EndEncounter(ctx, encounterID, userID any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndEncounter", reflect.TypeOf((*MockService)(nil).EndEncounter), ctx, encounterID, userID)
 }
 
+// ExecuteAttackWithTarget mocks base method.
+func (m *MockService) ExecuteAttackWithTarget(ctx context.Context, input *encounter.ExecuteAttackInput) (*encounter.ExecuteAttackResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecuteAttackWithTarget", ctx, input)
+	ret0, _ := ret[0].(*encounter.ExecuteAttackResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExecuteAttackWithTarget indicates an expected call of ExecuteAttackWithTarget.
+func (mr *MockServiceMockRecorder) ExecuteAttackWithTarget(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteAttackWithTarget", reflect.TypeOf((*MockService)(nil).ExecuteAttackWithTarget), ctx, input)
+}
+
 // GetActiveEncounter mocks base method.
 func (m *MockService) GetActiveEncounter(ctx context.Context, sessionID string) (*entities.Encounter, error) {
 	m.ctrl.T.Helper()
@@ -185,6 +200,51 @@ func (m *MockService) NextTurn(ctx context.Context, encounterID, userID string) 
 func (mr *MockServiceMockRecorder) NextTurn(ctx, encounterID, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NextTurn", reflect.TypeOf((*MockService)(nil).NextTurn), ctx, encounterID, userID)
+}
+
+// PerformAttack mocks base method.
+func (m *MockService) PerformAttack(ctx context.Context, input *encounter.AttackInput) (*encounter.AttackResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PerformAttack", ctx, input)
+	ret0, _ := ret[0].(*encounter.AttackResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PerformAttack indicates an expected call of PerformAttack.
+func (mr *MockServiceMockRecorder) PerformAttack(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PerformAttack", reflect.TypeOf((*MockService)(nil).PerformAttack), ctx, input)
+}
+
+// ProcessAllMonsterTurns mocks base method.
+func (m *MockService) ProcessAllMonsterTurns(ctx context.Context, encounterID string) ([]*encounter.AttackResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ProcessAllMonsterTurns", ctx, encounterID)
+	ret0, _ := ret[0].([]*encounter.AttackResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ProcessAllMonsterTurns indicates an expected call of ProcessAllMonsterTurns.
+func (mr *MockServiceMockRecorder) ProcessAllMonsterTurns(ctx, encounterID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProcessAllMonsterTurns", reflect.TypeOf((*MockService)(nil).ProcessAllMonsterTurns), ctx, encounterID)
+}
+
+// ProcessMonsterTurn mocks base method.
+func (m *MockService) ProcessMonsterTurn(ctx context.Context, encounterID, monsterID string) (*encounter.AttackResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ProcessMonsterTurn", ctx, encounterID, monsterID)
+	ret0, _ := ret[0].(*encounter.AttackResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ProcessMonsterTurn indicates an expected call of ProcessMonsterTurn.
+func (mr *MockServiceMockRecorder) ProcessMonsterTurn(ctx, encounterID, monsterID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProcessMonsterTurn", reflect.TypeOf((*MockService)(nil).ProcessMonsterTurn), ctx, encounterID, monsterID)
 }
 
 // RemoveCombatant mocks base method.
