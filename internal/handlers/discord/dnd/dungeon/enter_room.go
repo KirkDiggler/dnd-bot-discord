@@ -94,6 +94,18 @@ func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 }
 
 func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *entities.Session) error {
+	// Defer the response immediately to avoid timeout
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags: discordgo.MessageFlagsEphemeral,
+		},
+	})
+	if err != nil {
+		log.Printf("Failed to defer interaction: %v", err)
+		return err
+	}
+
 	// Get difficulty and room number from session metadata
 	difficulty := "medium"
 	roomNumber := 1
@@ -134,13 +146,11 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 
 	enc, err := h.services.EncounterService.CreateEncounter(context.Background(), encounterInput)
 	if err != nil {
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Failed to create encounter: %v", err),
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		content := fmt.Sprintf("❌ Failed to create encounter: %v", err)
+		_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
 		})
+		return editErr
 	}
 
 	// Add all party members to encounter
@@ -174,37 +184,31 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 	// Roll initiative
 	err = h.services.EncounterService.RollInitiative(context.Background(), enc.ID, botID)
 	if err != nil {
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Failed to roll initiative: %v", err),
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		content := fmt.Sprintf("❌ Failed to roll initiative: %v", err)
+		_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
 		})
+		return editErr
 	}
 
 	// Start combat
 	err = h.services.EncounterService.StartEncounter(context.Background(), enc.ID, botID)
 	if err != nil {
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Failed to start combat: %v", err),
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		content := fmt.Sprintf("❌ Failed to start combat: %v", err)
+		_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
 		})
+		return editErr
 	}
 
 	// Get updated encounter
 	enc, err = h.services.EncounterService.GetEncounter(context.Background(), enc.ID)
 	if err != nil {
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Failed to get encounter: %v", err),
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
+		content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
+		_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &content,
 		})
+		return editErr
 	}
 
 	// Process initial monster turns if they go first
@@ -354,16 +358,13 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		Inline: false,
 	})
 
-	// Send initial response (ephemeral to avoid clutter)
-	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "⚔️ Entering combat room...",
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
+	// Edit the deferred response with success message
+	content := "⚔️ Combat has begun! Check the public combat log above."
+	_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Content: &content,
 	})
-	if err != nil {
-		return err
+	if editErr != nil {
+		log.Printf("Failed to edit deferred response: %v", editErr)
 	}
 
 	// Create public combat log message

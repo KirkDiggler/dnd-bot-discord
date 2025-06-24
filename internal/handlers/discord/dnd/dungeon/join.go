@@ -11,6 +11,20 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+// Helper function to edit deferred responses
+func editDeferredResponse(s *discordgo.Session, i *discordgo.InteractionCreate, content string, embeds ...*discordgo.MessageEmbed) error {
+	edit := &discordgo.WebhookEdit{
+		Content: &content,
+	}
+	if len(embeds) > 0 {
+		edit.Embeds = &embeds
+		emptyContent := ""
+		edit.Content = &emptyContent
+	}
+	_, err := s.InteractionResponseEdit(i.Interaction, edit)
+	return err
+}
+
 type JoinPartyHandler struct {
 	services *services.Provider
 }
@@ -24,28 +38,28 @@ func NewJoinPartyHandler(serviceProvider *services.Provider) *JoinPartyHandler {
 func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCreate, sessionID string) error {
 	log.Printf("JoinParty - User %s attempting to join session %s", i.Member.User.ID, sessionID)
 
+	// Defer the response immediately to avoid timeout
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags: discordgo.MessageFlagsEphemeral,
+		},
+	})
+	if err != nil {
+		log.Printf("Failed to defer interaction: %v", err)
+		return err
+	}
+
 	// Get user's active character
 	chars, err := h.services.CharacterService.ListByOwner(i.Member.User.ID)
 	if err != nil {
 		log.Printf("JoinParty - Error listing characters for user %s: %v", i.Member.User.ID, err)
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ Failed to list characters. Please try again.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		return editDeferredResponse(s, i, "❌ Failed to list characters. Please try again.")
 	}
 
 	if len(chars) == 0 {
 		log.Printf("JoinParty - User %s has no characters", i.Member.User.ID)
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ You need a character to join! Use `/dnd character create`",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		return editDeferredResponse(s, i, "❌ You need a character to join! Use `/dnd character create`")
 	}
 
 	log.Printf("JoinParty - User %s has %d characters", i.Member.User.ID, len(chars))
@@ -63,25 +77,18 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 
 	if len(activeChars) == 0 {
 		log.Printf("JoinParty - No active character found for user %s", i.Member.User.ID)
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "❌ No active character found! Activate a character first.",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		return editDeferredResponse(s, i, "❌ No active character found! Activate a character first.")
 	}
 
 	// If user has multiple active characters, show selection menu
 	if len(activeChars) > 1 {
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content:    "🎭 Select your character for this dungeon:",
-				Flags:      discordgo.MessageFlagsEphemeral,
-				Components: buildCharacterSelectMenu(activeChars, sessionID),
-			},
-		})
+		components := buildCharacterSelectMenu(activeChars, sessionID)
+		edit := &discordgo.WebhookEdit{
+			Content:    &[]string{"🎭 Select your character for this dungeon:"}[0],
+			Components: &components,
+		}
+		_, err := s.InteractionResponseEdit(i.Interaction, edit)
+		return err
 	}
 
 	// If only one active character, use it
@@ -106,26 +113,14 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 		log.Printf("Character %s (ID: %s) is incomplete. Missing: %v",
 			playerChar.Name, playerChar.ID, missingInfo)
 
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Your character is incomplete! Missing: %s\n\nPlease create a new character or contact an admin if this is an error.",
-					strings.Join(missingInfo, ", ")),
-				Flags: discordgo.MessageFlagsEphemeral,
-			},
-		})
+		return editDeferredResponse(s, i, fmt.Sprintf("❌ Your character is incomplete! Missing: %s\n\nPlease create a new character or contact an admin if this is an error.",
+			strings.Join(missingInfo, ", ")))
 	}
 
 	// Check if user is already in the session
 	sess, err := h.services.SessionService.GetSession(context.Background(), sessionID)
 	if err != nil {
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Failed to get session: %v", err),
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		return editDeferredResponse(s, i, fmt.Sprintf("❌ Failed to get session: %v", err))
 	}
 
 	// If not in session, join it
@@ -133,13 +128,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 		log.Printf("User %s not in session, joining...", i.Member.User.ID)
 		_, err = h.services.SessionService.JoinSession(context.Background(), sessionID, i.Member.User.ID)
 		if err != nil {
-			return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: fmt.Sprintf("❌ Failed to join party: %v", err),
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
+			return editDeferredResponse(s, i, fmt.Sprintf("❌ Failed to join party: %v", err))
 		}
 	} else {
 		log.Printf("User %s already in session, updating character selection...", i.Member.User.ID)
@@ -150,13 +139,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 	err = h.services.SessionService.SelectCharacter(context.Background(), sessionID, i.Member.User.ID, playerChar.ID)
 	if err != nil {
 		log.Printf("Failed to select character: %v", err)
-		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Failed to select character: %v", err),
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		return editDeferredResponse(s, i, fmt.Sprintf("❌ Failed to select character: %v", err))
 	}
 	log.Printf("Successfully selected character %s for user %s", playerChar.Name, i.Member.User.ID)
 
@@ -206,13 +189,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 		},
 	}
 
-	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds: []*discordgo.MessageEmbed{embed},
-			Flags:  discordgo.MessageFlagsEphemeral,
-		},
-	})
+	return editDeferredResponse(s, i, "", embed)
 }
 
 // buildCharacterSelectMenu creates a dropdown menu for character selection
