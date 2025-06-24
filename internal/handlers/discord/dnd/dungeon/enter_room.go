@@ -370,6 +370,8 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 	}
 
 	// Combat buttons
+	// TODO: This creates duplicate UI with the main combat handler. 
+	// Should refactor to use the main combat handler's UI exclusively.
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{

@@ -84,6 +84,11 @@ func (h *Handler) handleAttack(s *discordgo.Session, i *discordgo.InteractionCre
 		if target.ID == attacker.ID || !target.IsActive || target.CurrentHP <= 0 {
 			continue
 		}
+		
+		// Players cannot attack other players
+		if attacker.Type == entities.CombatantTypePlayer && target.Type == entities.CombatantTypePlayer {
+			continue
+		}
 
 		emoji := "🧑"
 		if target.Type == entities.CombatantTypeMonster {
@@ -187,6 +192,8 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 
 // handleNextTurn advances the turn
 func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string) error {
+	log.Printf("handleNextTurn: encounterID=%s, userID=%s", encounterID, i.Member.User.ID)
+	
 	// Defer response for processing
 	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredMessageUpdate,
@@ -196,6 +203,7 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 
 	// Advance turn
 	if err := h.encounterService.NextTurn(context.Background(), encounterID, i.Member.User.ID); err != nil {
+		log.Printf("NextTurn failed: %v", err)
 		return respondEditError(s, i, "Failed to advance turn", err)
 	}
 
@@ -302,6 +310,8 @@ func (h *Handler) handleView(s *discordgo.Session, i *discordgo.InteractionCreat
 	isPlayerTurn := false
 	if current := enc.GetCurrentCombatant(); current != nil {
 		isPlayerTurn = current.PlayerID == i.Member.User.ID
+		log.Printf("handleView: current turn=%s (playerID=%s), checking user=%s, isPlayerTurn=%v",
+			current.Name, current.PlayerID, i.Member.User.ID, isPlayerTurn)
 	}
 
 	components := []discordgo.MessageComponent{

@@ -579,12 +579,17 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 	if session, err := s.sessionService.GetSession(ctx, encounter.SessionID); err == nil {
 		if sessionType, ok := session.Metadata["sessionType"].(string); ok && sessionType == "dungeon" {
 			// In dungeon encounters:
-			// - Players can advance monster turns
+			// - Any player can advance monster turns
 			// - Players can advance their own turn
 			// - DM (bot) can advance any turn
+			log.Printf("NextTurn: Dungeon encounter - current=%s (type=%s, playerID=%s), userID=%s, dmID=%s",
+				current.Name, current.Type, current.PlayerID, userID, encounter.CreatedBy)
+			
 			if current.Type == entities.CombatantTypeMonster {
 				// Any player can advance monster turns in dungeons
+				log.Printf("NextTurn: Allowing player %s to advance monster turn", userID)
 			} else if current.PlayerID != userID && encounter.CreatedBy != userID {
+				log.Printf("NextTurn: Denying - not player's turn (current.PlayerID=%s, userID=%s)", current.PlayerID, userID)
 				return dnderr.PermissionDenied("not your turn")
 			}
 		} else {
@@ -595,6 +600,7 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 		}
 	} else {
 		// Fallback to regular rules if session lookup fails
+		log.Printf("NextTurn: Failed to get session, using regular rules: %v", err)
 		if current.PlayerID != userID && encounter.CreatedBy != userID {
 			return dnderr.PermissionDenied("not your turn")
 		}
