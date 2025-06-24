@@ -650,12 +650,16 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 	current := encounter.GetCurrentCombatant()
 	if current == nil || current.ID != input.AttackerID {
 		// Special handling for dungeon encounters
-		if session, err := s.sessionService.GetSession(ctx, encounter.SessionID); err == nil {
-			if sessionType, ok := session.Metadata["sessionType"].(string); ok && sessionType == "dungeon" {
-				// In dungeon encounters, bot orchestrates combat
-			} else {
-				return nil, dnderr.PermissionDenied("not attacker's turn")
-			}
+		session, err := s.sessionService.GetSession(ctx, encounter.SessionID)
+		if err != nil {
+			// If we can't get the session, deny the attack for security
+			return nil, dnderr.PermissionDenied("unable to verify permissions")
+		}
+
+		if sessionType, ok := session.Metadata["sessionType"].(string); ok && sessionType == "dungeon" {
+			// In dungeon encounters, bot orchestrates combat
+		} else {
+			return nil, dnderr.PermissionDenied("not attacker's turn")
 		}
 	}
 
@@ -685,9 +689,9 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 
 		// Use first attack result
 		attackResult := attackResults[0]
-		result.AttackRoll = attackResult.AttackResult.Rolls[0]
-		result.AttackBonus = attackResult.AttackRoll - result.AttackRoll
-		result.TotalAttack = attackResult.AttackRoll
+		result.AttackRoll = attackResult.AttackResult.Rolls[0]      // The d20 roll
+		result.TotalAttack = attackResult.AttackRoll                // Total including bonuses
+		result.AttackBonus = result.TotalAttack - result.AttackRoll // Calculate bonus from total minus d20
 		result.DiceRolls = attackResult.AttackResult.Rolls
 
 		// Get weapon name
