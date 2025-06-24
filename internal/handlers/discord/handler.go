@@ -51,6 +51,7 @@ type Handler struct {
 	characterShowHandler                  *character.ShowHandler
 	characterWeaponHandler                *character.WeaponHandler
 	characterSheetHandler                 *character.SheetHandler
+	characterDeleteHandler                *character.DeleteHandler
 
 	// Session handlers
 	sessionCreateHandler *sessionHandler.CreateHandler
@@ -137,7 +138,8 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		characterWeaponHandler: character.NewWeaponHandler(&character.WeaponHandlerConfig{
 			ServiceProvider: cfg.ServiceProvider,
 		}),
-		characterSheetHandler: character.NewSheetHandler(cfg.ServiceProvider),
+		characterSheetHandler:  character.NewSheetHandler(cfg.ServiceProvider),
+		characterDeleteHandler: character.NewDeleteHandler(cfg.ServiceProvider),
 
 		// Initialize session handlers
 		sessionCreateHandler: sessionHandler.NewCreateHandler(cfg.ServiceProvider),
@@ -194,6 +196,11 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 						{
 							Name:        "list",
 							Description: "List all your characters",
+							Type:        discordgo.ApplicationCommandOptionSubCommand,
+						},
+						{
+							Name:        "delete",
+							Description: "Delete one of your characters",
 							Type:        discordgo.ApplicationCommandOptionSubCommand,
 						},
 					},
@@ -463,6 +470,14 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 			}
 			if err := h.characterListHandler.Handle(req); err != nil {
 				log.Printf("Error handling character list: %v", err)
+			}
+		case "delete":
+			req := &character.DeleteRequest{
+				Session:     s,
+				Interaction: i,
+			}
+			if err := h.characterDeleteHandler.Handle(req); err != nil {
+				log.Printf("Error handling character delete: %v", err)
 			}
 		}
 	} else if subcommandGroup.Name == "session" && len(subcommandGroup.Options) > 0 {
@@ -1644,6 +1659,46 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					}
 				}
 			}
+		}
+	} else if ctx == "character" && action == "delete_select" {
+		// Handle character selection for deletion
+		if len(parts) >= 3 {
+			characterID := parts[2]
+			req := &character.DeleteRequest{
+				Session:     s,
+				Interaction: i,
+				CharacterID: characterID,
+			}
+			if err := h.characterDeleteHandler.Handle(req); err != nil {
+				log.Printf("Error handling character delete select: %v", err)
+			}
+		}
+	} else if ctx == "character" && action == "delete_select_menu" {
+		// Handle character selection from dropdown menu
+		req := &character.DeleteRequest{
+			Session:     s,
+			Interaction: i,
+		}
+		if err := h.characterDeleteHandler.HandleSelectMenu(req); err != nil {
+			log.Printf("Error handling character delete select menu: %v", err)
+		}
+	} else if ctx == "character" && action == "delete_confirm" {
+		// Handle deletion confirmation
+		req := &character.DeleteRequest{
+			Session:     s,
+			Interaction: i,
+		}
+		if err := h.characterDeleteHandler.HandleDeleteConfirm(req); err != nil {
+			log.Printf("Error handling character delete confirm: %v", err)
+		}
+	} else if ctx == "character" && action == "delete_cancel" {
+		// Handle deletion cancellation
+		req := &character.DeleteRequest{
+			Session:     s,
+			Interaction: i,
+		}
+		if err := h.characterDeleteHandler.HandleDeleteCancel(req); err != nil {
+			log.Printf("Error handling character delete cancel: %v", err)
 		}
 	} else if ctx == "character" && action == "sheet_refresh" {
 		// Refresh character sheet
