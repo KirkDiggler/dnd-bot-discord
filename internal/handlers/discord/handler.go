@@ -3746,6 +3746,109 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				if err != nil {
 					log.Printf("Error showing action controller: %v", err)
 				}
+			case "continue_round":
+				// Simply show the action controller which will display the correct UI for the current turn
+				log.Printf("Continue round button clicked for encounter: %s", encounterID)
+				
+				// Update message to show loading
+				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseUpdateMessage,
+					Data: &discordgo.InteractionResponseData{
+						Content: "⏳ Starting new round...",
+						Embeds:  []*discordgo.MessageEmbed{},
+						Components: []discordgo.MessageComponent{},
+					},
+				})
+				if err != nil {
+					log.Printf("Failed to update with loading state: %v", err)
+					return
+				}
+				
+				// Get the encounter
+				encounter, err := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				if err != nil {
+					content := fmt.Sprintf("❌ Failed to get encounter: %v", err)
+					_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+						Content: &content,
+					})
+					if editErr != nil {
+						log.Printf("Failed to edit response: %v", editErr)
+					}
+					return
+				}
+				
+				// Show the appropriate UI for the current turn
+				current := encounter.GetCurrentCombatant()
+				if current != nil && current.PlayerID == i.Member.User.ID {
+					// It's this player's turn - show action controller
+					embed := &discordgo.MessageEmbed{
+						Title:       fmt.Sprintf("🎮 %s's Action Controller", current.Name),
+						Description: fmt.Sprintf("Round %d - It's your turn! Choose an action:", encounter.Round),
+						Color:       0x2ecc71, // Green
+						Fields: []*discordgo.MessageEmbedField{
+							{
+								Name:   "📊 Your Status",
+								Value:  fmt.Sprintf("HP: %d/%d | AC: %d", current.CurrentHP, current.MaxHP, current.AC),
+								Inline: false,
+							},
+						},
+					}
+
+					// Build action buttons
+					components := []discordgo.MessageComponent{
+						discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								discordgo.Button{
+									Label:    "Attack",
+									Style:    discordgo.DangerButton,
+									CustomID: fmt.Sprintf("encounter:attack:%s", encounterID),
+									Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
+								},
+								discordgo.Button{
+									Label:    "Cast Spell",
+									Style:    discordgo.PrimaryButton,
+									CustomID: fmt.Sprintf("encounter:cast_spell:%s", encounterID),
+									Emoji:    &discordgo.ComponentEmoji{Name: "✨"},
+									Disabled: true, // Not implemented yet
+								},
+								discordgo.Button{
+									Label:    "Use Item",
+									Style:    discordgo.PrimaryButton,
+									CustomID: fmt.Sprintf("encounter:use_item:%s", encounterID),
+									Emoji:    &discordgo.ComponentEmoji{Name: "🧪"},
+									Disabled: true, // Not implemented yet
+								},
+								discordgo.Button{
+									Label:    "End Turn",
+									Style:    discordgo.SecondaryButton,
+									CustomID: fmt.Sprintf("encounter:next_turn:%s", encounterID),
+									Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
+								},
+							},
+						},
+					}
+					
+					emptyContent := ""
+					_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+						Content:    &emptyContent,
+						Embeds:     &[]*discordgo.MessageEmbed{embed},
+						Components: &components,
+					})
+					if err != nil {
+						log.Printf("Error showing action controller after round continue: %v", err)
+					}
+				} else {
+					// Not this player's turn
+					content := fmt.Sprintf("⏭️ Round %d has begun! It's %s's turn.", encounter.Round, current.Name)
+					_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+						Content: &content,
+						Embeds:  &[]*discordgo.MessageEmbed{},
+						Components: &[]discordgo.MessageComponent{},
+					})
+					if err != nil {
+						log.Printf("Error showing round start message: %v", err)
+					}
+				}
 			case "attack":
 				log.Printf("Attack button pressed for encounter: %s by user: %s", encounterID, i.Member.User.ID)
 				// Simple attack handler for testing
@@ -4297,6 +4400,9 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					}
 				}
 
+				// Track the current round for detecting transitions
+				currentRound := encounter.Round
+				
 				// Auto-advance turn after player attack
 				if current.Type == entities.CombatantTypePlayer {
 					log.Printf("Auto-advancing turn after player attack")
@@ -4412,12 +4518,37 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 									break
 								}
 							}
+							
+							// Check if we've transitioned to a new round
+							if encounter.Round > currentRound {
+								log.Printf("Round transition detected: Round %d -> Round %d", currentRound, encounter.Round)
+								
+								// Add round summary to the embed
+								embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+									Name:   "🏁 Round Complete!",
+									Value:  fmt.Sprintf("**Round %d has ended.** Click 'Continue to Round %d' to proceed.", currentRound, encounter.Round),
+									Inline: false,
+								})
+								
+								// Show round statistics
+								var roundStats strings.Builder
+								roundStats.WriteString(fmt.Sprintf("📊 **Round %d Summary:**\n", currentRound))
+								roundStats.WriteString(fmt.Sprintf("⏱️ Actions taken: %d\n", len(encounter.TurnOrder)))
+								roundStats.WriteString("Ready for the next round of combat!")
+								
+								embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+									Name:   "📜 Round Statistics",
+									Value:  roundStats.String(),
+									Inline: false,
+								})
+							}
 						}
 					}
 				}
 
-				// Re-get encounter to check turn
+				// Re-get encounter to check turn and round status
 				encounter, _ = h.ServiceProvider.EncounterService.GetEncounter(context.Background(), encounterID)
+				roundChanged := encounter != nil && encounter.Round > currentRound
 				isPlayerTurn := false
 				if encounter != nil && encounter.Status == entities.EncounterStatusActive {
 					if current := encounter.GetCurrentCombatant(); current != nil {
@@ -4425,31 +4556,49 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					}
 				}
 
-				// Return to action controller buttons
-				components := []discordgo.MessageComponent{
-					discordgo.ActionsRow{
-						Components: []discordgo.MessageComponent{
-							discordgo.Button{
-								Label:    "Back to Actions",
-								Style:    discordgo.PrimaryButton,
-								CustomID: fmt.Sprintf("encounter:my_turn:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "🎮"},
-							},
-							discordgo.Button{
-								Label:    "Attack Again",
-								Style:    discordgo.DangerButton,
-								CustomID: fmt.Sprintf("encounter:attack:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
-								Disabled: !isPlayerTurn,
-							},
-							discordgo.Button{
-								Label:    "End Turn",
-								Style:    discordgo.SecondaryButton,
-								CustomID: fmt.Sprintf("encounter:next_turn:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
+				// Return appropriate buttons based on round state
+				var components []discordgo.MessageComponent
+				if roundChanged {
+					// Show continue to next round button
+					components = []discordgo.MessageComponent{
+						discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								discordgo.Button{
+									Label:    fmt.Sprintf("Continue to Round %d", encounter.Round),
+									Style:    discordgo.SuccessButton,
+									CustomID: fmt.Sprintf("encounter:continue_round:%s", encounterID),
+									Emoji:    &discordgo.ComponentEmoji{Name: "▶️"},
+								},
 							},
 						},
-					},
+					}
+				} else {
+					// Normal action controller buttons
+					components = []discordgo.MessageComponent{
+						discordgo.ActionsRow{
+							Components: []discordgo.MessageComponent{
+								discordgo.Button{
+									Label:    "Back to Actions",
+									Style:    discordgo.PrimaryButton,
+									CustomID: fmt.Sprintf("encounter:my_turn:%s", encounterID),
+									Emoji:    &discordgo.ComponentEmoji{Name: "🎮"},
+								},
+								discordgo.Button{
+									Label:    "Attack Again",
+									Style:    discordgo.DangerButton,
+									CustomID: fmt.Sprintf("encounter:attack:%s", encounterID),
+									Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
+									Disabled: !isPlayerTurn,
+								},
+								discordgo.Button{
+									Label:    "End Turn",
+									Style:    discordgo.SecondaryButton,
+									CustomID: fmt.Sprintf("encounter:next_turn:%s", encounterID),
+									Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
+								},
+							},
+						},
+					}
 				}
 
 				// Edit the original interaction message
