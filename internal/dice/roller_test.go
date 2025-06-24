@@ -10,14 +10,14 @@ import (
 
 func TestMockRoller_Roll(t *testing.T) {
 	tests := []struct {
-		name        string
-		setupRolls  []int
-		count       int
-		sides       int
-		bonus       int
-		wantTotal   int
-		wantRolls   []int
-		wantErr     bool
+		name       string
+		setupRolls []int
+		count      int
+		sides      int
+		bonus      int
+		wantTotal  int
+		wantRolls  []int
+		wantErr    bool
 	}{
 		{
 			name:       "single d20 roll",
@@ -223,22 +223,22 @@ func TestRandomRoller_BasicFunctionality(t *testing.T) {
 	total, rolls, err := roller.Roll(2, 6, 3)
 	require.NoError(t, err)
 	assert.Len(t, rolls, 2)
-	assert.GreaterOrEqual(t, total, 5)  // minimum: 1+1+3
-	assert.LessOrEqual(t, total, 15)    // maximum: 6+6+3
+	assert.GreaterOrEqual(t, total, 5) // minimum: 1+1+3
+	assert.LessOrEqual(t, total, 15)   // maximum: 6+6+3
 
 	// Test advantage
 	total, roll, err := roller.RollWithAdvantage(20, 2)
 	require.NoError(t, err)
-	assert.GreaterOrEqual(t, total, 3)  // minimum: 1+2
-	assert.LessOrEqual(t, total, 22)    // maximum: 20+2
+	assert.GreaterOrEqual(t, total, 3) // minimum: 1+2
+	assert.LessOrEqual(t, total, 22)   // maximum: 20+2
 	assert.GreaterOrEqual(t, roll, 1)
 	assert.LessOrEqual(t, roll, 20)
 
 	// Test disadvantage
 	total, roll, err = roller.RollWithDisadvantage(20, 2)
 	require.NoError(t, err)
-	assert.GreaterOrEqual(t, total, 3)  // minimum: 1+2
-	assert.LessOrEqual(t, total, 22)    // maximum: 20+2
+	assert.GreaterOrEqual(t, total, 3) // minimum: 1+2
+	assert.LessOrEqual(t, total, 22)   // maximum: 20+2
 	assert.GreaterOrEqual(t, roll, 1)
 	assert.LessOrEqual(t, roll, 20)
 }

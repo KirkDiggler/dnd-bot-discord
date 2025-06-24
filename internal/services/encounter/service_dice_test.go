@@ -21,20 +21,20 @@ func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 	// Setup
 	ctx := context.Background()
 	mockDice := dice.NewMockRoller()
-	
+
 	// Set deterministic rolls for initiative
 	mockDice.SetRolls([]int{
 		20, // Player rolls nat 20
 		10, // Goblin rolls 10
 		5,  // Skeleton rolls 5
 	})
-	
+
 	// Create services with mock dice
 	charRepo := characters.NewInMemoryRepository()
 	charService := character.NewService(&character.ServiceConfig{
 		Repository: charRepo,
 	})
-	
+
 	// Create a test character
 	testChar := &entities.Character{
 		ID:               "char-1",
@@ -48,13 +48,13 @@ func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 	}
 	err := charRepo.Create(ctx, testChar)
 	require.NoError(t, err)
-	
+
 	sessionRepo := gamesessions.NewInMemoryRepository()
 	sessionService := session.NewService(&session.ServiceConfig{
 		Repository:       sessionRepo,
 		CharacterService: charService,
 	})
-	
+
 	// Create session with all required fields
 	sess := &entities.Session{
 		ID:          "test-session",
@@ -75,7 +75,7 @@ func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 	}
 	createErr := sessionRepo.Create(ctx, sess)
 	require.NoError(t, createErr)
-	
+
 	// Create encounter service with mock dice
 	encounterService := encounter.NewService(&encounter.ServiceConfig{
 		Repository:       encounters.NewInMemoryRepository(),
@@ -83,7 +83,7 @@ func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 		CharacterService: charService,
 		DiceRoller:       mockDice,
 	})
-	
+
 	// Create encounter
 	enc, err := encounterService.CreateEncounter(ctx, &encounter.CreateEncounterInput{
 		SessionID:   "test-session",
@@ -93,7 +93,7 @@ func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 		UserID:      "user-1",
 	})
 	require.NoError(t, err)
-	
+
 	// Add combatants
 	_, err = encounterService.AddMonster(ctx, enc.ID, "user-1", &encounter.AddMonsterInput{
 		Name:            "Goblin",
@@ -102,7 +102,7 @@ func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 		InitiativeBonus: 2, // Will roll 10 + 2 = 12
 	})
 	require.NoError(t, err)
-	
+
 	_, err = encounterService.AddMonster(ctx, enc.ID, "user-1", &encounter.AddMonsterInput{
 		Name:            "Skeleton",
 		MaxHP:           13,
@@ -110,11 +110,11 @@ func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 		InitiativeBonus: 1, // Will roll 5 + 1 = 6
 	})
 	require.NoError(t, err)
-	
+
 	// Add player
 	_, err = encounterService.AddPlayer(ctx, enc.ID, "player-1", "char-1")
 	require.NoError(t, err)
-	
+
 	// Update player's initiative bonus
 	enc, _ = encounterService.GetEncounter(ctx, enc.ID)
 	for _, combatant := range enc.Combatants {
@@ -122,69 +122,69 @@ func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 			combatant.InitiativeBonus = 3 // Will roll 20 + 3 = 23
 		}
 	}
-	
+
 	// Roll initiative
 	err = encounterService.RollInitiative(ctx, enc.ID, "user-1")
 	require.NoError(t, err)
-	
+
 	// Get updated encounter
 	enc, err = encounterService.GetEncounter(ctx, enc.ID)
 	require.NoError(t, err)
-	
+
 	// The order of adding combatants determines the order of initiative rolls
 	// We added: Goblin (gets roll 20), Skeleton (gets roll 10), Player (gets roll 5)
 	expectedInitiatives := map[string]int{
 		"Goblin":   22, // 20 + 2
-		"Skeleton": 11, // 10 + 1  
+		"Skeleton": 11, // 10 + 1
 		"Player":   8,  // 5 + 3
 	}
-	
+
 	for _, combatant := range enc.Combatants {
 		expected, exists := expectedInitiatives[combatant.Name]
 		if exists {
-			assert.Equal(t, expected, combatant.Initiative, 
-				"Expected %s to have initiative %d, got %d", 
+			assert.Equal(t, expected, combatant.Initiative,
+				"Expected %s to have initiative %d, got %d",
 				combatant.Name, expected, combatant.Initiative)
 		}
 	}
-	
+
 	// Verify turn order (should be sorted by initiative descending)
 	assert.Len(t, enc.TurnOrder, 3)
-	
+
 	// The first in turn order should be Goblin (highest initiative)
 	firstCombatant := enc.Combatants[enc.TurnOrder[0]]
 	assert.Equal(t, "Goblin", firstCombatant.Name)
 	assert.Equal(t, 22, firstCombatant.Initiative)
-	
+
 	// Combat log should show the rolls
-	assert.Contains(t, enc.CombatLog[1], "Goblin") 
+	assert.Contains(t, enc.CombatLog[1], "Goblin")
 	assert.Contains(t, enc.CombatLog[1], "20 + 2 = **22**")
 }
 
 func TestEncounterService_CombatScenario_WithMockDice(t *testing.T) {
 	// This test demonstrates how we can test a complete combat scenario
 	// with predetermined dice rolls
-	
+
 	ctx := context.Background()
 	mockDice := dice.NewMockRoller()
-	
+
 	// Set up a complete combat scenario:
-	// Initiative: Player (15), Goblin (10)
-	// Player attacks: hits (roll 16), deals 8 damage - goblin dies
-	// Combat ends with player victory
+	// We add Goblin first, then Player
+	// Goblin gets first roll (15), Player gets second roll (10)
+	// But Player has initiative bonus, so let's give them a higher roll
 	mockDice.SetRolls([]int{
-		15, // Player initiative
-		10, // Goblin initiative
+		10, // Goblin initiative roll (10 + 0 = 10)
+		15, // Player initiative roll (15 + 3 = 18)
 		16, // Player attack roll (hits AC 15)
 		8,  // Player damage roll
 	})
-	
+
 	// Create services
 	charRepo := characters.NewInMemoryRepository()
 	charService := character.NewService(&character.ServiceConfig{
 		Repository: charRepo,
 	})
-	
+
 	// Create test character
 	testChar := &entities.Character{
 		ID:               "char-1",
@@ -198,13 +198,13 @@ func TestEncounterService_CombatScenario_WithMockDice(t *testing.T) {
 	}
 	err := charRepo.Create(ctx, testChar)
 	require.NoError(t, err)
-	
+
 	sessionRepo := gamesessions.NewInMemoryRepository()
 	sessionService := session.NewService(&session.ServiceConfig{
 		Repository:       sessionRepo,
 		CharacterService: charService,
 	})
-	
+
 	// Create session
 	sess := &entities.Session{
 		ID:          "test-session",
@@ -225,7 +225,7 @@ func TestEncounterService_CombatScenario_WithMockDice(t *testing.T) {
 	}
 	createErr := sessionRepo.Create(ctx, sess)
 	require.NoError(t, createErr)
-	
+
 	// Create encounter service with mock dice
 	encounterService := encounter.NewService(&encounter.ServiceConfig{
 		Repository:       encounters.NewInMemoryRepository(),
@@ -233,7 +233,7 @@ func TestEncounterService_CombatScenario_WithMockDice(t *testing.T) {
 		CharacterService: charService,
 		DiceRoller:       mockDice,
 	})
-	
+
 	// Create and setup encounter
 	enc, err := encounterService.CreateEncounter(ctx, &encounter.CreateEncounterInput{
 		SessionID: "test-session",
@@ -242,7 +242,7 @@ func TestEncounterService_CombatScenario_WithMockDice(t *testing.T) {
 		UserID:    "user-1",
 	})
 	require.NoError(t, err)
-	
+
 	// Add goblin with 7 HP
 	_, err = encounterService.AddMonster(ctx, enc.ID, "user-1", &encounter.AddMonsterInput{
 		Name:  "Goblin Boss",
@@ -250,30 +250,39 @@ func TestEncounterService_CombatScenario_WithMockDice(t *testing.T) {
 		AC:    15,
 	})
 	require.NoError(t, err)
-	
+
 	// Add player
 	_, err = encounterService.AddPlayer(ctx, enc.ID, "player-1", "char-1")
 	require.NoError(t, err)
-	
+
+	// Update player's initiative bonus
+	enc, _ = encounterService.GetEncounter(ctx, enc.ID)
+	for _, combatant := range enc.Combatants {
+		if combatant.Type == entities.CombatantTypePlayer {
+			combatant.InitiativeBonus = 3 // Will roll 15 + 3 = 18
+		}
+	}
+
 	// Roll initiative
 	err = encounterService.RollInitiative(ctx, enc.ID, "user-1")
 	require.NoError(t, err)
-	
+
 	// Start encounter
 	err = encounterService.StartEncounter(ctx, enc.ID, "user-1")
 	require.NoError(t, err)
-	
+
 	// Get updated encounter
 	enc, err = encounterService.GetEncounter(ctx, enc.ID)
 	require.NoError(t, err)
-	
-	// Verify player goes first
+
+	// Verify player goes first (15 + 3 = 18 vs goblin's 10 + 0 = 10)
 	firstCombatant := enc.GetCurrentCombatant()
 	assert.Equal(t, entities.CombatantTypePlayer, firstCombatant.Type)
-	
+	assert.Equal(t, "Fighter", firstCombatant.Name)
+
 	// In a real scenario, the player would attack here
 	// The mock dice would provide: attack roll 16 (hit), damage 8 (kills goblin)
-	
+
 	// This demonstrates how deterministic testing enables:
 	// 1. Testing specific combat scenarios
 	// 2. Reproducing bug reports

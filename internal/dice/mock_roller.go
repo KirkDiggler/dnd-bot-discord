@@ -48,11 +48,11 @@ func (m *MockRoller) Reset() {
 func (m *MockRoller) getNextRoll() (int, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if m.rollIndex >= len(m.rolls) {
 		return 0, fmt.Errorf("no more predetermined rolls available (used %d of %d)", m.rollIndex, len(m.rolls))
 	}
-	
+
 	roll := m.rolls[m.rollIndex]
 	m.rollIndex++
 	return roll, nil
@@ -62,7 +62,7 @@ func (m *MockRoller) getNextRoll() (int, error) {
 func (m *MockRoller) Roll(count, sides, bonus int) (total int, rolls []int, err error) {
 	rolls = make([]int, count)
 	total = bonus
-	
+
 	for i := 0; i < count; i++ {
 		roll, err := m.getNextRoll()
 		if err != nil {
@@ -74,7 +74,7 @@ func (m *MockRoller) Roll(count, sides, bonus int) (total int, rolls []int, err 
 		rolls[i] = roll
 		total += roll
 	}
-	
+
 	return total, rolls, nil
 }
 
@@ -84,22 +84,22 @@ func (m *MockRoller) RollWithAdvantage(sides, bonus int) (total int, roll int, e
 	if err != nil {
 		return 0, 0, err
 	}
-	
+
 	roll2, err := m.getNextRoll()
 	if err != nil {
 		return 0, 0, err
 	}
-	
+
 	if roll1 < 1 || roll1 > sides || roll2 < 1 || roll2 > sides {
 		return 0, 0, fmt.Errorf("invalid rolls %d,%d for d%d", roll1, roll2, sides)
 	}
-	
+
 	// Take the higher roll
 	higherRoll := roll1
 	if roll2 > higherRoll {
 		higherRoll = roll2
 	}
-	
+
 	return higherRoll + bonus, higherRoll, nil
 }
 
@@ -109,22 +109,22 @@ func (m *MockRoller) RollWithDisadvantage(sides, bonus int) (total int, roll int
 	if err != nil {
 		return 0, 0, err
 	}
-	
+
 	roll2, err := m.getNextRoll()
 	if err != nil {
 		return 0, 0, err
 	}
-	
+
 	if roll1 < 1 || roll1 > sides || roll2 < 1 || roll2 > sides {
 		return 0, 0, fmt.Errorf("invalid rolls %d,%d for d%d", roll1, roll2, sides)
 	}
-	
+
 	// Take the lower roll
 	lowerRoll := roll1
 	if roll2 < lowerRoll {
 		lowerRoll = roll2
 	}
-	
+
 	return lowerRoll + bonus, lowerRoll, nil
 }
 
@@ -146,7 +146,7 @@ func (m *MockRollerV2) Roll(count, sides, bonus int) (*interfaces.RollResult, er
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &interfaces.RollResult{
 		Total: total,
 		Rolls: rolls,
@@ -162,16 +162,16 @@ func (m *MockRollerV2) RollWithAdvantage(sides, bonus int) (*interfaces.RollResu
 	if err != nil {
 		return nil, err
 	}
-	
+
 	roll2, err := m.getNextRoll()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if roll1 < 1 || roll1 > sides || roll2 < 1 || roll2 > sides {
 		return nil, fmt.Errorf("invalid rolls %d,%d for d%d", roll1, roll2, sides)
 	}
-	
+
 	// Take the higher roll
 	higherRoll := roll1
 	lowerRoll := roll2
@@ -179,7 +179,7 @@ func (m *MockRollerV2) RollWithAdvantage(sides, bonus int) (*interfaces.RollResu
 		higherRoll = roll2
 		lowerRoll = roll1
 	}
-	
+
 	return &interfaces.RollResult{
 		Total: higherRoll + bonus,
 		Rolls: []int{higherRoll, lowerRoll}, // Show both rolls
@@ -195,16 +195,16 @@ func (m *MockRollerV2) RollWithDisadvantage(sides, bonus int) (*interfaces.RollR
 	if err != nil {
 		return nil, err
 	}
-	
+
 	roll2, err := m.getNextRoll()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if roll1 < 1 || roll1 > sides || roll2 < 1 || roll2 > sides {
 		return nil, fmt.Errorf("invalid rolls %d,%d for d%d", roll1, roll2, sides)
 	}
-	
+
 	// Take the lower roll
 	lowerRoll := roll1
 	higherRoll := roll2
@@ -212,7 +212,7 @@ func (m *MockRollerV2) RollWithDisadvantage(sides, bonus int) (*interfaces.RollR
 		lowerRoll = roll2
 		higherRoll = roll1
 	}
-	
+
 	return &interfaces.RollResult{
 		Total: lowerRoll + bonus,
 		Rolls: []int{lowerRoll, higherRoll}, // Show both rolls

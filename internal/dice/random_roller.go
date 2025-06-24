@@ -27,18 +27,18 @@ func (r *RandomRoller) RollWithAdvantage(sides, bonus int) (total int, roll int,
 	if err != nil {
 		return 0, 0, err
 	}
-	
+
 	result2, err := Roll(1, sides, 0)
 	if err != nil {
 		return 0, 0, err
 	}
-	
+
 	// Take the higher roll
 	higherRoll := result1.Rolls[0]
 	if result2.Rolls[0] > higherRoll {
 		higherRoll = result2.Rolls[0]
 	}
-	
+
 	return higherRoll + bonus, higherRoll, nil
 }
 
@@ -48,18 +48,18 @@ func (r *RandomRoller) RollWithDisadvantage(sides, bonus int) (total int, roll i
 	if err != nil {
 		return 0, 0, err
 	}
-	
+
 	result2, err := Roll(1, sides, 0)
 	if err != nil {
 		return 0, 0, err
 	}
-	
+
 	// Take the lower roll
 	lowerRoll := result1.Rolls[0]
 	if result2.Rolls[0] < lowerRoll {
 		lowerRoll = result2.Rolls[0]
 	}
-	
+
 	return lowerRoll + bonus, lowerRoll, nil
 }
 
@@ -77,7 +77,7 @@ func (r *RandomRollerV2) Roll(count, sides, bonus int) (*interfaces.RollResult, 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &interfaces.RollResult{
 		Total: result.Total,
 		Rolls: result.Rolls,
@@ -93,12 +93,12 @@ func (r *RandomRollerV2) RollWithAdvantage(sides, bonus int) (*interfaces.RollRe
 	if err != nil {
 		return nil, err
 	}
-	
+
 	result2, err := Roll(1, sides, 0)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Take the higher roll
 	higherRoll := result1.Rolls[0]
 	lowerRoll := result2.Rolls[0]
@@ -106,7 +106,7 @@ func (r *RandomRollerV2) RollWithAdvantage(sides, bonus int) (*interfaces.RollRe
 		higherRoll = result2.Rolls[0]
 		lowerRoll = result1.Rolls[0]
 	}
-	
+
 	return &interfaces.RollResult{
 		Total: higherRoll + bonus,
 		Rolls: []int{higherRoll, lowerRoll}, // Show both rolls
@@ -122,12 +122,12 @@ func (r *RandomRollerV2) RollWithDisadvantage(sides, bonus int) (*interfaces.Rol
 	if err != nil {
 		return nil, err
 	}
-	
+
 	result2, err := Roll(1, sides, 0)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Take the lower roll
 	lowerRoll := result1.Rolls[0]
 	higherRoll := result2.Rolls[0]
@@ -135,7 +135,7 @@ func (r *RandomRollerV2) RollWithDisadvantage(sides, bonus int) (*interfaces.Rol
 		lowerRoll = result2.Rolls[0]
 		higherRoll = result1.Rolls[0]
 	}
-	
+
 	return &interfaces.RollResult{
 		Total: lowerRoll + bonus,
 		Rolls: []int{lowerRoll, higherRoll}, // Show both rolls
