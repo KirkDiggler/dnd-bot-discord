@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
@@ -401,8 +402,16 @@ func (s *service) RollInitiative(ctx context.Context, encounterID, userID string
 	encounter.CombatLog = []string{"🎲 **Rolling Initiative**"}
 
 	// Roll initiative for each combatant
+	// Sort combatant IDs to ensure deterministic order for testing
+	combatantIDs := make([]string, 0, len(encounter.Combatants))
+	for id := range encounter.Combatants {
+		combatantIDs = append(combatantIDs, id)
+	}
+	sort.Strings(combatantIDs)
+
 	initiatives := make(map[string]int)
-	for id, combatant := range encounter.Combatants {
+	for _, id := range combatantIDs {
+		combatant := encounter.Combatants[id]
 		total, rolls, err := s.diceRoller.Roll(1, 20, combatant.InitiativeBonus)
 		if err != nil {
 			return dnderr.Wrap(err, "failed to roll initiative")

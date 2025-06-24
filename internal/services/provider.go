@@ -2,7 +2,6 @@ package services
 
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/interfaces"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/dungeons"
@@ -60,12 +59,6 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 		dungeonRepo = dungeons.NewInMemoryRepository()
 	}
 
-	// Use random dice roller if none provided
-	diceRoller := cfg.DiceRoller
-	if diceRoller == nil {
-		diceRoller = dice.NewRandomRoller()
-	}
-
 	// Create character service
 	charService := characterService.NewService(&characterService.ServiceConfig{
 		DNDClient:  cfg.DNDClient,
@@ -83,7 +76,7 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 		Repository:       encounterRepo,
 		SessionService:   sessService,
 		CharacterService: charService,
-		DiceRoller:       diceRoller,
+		DiceRoller:       cfg.DiceRoller,
 	})
 
 	// Create monster service
@@ -112,6 +105,6 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 		DungeonService:   dungService,
 		MonsterService:   monstService,
 		LootService:      ltService,
-		DiceRoller:       diceRoller,
+		DiceRoller:       cfg.DiceRoller,
 	}
 }
