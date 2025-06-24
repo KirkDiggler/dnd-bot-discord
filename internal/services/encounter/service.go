@@ -11,6 +11,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/interfaces"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
 	charService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	sessService "github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
@@ -88,6 +89,7 @@ type service struct {
 	sessionService   sessService.Service
 	characterService charService.Service
 	uuidGenerator    uuid.Generator
+	diceRoller       interfaces.DiceRoller
 }
 
 // ServiceConfig holds configuration for the service
@@ -96,6 +98,7 @@ type ServiceConfig struct {
 	SessionService   sessService.Service
 	CharacterService charService.Service
 	UUIDGenerator    uuid.Generator
+	DiceRoller       interfaces.DiceRoller
 }
 
 // NewService creates a new encounter service
@@ -114,12 +117,18 @@ func NewService(cfg *ServiceConfig) Service {
 		repository:       cfg.Repository,
 		sessionService:   cfg.SessionService,
 		characterService: cfg.CharacterService,
+		diceRoller:       cfg.DiceRoller,
 	}
 
 	if cfg.UUIDGenerator != nil {
 		svc.uuidGenerator = cfg.UUIDGenerator
 	} else {
 		svc.uuidGenerator = uuid.NewGoogleUUIDGenerator()
+	}
+
+	// Use random dice roller if none provided
+	if svc.diceRoller == nil {
+		svc.diceRoller = dice.NewRandomRoller()
 	}
 
 	return svc
@@ -394,17 +403,17 @@ func (s *service) RollInitiative(ctx context.Context, encounterID, userID string
 	// Roll initiative for each combatant
 	initiatives := make(map[string]int)
 	for id, combatant := range encounter.Combatants {
-		rollResult, err := dice.RollString("1d20")
+		total, rolls, err := s.diceRoller.Roll(1, 20, combatant.InitiativeBonus)
 		if err != nil {
 			return dnderr.Wrap(err, "failed to roll initiative")
 		}
-		combatant.Initiative = rollResult.Total + combatant.InitiativeBonus
+		combatant.Initiative = total
 		initiatives[id] = combatant.Initiative
 
 		// Log the initiative roll
 		logEntry := fmt.Sprintf("**%s** rolls initiative: %v + %d = **%d**",
 			combatant.Name,
-			rollResult.Rolls[0], // The d20 roll
+			rolls[0], // The d20 roll
 			combatant.InitiativeBonus,
 			combatant.Initiative)
 		encounter.CombatLog = append(encounter.CombatLog, logEntry)
