@@ -62,6 +62,15 @@ type Service interface {
 
 	// LogCombatAction logs a combat action (like a miss) without damage
 	LogCombatAction(ctx context.Context, encounterID, action string) error
+
+	// ProcessMonsterTurn handles a monster's turn automatically
+	ProcessMonsterTurn(ctx context.Context, encounterID string, monsterID string) (*AttackResult, error)
+
+	// ProcessAllMonsterTurns processes all consecutive monster turns
+	ProcessAllMonsterTurns(ctx context.Context, encounterID string) ([]*AttackResult, error)
+
+	// ExecuteAttackWithTarget handles a complete attack sequence including auto-advancing turns
+	ExecuteAttackWithTarget(ctx context.Context, input *ExecuteAttackInput) (*ExecuteAttackResult, error)
 }
 
 // CreateEncounterInput contains data for creating an encounter
@@ -127,6 +136,28 @@ type AttackResult struct {
 
 	// Combat log entry
 	LogEntry string
+}
+
+// ExecuteAttackInput contains data for executing a complete attack sequence
+type ExecuteAttackInput struct {
+	EncounterID string
+	TargetID    string
+	UserID      string // User executing the attack
+}
+
+// ExecuteAttackResult contains results of the complete attack sequence
+type ExecuteAttackResult struct {
+	// The initial attack result
+	PlayerAttack *AttackResult
+	
+	// Any monster attacks that followed
+	MonsterAttacks []*AttackResult
+	
+	// Updated encounter state
+	IsPlayerTurn   bool
+	CurrentTurn    *entities.Combatant
+	CombatEnded    bool
+	PlayersWon     bool
 }
 
 type service struct {
@@ -963,4 +994,177 @@ func (s *service) LogCombatAction(ctx context.Context, encounterID, action strin
 	}
 
 	return nil
+}
+
+// ProcessMonsterTurn handles a monster's turn automatically
+func (s *service) ProcessMonsterTurn(ctx context.Context, encounterID string, monsterID string) (*AttackResult, error) {
+	// Get encounter
+	encounter, err := s.repository.Get(ctx, encounterID)
+	if err != nil {
+		return nil, dnderr.Wrap(err, "failed to get encounter")
+	}
+
+	// Get the monster
+	monster, exists := encounter.Combatants[monsterID]
+	if !exists || !monster.IsActive {
+		return nil, dnderr.InvalidArgument("monster not found or inactive")
+	}
+
+	// Find a target (first active player)
+	var target *entities.Combatant
+	for _, combatant := range encounter.Combatants {
+		log.Printf("ProcessMonsterTurn - Checking combatant %s: Type=%s, IsActive=%v, HP=%d/%d",
+			combatant.Name, combatant.Type, combatant.IsActive, combatant.CurrentHP, combatant.MaxHP)
+		if combatant.Type == entities.CombatantTypePlayer && combatant.IsActive {
+			target = combatant
+			break
+		}
+	}
+
+	if target == nil {
+		log.Printf("ProcessMonsterTurn - No valid player targets found for monster %s", monster.Name)
+		return nil, dnderr.NotFound("no valid target found")
+	}
+
+	// Use PerformAttack with the first action
+	actionIndex := 0
+	if len(monster.Actions) == 0 {
+		actionIndex = -1 // Will trigger unarmed strike
+	}
+
+	return s.PerformAttack(ctx, &AttackInput{
+		EncounterID: encounterID,
+		AttackerID:  monsterID,
+		TargetID:    target.ID,
+		UserID:      encounter.CreatedBy, // DM/bot
+		ActionIndex: actionIndex,
+	})
+}
+
+// ProcessAllMonsterTurns processes all consecutive monster turns
+func (s *service) ProcessAllMonsterTurns(ctx context.Context, encounterID string) ([]*AttackResult, error) {
+	var results []*AttackResult
+
+	for {
+		// Get current encounter state
+		encounter, err := s.repository.Get(ctx, encounterID)
+		if err != nil {
+			return results, dnderr.Wrap(err, "failed to get encounter")
+		}
+
+		// Check if current turn is a monster
+		current := encounter.GetCurrentCombatant()
+		if current == nil || current.Type != entities.CombatantTypeMonster || !current.IsActive {
+			break // Not a monster's turn or no current combatant
+		}
+
+		// Process this monster's turn
+		result, err := s.ProcessMonsterTurn(ctx, encounterID, current.ID)
+		if err != nil {
+			log.Printf("Error processing monster turn: %v", err)
+			// Continue anyway, the monster might just not have a valid target
+		} else if result != nil {
+			results = append(results, result)
+		}
+
+		// Advance to next turn
+		err = s.NextTurn(ctx, encounterID, encounter.CreatedBy)
+		if err != nil {
+			return results, dnderr.Wrap(err, "failed to advance turn")
+		}
+
+		// Check if combat ended
+		encounter, err = s.repository.Get(ctx, encounterID)
+		if err != nil {
+			return results, dnderr.Wrap(err, "failed to get encounter after turn")
+		}
+
+		if encounter.Status != entities.EncounterStatusActive {
+			break // Combat ended
+		}
+	}
+
+	return results, nil
+}
+
+// ExecuteAttackWithTarget handles a complete attack sequence including auto-advancing turns
+func (s *service) ExecuteAttackWithTarget(ctx context.Context, input *ExecuteAttackInput) (*ExecuteAttackResult, error) {
+	result := &ExecuteAttackResult{
+		MonsterAttacks: []*AttackResult{},
+	}
+
+	// Get encounter
+	encounter, err := s.repository.Get(ctx, input.EncounterID)
+	if err != nil {
+		return nil, dnderr.Wrap(err, "failed to get encounter")
+	}
+
+	// Find the attacker - could be the player who clicked or current turn (for DM)
+	var attacker *entities.Combatant
+	
+	// First, try to find the player's combatant
+	for _, combatant := range encounter.Combatants {
+		if combatant.PlayerID == input.UserID && combatant.IsActive {
+			attacker = combatant
+			break
+		}
+	}
+	
+	// If not found, use current turn (for DM controlling monsters)
+	if attacker == nil {
+		attacker = encounter.GetCurrentCombatant()
+		if attacker == nil || !attacker.IsActive {
+			return nil, dnderr.InvalidArgument("no active attacker found")
+		}
+	}
+
+	// Execute the attack
+	attackInput := &AttackInput{
+		EncounterID: input.EncounterID,
+		AttackerID:  attacker.ID,
+		TargetID:    input.TargetID,
+		UserID:      input.UserID,
+		ActionIndex: 0, // Default to first action
+	}
+	
+	result.PlayerAttack, err = s.PerformAttack(ctx, attackInput)
+	if err != nil {
+		return nil, dnderr.Wrap(err, "failed to perform attack")
+	}
+
+	// Auto-advance turn if it was a player attack
+	if attacker.Type == entities.CombatantTypePlayer {
+		err = s.NextTurn(ctx, input.EncounterID, input.UserID)
+		if err != nil {
+			log.Printf("Error auto-advancing turn: %v", err)
+		} else {
+			// Process any monster turns that follow
+			monsterResults, err := s.ProcessAllMonsterTurns(ctx, input.EncounterID)
+			if err != nil {
+				log.Printf("Error processing monster turns: %v", err)
+			} else {
+				result.MonsterAttacks = monsterResults
+			}
+		}
+	}
+
+	// Get updated encounter state
+	encounter, err = s.repository.Get(ctx, input.EncounterID)
+	if err != nil {
+		log.Printf("Error getting updated encounter: %v", err)
+	} else {
+		// Check current turn
+		if current := encounter.GetCurrentCombatant(); current != nil {
+			result.CurrentTurn = current
+			result.IsPlayerTurn = current.PlayerID == input.UserID
+		}
+		
+		// Check if combat ended
+		if encounter.Status == entities.EncounterStatusCompleted {
+			result.CombatEnded = true
+			_, result.PlayersWon = encounter.CheckCombatEnd()
+		}
+	}
+
+	return result, nil
 }
