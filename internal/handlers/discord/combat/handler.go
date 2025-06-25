@@ -49,7 +49,16 @@ func (h *Handler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCre
 
 // handleAttack shows target selection UI
 func (h *Handler) handleAttack(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string) error {
-	// Defer response for processing
+	// Check if this is from an ephemeral message (like My Actions)
+	// If so, we need to send a new ephemeral response instead of updating
+	isFromEphemeral := i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral != 0
+	
+	if isFromEphemeral {
+		// For ephemeral sources, send a new ephemeral response with target selection
+		return h.handleAttackFromEphemeral(s, i, encounterID)
+	}
+	
+	// Defer response for processing (for shared messages)
 	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredMessageUpdate,
 	}); err != nil {
@@ -180,6 +189,42 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 	// Build components based on state
 	components := buildCombatComponents(encounterID, result)
 
+	// Check if this interaction came from an ephemeral message
+	isFromEphemeral := i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral != 0
+	
+	if isFromEphemeral {
+		// For ephemeral interactions, we need to:
+		// 1. Respond to the ephemeral interaction
+		// 2. Update the main shared combat message
+		
+		// First, respond to the ephemeral interaction with a simple acknowledgment
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Attack executed! Check the combat message for results.",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		if err != nil {
+			log.Printf("Failed to respond to ephemeral interaction: %v", err)
+		}
+		
+		// Now update the main shared combat message
+		if enc.MessageID != "" && enc.ChannelID != "" {
+			_, err = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+				ID:         enc.MessageID,
+				Channel:    enc.ChannelID,
+				Embeds:     &[]*discordgo.MessageEmbed{embed},
+				Components: &components,
+			})
+			if err != nil {
+				log.Printf("Failed to update main combat message: %v", err)
+			}
+		}
+		return err
+	}
+	
+	// For non-ephemeral interactions, update the message directly
 	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
 		Embeds:     &[]*discordgo.MessageEmbed{embed},
 		Components: &components,
@@ -189,11 +234,16 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 
 // handleNextTurn advances the turn
 func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string) error {
-	// Defer response for processing
-	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseDeferredMessageUpdate,
-	}); err != nil {
-		log.Printf("Failed to defer response: %v", err)
+	// Check if this is from an ephemeral message
+	isFromEphemeral := i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral != 0
+	
+	if !isFromEphemeral {
+		// Defer response for processing (for shared messages)
+		if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredMessageUpdate,
+		}); err != nil {
+			log.Printf("Failed to defer response: %v", err)
+		}
 	}
 
 	// Advance turn
@@ -292,7 +342,36 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 		},
 	}
 
-	// Update the original message
+	// Handle ephemeral vs shared message updates
+	if isFromEphemeral {
+		// For ephemeral interactions, acknowledge and update main combat message
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Turn skipped! Check the combat message for updates.",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		if err != nil {
+			log.Printf("Failed to respond to ephemeral interaction: %v", err)
+		}
+		
+		// Update the main shared combat message
+		if enc.MessageID != "" && enc.ChannelID != "" {
+			_, err = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+				ID:         enc.MessageID,
+				Channel:    enc.ChannelID,
+				Embeds:     &[]*discordgo.MessageEmbed{embed},
+				Components: &components,
+			})
+			if err != nil {
+				log.Printf("Failed to update main combat message: %v", err)
+			}
+		}
+		return err
+	}
+	
+	// For non-ephemeral, update the original message
 	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
 		Embeds:     &[]*discordgo.MessageEmbed{embed},
 		Components: &components,
@@ -611,65 +690,65 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 		isMyTurn = current.ID == playerCombatant.ID
 	}
 
-	// Build personalized action embed
+	// Build personalized action embed - focused on actions only
 	embed := &discordgo.MessageEmbed{
-		Title:       fmt.Sprintf("🎯 %s's Actions", playerCombatant.Name),
-		Description: fmt.Sprintf("**HP:** %d/%d | **AC:** %d", playerCombatant.CurrentHP, playerCombatant.MaxHP, playerCombatant.AC),
+		Title:       fmt.Sprintf("🎯 %s's Action Controller", playerCombatant.Name),
+		Description: "Choose your action:",
 		Color:       0x3498db, // Blue
-		Fields:      []*discordgo.MessageEmbedField{},
 	}
 
-	// Add turn status
-	if isMyTurn {
-		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:   "⏰ Your Turn!",
-			Value:  "It's your turn to act. Choose an action below:",
-			Inline: false,
-		})
-	} else if current := enc.GetCurrentCombatant(); current != nil {
-		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:   "⏳ Waiting...",
-			Value:  fmt.Sprintf("It's currently **%s's** turn.", current.Name),
-			Inline: false,
-		})
-	}
-
-	// Build action buttons
-	components := []discordgo.MessageComponent{
-		discordgo.ActionsRow{
-			Components: []discordgo.MessageComponent{
-				discordgo.Button{
-					Label:    "Attack",
-					Style:    discordgo.DangerButton,
-					CustomID: fmt.Sprintf("combat:attack:%s", encounterID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
-					Disabled: !isMyTurn || enc.Status != entities.EncounterStatusActive,
-				},
-				discordgo.Button{
-					Label:    "Skip Turn",
-					Style:    discordgo.SecondaryButton,
-					CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "⏭️"},
-					Disabled: !isMyTurn || enc.Status != entities.EncounterStatusActive,
+	// Build action buttons - only show actions, not status views
+	var components []discordgo.MessageComponent
+	
+	if isMyTurn && enc.Status == entities.EncounterStatusActive {
+		// Show available actions when it's player's turn
+		components = []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.Button{
+						Label:    "Attack",
+						Style:    discordgo.DangerButton,
+						CustomID: fmt.Sprintf("combat:attack:%s", encounterID),
+						Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
+					},
+					discordgo.Button{
+						Label:    "Skip Turn",
+						Style:    discordgo.SecondaryButton,
+						CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
+						Emoji:    &discordgo.ComponentEmoji{Name: "⏭️"},
+					},
 				},
 			},
-		},
-		discordgo.ActionsRow{
-			Components: []discordgo.MessageComponent{
-				discordgo.Button{
-					Label:    "View Combat",
-					Style:    discordgo.PrimaryButton,
-					CustomID: fmt.Sprintf("combat:view:%s", encounterID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
-				},
-				discordgo.Button{
-					Label:    "History",
-					Style:    discordgo.SecondaryButton,
-					CustomID: fmt.Sprintf("combat:history:%s", encounterID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "📜"},
+		}
+		
+		// TODO: Future action row for items, spells, etc.
+		// discordgo.ActionsRow{
+		//     Components: []discordgo.MessageComponent{
+		//         discordgo.Button{Label: "Use Item", ...},
+		//         discordgo.Button{Label: "Cast Spell", ...},
+		//     },
+		// },
+	} else {
+		// When not their turn, show minimal UI
+		components = []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.Button{
+						Label:    "Refresh",
+						Style:    discordgo.SecondaryButton,
+						CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
+						Emoji:    &discordgo.ComponentEmoji{Name: "🔄"},
+					},
 				},
 			},
-		},
+		}
+		
+		// Add descriptive text about waiting
+		if !isMyTurn {
+			if current := enc.GetCurrentCombatant(); current != nil {
+				embed.Description = fmt.Sprintf("Waiting for %s's turn...", current.Name)
+			}
+		}
 	}
 
 	// TODO: Add more action types in the future:
@@ -680,7 +759,7 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 
 	// Add footer with helpful info
 	embed.Footer = &discordgo.MessageEmbedFooter{
-		Text: "This is your personal action menu. Only you can see this message.",
+		Text: "Action controller - Only visible to you",
 	}
 
 	// Send ephemeral response
@@ -690,6 +769,74 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 			Embeds:     []*discordgo.MessageEmbed{embed},
 			Components: components,
 			Flags:      discordgo.MessageFlagsEphemeral,
+		},
+	})
+}
+
+// handleAttackFromEphemeral handles attack button clicks from ephemeral messages
+func (h *Handler) handleAttackFromEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string) error {
+	// Get encounter to build target list
+	enc, err := h.encounterService.GetEncounter(context.Background(), encounterID)
+	if err != nil {
+		return respondError(s, i, "Failed to get encounter", err)
+	}
+
+	// Find attacker - player who clicked
+	var attacker *entities.Combatant
+	for _, c := range enc.Combatants {
+		if c.PlayerID == i.Member.User.ID && c.IsActive {
+			attacker = c
+			break
+		}
+	}
+
+	if attacker == nil || !attacker.IsActive {
+		return respondError(s, i, "No active character found", nil)
+	}
+
+	// Build target buttons
+	var buttons []discordgo.MessageComponent
+	for _, target := range enc.Combatants {
+		if target.ID == attacker.ID || !target.IsActive || target.CurrentHP <= 0 {
+			continue
+		}
+
+		emoji := "🧑"
+		if target.Type == entities.CombatantTypeMonster {
+			emoji = "👹"
+		}
+
+		buttons = append(buttons, discordgo.Button{
+			Label:    fmt.Sprintf("%s (HP: %d/%d)", target.Name, target.CurrentHP, target.MaxHP),
+			Style:    discordgo.PrimaryButton,
+			CustomID: fmt.Sprintf("combat:select_target:%s:%s", encounterID, target.ID),
+			Emoji:    &discordgo.ComponentEmoji{Name: emoji},
+		})
+
+		if len(buttons) >= 5 {
+			break // Discord limit
+		}
+	}
+
+	if len(buttons) == 0 {
+		return respondError(s, i, "No valid targets available", nil)
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Title:       fmt.Sprintf("⚔️ %s's Target Selection", attacker.Name),
+		Description: "Choose your target:",
+		Color:       0xe74c3c,
+	}
+
+	// Send new ephemeral response with target selection
+	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Embeds: []*discordgo.MessageEmbed{embed},
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{Components: buttons},
+			},
+			Flags: discordgo.MessageFlagsEphemeral,
 		},
 	})
 }
