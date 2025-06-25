@@ -71,6 +71,9 @@ type Service interface {
 
 	// ExecuteAttackWithTarget handles a complete attack sequence including auto-advancing turns
 	ExecuteAttackWithTarget(ctx context.Context, input *ExecuteAttackInput) (*ExecuteAttackResult, error)
+
+	// UpdateMessageID updates the Discord message ID for an encounter
+	UpdateMessageID(ctx context.Context, encounterID, messageID, channelID string) error
 }
 
 // CreateEncounterInput contains data for creating an encounter
@@ -1171,4 +1174,40 @@ func (s *service) ExecuteAttackWithTarget(ctx context.Context, input *ExecuteAtt
 	}
 
 	return result, nil
+}
+
+// UpdateMessageID updates the Discord message ID for an encounter
+func (s *service) UpdateMessageID(ctx context.Context, encounterID, messageID, channelID string) error {
+	// Validate input
+	if encounterID == "" {
+		return dnderr.InvalidArgument("encounter ID is required")
+	}
+	if messageID == "" {
+		return dnderr.InvalidArgument("message ID is required")
+	}
+	if channelID == "" {
+		return dnderr.InvalidArgument("channel ID is required")
+	}
+
+	// Get the encounter
+	encounter, err := s.repository.Get(ctx, encounterID)
+	if err != nil {
+		return dnderr.Wrap(err, "failed to get encounter")
+	}
+	if encounter == nil {
+		return dnderr.NotFound("encounter not found")
+	}
+
+	// Update the message ID and channel ID
+	encounter.MessageID = messageID
+	encounter.ChannelID = channelID
+
+	// Save the updated encounter
+	err = s.repository.Update(ctx, encounter)
+	if err != nil {
+		return dnderr.Wrap(err, "failed to update encounter")
+	}
+
+	log.Printf("Updated encounter %s with message ID %s in channel %s", encounterID, messageID, channelID)
+	return nil
 }

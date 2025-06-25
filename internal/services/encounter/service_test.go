@@ -575,3 +575,82 @@ func TestEncounterCombatantFiltering(t *testing.T) {
 		assert.True(t, foundMonster, "Should find monster Orc")
 	})
 }
+
+func TestUpdateMessageID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	mockSessionSvc := mocksession.NewMockService(ctrl)
+	mockCharSvc := mockcharacter.NewMockService(ctrl)
+	mockRepo := NewMockRepository()
+	mockUUID := NewMockUUIDGenerator("enc")
+
+	svc := encounter.NewService(&encounter.ServiceConfig{
+		Repository:       mockRepo,
+		SessionService:   mockSessionSvc,
+		CharacterService: mockCharSvc,
+		UUIDGenerator:    mockUUID,
+	})
+
+	// Create test session
+	session := &entities.Session{
+		ID: "session-1",
+		Members: map[string]*entities.SessionMember{
+			"dm-1": {Role: entities.SessionRoleDM},
+		},
+	}
+
+	mockSessionSvc.EXPECT().GetSession(ctx, "session-1").Return(session, nil)
+
+	// Create encounter
+	input := &encounter.CreateEncounterInput{
+		SessionID:   "session-1",
+		ChannelID:   "channel-1",
+		Name:        "Test Encounter",
+		Description: "Test Description",
+		UserID:      "dm-1",
+	}
+
+	enc, err := svc.CreateEncounter(ctx, input)
+	require.NoError(t, err)
+	assert.Equal(t, "enc-1", enc.ID)
+	assert.Empty(t, enc.MessageID) // Initially empty
+
+	// Test successful update
+	t.Run("Success", func(t *testing.T) {
+		err := svc.UpdateMessageID(ctx, enc.ID, "msg-123", "channel-456")
+		require.NoError(t, err)
+
+		// Verify the update
+		updatedEnc, err := mockRepo.Get(ctx, enc.ID)
+		require.NoError(t, err)
+		assert.Equal(t, "msg-123", updatedEnc.MessageID)
+		assert.Equal(t, "channel-456", updatedEnc.ChannelID)
+	})
+
+	// Test validation errors
+	t.Run("ValidationErrors", func(t *testing.T) {
+		// Empty encounter ID
+		err := svc.UpdateMessageID(ctx, "", "msg-123", "channel-456")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "encounter ID is required")
+
+		// Empty message ID
+		err = svc.UpdateMessageID(ctx, enc.ID, "", "channel-456")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "message ID is required")
+
+		// Empty channel ID
+		err = svc.UpdateMessageID(ctx, enc.ID, "msg-123", "")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "channel ID is required")
+	})
+
+	// Test non-existent encounter
+	t.Run("NonExistentEncounter", func(t *testing.T) {
+		err := svc.UpdateMessageID(ctx, "non-existent", "msg-123", "channel-456")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "encounter not found")
+	})
+}
