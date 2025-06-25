@@ -272,17 +272,10 @@ func buildCombatComponents(encounterID string, result *encounter.ExecuteAttackRe
 		}
 	}
 
-	// Normal combat buttons
+	// Normal combat buttons - no Attack button on shared messages
 	return []discordgo.MessageComponent{
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
-				discordgo.Button{
-					Label:    "Attack Again",
-					Style:    discordgo.DangerButton,
-					CustomID: fmt.Sprintf("combat:attack:%s", encounterID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
-					Disabled: !result.IsPlayerTurn,
-				},
 				discordgo.Button{
 					Label:    "Next Turn",
 					Style:    discordgo.PrimaryButton,
@@ -295,16 +288,16 @@ func buildCombatComponents(encounterID string, result *encounter.ExecuteAttackRe
 					CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
 				},
-			},
-		},
-		discordgo.ActionsRow{
-			Components: []discordgo.MessageComponent{
 				discordgo.Button{
 					Label:    "View Status",
 					Style:    discordgo.SecondaryButton,
 					CustomID: fmt.Sprintf("combat:view:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
 				},
+			},
+		},
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
 				discordgo.Button{
 					Label:    "History",
 					Style:    discordgo.SecondaryButton,

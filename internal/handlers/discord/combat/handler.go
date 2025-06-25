@@ -141,11 +141,16 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 	}
 	targetID := parts[3]
 
-	// Defer response for long operation
-	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseDeferredMessageUpdate,
-	}); err != nil {
-		log.Printf("Failed to defer response: %v", err)
+	// Check if this interaction came from an ephemeral message
+	isFromEphemeral := i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral != 0
+	
+	if !isFromEphemeral {
+		// Only defer for non-ephemeral messages
+		if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredMessageUpdate,
+		}); err != nil {
+			log.Printf("Failed to defer response: %v", err)
+		}
 	}
 
 	// Execute attack with service
@@ -188,9 +193,6 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 
 	// Build components based on state
 	components := buildCombatComponents(encounterID, result)
-
-	// Check if this interaction came from an ephemeral message
-	isFromEphemeral := i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral != 0
 	
 	if isFromEphemeral {
 		// For ephemeral interactions, we need to:
@@ -294,22 +296,12 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 	}
 
 	// Check whose turn it is now
-	isPlayerTurn := false
-	if current := enc.GetCurrentCombatant(); current != nil {
-		isPlayerTurn = current.PlayerID == i.Member.User.ID
-	}
+	// No longer needed since Attack button removed from shared messages
 
-	// Build components
+	// Build components - no Attack button on shared messages
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
-				discordgo.Button{
-					Label:    "Attack",
-					Style:    discordgo.DangerButton,
-					CustomID: fmt.Sprintf("combat:attack:%s", encounterID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
-					Disabled: !isPlayerTurn,
-				},
 				discordgo.Button{
 					Label:    "Next Turn",
 					Style:    discordgo.PrimaryButton,
@@ -322,16 +314,16 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 					CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
 				},
-			},
-		},
-		discordgo.ActionsRow{
-			Components: []discordgo.MessageComponent{
 				discordgo.Button{
 					Label:    "View Status",
 					Style:    discordgo.SecondaryButton,
 					CustomID: fmt.Sprintf("combat:view:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
 				},
+			},
+		},
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
 				discordgo.Button{
 					Label:    "History",
 					Style:    discordgo.SecondaryButton,
@@ -395,22 +387,11 @@ func (h *Handler) handleView(s *discordgo.Session, i *discordgo.InteractionCreat
 
 	embed := buildDetailedCombatEmbed(enc)
 
-	// Check whose turn it is
-	isPlayerTurn := false
-	if current := enc.GetCurrentCombatant(); current != nil {
-		isPlayerTurn = current.PlayerID == i.Member.User.ID
-	}
+	// Build the combat status embed
 
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
-				discordgo.Button{
-					Label:    "Attack",
-					Style:    discordgo.DangerButton,
-					CustomID: fmt.Sprintf("combat:attack:%s", encounterID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
-					Disabled: !isPlayerTurn || enc.Status != entities.EncounterStatusActive,
-				},
 				discordgo.Button{
 					Label:    "Next Turn",
 					Style:    discordgo.PrimaryButton,
@@ -423,6 +404,12 @@ func (h *Handler) handleView(s *discordgo.Session, i *discordgo.InteractionCreat
 					Style:    discordgo.SuccessButton,
 					CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
+				},
+				discordgo.Button{
+					Label:    "View Status",
+					Style:    discordgo.SecondaryButton,
+					CustomID: fmt.Sprintf("combat:view:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
 				},
 			},
 		},
@@ -485,22 +472,11 @@ func (h *Handler) handleContinueRound(s *discordgo.Session, i *discordgo.Interac
 	}
 	embed.Description = roundSummary + "\n" + embed.Description
 
-	// Check whose turn it is
-	isPlayerTurn := false
-	if current := enc.GetCurrentCombatant(); current != nil {
-		isPlayerTurn = current.PlayerID == i.Member.User.ID
-	}
+	// Build the combat status embed
 
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
-				discordgo.Button{
-					Label:    "Attack",
-					Style:    discordgo.DangerButton,
-					CustomID: fmt.Sprintf("combat:attack:%s", encounterID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
-					Disabled: !isPlayerTurn,
-				},
 				discordgo.Button{
 					Label:    "Next Turn",
 					Style:    discordgo.PrimaryButton,
@@ -513,16 +489,16 @@ func (h *Handler) handleContinueRound(s *discordgo.Session, i *discordgo.Interac
 					CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
 				},
-			},
-		},
-		discordgo.ActionsRow{
-			Components: []discordgo.MessageComponent{
 				discordgo.Button{
 					Label:    "View Status",
 					Style:    discordgo.SecondaryButton,
 					CustomID: fmt.Sprintf("combat:view:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
 				},
+			},
+		},
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
 				discordgo.Button{
 					Label:    "History",
 					Style:    discordgo.SecondaryButton,
