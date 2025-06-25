@@ -288,3 +288,17 @@ func (mr *MockServiceMockRecorder) StartEncounter(ctx, encounterID, userID any) 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartEncounter", reflect.TypeOf((*MockService)(nil).StartEncounter), ctx, encounterID, userID)
 }
+
+// UpdateMessageID mocks base method.
+func (m *MockService) UpdateMessageID(ctx context.Context, encounterID, messageID, channelID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateMessageID", ctx, encounterID, messageID, channelID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateMessageID indicates an expected call of UpdateMessageID.
+func (mr *MockServiceMockRecorder) UpdateMessageID(ctx, encounterID, messageID, channelID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMessageID", reflect.TypeOf((*MockService)(nil).UpdateMessageID), ctx, encounterID, messageID, channelID)
+}

@@ -417,11 +417,29 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 	// the newer shared message format. This may be due to multiple handlers responding
 	// to the same interaction.
 
-	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+	// Send the combat UI and capture the message ID
+	msg, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
 		Embeds:     &[]*discordgo.MessageEmbed{embed},
 		Components: &components,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Store the message ID in the encounter for future updates
+	if msg != nil && msg.ID != "" {
+		enc.MessageID = msg.ID
+		enc.ChannelID = msg.ChannelID
+
+		// Update encounter with message ID
+		err = h.services.EncounterService.UpdateMessageID(context.Background(), enc.ID, msg.ID, msg.ChannelID)
+		if err != nil {
+			log.Printf("Failed to store message ID for encounter %s: %v", enc.ID, err)
+			// Continue anyway - this is not critical for combat to function
+		}
+	}
+
+	return nil
 }
 
 func (h *EnterRoomHandler) handlePuzzleRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *entities.Session) error {

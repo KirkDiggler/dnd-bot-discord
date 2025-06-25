@@ -50,7 +50,7 @@ linters:
 issues:
   exclude-dirs:
     - internal/mocks
-    - "*/mock"
+    - ".*/mock"
   
   exclude-rules:
     # Exclude some linters from running on test files
