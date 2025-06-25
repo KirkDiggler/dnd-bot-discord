@@ -757,7 +757,21 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 		Text: "Action controller - Only visible to you",
 	}
 
-	// Send ephemeral response
+	// Check if this is being called from an ephemeral message (like "Back to Actions")
+	isFromEphemeral := i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral != 0
+	
+	if isFromEphemeral {
+		// Update the existing ephemeral message
+		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseUpdateMessage,
+			Data: &discordgo.InteractionResponseData{
+				Embeds:     []*discordgo.MessageEmbed{embed},
+				Components: components,
+			},
+		})
+	}
+	
+	// Create new ephemeral message (when called from shared message buttons)
 	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
@@ -816,11 +830,10 @@ func (h *Handler) handleAttackFromEphemeral(s *discordgo.Session, i *discordgo.I
 		}
 		
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Type: discordgo.InteractionResponseUpdateMessage,
 			Data: &discordgo.InteractionResponseData{
 				Embeds:     []*discordgo.MessageEmbed{embed},
 				Components: components,
-				Flags:      discordgo.MessageFlagsEphemeral,
 			},
 		})
 	}
@@ -859,15 +872,14 @@ func (h *Handler) handleAttackFromEphemeral(s *discordgo.Session, i *discordgo.I
 		Color:       0xe74c3c,
 	}
 
-	// Send new ephemeral response with target selection
+	// Update the existing ephemeral message with target selection
 	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Type: discordgo.InteractionResponseUpdateMessage,
 		Data: &discordgo.InteractionResponseData{
 			Embeds: []*discordgo.MessageEmbed{embed},
 			Components: []discordgo.MessageComponent{
 				discordgo.ActionsRow{Components: buttons},
 			},
-			Flags: discordgo.MessageFlagsEphemeral,
 		},
 	})
 }
