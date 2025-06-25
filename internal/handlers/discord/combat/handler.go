@@ -52,12 +52,12 @@ func (h *Handler) handleAttack(s *discordgo.Session, i *discordgo.InteractionCre
 	// Check if this is from an ephemeral message (like My Actions)
 	// If so, we need to send a new ephemeral response instead of updating
 	isFromEphemeral := i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral != 0
-	
+
 	if isFromEphemeral {
 		// For ephemeral sources, send a new ephemeral response with target selection
 		return h.handleAttackFromEphemeral(s, i, encounterID)
 	}
-	
+
 	// Defer response for processing (for shared messages)
 	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredMessageUpdate,
@@ -143,7 +143,7 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 
 	// Check if this interaction came from an ephemeral message
 	isFromEphemeral := i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral != 0
-	
+
 	if !isFromEphemeral {
 		// Only defer for non-ephemeral messages
 		if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -193,12 +193,12 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 
 	// Build components based on state
 	components := buildCombatComponents(encounterID, result)
-	
+
 	if isFromEphemeral {
 		// For ephemeral interactions, we need to:
 		// 1. Respond to the ephemeral interaction
 		// 2. Update the main shared combat message
-		
+
 		// Show attack result with option to get new action controller
 		attackSummary := "Attack executed!"
 		if result.PlayerAttack != nil {
@@ -212,7 +212,7 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 				attackSummary = "❌ MISS! Your attack missed!"
 			}
 		}
-		
+
 		resultEmbed := &discordgo.MessageEmbed{
 			Title:       "⚔️ Attack Result",
 			Description: attackSummary,
@@ -221,7 +221,7 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 				Text: "Click below to return to your action controller",
 			},
 		}
-		
+
 		// Simple button to get back to action controller
 		resultComponents := []discordgo.MessageComponent{
 			discordgo.ActionsRow{
@@ -235,7 +235,7 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 				},
 			},
 		}
-		
+
 		// Update the ephemeral message with the result
 		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseUpdateMessage,
@@ -248,7 +248,7 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 		if err != nil {
 			log.Printf("Failed to update ephemeral message with result: %v", err)
 		}
-		
+
 		// Now update the main shared combat message
 		if enc.MessageID != "" && enc.ChannelID != "" {
 			log.Printf("Updating main combat message: MessageID=%s, ChannelID=%s", enc.MessageID, enc.ChannelID)
@@ -266,7 +266,7 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 		}
 		return err
 	}
-	
+
 	// For non-ephemeral interactions, update the message directly
 	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
 		Embeds:     &[]*discordgo.MessageEmbed{embed},
@@ -279,7 +279,7 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string) error {
 	// Check if this is from an ephemeral message
 	isFromEphemeral := i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral != 0
-	
+
 	if !isFromEphemeral {
 		// Defer response for processing (for shared messages)
 		if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -388,7 +388,7 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 		if err != nil {
 			log.Printf("Failed to respond to ephemeral interaction: %v", err)
 		}
-		
+
 		// Update the main shared combat message
 		if enc.MessageID != "" && enc.ChannelID != "" {
 			log.Printf("Updating main combat message from next turn: MessageID=%s, ChannelID=%s", enc.MessageID, enc.ChannelID)
@@ -406,7 +406,7 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 		}
 		return err
 	}
-	
+
 	// For non-ephemeral, update the original message
 	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
 		Embeds:     &[]*discordgo.MessageEmbed{embed},
@@ -738,7 +738,7 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 			},
 		},
 	}
-	
+
 	// Update description based on turn status
 	if !isMyTurn && enc.Status == entities.EncounterStatusActive {
 		if current := enc.GetCurrentCombatant(); current != nil {
@@ -759,7 +759,7 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 
 	// Check if this is being called from an ephemeral message (like "Back to Actions")
 	isFromEphemeral := i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral != 0
-	
+
 	if isFromEphemeral {
 		// Update the existing ephemeral message
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -770,7 +770,7 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 			},
 		})
 	}
-	
+
 	// Create new ephemeral message (when called from shared message buttons)
 	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -802,7 +802,7 @@ func (h *Handler) handleAttackFromEphemeral(s *discordgo.Session, i *discordgo.I
 	if attacker == nil || !attacker.IsActive {
 		return respondError(s, i, "No active character found", nil)
 	}
-	
+
 	// Check if it's actually this player's turn
 	current := enc.GetCurrentCombatant()
 	if current == nil || current.ID != attacker.ID {
@@ -815,7 +815,7 @@ func (h *Handler) handleAttackFromEphemeral(s *discordgo.Session, i *discordgo.I
 				Text: "Wait for your turn to attack",
 			},
 		}
-		
+
 		components := []discordgo.MessageComponent{
 			discordgo.ActionsRow{
 				Components: []discordgo.MessageComponent{
@@ -828,7 +828,7 @@ func (h *Handler) handleAttackFromEphemeral(s *discordgo.Session, i *discordgo.I
 				},
 			},
 		}
-		
+
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseUpdateMessage,
 			Data: &discordgo.InteractionResponseData{
