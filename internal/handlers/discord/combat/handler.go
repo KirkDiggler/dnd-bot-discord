@@ -213,6 +213,7 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 		
 		// Now update the main shared combat message
 		if enc.MessageID != "" && enc.ChannelID != "" {
+			log.Printf("Updating main combat message: MessageID=%s, ChannelID=%s", enc.MessageID, enc.ChannelID)
 			_, err = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
 				ID:         enc.MessageID,
 				Channel:    enc.ChannelID,
@@ -222,6 +223,8 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 			if err != nil {
 				log.Printf("Failed to update main combat message: %v", err)
 			}
+		} else {
+			log.Printf("WARNING: Cannot update main combat message - MessageID=%s, ChannelID=%s", enc.MessageID, enc.ChannelID)
 		}
 		return err
 	}
@@ -350,6 +353,7 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 		
 		// Update the main shared combat message
 		if enc.MessageID != "" && enc.ChannelID != "" {
+			log.Printf("Updating main combat message from next turn: MessageID=%s, ChannelID=%s", enc.MessageID, enc.ChannelID)
 			_, err = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
 				ID:         enc.MessageID,
 				Channel:    enc.ChannelID,
@@ -359,6 +363,8 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 			if err != nil {
 				log.Printf("Failed to update main combat message: %v", err)
 			}
+		} else {
+			log.Printf("WARNING: Cannot update main combat message from next turn - MessageID=%s, ChannelID=%s", enc.MessageID, enc.ChannelID)
 		}
 		return err
 	}
@@ -673,57 +679,32 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 		Color:       0x3498db, // Blue
 	}
 
-	// Build action buttons - only show actions, not status views
-	var components []discordgo.MessageComponent
+	// Build action buttons - always show them, just disable when not player's turn
+	components := []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.Button{
+					Label:    "Attack",
+					Style:    discordgo.DangerButton,
+					CustomID: fmt.Sprintf("combat:attack:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
+					Disabled: !isMyTurn || enc.Status != entities.EncounterStatusActive,
+				},
+				discordgo.Button{
+					Label:    "Skip Turn",
+					Style:    discordgo.SecondaryButton,
+					CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "⏭️"},
+					Disabled: !isMyTurn || enc.Status != entities.EncounterStatusActive,
+				},
+			},
+		},
+	}
 	
-	if isMyTurn && enc.Status == entities.EncounterStatusActive {
-		// Show available actions when it's player's turn
-		components = []discordgo.MessageComponent{
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.Button{
-						Label:    "Attack",
-						Style:    discordgo.DangerButton,
-						CustomID: fmt.Sprintf("combat:attack:%s", encounterID),
-						Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
-					},
-					discordgo.Button{
-						Label:    "Skip Turn",
-						Style:    discordgo.SecondaryButton,
-						CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
-						Emoji:    &discordgo.ComponentEmoji{Name: "⏭️"},
-					},
-				},
-			},
-		}
-		
-		// TODO: Future action row for items, spells, etc.
-		// discordgo.ActionsRow{
-		//     Components: []discordgo.MessageComponent{
-		//         discordgo.Button{Label: "Use Item", ...},
-		//         discordgo.Button{Label: "Cast Spell", ...},
-		//     },
-		// },
-	} else {
-		// When not their turn, show minimal UI
-		components = []discordgo.MessageComponent{
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.Button{
-						Label:    "Refresh",
-						Style:    discordgo.SecondaryButton,
-						CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
-						Emoji:    &discordgo.ComponentEmoji{Name: "🔄"},
-					},
-				},
-			},
-		}
-		
-		// Add descriptive text about waiting
-		if !isMyTurn {
-			if current := enc.GetCurrentCombatant(); current != nil {
-				embed.Description = fmt.Sprintf("Waiting for %s's turn...", current.Name)
-			}
+	// Update description based on turn status
+	if !isMyTurn && enc.Status == entities.EncounterStatusActive {
+		if current := enc.GetCurrentCombatant(); current != nil {
+			embed.Description = fmt.Sprintf("Waiting for %s's turn...", current.Name)
 		}
 	}
 
