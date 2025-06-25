@@ -48,3 +48,32 @@ func respondEditError(s *discordgo.Session, i *discordgo.InteractionCreate, mess
 	})
 	return editErr
 }
+
+// DiscordSession interface for Discord operations (for testing)
+type DiscordSession interface {
+	ChannelMessageEditComplex(edit *discordgo.MessageEdit, options ...discordgo.RequestOption) (*discordgo.Message, error)
+}
+
+// updateSharedCombatMessage updates the main shared combat message if MessageID is stored
+func updateSharedCombatMessage(s DiscordSession, encounterID, messageID, channelID string, embed *discordgo.MessageEmbed, components []discordgo.MessageComponent) error {
+	if messageID == "" || channelID == "" {
+		log.Printf("WARNING: Cannot update shared combat message - MessageID=%s, ChannelID=%s", messageID, channelID)
+		return nil // Not an error, just can't update
+	}
+
+	log.Printf("Updating shared combat message: EncounterID=%s, MessageID=%s, ChannelID=%s", encounterID, messageID, channelID)
+
+	_, err := s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+		ID:         messageID,
+		Channel:    channelID,
+		Embeds:     &[]*discordgo.MessageEmbed{embed},
+		Components: &components,
+	})
+
+	if err != nil {
+		log.Printf("Failed to update shared combat message: %v", err)
+		// Don't return error - combat should continue even if message update fails
+	}
+
+	return nil
+}
