@@ -379,6 +379,41 @@ The interactive character sheet aims to provide a rich, real-time D&D experience
 - Real-time character sheet updates via WebSocket
 - Advanced visualizations (3D dice, battle maps)
 
+### Session Summary - November 16, 2024
+
+**Issue #98: Get My Actions Button Implementation** ✅
+- **Branch**: `fix-98-get-my-actions`
+- **Status**: Implementation complete, ready for PR
+- **Problem Solved**: Multiplayer combat had shared button states causing "not your turn" errors
+- **Solution**: Added ephemeral "Get My Actions" button for personalized combat interfaces
+
+#### What Was Implemented:
+1. **New handleMyActions method** in combat handler
+   - Sends private ephemeral response to each player
+   - Shows personalized action buttons based on turn state
+   - Displays player's HP, AC, and current turn status
+
+2. **UI Updates**:
+   - Added "Get My Actions" button to all combat displays
+   - Button uses green success style with 🎯 emoji
+   - Integrated into enter_room, combat handler, and embed builders
+
+3. **Code Quality**:
+   - Fixed 4 errcheck linting issues
+   - Fixed parameter shadowing (max → maxHP)
+   - Added proper error logging for monster turn processing
+
+#### Next Steps:
+1. Create PR for issue #98
+2. Test multiplayer combat with new personalized actions
+3. Monitor for the duplicate combat UI issue (added TODO comment)
+4. Consider adding more action types (potions, spells, abilities)
+
+#### Known Issues to Monitor:
+- **Duplicate Combat UI**: First player sometimes gets old style message, needs to enter room again
+- **Turn Order Sync**: May need additional testing with 3+ players
+- **Button Limits**: Discord's 25-button limit may affect future action additions
+
 ### Contact
 - GitHub Issues: https://github.com/KirkDiggler/dnd-bot-discord/issues
 - GitHub Project: https://github.com/users/KirkDiggler/projects/6

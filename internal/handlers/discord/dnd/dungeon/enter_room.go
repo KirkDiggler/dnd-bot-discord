@@ -387,6 +387,16 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 					Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
 				},
 				discordgo.Button{
+					Label:    "Get My Actions",
+					Style:    discordgo.SuccessButton,
+					CustomID: fmt.Sprintf("combat:my_actions:%s", enc.ID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
+				},
+			},
+		},
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.Button{
 					Label:    "Status",
 					Style:    discordgo.SecondaryButton,
 					CustomID: fmt.Sprintf("combat:view:%s", enc.ID),
@@ -401,6 +411,11 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 			},
 		},
 	}
+
+	// TODO: Address duplicate combat UI issue - when 2 players are in a dungeon,
+	// the first player gets the old style message and needs to enter again to get
+	// the newer shared message format. This may be due to multiple handlers responding
+	// to the same interaction.
 
 	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
 		Embeds:     &[]*discordgo.MessageEmbed{embed},

@@ -13,6 +13,11 @@ func parseCustomID(customID string) []string {
 	return strings.Split(customID, ":")
 }
 
+// isEphemeralInteraction checks if an interaction originated from an ephemeral message
+func isEphemeralInteraction(i *discordgo.InteractionCreate) bool {
+	return i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral != 0
+}
+
 // respondError sends an error response
 func respondError(s *discordgo.Session, i *discordgo.InteractionCreate, message string, err error) error {
 	content := fmt.Sprintf("❌ %s", message)
