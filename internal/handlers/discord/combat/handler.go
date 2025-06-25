@@ -24,7 +24,7 @@ func NewHandler(encounterService encounter.Service) *Handler {
 }
 
 // HandleButton handles combat button interactions
-func (h *Handler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCreate, action string, encounterID string) error {
+func (h *Handler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCreate, action, encounterID string) error {
 	log.Printf("Combat button: action=%s, encounter=%s, user=%s", action, encounterID, i.Member.User.ID)
 
 	switch action {
@@ -40,6 +40,8 @@ func (h *Handler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCre
 		return h.handleContinueRound(s, i, encounterID)
 	case "history":
 		return h.handleHistory(s, i, encounterID)
+	case "my_actions":
+		return h.handleMyActions(s, i, encounterID)
 	default:
 		return fmt.Errorf("unknown combat action: %s", action)
 	}
@@ -213,10 +215,16 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 	// Process monster turns if any
 	var monsterResults []*encounter.AttackResult
 	if current := enc.GetCurrentCombatant(); current != nil && current.Type == entities.CombatantTypeMonster {
-		monsterResults, _ = h.encounterService.ProcessAllMonsterTurns(context.Background(), encounterID)
+		monsterResults, err = h.encounterService.ProcessAllMonsterTurns(context.Background(), encounterID)
+		if err != nil {
+			log.Printf("Error processing monster turns: %v", err)
+		}
 
 		// Re-get encounter after monster turns
-		enc, _ = h.encounterService.GetEncounter(context.Background(), encounterID)
+		enc, err = h.encounterService.GetEncounter(context.Background(), encounterID)
+		if err != nil {
+			log.Printf("Error getting encounter after monster turns: %v", err)
+		}
 	}
 
 	// Build detailed combat embed (like view status)
@@ -258,6 +266,16 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 					CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
 				},
+				discordgo.Button{
+					Label:    "Get My Actions",
+					Style:    discordgo.SuccessButton,
+					CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
+				},
+			},
+		},
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
 				discordgo.Button{
 					Label:    "View Status",
 					Style:    discordgo.SecondaryButton,
@@ -321,6 +339,12 @@ func (h *Handler) handleView(s *discordgo.Session, i *discordgo.InteractionCreat
 					Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
 					Disabled: enc.Status != entities.EncounterStatusActive,
 				},
+				discordgo.Button{
+					Label:    "Get My Actions",
+					Style:    discordgo.SuccessButton,
+					CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
+				},
 			},
 		},
 	}
@@ -353,10 +377,17 @@ func (h *Handler) handleContinueRound(s *discordgo.Session, i *discordgo.Interac
 	// Process any monster turns at start of round
 	var monsterResults []*encounter.AttackResult
 	if current := enc.GetCurrentCombatant(); current != nil && current.Type == entities.CombatantTypeMonster {
-		monsterResults, _ = h.encounterService.ProcessAllMonsterTurns(context.Background(), encounterID)
+		monsterResults, err = h.encounterService.ProcessAllMonsterTurns(context.Background(), encounterID)
+		if err != nil {
+			log.Printf("Error processing monster turns in continue round: %v", err)
+		}
 
 		// Re-get encounter
-		enc, _ = h.encounterService.GetEncounter(context.Background(), encounterID)
+		enc, err = h.encounterService.GetEncounter(context.Background(), encounterID)
+		if err != nil {
+			log.Printf("Error getting encounter in continue round: %v", err)
+			return respondEditError(s, i, "Failed to get updated encounter", err)
+		}
 	}
 
 	// Build detailed combat embed
@@ -397,6 +428,16 @@ func (h *Handler) handleContinueRound(s *discordgo.Session, i *discordgo.Interac
 					CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
 				},
+				discordgo.Button{
+					Label:    "Get My Actions",
+					Style:    discordgo.SuccessButton,
+					CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
+				},
+			},
+		},
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
 				discordgo.Button{
 					Label:    "View Status",
 					Style:    discordgo.SecondaryButton,
@@ -539,6 +580,116 @@ func (h *Handler) handleHistory(s *discordgo.Session, i *discordgo.InteractionCr
 		Data: &discordgo.InteractionResponseData{
 			Embeds: []*discordgo.MessageEmbed{embed},
 			Flags:  discordgo.MessageFlagsEphemeral,
+		},
+	})
+}
+
+// handleMyActions shows personalized actions for the player
+func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string) error {
+	// Get encounter
+	enc, err := h.encounterService.GetEncounter(context.Background(), encounterID)
+	if err != nil {
+		return respondError(s, i, "Failed to get encounter", err)
+	}
+
+	// Find the player's combatant
+	var playerCombatant *entities.Combatant
+	for _, c := range enc.Combatants {
+		if c.PlayerID == i.Member.User.ID && c.IsActive {
+			playerCombatant = c
+			break
+		}
+	}
+
+	if playerCombatant == nil {
+		return respondError(s, i, "You are not in this combat!", nil)
+	}
+
+	// Check if it's the player's turn
+	isMyTurn := false
+	if current := enc.GetCurrentCombatant(); current != nil {
+		isMyTurn = current.ID == playerCombatant.ID
+	}
+
+	// Build personalized action embed
+	embed := &discordgo.MessageEmbed{
+		Title:       fmt.Sprintf("🎯 %s's Actions", playerCombatant.Name),
+		Description: fmt.Sprintf("**HP:** %d/%d | **AC:** %d", playerCombatant.CurrentHP, playerCombatant.MaxHP, playerCombatant.AC),
+		Color:       0x3498db, // Blue
+		Fields:      []*discordgo.MessageEmbedField{},
+	}
+
+	// Add turn status
+	if isMyTurn {
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "⏰ Your Turn!",
+			Value:  "It's your turn to act. Choose an action below:",
+			Inline: false,
+		})
+	} else if current := enc.GetCurrentCombatant(); current != nil {
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "⏳ Waiting...",
+			Value:  fmt.Sprintf("It's currently **%s's** turn.", current.Name),
+			Inline: false,
+		})
+	}
+
+	// Build action buttons
+	components := []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.Button{
+					Label:    "Attack",
+					Style:    discordgo.DangerButton,
+					CustomID: fmt.Sprintf("combat:attack:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
+					Disabled: !isMyTurn || enc.Status != entities.EncounterStatusActive,
+				},
+				discordgo.Button{
+					Label:    "Skip Turn",
+					Style:    discordgo.SecondaryButton,
+					CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "⏭️"},
+					Disabled: !isMyTurn || enc.Status != entities.EncounterStatusActive,
+				},
+			},
+		},
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.Button{
+					Label:    "View Combat",
+					Style:    discordgo.PrimaryButton,
+					CustomID: fmt.Sprintf("combat:view:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
+				},
+				discordgo.Button{
+					Label:    "History",
+					Style:    discordgo.SecondaryButton,
+					CustomID: fmt.Sprintf("combat:history:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "📜"},
+				},
+			},
+		},
+	}
+
+	// TODO: Add more action types in the future:
+	// - Use Item (potions, scrolls)
+	// - Cast Spell
+	// - Special Abilities
+	// - Defensive Actions (dodge, dash, disengage)
+
+	// Add footer with helpful info
+	embed.Footer = &discordgo.MessageEmbedFooter{
+		Text: "This is your personal action menu. Only you can see this message.",
+	}
+
+	// Send ephemeral response
+	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Embeds:     []*discordgo.MessageEmbed{embed},
+			Components: components,
+			Flags:      discordgo.MessageFlagsEphemeral,
 		},
 	})
 }

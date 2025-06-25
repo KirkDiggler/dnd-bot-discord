@@ -290,6 +290,16 @@ func buildCombatComponents(encounterID string, result *encounter.ExecuteAttackRe
 					Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
 				},
 				discordgo.Button{
+					Label:    "Get My Actions",
+					Style:    discordgo.SuccessButton,
+					CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
+				},
+			},
+		},
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.Button{
 					Label:    "View Status",
 					Style:    discordgo.SecondaryButton,
 					CustomID: fmt.Sprintf("combat:view:%s", encounterID),
@@ -307,11 +317,11 @@ func buildCombatComponents(encounterID string, result *encounter.ExecuteAttackRe
 }
 
 // getHPBar returns an emoji HP indicator
-func getHPBar(current, max int) string {
-	if max == 0 {
+func getHPBar(current, maxHP int) string {
+	if maxHP == 0 {
 		return "💀"
 	}
-	percent := float64(current) / float64(max)
+	percent := float64(current) / float64(maxHP)
 	if percent > 0.5 {
 		return "🟢"
 	} else if percent > 0.25 {
