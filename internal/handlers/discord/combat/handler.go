@@ -93,6 +93,11 @@ func (h *Handler) handleAttack(s *discordgo.Session, i *discordgo.InteractionCre
 		if target.ID == attacker.ID || !target.IsActive || target.CurrentHP <= 0 {
 			continue
 		}
+		
+		// Players cannot attack other players
+		if attacker.Type == entities.CombatantTypePlayer && target.Type == entities.CombatantTypePlayer {
+			continue
+		}
 
 		emoji := "🧑"
 		if target.Type == entities.CombatantTypeMonster {
@@ -837,6 +842,11 @@ func (h *Handler) handleAttackFromEphemeral(s *discordgo.Session, i *discordgo.I
 	var buttons []discordgo.MessageComponent
 	for _, target := range enc.Combatants {
 		if target.ID == attacker.ID || !target.IsActive || target.CurrentHP <= 0 {
+			continue
+		}
+		
+		// Players cannot attack other players
+		if attacker.Type == entities.CombatantTypePlayer && target.Type == entities.CombatantTypePlayer {
 			continue
 		}
 
