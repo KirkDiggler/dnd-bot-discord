@@ -93,7 +93,7 @@ func (h *Handler) handleAttack(s *discordgo.Session, i *discordgo.InteractionCre
 		if target.ID == attacker.ID || !target.IsActive || target.CurrentHP <= 0 {
 			continue
 		}
-		
+
 		// Players cannot attack other players
 		if attacker.Type == entities.CombatantTypePlayer && target.Type == entities.CombatantTypePlayer {
 			continue
@@ -844,7 +844,7 @@ func (h *Handler) handleAttackFromEphemeral(s *discordgo.Session, i *discordgo.I
 		if target.ID == attacker.ID || !target.IsActive || target.CurrentHP <= 0 {
 			continue
 		}
-		
+
 		// Players cannot attack other players
 		if attacker.Type == entities.CombatantTypePlayer && target.Type == entities.CombatantTypePlayer {
 			continue
