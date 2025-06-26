@@ -149,7 +149,7 @@ func TestCombatEndIntegration_MonstersDefeatPlayer(t *testing.T) {
 	// Check that combat log contains defeat message
 	// The defeat message might not be the last entry
 	require.Greater(t, len(enc.CombatLog), 0, "Combat log should have entries")
-	
+
 	// Find the defeat message in the combat log
 	var foundDefeat bool
 	for _, logEntry := range enc.CombatLog {
