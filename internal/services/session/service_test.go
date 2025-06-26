@@ -2,6 +2,7 @@ package session_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
@@ -31,7 +32,7 @@ func (m *MockRepository) Create(_ context.Context, sess *entities.Session) error
 func (m *MockRepository) Get(_ context.Context, id string) (*entities.Session, error) {
 	sess, exists := m.sessions[id]
 	if !exists {
-		return nil, nil
+		return nil, fmt.Errorf("session not found")
 	}
 	return sess, nil
 }
@@ -176,6 +177,14 @@ func TestSelectCharacter(t *testing.T) {
 	t.Run("Successfully selects character for player", func(t *testing.T) {
 		characterID := "char-123"
 
+		// Mock the character service to return a character that belongs to the player
+		mockCharService.EXPECT().
+			GetByID(characterID).
+			Return(&entities.Character{
+				ID:      characterID,
+				OwnerID: playerID,
+			}, nil)
+
 		// Select character
 		err := svc.SelectCharacter(context.Background(), sessionID, playerID, characterID)
 		require.NoError(t, err)
@@ -193,6 +202,14 @@ func TestSelectCharacter(t *testing.T) {
 	t.Run("Updates existing character selection", func(t *testing.T) {
 		newCharacterID := "char-456"
 
+		// Mock the character service to return a character that belongs to the player
+		mockCharService.EXPECT().
+			GetByID(newCharacterID).
+			Return(&entities.Character{
+				ID:      newCharacterID,
+				OwnerID: playerID,
+			}, nil)
+
 		// Select different character
 		err := svc.SelectCharacter(context.Background(), sessionID, playerID, newCharacterID)
 		require.NoError(t, err)
@@ -206,20 +223,59 @@ func TestSelectCharacter(t *testing.T) {
 	})
 
 	t.Run("Fails when session doesn't exist", func(t *testing.T) {
+		// Mock the character service - it gets called before session check
+		mockCharService.EXPECT().
+			GetByID("char-789").
+			Return(&entities.Character{
+				ID:      "char-789",
+				OwnerID: playerID,
+			}, nil)
+
 		err := svc.SelectCharacter(context.Background(), "invalid-session", playerID, "char-789")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "session not found")
 	})
 
 	t.Run("Fails when player not in session", func(t *testing.T) {
+		// Mock the character service to return a character
+		mockCharService.EXPECT().
+			GetByID("char-789").
+			Return(&entities.Character{
+				ID:      "char-789",
+				OwnerID: "not-a-member",
+			}, nil)
+
 		err := svc.SelectCharacter(context.Background(), sessionID, "not-a-member", "char-789")
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "not a member")
+		assert.Contains(t, err.Error(), "not in the session")
+	})
+
+	t.Run("Fails when character doesn't belong to player", func(t *testing.T) {
+		// Mock the character service to return a character that belongs to a different player
+		mockCharService.EXPECT().
+			GetByID("char-890").
+			Return(&entities.Character{
+				ID:      "char-890",
+				OwnerID: "different-player",
+			}, nil)
+
+		err := svc.SelectCharacter(context.Background(), sessionID, playerID, "char-890")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "does not belong to user")
 	})
 
 	t.Run("Preserves character selection across session updates", func(t *testing.T) {
 		// Set a character
 		characterID := "char-persistent"
+		
+		// Mock the character service to return a character that belongs to the player
+		mockCharService.EXPECT().
+			GetByID(characterID).
+			Return(&entities.Character{
+				ID:      characterID,
+				OwnerID: playerID,
+			}, nil)
+		
 		err := svc.SelectCharacter(context.Background(), sessionID, playerID, characterID)
 		require.NoError(t, err)
 
