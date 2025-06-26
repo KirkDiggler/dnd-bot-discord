@@ -853,22 +853,40 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		}
 	}
 
-	// Generate log entry
+	// Generate log entry with dice rolls
 	if result.Hit {
+		// Format damage dice (e.g., "2d6+3" -> "[4,5]+3")
+		damageRollStr := ""
+		if len(result.DamageRolls) > 0 {
+			damageRollStr = fmt.Sprintf("[%d", result.DamageRolls[0])
+			for i := 1; i < len(result.DamageRolls); i++ {
+				damageRollStr += fmt.Sprintf(",%d", result.DamageRolls[i])
+			}
+			damageRollStr += "]"
+			if result.DamageBonus != 0 {
+				damageRollStr += fmt.Sprintf("%+d", result.DamageBonus)
+			}
+		}
+
 		if result.Critical {
-			result.LogEntry = fmt.Sprintf("💥 **%s** → **%s** | CRIT! 🩸 **%d** damage",
-				result.AttackerName, result.TargetName, result.Damage)
+			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | d20:**%d**%+d=%d vs AC:%d | 💥 CRIT! 🩸 **%d** %s",
+				result.AttackerName, result.TargetName,
+				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
+				result.Damage, damageRollStr)
 		} else {
-			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | HIT 🩸 **%d** damage",
-				result.AttackerName, result.TargetName, result.Damage)
+			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | d20:%d%+d=%d vs AC:%d | HIT 🩸 **%d** %s",
+				result.AttackerName, result.TargetName,
+				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
+				result.Damage, damageRollStr)
 		}
 
 		if result.TargetDefeated {
 			result.LogEntry += " 💀"
 		}
 	} else {
-		result.LogEntry = fmt.Sprintf("❌ **%s** → **%s** | MISS",
-			result.AttackerName, result.TargetName)
+		result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | d20:%d%+d=%d vs AC:%d | ❌ MISS",
+			result.AttackerName, result.TargetName,
+			result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC)
 	}
 
 	// Add to combat log

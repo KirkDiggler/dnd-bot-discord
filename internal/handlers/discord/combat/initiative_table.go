@@ -10,74 +10,70 @@ import (
 
 // BuildInitiativeFields creates Discord embed fields for initiative order
 func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedField {
-	var fields []*discordgo.MessageEmbedField
+	// Build a single table-style display
+	var sb strings.Builder
 
-	// Build two columns: Players and Monsters
-	var playerLines, monsterLines strings.Builder
+	// Use monospace code block for proper alignment
+	sb.WriteString("```\n")
+	sb.WriteString("Init │ Name              │ HP          │ AC\n")
+	sb.WriteString("─────┼───────────────────┼─────────────┼────\n")
 
 	for i, id := range enc.TurnOrder {
 		if c, exists := enc.Combatants[id]; exists && c.IsActive {
-			// Turn indicator
-			turnMarker := ""
+			// Current turn indicator
 			if i == enc.Turn {
-				turnMarker = "▶ "
+				sb.WriteString("▶ ")
+			} else {
+				sb.WriteString("  ")
 			}
 
-			// HP visual indicator
-			hpIcon := getHPIcon(c.CurrentHP, c.MaxHP)
+			// Initiative
+			sb.WriteString(fmt.Sprintf("%2d", c.Initiative))
+			sb.WriteString("  │ ")
 
 			// Name (truncated if needed)
 			name := c.Name
-			if len(name) > 15 {
-				name = name[:12] + "..."
+			if len(name) > 17 {
+				name = name[:14] + "..."
 			}
-
-			// Build the line
-			line := fmt.Sprintf("%s`%2d` %s **%s**\n├─ %s HP: %d/%d | AC: %d\n",
-				turnMarker,
-				c.Initiative,
-				hpIcon,
-				name,
-				getHPBar(c.CurrentHP, c.MaxHP),
-				c.CurrentHP,
-				c.MaxHP,
-				c.AC,
-			)
-
-			// Add to appropriate column
+			// Add class icon for players
 			if c.Type == entities.CombatantTypePlayer {
-				playerLines.WriteString(line)
-				if c.Class != "" {
-					playerLines.WriteString(fmt.Sprintf("└─ *%s*\n\n", c.Class))
-				} else {
-					playerLines.WriteString("\n")
-				}
+				name = getClassIcon(c.Class) + " " + name
 			} else {
-				monsterLines.WriteString(line)
-				monsterLines.WriteString("\n")
+				name = "🐉 " + name // Monster icon
 			}
+			sb.WriteString(fmt.Sprintf("%-17s", name))
+			sb.WriteString(" │ ")
+
+			// HP with visual bar
+			hpBar := getCompactHPBar(c.CurrentHP, c.MaxHP)
+			hpStr := fmt.Sprintf("%s %3d/%-3d", hpBar, c.CurrentHP, c.MaxHP)
+			sb.WriteString(hpStr)
+			sb.WriteString(" │ ")
+
+			// AC
+			sb.WriteString(fmt.Sprintf("%2d", c.AC))
+
+			// Status indicator
+			if c.CurrentHP == 0 {
+				sb.WriteString(" 💀")
+			} else if float64(c.CurrentHP)/float64(c.MaxHP) < 0.25 {
+				sb.WriteString(" ❗")
+			}
+
+			sb.WriteString("\n")
 		}
 	}
 
-	// Add player field if there are players
-	if playerLines.Len() > 0 {
-		fields = append(fields, &discordgo.MessageEmbedField{
-			Name:   "🛡️ Party Members",
-			Value:  playerLines.String(),
-			Inline: true,
-		})
-	}
+	sb.WriteString("```")
 
-	// Add monster field if there are monsters
-	if monsterLines.Len() > 0 {
-		fields = append(fields, &discordgo.MessageEmbedField{
-			Name:   "⚔️ Enemies",
-			Value:  monsterLines.String(),
-			Inline: true,
-		})
+	return []*discordgo.MessageEmbedField{
+		{
+			Name:   "🎯 Initiative Order",
+			Value:  sb.String(),
+			Inline: false,
+		},
 	}
-
-	return fields
 }
 
 // BuildCompactInitiativeDisplay creates a compact single-line display for each combatant
