@@ -100,13 +100,11 @@ func TestCharacterAttackFallbackBehavior(t *testing.T) {
 
 	results, err := char.Attack()
 
-	// Current behavior: returns nil
-	// Better behavior: should return improvised weapon attack or unarmed strike
+	// Should fall back to improvised weapon attack
 	require.NoError(t, err)
-
-	// This will fail with current code
-	// assert.NotEmpty(t, results, "Should fall back to improvised/unarmed attack")
-
-	// Document current behavior
-	assert.Empty(t, results, "Currently returns no results for non-weapon equipment")
+	assert.NotEmpty(t, results, "Should fall back to improvised/unarmed attack")
+	
+	// Verify it's an improvised attack
+	assert.Len(t, results, 1)
+	assert.Equal(t, damage.TypeBludgeoning, results[0].AttackType, "Improvised attacks deal bludgeoning damage")
 }
