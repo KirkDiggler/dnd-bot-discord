@@ -184,7 +184,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 
 	// Update the original dungeon message to show the new character
 	// We need to find the original message - it should be the interaction message
-	if i.Message != nil && !i.Message.Flags.Has(discordgo.MessageFlagsEphemeral) {
+	if i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral == 0 {
 		// This is the shared dungeon message - update it
 		log.Printf("Updating dungeon message to show new character selection")
 		
