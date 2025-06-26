@@ -258,14 +258,27 @@ func buildDetailedCombatEmbed(enc *entities.Encounter) *discordgo.MessageEmbed {
 func buildCombatComponents(encounterID string, result *encounter.ExecuteAttackResult) []discordgo.MessageComponent {
 	// Check if combat ended
 	if result.CombatEnded {
+		style := discordgo.SuccessButton
+		emoji := "🎉"
+		if !result.PlayersWon {
+			style = discordgo.DangerButton
+			emoji = "💀"
+		}
+
 		return []discordgo.MessageComponent{
 			discordgo.ActionsRow{
 				Components: []discordgo.MessageComponent{
 					discordgo.Button{
-						Label:    "Combat Complete",
-						Style:    discordgo.SuccessButton,
-						Disabled: true,
-						Emoji:    &discordgo.ComponentEmoji{Name: "🎉"},
+						Label:    "View History",
+						Style:    discordgo.PrimaryButton,
+						CustomID: fmt.Sprintf("combat:history:%s", encounterID),
+						Emoji:    &discordgo.ComponentEmoji{Name: "📜"},
+					},
+					discordgo.Button{
+						Label:    "Combat Summary",
+						Style:    style,
+						CustomID: fmt.Sprintf("combat:summary:%s", encounterID),
+						Emoji:    &discordgo.ComponentEmoji{Name: emoji},
 					},
 				},
 			},

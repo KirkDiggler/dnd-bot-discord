@@ -16,6 +16,35 @@ type Handler struct {
 	encounterService encounter.Service
 }
 
+// appendCombatEndMessage adds combat end information to an embed
+func appendCombatEndMessage(embed *discordgo.MessageEmbed, combatEnded bool, playersWon bool) {
+	if !combatEnded {
+		return
+	}
+
+	var endMessage string
+	if playersWon {
+		endMessage = "\n\n🎉 **VICTORY!** All enemies have been defeated!\n🪙 *Loot and XP will be distributed...*"
+		embed.Color = 0x00ff00 // Green for victory
+	} else {
+		endMessage = "\n\n💀 **DEFEAT!** The party has fallen...\n⚰️ *Better luck next time...*"
+		embed.Color = 0xff0000 // Red for defeat
+	}
+	embed.Description += endMessage
+}
+
+// getCombatEndMessage returns a short combat end message for ephemeral responses
+func getCombatEndMessage(combatEnded bool, playersWon bool) string {
+	if !combatEnded {
+		return ""
+	}
+
+	if playersWon {
+		return "\n\n🎉 **VICTORY!** All enemies defeated!"
+	}
+	return "\n\n💀 **DEFEAT!** Party has fallen..."
+}
+
 // NewHandler creates a new combat handler
 func NewHandler(encounterService encounter.Service) *Handler {
 	return &Handler{
@@ -42,6 +71,8 @@ func (h *Handler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCre
 		return h.handleHistory(s, i, encounterID)
 	case "my_actions":
 		return h.handleMyActions(s, i, encounterID)
+	case "summary":
+		return h.handleSummary(s, i, encounterID)
 	default:
 		return fmt.Errorf("unknown combat action: %s", action)
 	}
@@ -192,6 +223,9 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 		embed.Description = attackSummary + "\n\n" + embed.Description
 	}
 
+	// Add combat end information if applicable
+	appendCombatEndMessage(embed, result.CombatEnded, result.PlayersWon)
+
 	// Build components based on state
 	components := buildCombatComponents(encounterID, result)
 
@@ -209,10 +243,16 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 				} else {
 					attackSummary = fmt.Sprintf("✅ HIT! You dealt %d damage!", result.PlayerAttack.Damage)
 				}
+				if result.PlayerAttack.TargetDefeated {
+					attackSummary += "\n💀 Target defeated!"
+				}
 			} else {
 				attackSummary = "❌ MISS! Your attack missed!"
 			}
 		}
+
+		// Add combat end information to ephemeral message
+		attackSummary += getCombatEndMessage(result.CombatEnded, result.PlayersWon)
 
 		resultEmbed := &discordgo.MessageEmbed{
 			Title:       "⚔️ Attack Result",
@@ -223,18 +263,25 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 			},
 		}
 
-		// Simple button to get back to action controller
-		resultComponents := []discordgo.MessageComponent{
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.Button{
-						Label:    "Back to Actions",
-						Style:    discordgo.PrimaryButton,
-						CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
-						Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
+		// Button options based on combat state
+		var resultComponents []discordgo.MessageComponent
+		if result.CombatEnded {
+			// Combat ended - no buttons needed in ephemeral message
+			resultComponents = []discordgo.MessageComponent{}
+		} else {
+			// Combat continues - show back to actions
+			resultComponents = []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							Label:    "Back to Actions",
+							Style:    discordgo.PrimaryButton,
+							CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
+							Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
+						},
 					},
 				},
-			},
+			}
 		}
 
 		// Update the ephemeral message with the result

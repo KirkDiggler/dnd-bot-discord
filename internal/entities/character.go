@@ -101,11 +101,17 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 
 			// Calculate ability bonus based on weapon type
 			var abilityBonus int
-			switch weap.WeaponRange {
-			case "Ranged":
-				abilityBonus = c.Attributes[AttributeDexterity].Bonus
-			case "Melee":
-				abilityBonus = c.Attributes[AttributeStrength].Bonus
+			if c.Attributes != nil {
+				switch weap.WeaponRange {
+				case "Ranged":
+					if c.Attributes[AttributeDexterity] != nil {
+						abilityBonus = c.Attributes[AttributeDexterity].Bonus
+					}
+				case "Melee":
+					if c.Attributes[AttributeStrength] != nil {
+						abilityBonus = c.Attributes[AttributeStrength].Bonus
+					}
+				}
 			}
 
 			// Calculate proficiency bonus if proficient
@@ -179,11 +185,17 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 
 			// Calculate ability bonus based on weapon type
 			var abilityBonus int
-			switch weap.WeaponRange {
-			case "Ranged":
-				abilityBonus = c.Attributes[AttributeDexterity].Bonus
-			case "Melee":
-				abilityBonus = c.Attributes[AttributeStrength].Bonus
+			if c.Attributes != nil {
+				switch weap.WeaponRange {
+				case "Ranged":
+					if c.Attributes[AttributeDexterity] != nil {
+						abilityBonus = c.Attributes[AttributeDexterity].Bonus
+					}
+				case "Melee":
+					if c.Attributes[AttributeStrength] != nil {
+						abilityBonus = c.Attributes[AttributeStrength].Bonus
+					}
+				}
 			}
 
 			// Calculate proficiency bonus if proficient
@@ -252,7 +264,10 @@ func (c *Character) hasWeaponProficiencyInternal(weaponKey string) bool {
 }
 
 func (c *Character) improvisedMelee() (*attack.Result, error) {
-	bonus := c.Attributes[AttributeStrength].Bonus
+	bonus := 0
+	if c.Attributes != nil && c.Attributes[AttributeStrength] != nil {
+		bonus = c.Attributes[AttributeStrength].Bonus
+	}
 	attackRoll, err := dice.Roll(1, 20, 0)
 	if err != nil {
 		return nil, err
@@ -263,9 +278,11 @@ func (c *Character) improvisedMelee() (*attack.Result, error) {
 	}
 
 	return &attack.Result{
-		AttackRoll: attackRoll.Total + bonus,
-		DamageRoll: damageRoll.Total + bonus,
-		AttackType: "bludgening",
+		AttackRoll:   attackRoll.Total + bonus,
+		DamageRoll:   damageRoll.Total + bonus,
+		AttackType:   damage.TypeBludgeoning,
+		AttackResult: attackRoll,
+		DamageResult: damageRoll,
 	}, nil
 }
 

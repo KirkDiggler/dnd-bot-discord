@@ -136,6 +136,8 @@ type AttackResult struct {
 	// Results
 	TargetNewHP    int
 	TargetDefeated bool
+	CombatEnded    bool
+	PlayersWon     bool
 
 	// Combat log entry
 	LogEntry string
@@ -815,16 +817,22 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 
 	// Apply damage if hit
 	if result.Hit && result.Damage > 0 {
-		target.CurrentHP -= result.Damage
-		if target.CurrentHP < 0 {
-			target.CurrentHP = 0
-		}
+		// Use the ApplyDamage method which handles defeat and combat end detection
+		target.ApplyDamage(result.Damage)
 		result.TargetNewHP = target.CurrentHP
+		result.TargetDefeated = target.CurrentHP == 0
 
-		// Check if defeated
-		if target.CurrentHP == 0 {
-			target.IsActive = false
-			result.TargetDefeated = true
+		// Check if combat should end
+		if shouldEnd, playersWon := encounter.CheckCombatEnd(); shouldEnd {
+			log.Printf("Combat ending after attack - Players won: %v", playersWon)
+			encounter.End()
+			result.CombatEnded = true
+			result.PlayersWon = playersWon
+			if playersWon {
+				encounter.AddCombatLogEntry("Victory! All enemies have been defeated!")
+			} else {
+				encounter.AddCombatLogEntry("Defeat! The party has fallen...")
+			}
 		}
 
 		// Update encounter
@@ -1137,6 +1145,13 @@ func (s *service) ExecuteAttackWithTarget(ctx context.Context, input *ExecuteAtt
 	result.PlayerAttack, err = s.PerformAttack(ctx, attackInput)
 	if err != nil {
 		return nil, dnderr.Wrap(err, "failed to perform attack")
+	}
+
+	// Check if combat ended from the attack
+	if result.PlayerAttack.CombatEnded {
+		result.CombatEnded = true
+		result.PlayersWon = result.PlayerAttack.PlayersWon
+		return result, nil // Don't process turns if combat ended
 	}
 
 	// Auto-advance turn if it was a player attack
