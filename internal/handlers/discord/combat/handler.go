@@ -16,6 +16,35 @@ type Handler struct {
 	encounterService encounter.Service
 }
 
+// appendCombatEndMessage adds combat end information to an embed
+func appendCombatEndMessage(embed *discordgo.MessageEmbed, combatEnded bool, playersWon bool) {
+	if !combatEnded {
+		return
+	}
+	
+	var endMessage string
+	if playersWon {
+		endMessage = "\n\n🎉 **VICTORY!** All enemies have been defeated!\n🪙 *Loot and XP will be distributed...*"
+		embed.Color = 0x00ff00 // Green for victory
+	} else {
+		endMessage = "\n\n💀 **DEFEAT!** The party has fallen...\n⚰️ *Better luck next time...*"
+		embed.Color = 0xff0000 // Red for defeat
+	}
+	embed.Description += endMessage
+}
+
+// getCombatEndMessage returns a short combat end message for ephemeral responses
+func getCombatEndMessage(combatEnded bool, playersWon bool) string {
+	if !combatEnded {
+		return ""
+	}
+	
+	if playersWon {
+		return "\n\n🎉 **VICTORY!** All enemies defeated!"
+	}
+	return "\n\n💀 **DEFEAT!** Party has fallen..."
+}
+
 // NewHandler creates a new combat handler
 func NewHandler(encounterService encounter.Service) *Handler {
 	return &Handler{
@@ -195,17 +224,7 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 	}
 
 	// Add combat end information if applicable
-	if result.CombatEnded {
-		var endMessage string
-		if result.PlayersWon {
-			endMessage = "\n\n🎉 **VICTORY!** All enemies have been defeated!\n🪙 *Loot and XP will be distributed...*"
-			embed.Color = 0x00ff00 // Green for victory
-		} else {
-			endMessage = "\n\n💀 **DEFEAT!** The party has fallen...\n⚰️ *Better luck next time...*"
-			embed.Color = 0xff0000 // Red for defeat
-		}
-		embed.Description += endMessage
-	}
+	appendCombatEndMessage(embed, result.CombatEnded, result.PlayersWon)
 
 	// Build components based on state
 	components := buildCombatComponents(encounterID, result)
@@ -233,13 +252,7 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 		}
 
 		// Add combat end information to ephemeral message
-		if result.CombatEnded {
-			if result.PlayersWon {
-				attackSummary += "\n\n🎉 **VICTORY!** All enemies defeated!"
-			} else {
-				attackSummary += "\n\n💀 **DEFEAT!** Party has fallen..."
-			}
-		}
+		attackSummary += getCombatEndMessage(result.CombatEnded, result.PlayersWon)
 
 		resultEmbed := &discordgo.MessageEmbed{
 			Title:       "⚔️ Attack Result",
