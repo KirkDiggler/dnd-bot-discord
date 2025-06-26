@@ -22,7 +22,7 @@ func (r *RandomRoller) Roll(count, sides, bonus int) (total int, rolls []int, er
 }
 
 // RollWithAdvantage implements DiceRoller.RollWithAdvantage
-func (r *RandomRoller) RollWithAdvantage(sides, bonus int) (total int, roll int, err error) {
+func (r *RandomRoller) RollWithAdvantage(sides, bonus int) (total, roll int, err error) {
 	result1, err := Roll(1, sides, 0)
 	if err != nil {
 		return 0, 0, err
@@ -43,7 +43,7 @@ func (r *RandomRoller) RollWithAdvantage(sides, bonus int) (total int, roll int,
 }
 
 // RollWithDisadvantage implements DiceRoller.RollWithDisadvantage
-func (r *RandomRoller) RollWithDisadvantage(sides, bonus int) (total int, roll int, err error) {
+func (r *RandomRoller) RollWithDisadvantage(sides, bonus int) (total, roll int, err error) {
 	result1, err := Roll(1, sides, 0)
 	if err != nil {
 		return 0, 0, err

@@ -91,9 +91,10 @@ func TestDungeonCombatIntegration(t *testing.T) {
 		var players []*entities.Combatant
 
 		for _, c := range encounter.Combatants {
-			if c.Type == entities.CombatantTypeMonster {
+			switch c.Type {
+			case entities.CombatantTypeMonster:
 				enemies = append(enemies, c)
-			} else if c.Type == entities.CombatantTypePlayer {
+			case entities.CombatantTypePlayer:
 				players = append(players, c)
 			}
 		}
@@ -183,10 +184,11 @@ func TestPlayerMonsterNameCollision(t *testing.T) {
 	// Test that we can distinguish them
 	t.Run("Can identify player vs monster by Type", func(t *testing.T) {
 		for _, combatant := range encounter.Combatants {
-			if combatant.Type == entities.CombatantTypePlayer {
+			switch combatant.Type {
+			case entities.CombatantTypePlayer:
 				assert.NotEmpty(t, combatant.PlayerID, "Players must have PlayerID")
 				assert.NotEmpty(t, combatant.CharacterID, "Players must have CharacterID")
-			} else if combatant.Type == entities.CombatantTypeMonster {
+			case entities.CombatantTypeMonster:
 				assert.Empty(t, combatant.PlayerID, "Monsters must not have PlayerID")
 				assert.Empty(t, combatant.CharacterID, "Monsters must not have CharacterID")
 			}

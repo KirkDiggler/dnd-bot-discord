@@ -79,7 +79,7 @@ func (m *MockRoller) Roll(count, sides, bonus int) (total int, rolls []int, err 
 }
 
 // RollWithAdvantage implements DiceRoller.RollWithAdvantage
-func (m *MockRoller) RollWithAdvantage(sides, bonus int) (total int, roll int, err error) {
+func (m *MockRoller) RollWithAdvantage(sides, bonus int) (total, roll int, err error) {
 	roll1, err := m.getNextRoll()
 	if err != nil {
 		return 0, 0, err
@@ -104,7 +104,7 @@ func (m *MockRoller) RollWithAdvantage(sides, bonus int) (total int, roll int, e
 }
 
 // RollWithDisadvantage implements DiceRoller.RollWithDisadvantage
-func (m *MockRoller) RollWithDisadvantage(sides, bonus int) (total int, roll int, err error) {
+func (m *MockRoller) RollWithDisadvantage(sides, bonus int) (total, roll int, err error) {
 	roll1, err := m.getNextRoll()
 	if err != nil {
 		return 0, 0, err

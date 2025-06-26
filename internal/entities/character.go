@@ -765,7 +765,7 @@ func (c *Character) HasSavingThrowProficiency(attribute Attribute) bool {
 	savingThrowKey := fmt.Sprintf("saving-throw-%s", strings.ToLower(string(attribute)))
 
 	for _, prof := range c.Proficiencies[ProficiencyTypeSavingThrow] {
-		if strings.ToLower(prof.Key) == savingThrowKey {
+		if strings.EqualFold(prof.Key, savingThrowKey) {
 			return true
 		}
 	}
@@ -789,7 +789,7 @@ func (c *Character) GetSavingThrowBonus(attribute Attribute) int {
 	if c.Proficiencies != nil && c.Proficiencies[ProficiencyTypeSavingThrow] != nil {
 		savingThrowKey := fmt.Sprintf("saving-throw-%s", strings.ToLower(string(attribute)))
 		for _, prof := range c.Proficiencies[ProficiencyTypeSavingThrow] {
-			if strings.ToLower(prof.Key) == savingThrowKey {
+			if strings.EqualFold(prof.Key, savingThrowKey) {
 				isProficient = true
 				break
 			}

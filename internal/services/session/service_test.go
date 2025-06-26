@@ -172,7 +172,8 @@ func TestSelectCharacter(t *testing.T) {
 		},
 		Status: entities.SessionStatusActive,
 	}
-	mockRepo.Create(context.Background(), testSession)
+	err := mockRepo.Create(context.Background(), testSession)
+	require.NoError(t, err)
 
 	t.Run("Successfully selects character for player", func(t *testing.T) {
 		characterID := "char-123"
@@ -267,7 +268,7 @@ func TestSelectCharacter(t *testing.T) {
 	t.Run("Preserves character selection across session updates", func(t *testing.T) {
 		// Set a character
 		characterID := "char-persistent"
-		
+
 		// Mock the character service to return a character that belongs to the player
 		mockCharService.EXPECT().
 			GetByID(characterID).
@@ -275,17 +276,20 @@ func TestSelectCharacter(t *testing.T) {
 				ID:      characterID,
 				OwnerID: playerID,
 			}, nil)
-		
+
 		err := svc.SelectCharacter(context.Background(), sessionID, playerID, characterID)
 		require.NoError(t, err)
 
 		// Update session (simulate other operations)
-		sess, _ := mockRepo.Get(context.Background(), sessionID)
+		sess, err := mockRepo.Get(context.Background(), sessionID)
+		require.NoError(t, err)
 		sess.Status = entities.SessionStatusPaused
-		mockRepo.Update(context.Background(), sess)
+		err = mockRepo.Update(context.Background(), sess)
+		require.NoError(t, err)
 
 		// Character should still be set
-		updatedSess, _ := mockRepo.Get(context.Background(), sessionID)
+		updatedSess, err := mockRepo.Get(context.Background(), sessionID)
+		require.NoError(t, err)
 		member := updatedSess.Members[playerID]
 		assert.Equal(t, characterID, member.CharacterID)
 	})

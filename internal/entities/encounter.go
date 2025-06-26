@@ -257,15 +257,16 @@ func (e *Encounter) CanPlayerAct(playerID string) bool {
 }
 
 // CheckCombatEnd checks if combat should end (all enemies or all players defeated)
-func (e *Encounter) CheckCombatEnd() (shouldEnd bool, playersWon bool) {
+func (e *Encounter) CheckCombatEnd() (shouldEnd, playersWon bool) {
 	activeMonsters := 0
 	activePlayers := 0
 
 	for _, combatant := range e.Combatants {
 		if combatant.IsActive {
-			if combatant.Type == CombatantTypeMonster {
+			switch combatant.Type {
+			case CombatantTypeMonster:
 				activeMonsters++
-			} else if combatant.Type == CombatantTypePlayer {
+			case CombatantTypePlayer:
 				activePlayers++
 			}
 		}

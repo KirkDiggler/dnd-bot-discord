@@ -8,6 +8,8 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // Common skill mappings to attributes
@@ -51,7 +53,7 @@ func NewSkillCheckHandler(cfg *SkillCheckHandlerConfig) *SkillCheckHandler {
 
 // ShowSkillCheckPrompt displays a prompt for a player to make a skill check
 func (h *SkillCheckHandler) ShowSkillCheckPrompt(s *discordgo.Session, i *discordgo.InteractionCreate,
-	character *entities.Character, skillKey string, dc int, reason string) error {
+	char *entities.Character, skillKey string, dc int, reason string) error {
 
 	// Get the attribute for this skill
 	attribute, ok := SkillToAttribute[skillKey]
@@ -60,18 +62,18 @@ func (h *SkillCheckHandler) ShowSkillCheckPrompt(s *discordgo.Session, i *discor
 	}
 
 	// Calculate the bonus
-	bonus := character.GetSkillBonus(skillKey, attribute)
+	bonus := char.GetSkillBonus(skillKey, attribute)
 	profIndicator := ""
-	if character.HasSkillProficiency(skillKey) {
+	if char.HasSkillProficiency(skillKey) {
 		profIndicator = " (PROF)"
 	}
 
 	// Format skill name
-	skillName := strings.Title(strings.ReplaceAll(strings.TrimPrefix(skillKey, "skill-"), "-", " "))
+	skillName := cases.Title(language.English).String(strings.ReplaceAll(strings.TrimPrefix(skillKey, "skill-"), "-", " "))
 
 	embed := &discordgo.MessageEmbed{
 		Title:       "🎯 Skill Check Required!",
-		Description: fmt.Sprintf("%s must make a **%s** check!\n\n%s", character.Name, skillName, reason),
+		Description: fmt.Sprintf("%s must make a **%s** check!\n\n%s", char.Name, skillName, reason),
 		Color:       0x3498db, // Blue
 		Fields: []*discordgo.MessageEmbedField{
 			{
@@ -99,7 +101,7 @@ func (h *SkillCheckHandler) ShowSkillCheckPrompt(s *discordgo.Session, i *discor
 				discordgo.Button{
 					Label:    fmt.Sprintf("Roll %s", skillName),
 					Style:    discordgo.PrimaryButton,
-					CustomID: fmt.Sprintf("skill_check:%s:%s:%d", character.ID, skillKey, dc),
+					CustomID: fmt.Sprintf("skill_check:%s:%s:%d", char.ID, skillKey, dc),
 					Emoji: &discordgo.ComponentEmoji{
 						Name: "🎯",
 					},
@@ -175,7 +177,7 @@ func (h *SkillCheckHandler) HandleSkillCheckRoll(s *discordgo.Session, i *discor
 	}
 
 	// Format skill name
-	skillName := strings.Title(strings.ReplaceAll(strings.TrimPrefix(skillKey, "skill-"), "-", " "))
+	skillName := cases.Title(language.English).String(strings.ReplaceAll(strings.TrimPrefix(skillKey, "skill-"), "-", " "))
 
 	embed := &discordgo.MessageEmbed{
 		Title:       fmt.Sprintf("%s Check", skillName),

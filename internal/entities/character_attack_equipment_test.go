@@ -103,7 +103,7 @@ func TestCharacterAttackFallbackBehavior(t *testing.T) {
 	// Should fall back to improvised weapon attack
 	require.NoError(t, err)
 	assert.NotEmpty(t, results, "Should fall back to improvised/unarmed attack")
-	
+
 	// Verify it's an improvised attack
 	assert.Len(t, results, 1)
 	assert.Equal(t, damage.TypeBludgeoning, results[0].AttackType, "Improvised attacks deal bludgeoning damage")

@@ -17,7 +17,7 @@ type Handler struct {
 }
 
 // appendCombatEndMessage adds combat end information to an embed
-func appendCombatEndMessage(embed *discordgo.MessageEmbed, combatEnded bool, playersWon bool) {
+func appendCombatEndMessage(embed *discordgo.MessageEmbed, combatEnded, playersWon bool) {
 	if !combatEnded {
 		return
 	}
@@ -34,7 +34,7 @@ func appendCombatEndMessage(embed *discordgo.MessageEmbed, combatEnded bool, pla
 }
 
 // getCombatEndMessage returns a short combat end message for ephemeral responses
-func getCombatEndMessage(combatEnded bool, playersWon bool) string {
+func getCombatEndMessage(combatEnded, playersWon bool) string {
 	if !combatEnded {
 		return ""
 	}
@@ -298,8 +298,8 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 		}
 
 		// Now update the main shared combat message
-		if err := updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components); err != nil {
-			log.Printf("Failed to update shared combat message: %v", err)
+		if updateErr := updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components); updateErr != nil {
+			log.Printf("Failed to update shared combat message: %v", updateErr)
 		}
 		return nil
 	}
@@ -312,8 +312,8 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 
 	// Also update the shared message if this wasn't the shared message itself
 	if i.Message == nil || i.Message.ID != enc.MessageID {
-		if err := updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components); err != nil {
-			log.Printf("Failed to update shared combat message: %v", err)
+		if updateErr := updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components); updateErr != nil {
+			log.Printf("Failed to update shared combat message: %v", updateErr)
 		}
 	}
 
@@ -357,9 +357,9 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 		}
 
 		// Re-get encounter after monster turns
-		updatedEnc, err := h.encounterService.GetEncounter(context.Background(), encounterID)
-		if err != nil {
-			log.Printf("Error getting encounter after monster turns: %v", err)
+		updatedEnc, getErr := h.encounterService.GetEncounter(context.Background(), encounterID)
+		if getErr != nil {
+			log.Printf("Error getting encounter after monster turns: %v", getErr)
 			// Continue with the existing encounter state rather than risk a nil pointer
 		} else {
 			enc = updatedEnc
@@ -436,8 +436,8 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 		}
 
 		// Update the main shared combat message
-		if err := updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components); err != nil {
-			log.Printf("Failed to update shared combat message: %v", err)
+		if updateErr := updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components); updateErr != nil {
+			log.Printf("Failed to update shared combat message: %v", updateErr)
 		}
 		return nil
 	}
@@ -450,8 +450,8 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 
 	// Also update the shared message if this wasn't the shared message itself
 	if i.Message == nil || i.Message.ID != enc.MessageID {
-		if err := updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components); err != nil {
-			log.Printf("Failed to update shared combat message: %v", err)
+		if updateErr := updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components); updateErr != nil {
+			log.Printf("Failed to update shared combat message: %v", updateErr)
 		}
 	}
 

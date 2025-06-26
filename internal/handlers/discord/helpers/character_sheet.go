@@ -11,9 +11,9 @@ import (
 
 // ShowCharacterSheet is a helper function to display a character sheet
 // It handles fetching the character, verifying ownership, and building the sheet
-func ShowCharacterSheet(s *discordgo.Session, i *discordgo.InteractionCreate, characterID string, userID string, services *services.Provider, updateMessage bool) error {
+func ShowCharacterSheet(s *discordgo.Session, i *discordgo.InteractionCreate, characterID, userID string, serviceProvider *services.Provider, updateMessage bool) error {
 	// Get the character
-	char, err := services.CharacterService.GetByID(characterID)
+	char, err := serviceProvider.CharacterService.GetByID(characterID)
 	if err != nil {
 		log.Printf("Error getting character %s: %v", characterID, err)
 		return err

@@ -120,7 +120,8 @@ func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 	require.NoError(t, err)
 
 	// Update player's initiative bonus
-	enc, _ = encounterService.GetEncounter(ctx, enc.ID)
+	enc, err = encounterService.GetEncounter(ctx, enc.ID)
+	require.NoError(t, err)
 	for _, combatant := range enc.Combatants {
 		if combatant.Type == entities.CombatantTypePlayer {
 			combatant.InitiativeBonus = 3 // Will roll 20 + 3 = 23

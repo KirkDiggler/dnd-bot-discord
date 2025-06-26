@@ -33,18 +33,18 @@ func NewSavingThrowHandler(cfg *SavingThrowHandlerConfig) *SavingThrowHandler {
 
 // ShowSavingThrowPrompt displays a prompt for a player to make a saving throw
 func (h *SavingThrowHandler) ShowSavingThrowPrompt(s *discordgo.Session, i *discordgo.InteractionCreate,
-	character *entities.Character, attribute entities.Attribute, dc int, reason string) error {
+	char *entities.Character, attribute entities.Attribute, dc int, reason string) error {
 
 	// Calculate the bonus
-	bonus := character.GetSavingThrowBonus(attribute)
+	bonus := char.GetSavingThrowBonus(attribute)
 	profIndicator := ""
-	if character.HasSavingThrowProficiency(attribute) {
+	if char.HasSavingThrowProficiency(attribute) {
 		profIndicator = " (PROF)"
 	}
 
 	embed := &discordgo.MessageEmbed{
 		Title:       "🎲 Saving Throw Required!",
-		Description: fmt.Sprintf("%s must make a **%s saving throw**!\n\n%s", character.Name, strings.ToUpper(string(attribute)), reason),
+		Description: fmt.Sprintf("%s must make a **%s saving throw**!\n\n%s", char.Name, strings.ToUpper(string(attribute)), reason),
 		Color:       0xe74c3c, // Red
 		Fields: []*discordgo.MessageEmbedField{
 			{
@@ -72,7 +72,7 @@ func (h *SavingThrowHandler) ShowSavingThrowPrompt(s *discordgo.Session, i *disc
 				discordgo.Button{
 					Label:    fmt.Sprintf("Roll %s Save", strings.ToUpper(string(attribute))),
 					Style:    discordgo.PrimaryButton,
-					CustomID: fmt.Sprintf("saving_throw:%s:%s:%d", character.ID, attribute, dc),
+					CustomID: fmt.Sprintf("saving_throw:%s:%s:%d", char.ID, attribute, dc),
 					Emoji: &discordgo.ComponentEmoji{
 						Name: "🎲",
 					},

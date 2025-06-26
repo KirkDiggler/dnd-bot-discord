@@ -1024,7 +1024,7 @@ func (s *service) LogCombatAction(ctx context.Context, encounterID, action strin
 }
 
 // ProcessMonsterTurn handles a monster's turn automatically
-func (s *service) ProcessMonsterTurn(ctx context.Context, encounterID string, monsterID string) (*AttackResult, error) {
+func (s *service) ProcessMonsterTurn(ctx context.Context, encounterID, monsterID string) (*AttackResult, error) {
 	// Get encounter
 	encounter, err := s.repository.Get(ctx, encounterID)
 	if err != nil {
@@ -1173,9 +1173,9 @@ func (s *service) ExecuteAttackWithTarget(ctx context.Context, input *ExecuteAtt
 			log.Printf("Error auto-advancing turn: %v", err)
 		} else {
 			// Process any monster turns that follow
-			monsterResults, err := s.ProcessAllMonsterTurns(ctx, input.EncounterID)
-			if err != nil {
-				log.Printf("Error processing monster turns: %v", err)
+			monsterResults, monstErr := s.ProcessAllMonsterTurns(ctx, input.EncounterID)
+			if monstErr != nil {
+				log.Printf("Error processing monster turns: %v", monstErr)
 			} else {
 				result.MonsterAttacks = monsterResults
 			}
