@@ -22,9 +22,9 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 		if c, exists := enc.Combatants[id]; exists && c.IsActive {
 			// Current turn indicator and initiative in fixed width
 			if i == enc.Turn {
-				sb.WriteString(fmt.Sprintf("▶%2d", c.Initiative))
+				sb.WriteString(fmt.Sprintf("▶%-2d", c.Initiative))
 			} else {
-				sb.WriteString(fmt.Sprintf(" %2d", c.Initiative))
+				sb.WriteString(fmt.Sprintf(" %-2d", c.Initiative))
 			}
 			sb.WriteString(" │")
 
