@@ -172,29 +172,36 @@ func (e *Encounter) NextTurn() {
 
 	// Check if round is complete
 	if e.Turn >= len(e.TurnOrder) {
-		e.NextRound()
+		// Start new round
+		e.Round++
+		e.Turn = 0
+
+		// Reset all combatants' HasActed flag
+		for _, combatant := range e.Combatants {
+			combatant.HasActed = false
+		}
+
+		// Skip dead combatants at the start of the new round
+		for e.Turn < len(e.TurnOrder) {
+			if combatant, exists := e.Combatants[e.TurnOrder[e.Turn]]; exists && combatant.IsActive && combatant.CurrentHP > 0 {
+				// Found an active, alive combatant
+				break
+			}
+			// Skip this dead/inactive combatant
+			e.Turn++
+		}
 	}
 }
 
 // NextRound advances to the next round
 func (e *Encounter) NextRound() {
-	e.Round++
-	e.Turn = 0
-
-	// Reset all combatants' HasActed flag
-	for _, combatant := range e.Combatants {
-		combatant.HasActed = false
+	// NextTurn handles round advancement when Turn >= len(TurnOrder)
+	// This method is kept for backward compatibility but just delegates to NextTurn
+	if e.Turn < len(e.TurnOrder) {
+		// Force advancement to end of turn order to trigger new round
+		e.Turn = len(e.TurnOrder)
 	}
-
-	// Skip dead combatants at the start of the round
-	for e.Turn < len(e.TurnOrder) {
-		if combatant, exists := e.Combatants[e.TurnOrder[e.Turn]]; exists && combatant.IsActive && combatant.CurrentHP > 0 {
-			// Found an active, alive combatant
-			break
-		}
-		// Skip this dead/inactive combatant
-		e.Turn++
-	}
+	e.NextTurn()
 }
 
 // GetCurrentCombatant returns the combatant whose turn it is
