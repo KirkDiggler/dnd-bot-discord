@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/features"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
 )
@@ -185,22 +186,33 @@ func (h *ClassSelectHandler) buildSummaryEmbed(race *entities.Race, class *entit
 	classDetails := []string{}
 	classDetails = append(classDetails, fmt.Sprintf("Hit Die: d%d", class.HitDie))
 
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-		Name:   fmt.Sprintf("⚔️ %s Features", class.Name),
-		Value:  strings.Join(classDetails, "\n"),
-		Inline: true,
-	})
+	// Add level 1 class features
+	classFeatures := features.GetClassFeatures(class.Key, 1)
+	if len(classFeatures) > 0 {
+		classDetails = append(classDetails, "", "**Level 1 Features:**")
+		for _, feature := range classFeatures {
+			classDetails = append(classDetails, fmt.Sprintf("• %s", feature.Name))
+		}
+	}
 
-	// Progress indicator
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-		Name:   "Progress",
-		Value:  "✅ Step 1: Race\n✅ Step 2: Class\n⏳ Step 3: Abilities\n⏳ Step 4: Details",
-		Inline: false,
-	}, &discordgo.MessageEmbedField{
-		Name:   "📊 Starting Hit Points",
-		Value:  fmt.Sprintf("Base: %d (will add Constitution modifier)", class.HitDie),
-		Inline: false,
-	})
+	// Add class features and progress fields
+	embed.Fields = append(embed.Fields,
+		&discordgo.MessageEmbedField{
+			Name:   fmt.Sprintf("⚔️ %s Features", class.Name),
+			Value:  strings.Join(classDetails, "\n"),
+			Inline: true,
+		},
+		&discordgo.MessageEmbedField{
+			Name:   "Progress",
+			Value:  "✅ Step 1: Race\n✅ Step 2: Class\n⏳ Step 3: Abilities\n⏳ Step 4: Details",
+			Inline: false,
+		},
+		&discordgo.MessageEmbedField{
+			Name:   "📊 Starting Hit Points",
+			Value:  fmt.Sprintf("Base: %d (will add Constitution modifier)", class.HitDie),
+			Inline: false,
+		},
+	)
 
 	embed.Footer = &discordgo.MessageEmbedFooter{
 		Text: "Click 'Next' to roll your ability scores",
