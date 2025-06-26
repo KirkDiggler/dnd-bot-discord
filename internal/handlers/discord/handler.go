@@ -2638,6 +2638,40 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					if err != nil {
 						log.Printf("Error confirming character selection: %v", err)
 					}
+
+					// Check if there's an active encounter in this session
+					// If so, we need to add the player to it and update the shared message
+					enc, encErr := h.ServiceProvider.EncounterService.GetActiveEncounter(context.Background(), sessionID)
+					if encErr == nil && enc != nil {
+						log.Printf("Found active encounter %s, adding player %s with character %s", enc.ID, i.Member.User.ID, characterID)
+
+						// Add the player to the encounter
+						_, addErr := h.ServiceProvider.EncounterService.AddPlayer(context.Background(), enc.ID, i.Member.User.ID, characterID)
+						if addErr != nil {
+							log.Printf("Failed to add player to active encounter: %v", addErr)
+						} else {
+							// Update the shared combat message
+							log.Printf("Player added to encounter, updating shared combat message")
+							// Need to build the combat embed and update
+							updatedEnc, _ := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), enc.ID)
+							if updatedEnc != nil && updatedEnc.MessageID != "" {
+								// Build the combat status embed
+								embed := combat.BuildCombatStatusEmbed(updatedEnc, nil)
+								components := combat.BuildCombatComponents(enc.ID, &encounter.ExecuteAttackResult{})
+
+								// Update the shared message
+								_, err := s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+									ID:         updatedEnc.MessageID,
+									Channel:    updatedEnc.ChannelID,
+									Embeds:     &[]*discordgo.MessageEmbed{embed},
+									Components: &components,
+								})
+								if err != nil {
+									log.Printf("Failed to update shared combat message: %v", err)
+								}
+							}
+						}
+					}
 				}
 			case "pause":
 				// Pause the session

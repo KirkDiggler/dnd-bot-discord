@@ -104,7 +104,8 @@ func buildAttackResultEmbed(result *encounter.ExecuteAttackResult) *discordgo.Me
 }
 
 // buildCombatStatusEmbed creates a status embed with optional monster actions
-func buildCombatStatusEmbed(enc *entities.Encounter, monsterActions []*encounter.AttackResult) *discordgo.MessageEmbed {
+// BuildCombatStatusEmbed creates the main combat status embed
+func BuildCombatStatusEmbed(enc *entities.Encounter, monsterActions []*encounter.AttackResult) *discordgo.MessageEmbed {
 	current := enc.GetCurrentCombatant()
 
 	embed := &discordgo.MessageEmbed{
@@ -255,7 +256,8 @@ func buildDetailedCombatEmbed(enc *entities.Encounter) *discordgo.MessageEmbed {
 }
 
 // buildCombatComponents creates appropriate buttons based on combat state
-func buildCombatComponents(encounterID string, result *encounter.ExecuteAttackResult) []discordgo.MessageComponent {
+// BuildCombatComponents creates the combat UI components
+func BuildCombatComponents(encounterID string, result *encounter.ExecuteAttackResult) []discordgo.MessageComponent {
 	// Check if combat ended
 	if result.CombatEnded {
 		style := discordgo.SuccessButton
