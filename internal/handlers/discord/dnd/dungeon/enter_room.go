@@ -426,7 +426,7 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		return err
 	}
 
-	// Store the message ID in the encounter for future updates
+	// Store the message ID in the encounter (it's the same message as the lobby)
 	if msg != nil && msg.ID != "" {
 		enc.MessageID = msg.ID
 		enc.ChannelID = msg.ChannelID
@@ -436,6 +436,8 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		if err != nil {
 			log.Printf("Failed to store message ID for encounter %s: %v", enc.ID, err)
 			// Continue anyway - this is not critical for combat to function
+		} else {
+			log.Printf("Combat using same message as lobby: %s", msg.ID)
 		}
 	}
 

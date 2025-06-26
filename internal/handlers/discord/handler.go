@@ -4191,20 +4191,18 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						log.Printf("Failed to respond with success message: %v", responseErr)
 					}
 					
-					// Update the shared dungeon message to show all party members
-					// We need to find and update the original dungeon message in the channel
-					// For now, we'll search recent messages for the dungeon embed
-					messages, err := s.ChannelMessages(i.ChannelID, 50, "", "", "")
-					if err == nil {
-						for _, msg := range messages {
-							// Look for the dungeon message by checking embed title
-							if len(msg.Embeds) > 0 && strings.Contains(msg.Embeds[0].Title, "🏰 Dungeon Started") {
-								// Found the dungeon message, update it
-								log.Printf("Found dungeon message %s, updating party list", msg.ID)
+					// Update the shared dungeon lobby message using stored message ID
+					freshSess, _ := h.ServiceProvider.SessionService.GetSession(context.Background(), sessionID)
+					if freshSess != nil && freshSess.Metadata != nil {
+						// Get stored message ID from session metadata
+						if messageID, ok := freshSess.Metadata["lobbyMessageID"].(string); ok {
+							if channelID, ok := freshSess.Metadata["lobbyChannelID"].(string); ok {
+								log.Printf("Updating dungeon lobby message %s with new party member", messageID)
 								
-								// Get all party members
-								freshSess, _ := h.ServiceProvider.SessionService.GetSession(context.Background(), sessionID)
-								if freshSess != nil {
+								// Get the original message to preserve its structure
+								origMsg, err := s.ChannelMessage(channelID, messageID)
+								if err == nil && len(origMsg.Embeds) > 0 {
+									// Build updated party list
 									var partyLines []string
 									for userID, member := range freshSess.Members {
 										if member.Role == entities.SessionRolePlayer {
@@ -4221,7 +4219,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 									}
 									
 									// Update the party field
-									updatedEmbed := msg.Embeds[0]
+									updatedEmbed := origMsg.Embeds[0]
 									for idx, field := range updatedEmbed.Fields {
 										if field.Name == "👥 Party" {
 											updatedEmbed.Fields[idx].Value = strings.Join(partyLines, "\n")
@@ -4231,19 +4229,20 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 									
 									// Edit the message
 									_, editErr := s.ChannelMessageEditComplex(&discordgo.MessageEdit{
-										ID:         msg.ID,
-										Channel:    i.ChannelID,
+										ID:         messageID,
+										Channel:    channelID,
 										Embeds:     &[]*discordgo.MessageEmbed{updatedEmbed},
-										Components: &msg.Components,
+										Components: &origMsg.Components,
 									})
 									if editErr != nil {
-										log.Printf("Failed to update dungeon message: %v", editErr)
+										log.Printf("Failed to update dungeon lobby message: %v", editErr)
 									} else {
 										log.Printf("Successfully updated dungeon lobby with new party member")
 									}
 								}
-								break
 							}
+						} else {
+							log.Printf("No lobby message ID found in session metadata")
 						}
 					}
 				}
