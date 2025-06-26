@@ -27,11 +27,21 @@ test-unit:
 	@echo "Running unit tests..."
 	@go test ./... -short -race -v
 
+test-unit-no-race:
+	@echo "Running unit tests without race detector..."
+	@CGO_ENABLED=0 go test ./... -short -v
+
 test-integration:
 	@echo "Running integration tests..."
 	@go test ./... -tags=integration -race -v
 
+test-integration-no-race:
+	@echo "Running integration tests without race detector..."
+	@CGO_ENABLED=0 go test ./... -tags=integration -v
+
 test-all: test-unit test-integration
+
+test-all-no-race: test-unit-no-race test-integration-no-race
 
 # Coverage target
 coverage:
@@ -122,7 +132,13 @@ pre-commit:
 	@echo "→ Running linter..."
 	@/home/kirk/go/bin/golangci-lint run ./...
 	@echo "→ Running unit tests..."
-	@go test ./... -short -race
+	@if command -v gcc >/dev/null 2>&1; then \
+		echo "  GCC detected, running with race detector..."; \
+		go test ./... -short -race; \
+	else \
+		echo "  GCC not found, running without race detector..."; \
+		CGO_ENABLED=0 go test ./... -short; \
+	fi
 	@echo "✓ All pre-commit checks passed!"
 
 # GitHub workflow helpers
