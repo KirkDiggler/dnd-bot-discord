@@ -192,6 +192,19 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 		embed.Description = attackSummary + "\n\n" + embed.Description
 	}
 
+	// Add combat end information if applicable
+	if result.CombatEnded {
+		var endMessage string
+		if result.PlayersWon {
+			endMessage = "\n\n🎉 **VICTORY!** All enemies have been defeated!\n🪙 *Loot and XP will be distributed...*"
+			embed.Color = 0x00ff00 // Green for victory
+		} else {
+			endMessage = "\n\n💀 **DEFEAT!** The party has fallen...\n⚰️ *Better luck next time...*"
+			embed.Color = 0xff0000 // Red for defeat
+		}
+		embed.Description += endMessage
+	}
+
 	// Build components based on state
 	components := buildCombatComponents(encounterID, result)
 
@@ -209,8 +222,20 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 				} else {
 					attackSummary = fmt.Sprintf("✅ HIT! You dealt %d damage!", result.PlayerAttack.Damage)
 				}
+				if result.PlayerAttack.TargetDefeated {
+					attackSummary += "\n💀 Target defeated!"
+				}
 			} else {
 				attackSummary = "❌ MISS! Your attack missed!"
+			}
+		}
+
+		// Add combat end information to ephemeral message
+		if result.CombatEnded {
+			if result.PlayersWon {
+				attackSummary += "\n\n🎉 **VICTORY!** All enemies defeated!"
+			} else {
+				attackSummary += "\n\n💀 **DEFEAT!** Party has fallen..."
 			}
 		}
 
@@ -223,18 +248,36 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 			},
 		}
 
-		// Simple button to get back to action controller
-		resultComponents := []discordgo.MessageComponent{
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.Button{
-						Label:    "Back to Actions",
-						Style:    discordgo.PrimaryButton,
-						CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
-						Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
+		// Button options based on combat state
+		var resultComponents []discordgo.MessageComponent
+		if result.CombatEnded {
+			// Combat ended - show victory/defeat button
+			resultComponents = []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							Label:    "Combat Complete",
+							Style:    discordgo.SuccessButton,
+							Disabled: true,
+							Emoji:    &discordgo.ComponentEmoji{Name: "🎉"},
+						},
 					},
 				},
-			},
+			}
+		} else {
+			// Combat continues - show back to actions
+			resultComponents = []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							Label:    "Back to Actions",
+							Style:    discordgo.PrimaryButton,
+							CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
+							Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
+						},
+					},
+				},
+			}
 		}
 
 		// Update the ephemeral message with the result
