@@ -4191,10 +4191,61 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						log.Printf("Failed to respond with success message: %v", responseErr)
 					}
 					
-					// TODO: Update the shared dungeon message
-					// For now, we don't have a good way to find the original dungeon message
-					// This would require storing the message ID in the session metadata
-					log.Printf("Character selected via dropdown - need to update shared dungeon message (not implemented yet)")
+					// Update the shared dungeon message to show all party members
+					// We need to find and update the original dungeon message in the channel
+					// For now, we'll search recent messages for the dungeon embed
+					messages, err := s.ChannelMessages(i.ChannelID, 50, "", "", "")
+					if err == nil {
+						for _, msg := range messages {
+							// Look for the dungeon message by checking embed title
+							if len(msg.Embeds) > 0 && strings.Contains(msg.Embeds[0].Title, "🏰 Dungeon Started") {
+								// Found the dungeon message, update it
+								log.Printf("Found dungeon message %s, updating party list", msg.ID)
+								
+								// Get all party members
+								freshSess, _ := h.ServiceProvider.SessionService.GetSession(context.Background(), sessionID)
+								if freshSess != nil {
+									var partyLines []string
+									for userID, member := range freshSess.Members {
+										if member.Role == entities.SessionRolePlayer {
+											if member.CharacterID != "" {
+												// Get character info
+												memberChar, err := h.ServiceProvider.CharacterService.GetByID(member.CharacterID)
+												if err == nil && memberChar != nil {
+													partyLines = append(partyLines, fmt.Sprintf("<@%s> - %s", userID, memberChar.Name))
+												}
+											} else {
+												partyLines = append(partyLines, fmt.Sprintf("<@%s> (no character selected)", userID))
+											}
+										}
+									}
+									
+									// Update the party field
+									updatedEmbed := msg.Embeds[0]
+									for idx, field := range updatedEmbed.Fields {
+										if field.Name == "👥 Party" {
+											updatedEmbed.Fields[idx].Value = strings.Join(partyLines, "\n")
+											break
+										}
+									}
+									
+									// Edit the message
+									_, editErr := s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+										ID:         msg.ID,
+										Channel:    i.ChannelID,
+										Embeds:     &[]*discordgo.MessageEmbed{updatedEmbed},
+										Components: &msg.Components,
+									})
+									if editErr != nil {
+										log.Printf("Failed to update dungeon message: %v", editErr)
+									} else {
+										log.Printf("Successfully updated dungeon lobby with new party member")
+									}
+								}
+								break
+							}
+						}
+					}
 				}
 			case "enter":
 				if len(parts) >= 4 {
