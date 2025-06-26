@@ -46,9 +46,9 @@ func TestBuildCombatComponents_AlwaysHasCustomID(t *testing.T) {
 				if actionRow, ok := row.(discordgo.ActionsRow); ok {
 					for _, component := range actionRow.Components {
 						if button, ok := component.(discordgo.Button); ok {
-							assert.NotEmpty(t, button.CustomID, 
+							assert.NotEmpty(t, button.CustomID,
 								"Button '%s' must have a CustomID even if disabled", button.Label)
-							assert.Contains(t, button.CustomID, "combat:", 
+							assert.Contains(t, button.CustomID, "combat:",
 								"CustomID should start with 'combat:' prefix")
 						}
 					}

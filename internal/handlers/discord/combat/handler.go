@@ -908,4 +908,3 @@ func (h *Handler) handleAttackFromEphemeral(s *discordgo.Session, i *discordgo.I
 		},
 	})
 }
-

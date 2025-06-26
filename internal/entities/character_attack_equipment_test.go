@@ -72,9 +72,10 @@ func TestCharacterAttackWithBasicEquipment(t *testing.T) {
 				require.NoError(t, err, tt.description)
 				assert.NotEmpty(t, results, "Should have attack results")
 			} else {
-				// With current code, this returns nil results when equipment isn't a weapon
-				// This is the bug - it should either return an unarmed strike or an error
-				assert.Empty(t, results, tt.description)
+				// After fix: BasicEquipment now falls back to improvised melee
+				require.NoError(t, err, tt.description)
+				assert.NotEmpty(t, results, "Should fall back to improvised melee")
+				assert.Equal(t, damage.TypeBludgeoning, results[0].AttackType, "Should be bludgeoning damage")
 			}
 		})
 	}

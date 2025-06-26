@@ -46,6 +46,9 @@ func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 		CurrentHitPoints: 10,
 		MaxHitPoints:     10,
 		AC:               15,
+		Attributes: map[entities.Attribute]*entities.AbilityScore{
+			entities.AttributeDexterity: {Score: 16, Bonus: 3}, // +3 DEX bonus for initiative
+		},
 	}
 	err := charRepo.Create(ctx, testChar)
 	require.NoError(t, err)

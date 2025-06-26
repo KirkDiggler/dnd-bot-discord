@@ -54,11 +54,11 @@ func TestCharacter_Attack_ImprovisedMelee(t *testing.T) {
 			result := results[0]
 			assert.NotNil(t, result)
 			assert.Equal(t, damage.TypeBludgeoning, result.AttackType)
-			
+
 			// Most importantly, these should not be nil (fixing the panic)
 			assert.NotNil(t, result.AttackResult, "AttackResult should not be nil")
 			assert.NotNil(t, result.DamageResult, "DamageResult should not be nil")
-			
+
 			// Verify the rolls were populated
 			assert.Greater(t, result.AttackRoll, 0)
 			assert.GreaterOrEqual(t, result.DamageRoll, 1) // At least 1 from 1d4
@@ -102,7 +102,7 @@ func TestCharacter_Attack_WithWeapon(t *testing.T) {
 	result := results[0]
 	assert.NotNil(t, result)
 	assert.Equal(t, damage.TypeSlashing, result.AttackType)
-	
+
 	// These should not be nil
 	assert.NotNil(t, result.AttackResult, "AttackResult should not be nil")
 	assert.NotNil(t, result.DamageResult, "DamageResult should not be nil")

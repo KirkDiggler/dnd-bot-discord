@@ -264,7 +264,7 @@ func buildCombatComponents(encounterID string, result *encounter.ExecuteAttackRe
 			style = discordgo.DangerButton
 			emoji = "💀"
 		}
-		
+
 		return []discordgo.MessageComponent{
 			discordgo.ActionsRow{
 				Components: []discordgo.MessageComponent{
