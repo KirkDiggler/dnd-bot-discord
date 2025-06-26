@@ -5,9 +5,11 @@ import (
 	"testing"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	mockchar "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 // MockRepository is a simple in-memory repository for testing
@@ -47,7 +49,59 @@ func (m *MockRepository) Delete(_ context.Context, id string) error {
 func (m *MockRepository) ListByOwner(_ context.Context, ownerID string) ([]*entities.Session, error) {
 	var result []*entities.Session
 	for _, sess := range m.sessions {
-		if sess.OwnerID == ownerID {
+		if sess.CreatorID == ownerID {
+			result = append(result, sess)
+		}
+	}
+	return result, nil
+}
+
+func (m *MockRepository) GetActiveByRealm(_ context.Context, realmID string) ([]*entities.Session, error) {
+	var result []*entities.Session
+	for _, sess := range m.sessions {
+		if sess.RealmID == realmID && sess.Status == entities.SessionStatusActive {
+			result = append(result, sess)
+		}
+	}
+	return result, nil
+}
+
+func (m *MockRepository) GetActiveByUser(_ context.Context, userID string) ([]*entities.Session, error) {
+	var result []*entities.Session
+	for _, sess := range m.sessions {
+		if sess.Status == entities.SessionStatusActive {
+			// Check if user is a member
+			if _, isMember := sess.Members[userID]; isMember {
+				result = append(result, sess)
+			}
+			// Also check if user is the creator
+			if sess.CreatorID == userID {
+				result = append(result, sess)
+			}
+		}
+	}
+	return result, nil
+}
+
+func (m *MockRepository) GetByRealm(_ context.Context, realmID string) ([]*entities.Session, error) {
+	var result []*entities.Session
+	for _, sess := range m.sessions {
+		if sess.RealmID == realmID {
+			result = append(result, sess)
+		}
+	}
+	return result, nil
+}
+
+func (m *MockRepository) GetByUser(_ context.Context, userID string) ([]*entities.Session, error) {
+	var result []*entities.Session
+	for _, sess := range m.sessions {
+		// Check if user is a member
+		if _, isMember := sess.Members[userID]; isMember {
+			result = append(result, sess)
+		}
+		// Also check if user is the creator
+		if sess.CreatorID == userID {
 			result = append(result, sess)
 		}
 	}
@@ -89,21 +143,25 @@ func (m *MockUUIDGenerator) New() string {
 }
 
 func TestSelectCharacter(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	mockRepo := NewMockRepository()
+	mockCharService := mockchar.NewMockService(ctrl)
 
 	svc := session.NewService(&session.ServiceConfig{
 		Repository:       mockRepo,
 		UUIDGenerator:    NewMockUUIDGenerator("uuid"),
-		InviteCodeLength: 6,
+		CharacterService: mockCharService,
 	})
 
 	// Create a test session with a player
 	sessionID := "session-123"
 	playerID := "player-123"
 	testSession := &entities.Session{
-		ID:      sessionID,
-		Name:    "Test Dungeon",
-		OwnerID: "dm-123",
+		ID:        sessionID,
+		Name:      "Test Dungeon",
+		CreatorID: "dm-123",
 		Members: map[string]*entities.SessionMember{
 			playerID: {
 				UserID: playerID,
