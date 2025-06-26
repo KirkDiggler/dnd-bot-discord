@@ -99,9 +99,9 @@ func TestInMemoryRepository_Create(t *testing.T) {
 		err = repo.Create(ctx, enc2)
 		require.NoError(t, err)
 
-		// Get all encounters for session
-		encounters, err := repo.GetBySession(ctx, sessionID)
+		// Get all encounterResult for session
+		encounterResult, err := repo.GetBySession(ctx, sessionID)
 		require.NoError(t, err)
-		assert.Len(t, encounters, 2)
+		assert.Len(t, encounterResult, 2)
 	})
 }

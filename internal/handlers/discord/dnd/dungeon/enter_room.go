@@ -155,10 +155,10 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		log.Printf("Processing member - UserID: %s, Role: %s, CharacterID: %s", userID, member.Role, member.CharacterID)
 		if member.CharacterID != "" {
 			log.Printf("Adding player - UserID: %s, CharacterID: %s", userID, member.CharacterID)
-			combatant, err := h.services.EncounterService.AddPlayer(context.Background(), enc.ID, userID, member.CharacterID)
-			if err != nil {
+			combatant, addErr := h.services.EncounterService.AddPlayer(context.Background(), enc.ID, userID, member.CharacterID)
+			if addErr != nil {
 				// Log but continue
-				log.Printf("Failed to add player %s: %v", userID, err)
+				log.Printf("Failed to add player %s: %v", userID, addErr)
 			} else if combatant != nil {
 				log.Printf("Added player combatant: Name=%s, Type=%s, HP=%d/%d, PlayerID=%s", combatant.Name, combatant.Type, combatant.CurrentHP, combatant.MaxHP, combatant.PlayerID)
 			}
@@ -238,7 +238,11 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 			action := current.Actions[0]
 
 			// Roll attack
-			attackResult, _ := dice.Roll(1, 20, 0)
+			attackResult, rollErr := dice.Roll(1, 20, 0)
+			if rollErr != nil {
+				log.Printf("Failed to roll attack: %v", rollErr)
+				//TODO: Handle error
+			}
 			attackRoll := attackResult.Total
 			totalAttack := attackRoll + action.AttackBonus
 
@@ -251,7 +255,11 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 					if attackRoll == 20 { // Critical hit doubles dice
 						diceCount *= 2
 					}
-					rollResult, _ := dice.Roll(diceCount, dmg.DiceSize, dmg.Bonus)
+					rollResult, rollErr := dice.Roll(diceCount, dmg.DiceSize, dmg.Bonus)
+					if rollErr != nil {
+						log.Printf("Failed to roll damage: %v", rollErr)
+						//TODO: Handle error
+					}
 					totalDamage += rollResult.Total
 				}
 
@@ -693,11 +701,11 @@ func (h *EnterRoomHandler) generateCombatRoom(difficulty string, roomNumber int)
 }
 
 // getHPBar returns an emoji HP indicator
-func getHPBar(current, max int) string {
-	if max == 0 {
+func getHPBar(current, maxValue int) string {
+	if maxValue == 0 {
 		return "💀"
 	}
-	percent := float64(current) / float64(max)
+	percent := float64(current) / float64(maxValue)
 	if percent > 0.5 {
 		return "🟢"
 	} else if percent > 0.25 {

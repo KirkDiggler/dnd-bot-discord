@@ -30,9 +30,10 @@ func (h *Handler) handleSummary(s *discordgo.Session, i *discordgo.InteractionCr
 		monstersAlive := 0
 		for _, c := range enc.Combatants {
 			if c.IsActive && c.CurrentHP > 0 {
-				if c.Type == entities.CombatantTypePlayer {
+				switch c.Type {
+				case entities.CombatantTypePlayer:
 					playersAlive++
-				} else if c.Type == entities.CombatantTypeMonster {
+				case entities.CombatantTypeMonster:
 					monstersAlive++
 				}
 			}

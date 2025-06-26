@@ -33,8 +33,8 @@ func TestInventoryDisplayBug(t *testing.T) {
 
 	client := redis.NewClient(opts)
 	defer func() {
-		if err := client.Close(); err != nil {
-			log.Printf("Failed to close Redis client: %v", err)
+		if clientErr := client.Close(); clientErr != nil {
+			log.Printf("Failed to close Redis client: %v", clientErr)
 		}
 	}()
 

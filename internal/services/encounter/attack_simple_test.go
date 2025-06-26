@@ -104,7 +104,8 @@ func TestPerformAttack_MonsterVsMonster_WithMockDice(t *testing.T) {
 	require.NoError(t, err)
 
 	// Get updated encounter and manually set it up for combat
-	enc, _ = encounterService.GetEncounter(ctx, enc.ID)
+	enc, err = encounterService.GetEncounter(ctx, enc.ID)
+	require.NoError(t, err)
 	enc.Status = entities.EncounterStatusActive
 	enc.Turn = 0
 	enc.TurnOrder = []string{attacker.ID, target.ID}
@@ -217,7 +218,8 @@ func TestPerformAttack_UnarmedStrike_WithMockDice(t *testing.T) {
 	require.NoError(t, err)
 
 	// Get updated encounter and manually set it up for combat
-	enc, _ = encounterService.GetEncounter(ctx, enc.ID)
+	enc, err = encounterService.GetEncounter(ctx, enc.ID)
+	require.NoError(t, err)
 	enc.Status = entities.EncounterStatusActive
 	enc.Turn = 0
 	enc.TurnOrder = []string{attacker.ID, target.ID}

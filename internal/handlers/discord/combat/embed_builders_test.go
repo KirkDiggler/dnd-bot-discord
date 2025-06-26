@@ -38,7 +38,7 @@ func TestBuildCombatComponents_AlwaysHasCustomID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			components := buildCombatComponents("test-encounter-id", tt.result)
+			components := BuildCombatComponents("test-encounter-id", tt.result)
 			require.NotEmpty(t, components, "Should have at least one component row")
 
 			// Check all buttons have custom IDs

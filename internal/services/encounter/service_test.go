@@ -2,98 +2,19 @@ package encounter_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
-	"fmt"
-
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	mockencrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters/mock"
 	mockcharacter "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
 	mocksession "github.com/KirkDiggler/dnd-bot-discord/internal/services/session/mock"
+	mockuuid "github.com/KirkDiggler/dnd-bot-discord/internal/uuid/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
-
-// MockUUIDGenerator is a simple UUID generator for testing
-type MockUUIDGenerator struct {
-	prefix  string
-	counter int
-}
-
-func NewMockUUIDGenerator(prefix string) *MockUUIDGenerator {
-	return &MockUUIDGenerator{prefix: prefix, counter: 0}
-}
-
-func (m *MockUUIDGenerator) New() string {
-	m.counter++
-	return fmt.Sprintf("%s-%d", m.prefix, m.counter)
-}
-
-// MockRepository is a simple in-memory repository for testing
-type MockRepository struct {
-	encounters map[string]*entities.Encounter
-}
-
-func NewMockRepository() *MockRepository {
-	return &MockRepository{
-		encounters: make(map[string]*entities.Encounter),
-	}
-}
-
-func (m *MockRepository) Create(_ context.Context, encounter *entities.Encounter) error {
-	m.encounters[encounter.ID] = encounter
-	return nil
-}
-
-func (m *MockRepository) Get(_ context.Context, id string) (*entities.Encounter, error) {
-	encounter, exists := m.encounters[id]
-	if !exists {
-		return nil, nil
-	}
-	return encounter, nil
-}
-
-func (m *MockRepository) Update(_ context.Context, encounter *entities.Encounter) error {
-	m.encounters[encounter.ID] = encounter
-	return nil
-}
-
-func (m *MockRepository) Delete(_ context.Context, id string) error {
-	delete(m.encounters, id)
-	return nil
-}
-
-func (m *MockRepository) GetActiveBySession(_ context.Context, sessionID string) (*entities.Encounter, error) {
-	for _, encounter := range m.encounters {
-		if encounter.SessionID == sessionID &&
-			(encounter.Status == entities.EncounterStatusActive ||
-				encounter.Status == entities.EncounterStatusSetup ||
-				encounter.Status == entities.EncounterStatusRolling) {
-			return encounter, nil
-		}
-	}
-	return nil, nil // Important: return nil, nil when no active encounter exists
-}
-
-func (m *MockRepository) GetBySession(_ context.Context, sessionID string) ([]*entities.Encounter, error) {
-	var encounters []*entities.Encounter
-	for _, encounter := range m.encounters {
-		if encounter.SessionID == sessionID {
-			encounters = append(encounters, encounter)
-		}
-	}
-	return encounters, nil
-}
-
-func (m *MockRepository) GetByMessage(_ context.Context, messageID string) (*entities.Encounter, error) {
-	for _, encounter := range m.encounters {
-		if encounter.MessageID == messageID {
-			return encounter, nil
-		}
-	}
-	return nil, nil
-}
 
 func TestCreateEncounter_DungeonSession(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -101,13 +22,14 @@ func TestCreateEncounter_DungeonSession(t *testing.T) {
 
 	mockSessionService := mocksession.NewMockService(ctrl)
 	mockCharService := mockcharacter.NewMockService(ctrl)
-	mockRepo := NewMockRepository()
+	mockRepo := mockencrepo.NewMockRepository(ctrl)
+	mockUUID := mockuuid.NewMockGenerator(ctrl)
 
 	svc := encounter.NewService(&encounter.ServiceConfig{
 		Repository:       mockRepo,
 		SessionService:   mockSessionService,
 		CharacterService: mockCharService,
-		UUIDGenerator:    NewMockUUIDGenerator("enc"),
+		UUIDGenerator:    mockUUID,
 	})
 
 	// Test case: Bot creates encounter for dungeon session
@@ -133,8 +55,31 @@ func TestCreateEncounter_DungeonSession(t *testing.T) {
 			GetSession(gomock.Any(), sessionID).
 			Return(dungeonSession, nil)
 
-		// Create encounter as bot
-		encounter, err := svc.CreateEncounter(context.Background(), &encounter.CreateEncounterInput{
+		// Mock UUID generation
+		mockUUID.EXPECT().
+			New().
+			Return("enc-1")
+
+		// Mock repository - expect GetActiveBySession to check for existing encounters
+		mockRepo.EXPECT().
+			GetActiveBySession(gomock.Any(), sessionID).
+			Return(nil, nil) // No active encounter
+
+		// Mock repository - expect Create to be called
+		mockRepo.EXPECT().
+			Create(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, enc *entities.Encounter) error {
+				// Validate the encounter being created
+				assert.Equal(t, "enc-1", enc.ID)
+				assert.Equal(t, sessionID, enc.SessionID)
+				assert.Equal(t, channelID, enc.ChannelID)
+				assert.Equal(t, "Dungeon Room 1", enc.Name)
+				assert.Equal(t, botUserID, enc.CreatedBy)
+				return nil
+			})
+
+		// Create encResult as bot
+		encResult, err := svc.CreateEncounter(context.Background(), &encounter.CreateEncounterInput{
 			SessionID:   sessionID,
 			ChannelID:   channelID,
 			Name:        "Dungeon Room 1",
@@ -144,10 +89,10 @@ func TestCreateEncounter_DungeonSession(t *testing.T) {
 
 		// Should succeed for dungeon sessions
 		require.NoError(t, err)
-		assert.NotNil(t, encounter)
-		assert.Equal(t, "Dungeon Room 1", encounter.Name)
-		assert.Equal(t, sessionID, encounter.SessionID)
-		assert.Equal(t, botUserID, encounter.CreatedBy)
+		assert.NotNil(t, encResult)
+		assert.Equal(t, "Dungeon Room 1", encResult.Name)
+		assert.Equal(t, sessionID, encResult.SessionID)
+		assert.Equal(t, botUserID, encResult.CreatedBy)
 	})
 
 	// Test case: Non-DM cannot create encounter for regular session
@@ -212,8 +157,23 @@ func TestCreateEncounter_DungeonSession(t *testing.T) {
 			GetSession(gomock.Any(), sessionID).
 			Return(regularSession, nil)
 
+		// Mock UUID generation for DM test
+		mockUUID.EXPECT().
+			New().
+			Return("enc-2")
+
+		// Mock repository - expect GetActiveBySession to check for existing encounters
+		mockRepo.EXPECT().
+			GetActiveBySession(gomock.Any(), sessionID).
+			Return(nil, nil) // No active encounter
+
+		// Mock repository - expect Create to be called
+		mockRepo.EXPECT().
+			Create(gomock.Any(), gomock.Any()).
+			Return(nil)
+
 		// Create encounter as DM
-		encounter, err := svc.CreateEncounter(context.Background(), &encounter.CreateEncounterInput{
+		encResult, err := svc.CreateEncounter(context.Background(), &encounter.CreateEncounterInput{
 			SessionID:   sessionID,
 			ChannelID:   channelID,
 			Name:        "DM Encounter",
@@ -223,9 +183,9 @@ func TestCreateEncounter_DungeonSession(t *testing.T) {
 
 		// Should succeed for DM
 		require.NoError(t, err)
-		assert.NotNil(t, encounter)
-		assert.Equal(t, "DM Encounter", encounter.Name)
-		assert.Equal(t, dmUserID, encounter.CreatedBy)
+		assert.NotNil(t, encResult)
+		assert.Equal(t, "DM Encounter", encResult.Name)
+		assert.Equal(t, dmUserID, encResult.CreatedBy)
 	})
 }
 
@@ -235,13 +195,14 @@ func TestAddPlayer(t *testing.T) {
 
 	mockSessionService := mocksession.NewMockService(ctrl)
 	mockCharService := mockcharacter.NewMockService(ctrl)
-	mockRepo := NewMockRepository()
+	mockRepo := mockencrepo.NewMockRepository(ctrl)
+	mockUUID := mockuuid.NewMockGenerator(ctrl)
 
 	svc := encounter.NewService(&encounter.ServiceConfig{
 		Repository:       mockRepo,
 		SessionService:   mockSessionService,
 		CharacterService: mockCharService,
-		UUIDGenerator:    NewMockUUIDGenerator("test"),
+		UUIDGenerator:    mockUUID,
 	})
 
 	// Create a test encounter
@@ -249,11 +210,27 @@ func TestAddPlayer(t *testing.T) {
 	sessionID := "session-123"
 	testEncounter := entities.NewEncounter(encounterID, sessionID, "channel-123", "Test Encounter", "dm-123")
 	testEncounter.Status = entities.EncounterStatusSetup
-	mockRepo.Create(context.Background(), testEncounter)
+
+	// Mock repository expectations for Get and Update calls
+	mockRepo.EXPECT().
+		Get(gomock.Any(), encounterID).
+		Return(testEncounter, nil).
+		AnyTimes()
+
+	mockRepo.EXPECT().
+		Update(gomock.Any(), gomock.Any()).
+		Return(nil).
+		AnyTimes()
 
 	t.Run("Successfully adds player with correct character data", func(t *testing.T) {
 		playerID := "player-123"
 		characterID := "char-123"
+
+		// Mock UUID for combatant ID
+		mockUUID.EXPECT().
+			New().
+			Return("combatant-1").
+			Times(1)
 
 		// Create test character
 		testChar := &entities.Character{
@@ -292,12 +269,19 @@ func TestAddPlayer(t *testing.T) {
 		assert.True(t, combatant.IsActive)
 
 		// Verify combatant was added to encounter
-		updatedEnc, _ := mockRepo.Get(context.Background(), encounterID)
+		updatedEnc, err := mockRepo.Get(context.Background(), encounterID)
+		require.NoError(t, err)
 		assert.Len(t, updatedEnc.Combatants, 1)
 		assert.NotNil(t, updatedEnc.Combatants[combatant.ID])
 	})
 
 	t.Run("Player name different from monster names", func(t *testing.T) {
+		// Mock UUID for second combatant
+		mockUUID.EXPECT().
+			New().
+			Return("combatant-2").
+			Times(1)
+
 		// Reset encounter
 		testEncounter.Combatants = make(map[string]*entities.Combatant)
 
@@ -312,7 +296,6 @@ func TestAddPlayer(t *testing.T) {
 			IsActive:  true,
 		}
 		testEncounter.AddCombatant(orcCombatant)
-		mockRepo.Update(context.Background(), testEncounter)
 
 		// Now add a player
 		playerID := "player-456"
@@ -339,7 +322,8 @@ func TestAddPlayer(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify both combatants exist with correct names
-		updatedEnc, _ := mockRepo.Get(context.Background(), encounterID)
+		updatedEnc, err := mockRepo.Get(context.Background(), encounterID)
+		require.NoError(t, err)
 		assert.Len(t, updatedEnc.Combatants, 2)
 
 		// Find each combatant and verify
@@ -359,6 +343,12 @@ func TestAddPlayer(t *testing.T) {
 	})
 
 	t.Run("Handles player with same name as monster", func(t *testing.T) {
+		// Mock UUID for third combatant
+		mockUUID.EXPECT().
+			New().
+			Return("combatant-3").
+			Times(1)
+
 		// Reset encounter
 		testEncounter.Combatants = make(map[string]*entities.Combatant)
 
@@ -373,7 +363,6 @@ func TestAddPlayer(t *testing.T) {
 			IsActive:  true,
 		}
 		testEncounter.AddCombatant(goblinMonster)
-		mockRepo.Update(context.Background(), testEncounter)
 
 		// Add a player named "Goblin" (edge case)
 		playerID := "player-789"
@@ -400,17 +389,19 @@ func TestAddPlayer(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify both exist and can be distinguished by Type
-		updatedEnc, _ := mockRepo.Get(context.Background(), encounterID)
+		updatedEnc, getErr := mockRepo.Get(context.Background(), encounterID)
+		require.NoError(t, getErr)
 		assert.Len(t, updatedEnc.Combatants, 2)
 
 		// Count each type
 		var monsterGoblins, playerGoblins int
 		for _, c := range updatedEnc.Combatants {
 			if c.Name == "Goblin" {
-				if c.Type == entities.CombatantTypeMonster {
+				switch c.Type {
+				case entities.CombatantTypeMonster:
 					monsterGoblins++
 					assert.Empty(t, c.PlayerID) // Monsters don't have PlayerID
-				} else if c.Type == entities.CombatantTypePlayer {
+				case entities.CombatantTypePlayer:
 					playerGoblins++
 					assert.Equal(t, playerID, c.PlayerID) // Players have PlayerID
 					assert.Equal(t, characterID, c.CharacterID)
@@ -454,7 +445,8 @@ func TestAddPlayer(t *testing.T) {
 			PlayerID: "player-123", // This player is already in
 		}
 		testEncounter.AddCombatant(existingCombatant)
-		mockRepo.Update(context.Background(), testEncounter)
+		err := mockRepo.Update(context.Background(), testEncounter)
+		require.NoError(t, err)
 
 		// Try to add same player again
 		characterID := "char-new"
@@ -479,7 +471,7 @@ func TestAddPlayer(t *testing.T) {
 
 func TestEncounterCombatantFiltering(t *testing.T) {
 	// Test that we can properly filter combatants by type
-	encounter := entities.NewEncounter("enc-1", "session-1", "channel-1", "Mixed Combat", "dm-1")
+	encounterResult := entities.NewEncounter("enc-1", "session-1", "channel-1", "Mixed Combat", "dm-1")
 
 	// Add various combatants
 	player1 := &entities.Combatant{
@@ -512,14 +504,14 @@ func TestEncounterCombatantFiltering(t *testing.T) {
 		IsActive: true,
 	}
 
-	encounter.AddCombatant(player1)
-	encounter.AddCombatant(player2)
-	encounter.AddCombatant(monster1)
-	encounter.AddCombatant(monster2)
+	encounterResult.AddCombatant(player1)
+	encounterResult.AddCombatant(player2)
+	encounterResult.AddCombatant(monster1)
+	encounterResult.AddCombatant(monster2)
 
 	t.Run("Can filter for monsters only", func(t *testing.T) {
 		var monsters []*entities.Combatant
-		for _, c := range encounter.Combatants {
+		for _, c := range encounterResult.Combatants {
 			if c.Type == entities.CombatantTypeMonster {
 				monsters = append(monsters, c)
 			}
@@ -535,7 +527,7 @@ func TestEncounterCombatantFiltering(t *testing.T) {
 
 	t.Run("Can filter for players only", func(t *testing.T) {
 		var players []*entities.Combatant
-		for _, c := range encounter.Combatants {
+		for _, c := range encounterResult.Combatants {
 			if c.Type == entities.CombatantTypePlayer {
 				players = append(players, c)
 			}
@@ -551,7 +543,7 @@ func TestEncounterCombatantFiltering(t *testing.T) {
 
 	t.Run("Can distinguish same-named player and monster", func(t *testing.T) {
 		var orcs []*entities.Combatant
-		for _, c := range encounter.Combatants {
+		for _, c := range encounterResult.Combatants {
 			if c.Name == "Orc" {
 				orcs = append(orcs, c)
 			}
@@ -583,8 +575,8 @@ func TestUpdateMessageID(t *testing.T) {
 	ctx := context.Background()
 	mockSessionSvc := mocksession.NewMockService(ctrl)
 	mockCharSvc := mockcharacter.NewMockService(ctrl)
-	mockRepo := NewMockRepository()
-	mockUUID := NewMockUUIDGenerator("enc")
+	mockRepo := mockencrepo.NewMockRepository(ctrl)
+	mockUUID := mockuuid.NewMockGenerator(ctrl)
 
 	svc := encounter.NewService(&encounter.ServiceConfig{
 		Repository:       mockRepo,
@@ -601,7 +593,19 @@ func TestUpdateMessageID(t *testing.T) {
 		},
 	}
 
-	mockSessionSvc.EXPECT().GetSession(ctx, "session-1").Return(session, nil)
+	mockSessionSvc.EXPECT().GetSession(ctx, "session-1").Return(session, nil).AnyTimes()
+
+	// Mock UUID generation
+	mockUUID.EXPECT().New().Return("enc-1")
+
+	// Mock repository for create
+	mockRepo.EXPECT().
+		GetActiveBySession(gomock.Any(), "session-1").
+		Return(nil, nil) // No active encounter
+
+	mockRepo.EXPECT().
+		Create(gomock.Any(), gomock.Any()).
+		Return(nil)
 
 	// Create encounter
 	input := &encounter.CreateEncounterInput{
@@ -619,14 +623,27 @@ func TestUpdateMessageID(t *testing.T) {
 
 	// Test successful update
 	t.Run("Success", func(t *testing.T) {
+		// Mock Get to return the encounter
+		mockRepo.EXPECT().
+			Get(gomock.Any(), enc.ID).
+			Return(enc, nil)
+
+		// Mock Update to save changes
+		mockRepo.EXPECT().
+			Update(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, e *entities.Encounter) error {
+				// Update the local encounter object to simulate repository behavior
+				enc.MessageID = e.MessageID
+				enc.ChannelID = e.ChannelID
+				return nil
+			})
+
 		err := svc.UpdateMessageID(ctx, enc.ID, "msg-123", "channel-456")
 		require.NoError(t, err)
 
 		// Verify the update
-		updatedEnc, err := mockRepo.Get(ctx, enc.ID)
-		require.NoError(t, err)
-		assert.Equal(t, "msg-123", updatedEnc.MessageID)
-		assert.Equal(t, "channel-456", updatedEnc.ChannelID)
+		assert.Equal(t, "msg-123", enc.MessageID)
+		assert.Equal(t, "channel-456", enc.ChannelID)
 	})
 
 	// Test validation errors
@@ -649,6 +666,11 @@ func TestUpdateMessageID(t *testing.T) {
 
 	// Test non-existent encounter
 	t.Run("NonExistentEncounter", func(t *testing.T) {
+		// Mock Get to return not found
+		mockRepo.EXPECT().
+			Get(gomock.Any(), "non-existent").
+			Return(nil, fmt.Errorf("encounter not found"))
+
 		err := svc.UpdateMessageID(ctx, "non-existent", "msg-123", "channel-456")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "encounter not found")
