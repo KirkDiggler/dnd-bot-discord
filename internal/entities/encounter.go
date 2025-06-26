@@ -64,8 +64,8 @@ type Combatant struct {
 	// For players
 	PlayerID    string `json:"player_id,omitempty"`
 	CharacterID string `json:"character_id,omitempty"`
-	Class       string `json:"class,omitempty"`       // Character class (Fighter, Wizard, etc.)
-	Race        string `json:"race,omitempty"`        // Character race
+	Class       string `json:"class,omitempty"` // Character class (Fighter, Wizard, etc.)
+	Race        string `json:"race,omitempty"`  // Character race
 
 	// For monsters
 	MonsterRef string           `json:"monster_ref,omitempty"` // D&D API reference

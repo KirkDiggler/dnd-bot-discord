@@ -2666,7 +2666,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 								log.Printf("Failed to remove old combatant: %v", removeErr)
 							}
 						}
-						
+
 						// Add the player with the new character
 						_, addErr := h.ServiceProvider.EncounterService.AddPlayer(context.Background(), enc.ID, i.Member.User.ID, characterID)
 						if addErr != nil {
@@ -2678,14 +2678,14 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						// Always try to update the shared combat message after character selection
 						// This ensures the display is current even if the player was already in the encounter
 						log.Printf("Updating shared combat message for encounter %s", enc.ID)
-						
+
 						// Get fresh encounter data
 						updatedEnc, getErr := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), enc.ID)
 						if getErr != nil {
 							log.Printf("Failed to get updated encounter: %v", getErr)
 						} else if updatedEnc != nil {
 							log.Printf("Got updated encounter. MessageID: %s, ChannelID: %s", updatedEnc.MessageID, updatedEnc.ChannelID)
-							
+
 							if updatedEnc.MessageID != "" && updatedEnc.ChannelID != "" {
 								// Build the combat status embed
 								embed := combat.BuildCombatStatusEmbed(updatedEnc, nil)
@@ -4190,7 +4190,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					}); responseErr != nil {
 						log.Printf("Failed to respond with success message: %v", responseErr)
 					}
-					
+
 					// Update the shared dungeon lobby message using stored message ID
 					freshSess, _ := h.ServiceProvider.SessionService.GetSession(context.Background(), sessionID)
 					if freshSess != nil && freshSess.Metadata != nil {
@@ -4198,7 +4198,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						if messageID, ok := freshSess.Metadata["lobbyMessageID"].(string); ok {
 							if channelID, ok := freshSess.Metadata["lobbyChannelID"].(string); ok {
 								log.Printf("Updating dungeon lobby message %s with new party member", messageID)
-								
+
 								// Get the original message to preserve its structure
 								origMsg, err := s.ChannelMessage(channelID, messageID)
 								if err == nil && len(origMsg.Embeds) > 0 {
@@ -4217,7 +4217,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 											}
 										}
 									}
-									
+
 									// Update the party field
 									updatedEmbed := origMsg.Embeds[0]
 									for idx, field := range updatedEmbed.Fields {
@@ -4226,7 +4226,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 											break
 										}
 									}
-									
+
 									// Edit the message
 									_, editErr := s.ChannelMessageEditComplex(&discordgo.MessageEdit{
 										ID:         messageID,

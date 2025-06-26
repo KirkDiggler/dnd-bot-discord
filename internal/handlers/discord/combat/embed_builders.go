@@ -144,7 +144,7 @@ func BuildCombatStatusEmbed(enc *entities.Encounter, monsterActions []*encounter
 		}
 
 		hpBar := getHPBar(c.CurrentHP, c.MaxHP)
-		
+
 		if c.Type == entities.CombatantTypeMonster {
 			line := fmt.Sprintf("%s **%s** - %d/%d HP\n", hpBar, c.Name, c.CurrentHP, c.MaxHP)
 			enemies.WriteString(line)
@@ -155,7 +155,7 @@ func BuildCombatStatusEmbed(enc *entities.Encounter, monsterActions []*encounter
 			if c.Class != "" {
 				classInfo = fmt.Sprintf(" (%s)", c.Class)
 			}
-			line := fmt.Sprintf("%s %s **%s**%s - %d/%d HP | AC %d\n", 
+			line := fmt.Sprintf("%s %s **%s**%s - %d/%d HP | AC %d\n",
 				classIcon, hpBar, c.Name, classInfo, c.CurrentHP, c.MaxHP, c.AC)
 			allies.WriteString(line)
 		}

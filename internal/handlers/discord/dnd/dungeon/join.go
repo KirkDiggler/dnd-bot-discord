@@ -187,7 +187,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 	if i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral == 0 {
 		// This is the shared dungeon message - update it
 		log.Printf("Updating dungeon message to show new character selection")
-		
+
 		// Get fresh session data to see all party members
 		freshSess, _ := h.services.SessionService.GetSession(context.Background(), sessionID)
 		if freshSess != nil {
@@ -204,7 +204,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 					}
 				}
 			}
-			
+
 			// Update the embed's party field
 			if len(i.Message.Embeds) > 0 {
 				updatedEmbed := i.Message.Embeds[0]
@@ -214,7 +214,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 						break
 					}
 				}
-				
+
 				// Edit the message
 				_, err := s.ChannelMessageEditComplex(&discordgo.MessageEdit{
 					ID:      i.Message.ID,
