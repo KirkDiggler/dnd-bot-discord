@@ -102,12 +102,15 @@ func TestBuildCharacterSheetComponents(t *testing.T) {
 	require.Len(t, actionRow.Components, 3)
 
 	// Verify button custom IDs
-	button1 := actionRow.Components[0].(discordgo.Button)
+	button1, ok := actionRow.Components[0].(discordgo.Button)
+	require.True(t, ok)
 	assert.Equal(t, "character:inventory:test-char-123", button1.CustomID)
 
-	button2 := actionRow.Components[1].(discordgo.Button)
+	button2, ok := actionRow.Components[1].(discordgo.Button)
+	require.True(t, ok)
 	assert.Equal(t, "character:details:test-char-123", button2.CustomID)
 
-	button3 := actionRow.Components[2].(discordgo.Button)
+	button3, ok := actionRow.Components[2].(discordgo.Button)
+	require.True(t, ok)
 	assert.Equal(t, "character:sheet_refresh:test-char-123", button3.CustomID)
 }

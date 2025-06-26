@@ -298,7 +298,9 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 		}
 
 		// Now update the main shared combat message
-		updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components)
+		if err := updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components); err != nil {
+			log.Printf("Failed to update shared combat message: %v", err)
+		}
 		return nil
 	}
 
@@ -310,7 +312,9 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 
 	// Also update the shared message if this wasn't the shared message itself
 	if i.Message == nil || i.Message.ID != enc.MessageID {
-		updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components)
+		if err := updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components); err != nil {
+			log.Printf("Failed to update shared combat message: %v", err)
+		}
 	}
 
 	return err
@@ -432,7 +436,9 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 		}
 
 		// Update the main shared combat message
-		updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components)
+		if err := updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components); err != nil {
+			log.Printf("Failed to update shared combat message: %v", err)
+		}
 		return nil
 	}
 
@@ -444,7 +450,9 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 
 	// Also update the shared message if this wasn't the shared message itself
 	if i.Message == nil || i.Message.ID != enc.MessageID {
-		updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components)
+		if err := updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components); err != nil {
+			log.Printf("Failed to update shared combat message: %v", err)
+		}
 	}
 
 	return err
