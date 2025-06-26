@@ -264,6 +264,7 @@ func buildCombatComponents(encounterID string, result *encounter.ExecuteAttackRe
 					discordgo.Button{
 						Label:    "Combat Complete",
 						Style:    discordgo.SuccessButton,
+						CustomID: fmt.Sprintf("combat:complete:%s", encounterID),
 						Disabled: true,
 						Emoji:    &discordgo.ComponentEmoji{Name: "🎉"},
 					},

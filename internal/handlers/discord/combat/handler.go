@@ -258,6 +258,7 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 						discordgo.Button{
 							Label:    "Combat Complete",
 							Style:    discordgo.SuccessButton,
+							CustomID: fmt.Sprintf("combat:complete:%s", encounterID),
 							Disabled: true,
 							Emoji:    &discordgo.ComponentEmoji{Name: "🎉"},
 						},
