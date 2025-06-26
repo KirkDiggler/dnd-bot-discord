@@ -364,36 +364,8 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 	return nil
 }
 
-// ptr returns a pointer to the given string
-func ptr(s string) *string {
-	return &s
-}
-
 // HandleInteraction handles all Discord interactions
 func (h *Handler) HandleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	// Add panic recovery for all interaction types
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("PANIC in interaction handler: %v\nInteraction type: %v\nUser: %s", 
-				r, i.Type, i.Member.User.ID)
-			
-			// Try to respond to the user
-			err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "❌ An unexpected error occurred. Please try again or contact support.",
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
-			if err != nil {
-				// If we can't respond, try to edit
-				_, _ = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-					Content: ptr("❌ An unexpected error occurred. Please try again or contact support."),
-				})
-			}
-		}
-	}()
-
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		h.handleCommand(s, i)
