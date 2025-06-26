@@ -268,6 +268,12 @@ func buildCombatComponents(encounterID string, result *encounter.ExecuteAttackRe
 						Disabled: true,
 						Emoji:    &discordgo.ComponentEmoji{Name: "🎉"},
 					},
+					discordgo.Button{
+						Label:    "View History",
+						Style:    discordgo.SecondaryButton,
+						CustomID: fmt.Sprintf("combat:history:%s", encounterID),
+						Emoji:    &discordgo.ComponentEmoji{Name: "📜"},
+					},
 				},
 			},
 		}
