@@ -1938,6 +1938,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			// Add item selection if there are items
 			if len(items) > 0 {
 				options := []discordgo.SelectMenuOption{}
+
+				// Track item counts to handle duplicates
+				itemCounts := make(map[string]int)
+				for _, invItem := range items {
+					itemCounts[invItem.GetKey()]++
+				}
+
+				// Track current index for each item type
+				itemIndices := make(map[string]int)
+
 				for i, invItem := range items {
 					if i >= 25 { // Discord limit
 						break
@@ -1976,10 +1986,22 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						label += " (Equipped)"
 					}
 
+					// Make value unique for duplicate items
+					value := invItem.GetKey()
+					if itemCounts[invItem.GetKey()] > 1 {
+						itemIndices[invItem.GetKey()]++
+						// Use a special delimiter "|||" to avoid conflicts with item keys that contain underscores
+						value = fmt.Sprintf("%s|||%d", invItem.GetKey(), itemIndices[invItem.GetKey()])
+						// Add index to label if there are duplicates
+						if !isEquipped {
+							label = fmt.Sprintf("%s #%d", label, itemIndices[invItem.GetKey()])
+						}
+					}
+
 					options = append(options, discordgo.SelectMenuOption{
 						Label:       label,
 						Description: desc,
-						Value:       invItem.GetKey(),
+						Value:       value,
 					})
 				}
 
@@ -2027,7 +2049,19 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 		if len(parts) >= 4 && len(i.MessageComponentData().Values) > 0 {
 			characterID := parts[2]
 			category := parts[3]
-			itemKey := i.MessageComponentData().Values[0]
+			itemValue := i.MessageComponentData().Values[0]
+
+			// Extract the base item key (remove index suffix if present)
+			// We use a special delimiter pattern "|||" to separate the key from index
+			// to avoid conflicts with items that have underscores in their keys
+			itemKey := itemValue
+			delimiterPattern := "|||"
+			if idx := strings.LastIndex(itemValue, delimiterPattern); idx != -1 {
+				// Check if the part after delimiter is a number
+				if _, err := strconv.Atoi(itemValue[idx+len(delimiterPattern):]); err == nil {
+					itemKey = itemValue[:idx]
+				}
+			}
 
 			// Get the character
 			char, err := h.ServiceProvider.CharacterService.GetByID(characterID)
@@ -2044,11 +2078,23 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 			// Find the item in inventory
 			var selectedItem entities.Equipment
+			currentIndex := make(map[string]int)
+
 			for _, equipList := range char.Inventory {
 				for _, equip := range equipList {
 					if equip.GetKey() == itemKey {
-						selectedItem = equip
-						break
+						currentIndex[itemKey]++
+						// If the value has an index, match it
+						if strings.Contains(itemValue, delimiterPattern) {
+							if itemValue == fmt.Sprintf("%s|||%d", itemKey, currentIndex[itemKey]) {
+								selectedItem = equip
+								break
+							}
+						} else {
+							// No index, just take the first match
+							selectedItem = equip
+							break
+						}
 					}
 				}
 				if selectedItem != nil {
@@ -2065,7 +2111,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			isEquipped := false
 			var equippedSlot entities.Slot
 			for slot, equipped := range char.EquippedSlots {
-				if equipped != nil && equipped.GetKey() == itemKey {
+				if equipped != nil && equipped == selectedItem {
 					isEquipped = true
 					equippedSlot = slot
 					break
