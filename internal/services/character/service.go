@@ -895,6 +895,24 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 		char.AC = baseAC
 	}
 
+	// Add starting equipment if class is set and DND client is available
+	if s.dndClient != nil && char.Class != nil && char.Class.StartingEquipment != nil {
+		for _, se := range char.Class.StartingEquipment {
+			if se != nil && se.Equipment != nil {
+				equipment, err := s.dndClient.GetEquipment(se.Equipment.Key)
+				if err != nil {
+					// Log the error but don't fail the finalization
+					log.Printf("Failed to get starting equipment %s: %v", se.Equipment.Key, err)
+					continue
+				}
+				// If no error, equipment is valid
+				for i := 0; i < se.Quantity; i++ {
+					char.AddInventory(equipment)
+				}
+			}
+		}
+	}
+
 	// Update status to active
 	char.Status = entities.CharacterStatusActive
 
