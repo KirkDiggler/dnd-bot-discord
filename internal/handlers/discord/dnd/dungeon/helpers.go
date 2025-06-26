@@ -1,6 +1,7 @@
 package dungeon
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -14,7 +15,7 @@ import (
 // UpdateDungeonLobbyMessage updates the shared dungeon lobby message with current party members
 func UpdateDungeonLobbyMessage(s *discordgo.Session, sessionService session.Service, characterService character.Service, sessionID, messageID, channelID string) error {
 	// Get fresh session data
-	sess, err := sessionService.GetSession(nil, sessionID)
+	sess, err := sessionService.GetSession(context.Background(), sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to get session: %w", err)
 	}
