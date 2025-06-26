@@ -15,8 +15,8 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 
 	// Use monospace code block for proper alignment
 	sb.WriteString("```\n")
-	sb.WriteString("Init │ Name              │ HP          │ AC\n")
-	sb.WriteString("─────┼───────────────────┼─────────────┼────\n")
+	sb.WriteString("Init │ Name                │ HP            │ AC\n")
+	sb.WriteString("─────┼─────────────────────┼───────────────┼────\n")
 
 	for i, id := range enc.TurnOrder {
 		if c, exists := enc.Combatants[id]; exists && c.IsActive {
@@ -31,24 +31,29 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 			sb.WriteString(fmt.Sprintf("%2d", c.Initiative))
 			sb.WriteString("  │ ")
 
-			// Name (truncated if needed)
-			name := c.Name
-			if len(name) > 17 {
-				name = name[:14] + "..."
-			}
-			// Add class icon for players
+			// Name with icon (truncated if needed)
+			icon := ""
 			if c.Type == entities.CombatantTypePlayer {
-				name = getClassIcon(c.Class) + " " + name
+				icon = getClassIcon(c.Class)
 			} else {
-				name = "🐉 " + name // Monster icon
+				icon = "🐉" // Monster icon
 			}
-			sb.WriteString(fmt.Sprintf("%-17s", name))
+
+			name := c.Name
+			maxNameLen := 16 // Leave room for icon and spacing
+			if len(name) > maxNameLen {
+				name = name[:maxNameLen-3] + "..."
+			}
+
+			// Format: "icon name" padded to 19 chars total
+			nameStr := fmt.Sprintf("%s %s", icon, name)
+			sb.WriteString(fmt.Sprintf("%-19s", nameStr))
 			sb.WriteString(" │ ")
 
-			// HP with visual bar
+			// HP with visual bar - ensure consistent width
 			hpBar := getCompactHPBar(c.CurrentHP, c.MaxHP)
 			hpStr := fmt.Sprintf("%s %3d/%-3d", hpBar, c.CurrentHP, c.MaxHP)
-			sb.WriteString(hpStr)
+			sb.WriteString(fmt.Sprintf("%-13s", hpStr))
 			sb.WriteString(" │ ")
 
 			// AC

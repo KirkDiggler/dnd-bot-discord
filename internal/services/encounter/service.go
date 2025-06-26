@@ -869,22 +869,24 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		}
 
 		if result.Critical {
-			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | d20:**%d**%+d=%d vs AC:%d | 💥 CRIT! 🩸 **%d** %s",
+			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | 💥 CRIT! 🩸 **%d** ||d20:**%d**%+d=%d vs AC:%d, dmg:%s||",
 				result.AttackerName, result.TargetName,
+				result.Damage,
 				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
-				result.Damage, damageRollStr)
+				damageRollStr)
 		} else {
-			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | d20:%d%+d=%d vs AC:%d | HIT 🩸 **%d** %s",
+			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | HIT 🩸 **%d** ||d20:%d%+d=%d vs AC:%d, dmg:%s||",
 				result.AttackerName, result.TargetName,
+				result.Damage,
 				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
-				result.Damage, damageRollStr)
+				damageRollStr)
 		}
 
 		if result.TargetDefeated {
 			result.LogEntry += " 💀"
 		}
 	} else {
-		result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | d20:%d%+d=%d vs AC:%d | ❌ MISS",
+		result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | ❌ MISS ||d20:%d%+d=%d vs AC:%d||",
 			result.AttackerName, result.TargetName,
 			result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC)
 	}
