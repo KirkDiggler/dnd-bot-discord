@@ -131,6 +131,12 @@ func (e *Encounter) Start() bool {
 	e.Round = 1
 	e.Turn = 0
 
+	// Check if combat should end before starting
+	if shouldEnd, _ := e.CheckCombatEnd(); shouldEnd {
+		e.End()
+		return false
+	}
+
 	// Skip dead combatants at the start
 	for e.Turn < len(e.TurnOrder) {
 		if combatant, exists := e.Combatants[e.TurnOrder[e.Turn]]; exists && combatant.IsActive && combatant.CurrentHP > 0 {
@@ -160,6 +166,12 @@ func (e *Encounter) NextTurn() {
 	// Advance turn
 	e.Turn++
 
+	// Check if combat should end before skipping dead combatants
+	if shouldEnd, _ := e.CheckCombatEnd(); shouldEnd {
+		e.End()
+		return
+	}
+
 	// Skip dead combatants
 	for e.Turn < len(e.TurnOrder) {
 		if combatant, exists := e.Combatants[e.TurnOrder[e.Turn]]; exists && combatant.IsActive && combatant.CurrentHP > 0 {
@@ -179,6 +191,12 @@ func (e *Encounter) NextTurn() {
 		// Reset all combatants' HasActed flag
 		for _, combatant := range e.Combatants {
 			combatant.HasActed = false
+		}
+
+		// Check if combat should end after round reset
+		if shouldEnd, _ := e.CheckCombatEnd(); shouldEnd {
+			e.End()
+			return
 		}
 
 		// Skip dead combatants at the start of the new round
