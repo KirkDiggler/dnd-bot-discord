@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/features"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
 )
@@ -184,6 +185,16 @@ func (h *ClassSelectHandler) buildSummaryEmbed(race *entities.Race, class *entit
 	// Class details
 	classDetails := []string{}
 	classDetails = append(classDetails, fmt.Sprintf("Hit Die: d%d", class.HitDie))
+
+	// Add level 1 class features
+	classFeatures := features.GetClassFeatures(class.Key, 1)
+	if len(classFeatures) > 0 {
+		classDetails = append(classDetails, "")
+		classDetails = append(classDetails, "**Level 1 Features:**")
+		for _, feature := range classFeatures {
+			classDetails = append(classDetails, fmt.Sprintf("• %s", feature.Name))
+		}
+	}
 
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 		Name:   fmt.Sprintf("⚔️ %s Features", class.Name),

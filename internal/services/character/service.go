@@ -574,6 +574,11 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 			newFeatures = append(newFeatures, &feat)
 		}
 		char.Features = newFeatures
+
+		// Apply passive effects from new racial features
+		if err := features.DefaultRegistry.ApplyAllPassiveEffects(char); err != nil {
+			log.Printf("Error applying passive effects: %v", err)
+		}
 	}
 
 	// Update class if provided
@@ -603,6 +608,14 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 			newFeatures = append(newFeatures, &feat)
 		}
 		char.Features = newFeatures
+
+		// Apply passive effects from new features
+		if err := features.DefaultRegistry.ApplyAllPassiveEffects(char); err != nil {
+			log.Printf("Error applying passive effects: %v", err)
+		}
+
+		// Recalculate AC with new class features
+		char.AC = features.CalculateAC(char)
 	}
 
 	// Update ability rolls if provided (including clearing with empty slice)
@@ -836,64 +849,37 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 		char.HitDie = char.Class.HitDie
 	}
 
-	// Fetch class features if not already loaded
-	if char.Features == nil && char.Class != nil {
-		feat, featErr := s.dndClient.GetClassFeatures(char.Class.Key, char.Level)
-		if featErr == nil {
-			char.Features = feat
+	// Apply features if not already loaded
+	if len(char.Features) == 0 {
+		char.Features = []*entities.CharacterFeature{}
+
+		// Apply racial features
+		if char.Race != nil {
+			racialFeatures := features.GetRacialFeatures(char.Race.Key)
+			for _, feat := range racialFeatures {
+				featCopy := feat // Make a copy to avoid reference issues
+				char.Features = append(char.Features, &featCopy)
+			}
+		}
+
+		// Apply class features
+		if char.Class != nil {
+			classFeatures := features.GetClassFeatures(char.Class.Key, char.Level)
+			for _, feat := range classFeatures {
+				featCopy := feat // Make a copy to avoid reference issues
+				char.Features = append(char.Features, &featCopy)
+			}
 		}
 	}
 
-	// Calculate AC if not set
-	if char.AC == 0 {
-		dexMod := 0
-		wisMod := 0
-
-		if char.Attributes != nil {
-			if dex, ok := char.Attributes[entities.AttributeDexterity]; ok && dex != nil {
-				dexMod = dex.Bonus
-			}
-			if wis, ok := char.Attributes[entities.AttributeWisdom]; ok && wis != nil {
-				wisMod = wis.Bonus
-			}
-		}
-
-		// Check for Unarmored Defense
-		hasUnarmoredDefense := false
-		if char.Features != nil {
-			for _, feature := range char.Features {
-				if strings.Contains(strings.ToLower(feature.Name), "unarmored defense") {
-					hasUnarmoredDefense = true
-					break
-				}
-			}
-		}
-
-		// Calculate AC based on class and features
-		var baseAC int
-		if hasUnarmoredDefense && char.Class != nil {
-			switch strings.ToLower(char.Class.Key) {
-			case "monk":
-				// Monk: 10 + Dex modifier + Wis modifier
-				baseAC = 10 + dexMod + wisMod
-			case "barbarian":
-				// Barbarian: 10 + Dex modifier + Con modifier
-				conMod := 0
-				if con, ok := char.Attributes[entities.AttributeConstitution]; ok && con != nil {
-					conMod = con.Bonus
-				}
-				baseAC = 10 + dexMod + conMod
-			default:
-				// Default unarmored
-				baseAC = 10 + dexMod
-			}
-		} else {
-			// Default: 10 + Dex modifier
-			baseAC = 10 + dexMod
-		}
-
-		char.AC = baseAC
+	// Apply passive effects from all features
+	if err := features.DefaultRegistry.ApplyAllPassiveEffects(char); err != nil {
+		// Log error but don't fail finalization
+		log.Printf("Error applying passive effects: %v", err)
 	}
+
+	// Calculate AC using the features package
+	char.AC = features.CalculateAC(char)
 
 	// Add starting equipment if class is set and DND client is available
 	if s.dndClient != nil && char.Class != nil && char.Class.StartingEquipment != nil {

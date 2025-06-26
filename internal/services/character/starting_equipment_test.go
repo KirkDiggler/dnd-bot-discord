@@ -263,7 +263,6 @@ func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 			mockClient.EXPECT().GetEquipment("scale-mail").Return(scaleMail, nil).AnyTimes()
 			mockClient.EXPECT().GetEquipment("shortbow").Return(shortbow, nil).AnyTimes()
 			mockClient.EXPECT().GetEquipment("arrow").Return(arrow, nil).AnyTimes()
-			mockClient.EXPECT().GetClassFeatures(tt.class.Key, 1).Return([]*entities.CharacterFeature{}, nil).AnyTimes()
 
 			// Create repository and service
 			repo := characters.NewInMemoryRepository()
@@ -367,7 +366,6 @@ func TestFinalizeDraftCharacter_HandlesEquipmentErrors(t *testing.T) {
 	mockClient := mockdnd5e.NewMockClient(ctrl)
 	mockClient.EXPECT().GetEquipment("valid-equipment").Return(validEquipment, nil)
 	mockClient.EXPECT().GetEquipment("missing-equipment").Return(nil, errors.New("not found"))
-	mockClient.EXPECT().GetClassFeatures(testClass.Key, 1).Return([]*entities.CharacterFeature{}, nil)
 
 	// Create repository and service
 	repo := characters.NewInMemoryRepository()
