@@ -220,11 +220,27 @@ func TestAddPlayer(t *testing.T) {
 	sessionID := "session-123"
 	testEncounter := entities.NewEncounter(encounterID, sessionID, "channel-123", "Test Encounter", "dm-123")
 	testEncounter.Status = entities.EncounterStatusSetup
-	mockRepo.Create(context.Background(), testEncounter)
+	
+	// Mock repository expectations for Get and Update calls
+	mockRepo.EXPECT().
+		Get(gomock.Any(), encounterID).
+		Return(testEncounter, nil).
+		AnyTimes()
+	
+	mockRepo.EXPECT().
+		Update(gomock.Any(), gomock.Any()).
+		Return(nil).
+		AnyTimes()
 
 	t.Run("Successfully adds player with correct character data", func(t *testing.T) {
 		playerID := "player-123"
 		characterID := "char-123"
+		
+		// Mock UUID for combatant ID
+		mockUUID.EXPECT().
+			New().
+			Return("combatant-1").
+			Times(1)
 
 		// Create test character
 		testChar := &entities.Character{
@@ -269,6 +285,12 @@ func TestAddPlayer(t *testing.T) {
 	})
 
 	t.Run("Player name different from monster names", func(t *testing.T) {
+		// Mock UUID for second combatant
+		mockUUID.EXPECT().
+			New().
+			Return("combatant-2").
+			Times(1)
+		
 		// Reset encounter
 		testEncounter.Combatants = make(map[string]*entities.Combatant)
 
@@ -283,7 +305,6 @@ func TestAddPlayer(t *testing.T) {
 			IsActive:  true,
 		}
 		testEncounter.AddCombatant(orcCombatant)
-		mockRepo.Update(context.Background(), testEncounter)
 
 		// Now add a player
 		playerID := "player-456"
@@ -330,6 +351,12 @@ func TestAddPlayer(t *testing.T) {
 	})
 
 	t.Run("Handles player with same name as monster", func(t *testing.T) {
+		// Mock UUID for third combatant
+		mockUUID.EXPECT().
+			New().
+			Return("combatant-3").
+			Times(1)
+		
 		// Reset encounter
 		testEncounter.Combatants = make(map[string]*entities.Combatant)
 
@@ -344,7 +371,6 @@ func TestAddPlayer(t *testing.T) {
 			IsActive:  true,
 		}
 		testEncounter.AddCombatant(goblinMonster)
-		mockRepo.Update(context.Background(), testEncounter)
 
 		// Add a player named "Goblin" (edge case)
 		playerID := "player-789"
@@ -555,8 +581,8 @@ func TestUpdateMessageID(t *testing.T) {
 	ctx := context.Background()
 	mockSessionSvc := mocksession.NewMockService(ctrl)
 	mockCharSvc := mockcharacter.NewMockService(ctrl)
-	mockRepo := NewMockRepository()
-	mockUUID := NewMockUUIDGenerator("enc")
+	mockRepo := mockencrepo.NewMockRepository(ctrl)
+	mockUUID := mockuuid.NewMockGenerator(ctrl)
 
 	svc := encounter.NewService(&encounter.ServiceConfig{
 		Repository:       mockRepo,
@@ -573,7 +599,19 @@ func TestUpdateMessageID(t *testing.T) {
 		},
 	}
 
-	mockSessionSvc.EXPECT().GetSession(ctx, "session-1").Return(session, nil)
+	mockSessionSvc.EXPECT().GetSession(ctx, "session-1").Return(session, nil).AnyTimes()
+
+	// Mock UUID generation
+	mockUUID.EXPECT().New().Return("enc-1")
+
+	// Mock repository for create
+	mockRepo.EXPECT().
+		GetActiveBySession(gomock.Any(), "session-1").
+		Return(nil, nil) // No active encounter
+	
+	mockRepo.EXPECT().
+		Create(gomock.Any(), gomock.Any()).
+		Return(nil)
 
 	// Create encounter
 	input := &encounter.CreateEncounterInput{
@@ -591,14 +629,27 @@ func TestUpdateMessageID(t *testing.T) {
 
 	// Test successful update
 	t.Run("Success", func(t *testing.T) {
+		// Mock Get to return the encounter
+		mockRepo.EXPECT().
+			Get(gomock.Any(), enc.ID).
+			Return(enc, nil)
+		
+		// Mock Update to save changes
+		mockRepo.EXPECT().
+			Update(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, e *entities.Encounter) error {
+				// Update the local encounter object to simulate repository behavior
+				enc.MessageID = e.MessageID
+				enc.ChannelID = e.ChannelID
+				return nil
+			})
+		
 		err := svc.UpdateMessageID(ctx, enc.ID, "msg-123", "channel-456")
 		require.NoError(t, err)
 
 		// Verify the update
-		updatedEnc, err := mockRepo.Get(ctx, enc.ID)
-		require.NoError(t, err)
-		assert.Equal(t, "msg-123", updatedEnc.MessageID)
-		assert.Equal(t, "channel-456", updatedEnc.ChannelID)
+		assert.Equal(t, "msg-123", enc.MessageID)
+		assert.Equal(t, "channel-456", enc.ChannelID)
 	})
 
 	// Test validation errors
@@ -621,6 +672,11 @@ func TestUpdateMessageID(t *testing.T) {
 
 	// Test non-existent encounter
 	t.Run("NonExistentEncounter", func(t *testing.T) {
+		// Mock Get to return not found
+		mockRepo.EXPECT().
+			Get(gomock.Any(), "non-existent").
+			Return(nil, fmt.Errorf("encounter not found"))
+		
 		err := svc.UpdateMessageID(ctx, "non-existent", "msg-123", "channel-456")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "encounter not found")
