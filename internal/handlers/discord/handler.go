@@ -27,6 +27,13 @@ import (
 	"golang.org/x/text/language"
 )
 
+const (
+	// equipmentIndexDelimiter is used to separate equipment keys from their index
+	// when multiple copies of the same item exist in inventory.
+	// This delimiter is chosen to avoid conflicts with item keys that may contain underscores.
+	equipmentIndexDelimiter = "|||"
+)
+
 // Handler handles all Discord interactions
 type Handler struct {
 	ServiceProvider                       *services.Provider
@@ -1990,8 +1997,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					value := invItem.GetKey()
 					if itemCounts[invItem.GetKey()] > 1 {
 						itemIndices[invItem.GetKey()]++
-						// Use a special delimiter "|||" to avoid conflicts with item keys that contain underscores
-						value = fmt.Sprintf("%s|||%d", invItem.GetKey(), itemIndices[invItem.GetKey()])
+						value = fmt.Sprintf("%s%s%d", invItem.GetKey(), equipmentIndexDelimiter, itemIndices[invItem.GetKey()])
 						// Add index to label if there are duplicates
 						if !isEquipped {
 							label = fmt.Sprintf("%s #%d", label, itemIndices[invItem.GetKey()])
@@ -2052,13 +2058,12 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			itemValue := i.MessageComponentData().Values[0]
 
 			// Extract the base item key (remove index suffix if present)
-			// We use a special delimiter pattern "|||" to separate the key from index
+			// We use a special delimiter pattern to separate the key from index
 			// to avoid conflicts with items that have underscores in their keys
 			itemKey := itemValue
-			delimiterPattern := "|||"
-			if idx := strings.LastIndex(itemValue, delimiterPattern); idx != -1 {
+			if idx := strings.LastIndex(itemValue, equipmentIndexDelimiter); idx != -1 {
 				// Check if the part after delimiter is a number
-				if _, err := strconv.Atoi(itemValue[idx+len(delimiterPattern):]); err == nil {
+				if _, err := strconv.Atoi(itemValue[idx+len(equipmentIndexDelimiter):]); err == nil {
 					itemKey = itemValue[:idx]
 				}
 			}
@@ -2085,8 +2090,8 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					if equip.GetKey() == itemKey {
 						currentIndex[itemKey]++
 						// If the value has an index, match it
-						if strings.Contains(itemValue, delimiterPattern) {
-							if itemValue == fmt.Sprintf("%s|||%d", itemKey, currentIndex[itemKey]) {
+						if strings.Contains(itemValue, equipmentIndexDelimiter) {
+							if itemValue == fmt.Sprintf("%s%s%d", itemKey, equipmentIndexDelimiter, currentIndex[itemKey]) {
 								selectedItem = equip
 								break
 							}
