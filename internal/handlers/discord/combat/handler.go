@@ -251,21 +251,8 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 		}
 
 		// Now update the main shared combat message
-		if enc.MessageID != "" && enc.ChannelID != "" {
-			log.Printf("Updating main combat message: MessageID=%s, ChannelID=%s", enc.MessageID, enc.ChannelID)
-			_, err = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
-				ID:         enc.MessageID,
-				Channel:    enc.ChannelID,
-				Embeds:     &[]*discordgo.MessageEmbed{embed},
-				Components: &components,
-			})
-			if err != nil {
-				log.Printf("Failed to update main combat message: %v", err)
-			}
-		} else {
-			log.Printf("WARNING: Cannot update main combat message - MessageID=%s, ChannelID=%s", enc.MessageID, enc.ChannelID)
-		}
-		return err
+		updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components)
+		return nil
 	}
 
 	// For non-ephemeral interactions, update the message directly
@@ -273,6 +260,12 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 		Embeds:     &[]*discordgo.MessageEmbed{embed},
 		Components: &components,
 	})
+
+	// Also update the shared message if this wasn't the shared message itself
+	if i.Message == nil || i.Message.ID != enc.MessageID {
+		updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components)
+	}
+
 	return err
 }
 
@@ -392,21 +385,8 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 		}
 
 		// Update the main shared combat message
-		if enc.MessageID != "" && enc.ChannelID != "" {
-			log.Printf("Updating main combat message from next turn: MessageID=%s, ChannelID=%s", enc.MessageID, enc.ChannelID)
-			_, err = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
-				ID:         enc.MessageID,
-				Channel:    enc.ChannelID,
-				Embeds:     &[]*discordgo.MessageEmbed{embed},
-				Components: &components,
-			})
-			if err != nil {
-				log.Printf("Failed to update main combat message: %v", err)
-			}
-		} else {
-			log.Printf("WARNING: Cannot update main combat message from next turn - MessageID=%s, ChannelID=%s", enc.MessageID, enc.ChannelID)
-		}
-		return err
+		updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components)
+		return nil
 	}
 
 	// For non-ephemeral, update the original message
@@ -414,6 +394,12 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 		Embeds:     &[]*discordgo.MessageEmbed{embed},
 		Components: &components,
 	})
+
+	// Also update the shared message if this wasn't the shared message itself
+	if i.Message == nil || i.Message.ID != enc.MessageID {
+		updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, components)
+	}
+
 	return err
 }
 
