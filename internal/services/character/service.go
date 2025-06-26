@@ -609,11 +609,6 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		}
 		char.Features = newFeatures
 
-		// Apply passive effects from new features
-		if err := features.DefaultRegistry.ApplyAllPassiveEffects(char); err != nil {
-			log.Printf("Error applying passive effects: %v", err)
-		}
-
 		// Recalculate AC with new class features
 		char.AC = features.CalculateAC(char)
 	}
