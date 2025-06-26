@@ -4199,46 +4199,11 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							if channelID, ok := freshSess.Metadata["lobbyChannelID"].(string); ok {
 								log.Printf("Updating dungeon lobby message %s with new party member", messageID)
 
-								// Get the original message to preserve its structure
-								origMsg, err := s.ChannelMessage(channelID, messageID)
-								if err == nil && len(origMsg.Embeds) > 0 {
-									// Build updated party list
-									var partyLines []string
-									for userID, member := range freshSess.Members {
-										if member.Role == entities.SessionRolePlayer {
-											if member.CharacterID != "" {
-												// Get character info
-												memberChar, err := h.ServiceProvider.CharacterService.GetByID(member.CharacterID)
-												if err == nil && memberChar != nil {
-													partyLines = append(partyLines, fmt.Sprintf("<@%s> - %s", userID, memberChar.Name))
-												}
-											} else {
-												partyLines = append(partyLines, fmt.Sprintf("<@%s> (no character selected)", userID))
-											}
-										}
-									}
-
-									// Update the party field
-									updatedEmbed := origMsg.Embeds[0]
-									for idx, field := range updatedEmbed.Fields {
-										if field.Name == "👥 Party" {
-											updatedEmbed.Fields[idx].Value = strings.Join(partyLines, "\n")
-											break
-										}
-									}
-
-									// Edit the message
-									_, editErr := s.ChannelMessageEditComplex(&discordgo.MessageEdit{
-										ID:         messageID,
-										Channel:    channelID,
-										Embeds:     &[]*discordgo.MessageEmbed{updatedEmbed},
-										Components: &origMsg.Components,
-									})
-									if editErr != nil {
-										log.Printf("Failed to update dungeon lobby message: %v", editErr)
-									} else {
-										log.Printf("Successfully updated dungeon lobby with new party member")
-									}
+								// Use the helper function to update the lobby message
+								if updateErr := dungeon.UpdateDungeonLobbyMessage(s, h.ServiceProvider.SessionService, h.ServiceProvider.CharacterService, sessionID, messageID, channelID); updateErr != nil {
+									log.Printf("Failed to update dungeon lobby message: %v", updateErr)
+								} else {
+									log.Printf("Successfully updated dungeon lobby with new party member")
 								}
 							}
 						} else {

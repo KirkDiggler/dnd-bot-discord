@@ -188,45 +188,12 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 		// This is the shared dungeon message - update it
 		log.Printf("Updating dungeon message to show new character selection")
 
-		// Get fresh session data to see all party members
-		freshSess, _ := h.services.SessionService.GetSession(context.Background(), sessionID)
-		if freshSess != nil {
-			// Build updated party field
-			var partyMembers []string
-			for userID, member := range freshSess.Members {
-				if member.Role == entities.SessionRolePlayer && member.CharacterID != "" {
-					// Get character info
-					char, err := h.services.CharacterService.GetByID(member.CharacterID)
-					if err == nil && char != nil {
-						partyMembers = append(partyMembers, fmt.Sprintf("<@%s> - %s", userID, char.Name))
-					} else {
-						partyMembers = append(partyMembers, fmt.Sprintf("<@%s> (character not found)", userID))
-					}
-				}
-			}
-
-			// Update the embed's party field
-			if len(i.Message.Embeds) > 0 {
-				updatedEmbed := i.Message.Embeds[0]
-				for idx, field := range updatedEmbed.Fields {
-					if field.Name == "👥 Party" {
-						updatedEmbed.Fields[idx].Value = strings.Join(partyMembers, "\n")
-						break
-					}
-				}
-
-				// Edit the message
-				_, err := s.ChannelMessageEditComplex(&discordgo.MessageEdit{
-					ID:      i.Message.ID,
-					Channel: i.Message.ChannelID,
-					Embeds:  &[]*discordgo.MessageEmbed{updatedEmbed},
-				})
-				if err != nil {
-					log.Printf("Failed to update dungeon message: %v", err)
-				} else {
-					log.Printf("Successfully updated dungeon message with new party member")
-				}
-			}
+		// Update the dungeon lobby message using the helper function
+		err := UpdateDungeonLobbyMessage(s, h.services.SessionService, h.services.CharacterService, sessionID, i.Message.ID, i.Message.ChannelID)
+		if err != nil {
+			log.Printf("Failed to update dungeon message: %v", err)
+		} else {
+			log.Printf("Successfully updated dungeon message with new party member")
 		}
 	}
 
