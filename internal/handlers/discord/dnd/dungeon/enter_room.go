@@ -214,7 +214,6 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 	}
 
 	// Process initial monster turns if they go first
-	var monsterAttackResults []*encounter.AttackResult
 	for enc.Status == entities.EncounterStatusActive {
 		current := enc.GetCurrentCombatant()
 		if current == nil || current.Type != entities.CombatantTypeMonster {
@@ -249,9 +248,15 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 			if err != nil {
 				log.Printf("Error performing monster attack: %v", err)
 			} else if attackResult != nil {
-				monsterAttackResults = append(monsterAttackResults, attackResult)
 				log.Printf("Monster attack result: %s", attackResult.LogEntry)
 			}
+		}
+
+		// Advance turn after monster attack
+		err = h.services.EncounterService.NextTurn(context.Background(), enc.ID, botID)
+		if err != nil {
+			log.Printf("Error advancing turn after monster attack: %v", err)
+			break
 		}
 
 		// Re-get encounter for next iteration
@@ -263,7 +268,8 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 	}
 
 	// Use the combat embed builder for consistent formatting
-	embed := combat.BuildCombatStatusEmbed(enc, monsterAttackResults)
+	// Don't pass monsterAttackResults since they're already in the combat log
+	embed := combat.BuildCombatStatusEmbed(enc, nil)
 
 	// Add room description to the embed
 	if embed.Description != "" {

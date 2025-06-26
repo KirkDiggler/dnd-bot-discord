@@ -13,23 +13,20 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 	// Build a single table-style display
 	var sb strings.Builder
 
-	// Use monospace code block for proper alignment
-	sb.WriteString("```\n")
-	sb.WriteString("Init │ Name                │ HP            │ AC\n")
-	sb.WriteString("─────┼─────────────────────┼───────────────┼────\n")
+	// Use ANSI code block for color support
+	sb.WriteString("```ansi\n")
+	sb.WriteString("Init│Name              │HP          │AC\n")
+	sb.WriteString("────┼──────────────────┼────────────┼──\n")
 
 	for i, id := range enc.TurnOrder {
 		if c, exists := enc.Combatants[id]; exists && c.IsActive {
-			// Current turn indicator
+			// Current turn indicator and initiative in fixed width
 			if i == enc.Turn {
-				sb.WriteString("▶ ")
+				sb.WriteString(fmt.Sprintf("▶%2d", c.Initiative))
 			} else {
-				sb.WriteString("  ")
+				sb.WriteString(fmt.Sprintf(" %2d", c.Initiative))
 			}
-
-			// Initiative
-			sb.WriteString(fmt.Sprintf("%2d", c.Initiative))
-			sb.WriteString("  │ ")
+			sb.WriteString(" │")
 
 			// Name with icon (truncated if needed)
 			icon := ""
@@ -40,21 +37,33 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 			}
 
 			name := c.Name
-			maxNameLen := 16 // Leave room for icon and spacing
+			maxNameLen := 13 // Reduced to fit better
 			if len(name) > maxNameLen {
 				name = name[:maxNameLen-3] + "..."
 			}
 
-			// Format: "icon name" padded to 19 chars total
+			// Format: "icon name" padded to 16 chars total
 			nameStr := fmt.Sprintf("%s %s", icon, name)
-			sb.WriteString(fmt.Sprintf("%-19s", nameStr))
-			sb.WriteString(" │ ")
+			sb.WriteString(fmt.Sprintf("%-16s", nameStr))
+			sb.WriteString(" │")
 
-			// HP with visual bar - ensure consistent width
+			// HP with visual bar and color coding
+			percent := float64(c.CurrentHP) / float64(c.MaxHP)
+			if c.CurrentHP == 0 {
+				sb.WriteString("\u001b[90m") // Gray for dead
+			} else if percent > 0.5 {
+				sb.WriteString("\u001b[32m") // Green
+			} else if percent > 0.25 {
+				sb.WriteString("\u001b[33m") // Yellow
+			} else {
+				sb.WriteString("\u001b[31m") // Red
+			}
+			
 			hpBar := getCompactHPBar(c.CurrentHP, c.MaxHP)
-			hpStr := fmt.Sprintf("%s %3d/%-3d", hpBar, c.CurrentHP, c.MaxHP)
-			sb.WriteString(fmt.Sprintf("%-13s", hpStr))
-			sb.WriteString(" │ ")
+			sb.WriteString(hpBar)
+			sb.WriteString(fmt.Sprintf(" %3d/%-3d", c.CurrentHP, c.MaxHP))
+			sb.WriteString("\u001b[0m") // Reset color
+			sb.WriteString(" │")
 
 			// AC
 			sb.WriteString(fmt.Sprintf("%2d", c.AC))
@@ -150,10 +159,10 @@ func getHPIcon(current, maxHP int) string {
 	return "💀" // Dead
 }
 
-// getCompactHPBar returns a compact visual HP bar
+// getCompactHPBar returns a compact visual HP bar using single-width characters
 func getCompactHPBar(current, maxHP int) string {
-	if maxHP == 0 {
-		return "████" // All black for dead
+	if maxHP == 0 || current == 0 {
+		return "████████" // All filled for dead
 	}
 
 	percent := float64(current) / float64(maxHP)
@@ -162,9 +171,9 @@ func getCompactHPBar(current, maxHP int) string {
 	bar := ""
 	for i := 0; i < 8; i++ {
 		if i < filled {
-			bar += "▰"
+			bar += "█"
 		} else {
-			bar += "▱"
+			bar += "░"
 		}
 	}
 
