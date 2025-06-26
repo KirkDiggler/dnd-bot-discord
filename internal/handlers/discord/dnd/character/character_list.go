@@ -25,9 +25,12 @@ func NewListHandler(serviceProvider *services.Provider) *ListHandler {
 }
 
 func (h *ListHandler) Handle(req *ListRequest) error {
-	// Defer acknowledge the interaction
+	// Defer acknowledge the interaction with ephemeral flag
 	err := req.Session.InteractionRespond(req.Interaction.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags: discordgo.MessageFlagsEphemeral,
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to acknowledge interaction: %w", err)

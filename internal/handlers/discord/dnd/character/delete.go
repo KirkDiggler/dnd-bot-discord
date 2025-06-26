@@ -36,9 +36,12 @@ func (h *DeleteHandler) Handle(req *DeleteRequest) error {
 }
 
 func (h *DeleteHandler) showCharacterSelection(req *DeleteRequest) error {
-	// Defer acknowledge the interaction
+	// Defer acknowledge the interaction with ephemeral flag
 	err := req.Session.InteractionRespond(req.Interaction.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags: discordgo.MessageFlagsEphemeral,
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to acknowledge interaction: %w", err)
