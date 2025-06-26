@@ -856,24 +856,19 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 	// Generate log entry
 	if result.Hit {
 		if result.Critical {
-			result.LogEntry = fmt.Sprintf("⚔️ **CRITICAL HIT!** %s attacks %s with %s: %d + %d = **%d** vs AC %d - **HIT** for %d %s damage!",
-				result.AttackerName, result.TargetName, result.WeaponName,
-				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
-				result.Damage, result.DamageType)
+			result.LogEntry = fmt.Sprintf("💥 **%s** → **%s** | CRIT! 🩸 **%d** damage",
+				result.AttackerName, result.TargetName, result.Damage)
 		} else {
-			result.LogEntry = fmt.Sprintf("⚔️ %s attacks %s with %s: %d + %d = **%d** vs AC %d - **HIT** for %d %s damage",
-				result.AttackerName, result.TargetName, result.WeaponName,
-				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
-				result.Damage, result.DamageType)
+			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | HIT 🩸 **%d** damage",
+				result.AttackerName, result.TargetName, result.Damage)
 		}
 
 		if result.TargetDefeated {
-			result.LogEntry += fmt.Sprintf("\n💀 **%s has been defeated!**", result.TargetName)
+			result.LogEntry += " 💀"
 		}
 	} else {
-		result.LogEntry = fmt.Sprintf("⚔️ %s attacks %s with %s: %d + %d = **%d** vs AC %d - **MISS**",
-			result.AttackerName, result.TargetName, result.WeaponName,
-			result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC)
+		result.LogEntry = fmt.Sprintf("❌ **%s** → **%s** | MISS",
+			result.AttackerName, result.TargetName)
 	}
 
 	// Add to combat log

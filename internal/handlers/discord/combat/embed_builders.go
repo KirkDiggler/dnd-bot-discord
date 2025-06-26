@@ -12,6 +12,11 @@ import (
 // buildCombatStatusEmbed creates a status embed with optional monster actions
 // BuildCombatStatusEmbed creates the main combat status embed
 func BuildCombatStatusEmbed(enc *entities.Encounter, monsterActions []*encounter.AttackResult) *discordgo.MessageEmbed {
+	return BuildCombatStatusEmbedForPlayer(enc, monsterActions, "")
+}
+
+// BuildCombatStatusEmbedForPlayer creates a player-focused combat status embed
+func BuildCombatStatusEmbedForPlayer(enc *entities.Encounter, monsterActions []*encounter.AttackResult, playerName string) *discordgo.MessageEmbed {
 	current := enc.GetCurrentCombatant()
 
 	embed := &discordgo.MessageEmbed{
@@ -25,8 +30,33 @@ func BuildCombatStatusEmbed(enc *entities.Encounter, monsterActions []*encounter
 		embed.Description = fmt.Sprintf("**%s's turn** (HP: %d/%d)", current.Name, current.CurrentHP, current.MaxHP)
 	}
 
-	// Monster actions if any
-	if len(monsterActions) > 0 {
+	// Create round summary if we have actions
+	if len(monsterActions) > 0 && playerName != "" {
+		roundSummary := NewRoundSummary(enc.Round)
+
+		// Record monster actions
+		for _, ma := range monsterActions {
+			roundSummary.RecordAttack(AttackInfo{
+				AttackerName: ma.AttackerName,
+				TargetName:   ma.TargetName,
+				Damage:       ma.Damage,
+				Hit:          ma.Hit,
+				Critical:     ma.Critical,
+				WeaponName:   ma.WeaponName,
+			})
+		}
+
+		// Add player-focused summary
+		playerSummary := roundSummary.GetPlayerSummary(playerName)
+		if playerSummary != "" {
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "⚔️ Your Combat Summary",
+				Value:  playerSummary,
+				Inline: false,
+			})
+		}
+	} else if len(monsterActions) > 0 {
+		// Fallback to old style for non-player-specific views
 		for _, ma := range monsterActions {
 			var value string
 			if ma.Hit {
