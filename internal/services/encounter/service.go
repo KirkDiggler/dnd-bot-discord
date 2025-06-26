@@ -404,6 +404,16 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 		dexBonus = dexScore.Bonus
 	}
 
+	// Get character class and race info
+	className := ""
+	if character.Class != nil {
+		className = character.Class.Name
+	}
+	raceName := ""
+	if character.Race != nil {
+		raceName = character.Race.Name
+	}
+
 	combatant := &entities.Combatant{
 		ID:              combatantID,
 		Name:            character.Name,
@@ -416,6 +426,8 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 		IsActive:        true,
 		PlayerID:        playerID,
 		CharacterID:     characterID,
+		Class:           className,
+		Race:            raceName,
 	}
 
 	// Add to encounter

@@ -210,27 +210,34 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 		},
 	}
 
-	// Store room data in session metadata
-	sess.Metadata = map[string]interface{}{
-		"sessionType": "dungeon",
-		"currentRoom": room,
-		"roomNumber":  1,
-		"difficulty":  req.Difficulty,
+	// Send the dungeon lobby message and capture the message ID
+	msg, err := req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
+		Embeds:     &[]*discordgo.MessageEmbed{embed},
+		Components: &components,
+	})
+	if err != nil {
+		return err
 	}
 
-	log.Printf("Dungeon started with difficulty: %s, bot ID: %s as DM", req.Difficulty, botID)
+	// Store room data AND message ID in session metadata
+	sess.Metadata = map[string]interface{}{
+		"sessionType":    "dungeon",
+		"currentRoom":    room,
+		"roomNumber":     1,
+		"difficulty":     req.Difficulty,
+		"lobbyMessageID": msg.ID,
+		"lobbyChannelID": msg.ChannelID,
+	}
 
-	// Save the session with the bot as DM and metadata
+	log.Printf("Dungeon started with difficulty: %s, bot ID: %s as DM, message ID: %s", req.Difficulty, botID, msg.ID)
+
+	// Save the session with the bot as DM and metadata including message ID
 	err = h.services.SessionService.SaveSession(context.Background(), sess)
 	if err != nil {
 		log.Printf("Warning: Failed to save session updates: %v", err)
 	}
 
-	_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
-		Embeds:     &[]*discordgo.MessageEmbed{embed},
-		Components: &components,
-	})
-	return err
+	return nil
 }
 
 // generateRoom creates a random room based on difficulty and room number

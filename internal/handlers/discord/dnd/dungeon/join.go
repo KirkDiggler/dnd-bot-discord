@@ -182,6 +182,21 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 	// Build character info
 	charInfo := fmt.Sprintf("%s (Level %d)", playerChar.GetDisplayInfo(), playerChar.Level)
 
+	// Update the original dungeon message to show the new character
+	// We need to find the original message - it should be the interaction message
+	if i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral == 0 {
+		// This is the shared dungeon message - update it
+		log.Printf("Updating dungeon message to show new character selection")
+
+		// Update the dungeon lobby message using the helper function
+		err := UpdateDungeonLobbyMessage(s, h.services.SessionService, h.services.CharacterService, sessionID, i.Message.ID, i.Message.ChannelID)
+		if err != nil {
+			log.Printf("Failed to update dungeon message: %v", err)
+		} else {
+			log.Printf("Successfully updated dungeon message with new party member")
+		}
+	}
+
 	// Success response
 	embed := &discordgo.MessageEmbed{
 		Title:       "🎉 Joined the Party!",

@@ -227,7 +227,7 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 	appendCombatEndMessage(embed, result.CombatEnded, result.PlayersWon)
 
 	// Build components based on state
-	components := buildCombatComponents(encounterID, result)
+	components := BuildCombatComponents(encounterID, result)
 
 	if isEphemeralInteraction(i) {
 		// For ephemeral interactions, we need to:

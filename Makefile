@@ -66,7 +66,7 @@ clean:
 # Lint target
 lint:
 	@echo "Running linters..."
-	@golangci-lint run ./...
+	@/home/kirk/go/bin/golangci-lint run ./...
 
 # Install development tools
 install-tools:
@@ -120,7 +120,7 @@ pre-commit:
 	@echo "→ Tidying modules..."
 	@go mod tidy
 	@echo "→ Running linter..."
-	@golangci-lint run ./...
+	@/home/kirk/go/bin/golangci-lint run ./...
 	@echo "→ Running unit tests..."
 	@go test ./... -short -race
 	@echo "✓ All pre-commit checks passed!"

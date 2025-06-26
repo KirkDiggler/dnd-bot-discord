@@ -1,5 +1,16 @@
 # Context for Claude - D&D Discord Bot
 
+## Important Working Principles
+
+### Clarity Over Agreement
+- **Don't say "You're right!" when still confused** - This creates false confidence and wastes time
+- **Ask clarifying questions when understanding is cloudy** - Better to pause and clarify than charge ahead with wrong assumptions
+- **Be honest about uncertainty** - Say "I'm not entirely clear on..." instead of agreeing while misunderstanding
+- **Gain confidence in assumptions** - Test understanding by asking specific scenario questions like:
+  - "Can you walk me through the exact scenario?"
+  - "What specific message should be updating?"
+  - "Is this about X or Y?"
+
 ## Session Summary - June 17, 2025
 
 ### Recent Major Fixes
