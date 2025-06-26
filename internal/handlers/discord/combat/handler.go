@@ -42,6 +42,8 @@ func (h *Handler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCre
 		return h.handleHistory(s, i, encounterID)
 	case "my_actions":
 		return h.handleMyActions(s, i, encounterID)
+	case "summary":
+		return h.handleSummary(s, i, encounterID)
 	default:
 		return fmt.Errorf("unknown combat action: %s", action)
 	}
@@ -251,20 +253,8 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 		// Button options based on combat state
 		var resultComponents []discordgo.MessageComponent
 		if result.CombatEnded {
-			// Combat ended - show victory/defeat button
-			resultComponents = []discordgo.MessageComponent{
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.Button{
-							Label:    "Combat Complete",
-							Style:    discordgo.SuccessButton,
-							CustomID: fmt.Sprintf("combat:complete:%s", encounterID),
-							Disabled: true,
-							Emoji:    &discordgo.ComponentEmoji{Name: "🎉"},
-						},
-					},
-				},
-			}
+			// Combat ended - no buttons needed in ephemeral message
+			resultComponents = []discordgo.MessageComponent{}
 		} else {
 			// Combat continues - show back to actions
 			resultComponents = []discordgo.MessageComponent{
@@ -918,3 +908,4 @@ func (h *Handler) handleAttackFromEphemeral(s *discordgo.Session, i *discordgo.I
 		},
 	})
 }
+
