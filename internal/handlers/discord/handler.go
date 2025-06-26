@@ -4190,6 +4190,11 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					}); responseErr != nil {
 						log.Printf("Failed to respond with success message: %v", responseErr)
 					}
+					
+					// TODO: Update the shared dungeon message
+					// For now, we don't have a good way to find the original dungeon message
+					// This would require storing the message ID in the session metadata
+					log.Printf("Character selected via dropdown - need to update shared dungeon message (not implemented yet)")
 				}
 			case "enter":
 				if len(parts) >= 4 {
