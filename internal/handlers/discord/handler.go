@@ -2642,24 +2642,57 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					// Check if there's an active encounter in this session
 					// If so, we need to add the player to it and update the shared message
 					enc, encErr := h.ServiceProvider.EncounterService.GetActiveEncounter(context.Background(), sessionID)
-					if encErr == nil && enc != nil {
+					if encErr != nil {
+						// Log the error but don't fail - there might not be an active encounter
+						log.Printf("No active encounter found for session %s: %v", sessionID, encErr)
+					} else if enc != nil {
 						log.Printf("Found active encounter %s, adding player %s with character %s", enc.ID, i.Member.User.ID, characterID)
 
-						// Add the player to the encounter
+						// Check if player is already in the encounter with a different character
+						var existingCombatantID string
+						for id, combatant := range enc.Combatants {
+							if combatant.PlayerID == i.Member.User.ID {
+								log.Printf("Player %s is already in encounter as %s (combatant %s)", i.Member.User.ID, combatant.Name, id)
+								existingCombatantID = id
+								break
+							}
+						}
+
+						if existingCombatantID != "" {
+							// Remove the old combatant first
+							log.Printf("Removing old combatant %s to replace with new character", existingCombatantID)
+							removeErr := h.ServiceProvider.EncounterService.RemoveCombatant(context.Background(), enc.ID, existingCombatantID, i.Member.User.ID)
+							if removeErr != nil {
+								log.Printf("Failed to remove old combatant: %v", removeErr)
+							}
+						}
+						
+						// Add the player with the new character
 						_, addErr := h.ServiceProvider.EncounterService.AddPlayer(context.Background(), enc.ID, i.Member.User.ID, characterID)
 						if addErr != nil {
 							log.Printf("Failed to add player to active encounter: %v", addErr)
 						} else {
-							// Update the shared combat message
-							log.Printf("Player added to encounter, updating shared combat message")
-							// Need to build the combat embed and update
-							updatedEnc, _ := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), enc.ID)
-							if updatedEnc != nil && updatedEnc.MessageID != "" {
+							log.Printf("Successfully added player %s to encounter %s with new character", i.Member.User.ID, enc.ID)
+						}
+
+						// Always try to update the shared combat message after character selection
+						// This ensures the display is current even if the player was already in the encounter
+						log.Printf("Updating shared combat message for encounter %s", enc.ID)
+						
+						// Get fresh encounter data
+						updatedEnc, getErr := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), enc.ID)
+						if getErr != nil {
+							log.Printf("Failed to get updated encounter: %v", getErr)
+						} else if updatedEnc != nil {
+							log.Printf("Got updated encounter. MessageID: %s, ChannelID: %s", updatedEnc.MessageID, updatedEnc.ChannelID)
+							
+							if updatedEnc.MessageID != "" && updatedEnc.ChannelID != "" {
 								// Build the combat status embed
 								embed := combat.BuildCombatStatusEmbed(updatedEnc, nil)
-								components := combat.BuildCombatComponents(enc.ID, &encounter.ExecuteAttackResult{})
+								components := combat.BuildCombatComponents(updatedEnc.ID, &encounter.ExecuteAttackResult{})
 
 								// Update the shared message
+								log.Printf("Attempting to update message %s in channel %s", updatedEnc.MessageID, updatedEnc.ChannelID)
 								_, err := s.ChannelMessageEditComplex(&discordgo.MessageEdit{
 									ID:         updatedEnc.MessageID,
 									Channel:    updatedEnc.ChannelID,
@@ -2668,7 +2701,11 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 								})
 								if err != nil {
 									log.Printf("Failed to update shared combat message: %v", err)
+								} else {
+									log.Printf("Successfully updated shared combat message")
 								}
+							} else {
+								log.Printf("Encounter %s has no message ID stored (MessageID: %s, ChannelID: %s)", updatedEnc.ID, updatedEnc.MessageID, updatedEnc.ChannelID)
 							}
 						}
 					}

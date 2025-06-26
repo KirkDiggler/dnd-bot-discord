@@ -144,11 +144,19 @@ func BuildCombatStatusEmbed(enc *entities.Encounter, monsterActions []*encounter
 		}
 
 		hpBar := getHPBar(c.CurrentHP, c.MaxHP)
-		line := fmt.Sprintf("%s **%s** - %d/%d HP\n", hpBar, c.Name, c.CurrentHP, c.MaxHP)
-
+		
 		if c.Type == entities.CombatantTypeMonster {
+			line := fmt.Sprintf("%s **%s** - %d/%d HP\n", hpBar, c.Name, c.CurrentHP, c.MaxHP)
 			enemies.WriteString(line)
 		} else {
+			// For players, show class icon, name, class, HP, and AC
+			classIcon := getClassIcon(c.Class)
+			classInfo := ""
+			if c.Class != "" {
+				classInfo = fmt.Sprintf(" (%s)", c.Class)
+			}
+			line := fmt.Sprintf("%s %s **%s**%s - %d/%d HP | AC %d\n", 
+				classIcon, hpBar, c.Name, classInfo, c.CurrentHP, c.MaxHP, c.AC)
 			allies.WriteString(line)
 		}
 	}
@@ -224,7 +232,12 @@ func buildDetailedCombatEmbed(enc *entities.Encounter) *discordgo.MessageEmbed {
 		status := "💀 Defeated"
 		if c.IsActive {
 			hpBar := getHPBar(c.CurrentHP, c.MaxHP)
-			status = fmt.Sprintf("%s %d/%d HP | AC %d", hpBar, c.CurrentHP, c.MaxHP, c.AC)
+			if c.Type == entities.CombatantTypePlayer && c.Class != "" {
+				classIcon := getClassIcon(c.Class)
+				status = fmt.Sprintf("%s %s %d/%d HP | AC %d | %s", classIcon, hpBar, c.CurrentHP, c.MaxHP, c.AC, c.Class)
+			} else {
+				status = fmt.Sprintf("%s %d/%d HP | AC %d", hpBar, c.CurrentHP, c.MaxHP, c.AC)
+			}
 		}
 		combatantList.WriteString(fmt.Sprintf("**%s**\n%s\n\n", c.Name, status))
 	}
@@ -325,6 +338,38 @@ func BuildCombatComponents(encounterID string, result *encounter.ExecuteAttackRe
 }
 
 // getHPBar returns an emoji HP indicator
+// getClassIcon returns an emoji icon for the character class
+func getClassIcon(class string) string {
+	switch class {
+	case "Fighter":
+		return "⚔️"
+	case "Wizard":
+		return "🧙"
+	case "Cleric":
+		return "✨"
+	case "Rogue":
+		return "🗡️"
+	case "Ranger":
+		return "🏹"
+	case "Barbarian":
+		return "🪓"
+	case "Paladin":
+		return "🛡️"
+	case "Monk":
+		return "👊"
+	case "Warlock":
+		return "🔮"
+	case "Sorcerer":
+		return "⚡"
+	case "Druid":
+		return "🌿"
+	case "Bard":
+		return "🎵"
+	default:
+		return "👤"
+	}
+}
+
 func getHPBar(current, maxHP int) string {
 	if maxHP == 0 {
 		return "💀"
