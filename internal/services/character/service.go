@@ -577,7 +577,8 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 
 		// Apply passive effects from new racial features
 		if err := features.DefaultRegistry.ApplyAllPassiveEffects(char); err != nil {
-			log.Printf("Error applying passive effects: %v", err)
+			log.Printf("Error applying passive effects for character %s (race: %s): %v",
+				characterID, race.Name, err)
 		}
 	}
 
@@ -870,7 +871,8 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 	// Apply passive effects from all features
 	if err := features.DefaultRegistry.ApplyAllPassiveEffects(char); err != nil {
 		// Log error but don't fail finalization
-		log.Printf("Error applying passive effects: %v", err)
+		log.Printf("Error applying passive effects for character %s (%s %s): %v",
+			char.ID, char.Race.Name, char.Class.Name, err)
 	}
 
 	// Calculate AC using the features package

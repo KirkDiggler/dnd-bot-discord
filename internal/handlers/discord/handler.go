@@ -1990,7 +1990,8 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					value := invItem.GetKey()
 					if itemCounts[invItem.GetKey()] > 1 {
 						itemIndices[invItem.GetKey()]++
-						value = fmt.Sprintf("%s_%d", invItem.GetKey(), itemIndices[invItem.GetKey()])
+						// Use a special delimiter "|||" to avoid conflicts with item keys that contain underscores
+						value = fmt.Sprintf("%s|||%d", invItem.GetKey(), itemIndices[invItem.GetKey()])
 						// Add index to label if there are duplicates
 						if !isEquipped {
 							label = fmt.Sprintf("%s #%d", label, itemIndices[invItem.GetKey()])
@@ -2051,10 +2052,13 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			itemValue := i.MessageComponentData().Values[0]
 
 			// Extract the base item key (remove index suffix if present)
+			// We use a special delimiter pattern "|||" to separate the key from index
+			// to avoid conflicts with items that have underscores in their keys
 			itemKey := itemValue
-			if idx := strings.LastIndex(itemValue, "_"); idx != -1 {
-				// Check if the part after _ is a number
-				if _, err := strconv.Atoi(itemValue[idx+1:]); err == nil {
+			delimiterPattern := "|||"
+			if idx := strings.LastIndex(itemValue, delimiterPattern); idx != -1 {
+				// Check if the part after delimiter is a number
+				if _, err := strconv.Atoi(itemValue[idx+len(delimiterPattern):]); err == nil {
 					itemKey = itemValue[:idx]
 				}
 			}
@@ -2081,8 +2085,8 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					if equip.GetKey() == itemKey {
 						currentIndex[itemKey]++
 						// If the value has an index, match it
-						if strings.Contains(itemValue, "_") {
-							if itemValue == fmt.Sprintf("%s_%d", itemKey, currentIndex[itemKey]) {
+						if strings.Contains(itemValue, delimiterPattern) {
+							if itemValue == fmt.Sprintf("%s|||%d", itemKey, currentIndex[itemKey]) {
 								selectedItem = equip
 								break
 							}
