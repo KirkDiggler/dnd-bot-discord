@@ -21,7 +21,7 @@ func appendCombatEndMessage(embed *discordgo.MessageEmbed, combatEnded bool, pla
 	if !combatEnded {
 		return
 	}
-	
+
 	var endMessage string
 	if playersWon {
 		endMessage = "\n\n🎉 **VICTORY!** All enemies have been defeated!\n🪙 *Loot and XP will be distributed...*"
@@ -38,7 +38,7 @@ func getCombatEndMessage(combatEnded bool, playersWon bool) string {
 	if !combatEnded {
 		return ""
 	}
-	
+
 	if playersWon {
 		return "\n\n🎉 **VICTORY!** All enemies defeated!"
 	}
