@@ -752,7 +752,7 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 		Color:       0x3498db, // Blue
 	}
 
-	// Build action buttons - always show them, just disable when not player's turn
+	// Build action buttons - always enabled unless combat is not active
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
@@ -761,14 +761,14 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 					Style:    discordgo.DangerButton,
 					CustomID: fmt.Sprintf("combat:attack:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
-					Disabled: !isMyTurn || enc.Status != entities.EncounterStatusActive,
+					Disabled: enc.Status != entities.EncounterStatusActive,
 				},
 				discordgo.Button{
 					Label:    "Skip Turn",
 					Style:    discordgo.SecondaryButton,
 					CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "⏭️"},
-					Disabled: !isMyTurn || enc.Status != entities.EncounterStatusActive,
+					Disabled: enc.Status != entities.EncounterStatusActive,
 				},
 			},
 		},
