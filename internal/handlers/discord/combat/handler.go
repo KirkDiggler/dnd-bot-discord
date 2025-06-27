@@ -758,42 +758,15 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 		isMyTurn = current.ID == playerCombatant.ID
 	}
 
-	// Build personalized action embed with combat summary
-	embed := &discordgo.MessageEmbed{
-		Title:       fmt.Sprintf("🎯 %s's Action Controller", playerCombatant.Name),
-		Description: "Choose your action:",
-		Color:       0x3498db, // Blue
-		Fields:      []*discordgo.MessageEmbedField{},
-	}
-
-	// Add player's current status
-	hpBar := getHPBar(playerCombatant.CurrentHP, playerCombatant.MaxHP)
-	statusValue := fmt.Sprintf("%s HP: **%d/%d** | AC: **%d**", hpBar, playerCombatant.CurrentHP, playerCombatant.MaxHP, playerCombatant.AC)
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-		Name:   "🛡️ Your Status",
-		Value:  statusValue,
-		Inline: false,
-	})
-
-	// Show recent combat actions involving this player
-	if len(enc.CombatLog) > 0 {
-		var playerActions strings.Builder
-		count := 0
-		// Search backwards through combat log for actions involving this player
-		for i := len(enc.CombatLog) - 1; i >= 0 && count < 5; i-- {
-			logEntry := enc.CombatLog[i]
-			if strings.Contains(logEntry, playerCombatant.Name) {
-				playerActions.WriteString("• " + logEntry + "\n")
-				count++
-			}
-		}
-
-		if playerActions.Len() > 0 {
-			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-				Name:   "📜 Your Recent Actions",
-				Value:  playerActions.String(),
-				Inline: false,
-			})
+	// Use the standard combat status embed for consistency
+	embed := BuildCombatStatusEmbedForPlayer(enc, nil, playerCombatant.Name)
+	
+	// Update title and description for personalized view
+	embed.Title = fmt.Sprintf("🎯 %s's Action Controller", playerCombatant.Name)
+	embed.Description = "Choose your action:"
+	if !isMyTurn && enc.Status == entities.EncounterStatusActive {
+		if current := enc.GetCurrentCombatant(); current != nil {
+			embed.Description = fmt.Sprintf("Waiting for %s's turn...", current.Name)
 		}
 	}
 
@@ -817,13 +790,6 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 				},
 			},
 		},
-	}
-
-	// Update description based on turn status
-	if !isMyTurn && enc.Status == entities.EncounterStatusActive {
-		if current := enc.GetCurrentCombatant(); current != nil {
-			embed.Description = fmt.Sprintf("Waiting for %s's turn...", current.Name)
-		}
 	}
 
 	// TODO: Add more action types in the future:

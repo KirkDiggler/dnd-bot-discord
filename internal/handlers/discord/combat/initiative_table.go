@@ -15,8 +15,8 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 
 	// Use ANSI code block for color support
 	sb.WriteString("```ansi\n")
-	sb.WriteString("Init│Name              │HP              │ AC\n")
-	sb.WriteString("────┼──────────────────┼────────────────┼───\n")
+	sb.WriteString("Init│Name              │HP               │ AC\n")
+	sb.WriteString("────┼──────────────────┼─────────────────┼───\n")
 
 	for i, id := range enc.TurnOrder {
 		if c, exists := enc.Combatants[id]; exists && c.IsActive {
@@ -58,7 +58,7 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 			} else {
 				sb.WriteString("\u001b[31m") // Red
 			}
-			
+
 			hpBar := getCompactHPBar(c.CurrentHP, c.MaxHP)
 			sb.WriteString(hpBar)
 			sb.WriteString(fmt.Sprintf(" %3d/%-3d", c.CurrentHP, c.MaxHP))
