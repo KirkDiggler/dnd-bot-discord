@@ -864,12 +864,12 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 				// Common weapon dice - this is a simple heuristic
 				switch {
 				case len(result.DamageRolls) == 1:
-					if result.Damage-result.DamageBonus <= 8 {
-						diceExpr = "1d8"
+					if result.Damage-result.DamageBonus <= 4 {
+						diceExpr = "1d4"
 					} else if result.Damage-result.DamageBonus <= 6 {
 						diceExpr = "1d6"
-					} else if result.Damage-result.DamageBonus <= 4 {
-						diceExpr = "1d4"
+					} else if result.Damage-result.DamageBonus <= 8 {
+						diceExpr = "1d8"
 					} else {
 						diceExpr = "1d10"
 					}
