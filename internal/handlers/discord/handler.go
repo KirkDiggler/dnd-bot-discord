@@ -176,7 +176,7 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		skillCheckHandler: oldcombat.NewSkillCheckHandler(&oldcombat.SkillCheckHandlerConfig{
 			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
-		combatHandler: combat.NewHandler(cfg.ServiceProvider.EncounterService),
+		combatHandler: combat.NewHandler(cfg.ServiceProvider.EncounterService, cfg.ServiceProvider.AbilityService),
 	}
 }
 

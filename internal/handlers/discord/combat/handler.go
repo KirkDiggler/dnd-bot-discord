@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/services/ability"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
 	"github.com/bwmarrin/discordgo"
 )
@@ -14,6 +15,7 @@ import (
 // Handler handles combat-related Discord interactions
 type Handler struct {
 	encounterService encounter.Service
+	abilityService   ability.Service
 }
 
 // appendCombatEndMessage adds combat end information to an embed
@@ -46,9 +48,10 @@ func getCombatEndMessage(combatEnded, playersWon bool) string {
 }
 
 // NewHandler creates a new combat handler
-func NewHandler(encounterService encounter.Service) *Handler {
+func NewHandler(encounterService encounter.Service, abilityService ability.Service) *Handler {
 	return &Handler{
 		encounterService: encounterService,
+		abilityService:   abilityService,
 	}
 }
 
@@ -73,6 +76,12 @@ func (h *Handler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCre
 		return h.handleMyActions(s, i, encounterID)
 	case "summary":
 		return h.handleSummary(s, i, encounterID)
+	case "abilities":
+		return h.handleShowAbilities(s, i, encounterID)
+	case "use_ability":
+		return h.handleUseAbility(s, i, encounterID)
+	case "lay_on_hands_amount":
+		return h.handleLayOnHandsAmount(s, i, encounterID)
 	default:
 		return fmt.Errorf("unknown combat action: %s", action)
 	}
@@ -779,6 +788,13 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 					Style:    discordgo.DangerButton,
 					CustomID: fmt.Sprintf("combat:attack:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
+					Disabled: enc.Status != entities.EncounterStatusActive,
+				},
+				discordgo.Button{
+					Label:    "Abilities",
+					Style:    discordgo.PrimaryButton,
+					CustomID: fmt.Sprintf("combat:abilities:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "✨"},
 					Disabled: enc.Status != entities.EncounterStatusActive,
 				},
 				discordgo.Button{

@@ -480,6 +480,88 @@ func TestCharacter_InitializeResources(t *testing.T) {
 		assert.Equal(t, entities.RestTypeShort, secondWind.RestType)
 		assert.Equal(t, 0, secondWind.Duration) // Instant effect
 	})
+
+	t.Run("bard resources", func(t *testing.T) {
+		char := &entities.Character{
+			Level:            1,
+			MaxHitPoints:     8,
+			CurrentHitPoints: 8,
+			Class:            testutils.CreateTestClass("bard", "Bard", 8),
+			Attributes: map[entities.Attribute]*entities.AbilityScore{
+				entities.AttributeCharisma: {Score: 16, Bonus: 3},
+			},
+		}
+
+		char.InitializeResources()
+
+		require.NotNil(t, char.Resources)
+
+		// Check bardic inspiration
+		bardicInspiration, exists := char.Resources.Abilities["bardic-inspiration"]
+		require.True(t, exists)
+		assert.Equal(t, "bardic-inspiration", bardicInspiration.Key)
+		assert.Equal(t, entities.AbilityTypeBonusAction, bardicInspiration.ActionType)
+		assert.Equal(t, 3, bardicInspiration.UsesMax) // Charisma modifier
+		assert.Equal(t, 3, bardicInspiration.UsesRemaining)
+		assert.Equal(t, entities.RestTypeLong, bardicInspiration.RestType)
+		assert.Equal(t, 10, bardicInspiration.Duration) // 10 minutes
+	})
+
+	t.Run("paladin resources", func(t *testing.T) {
+		char := &entities.Character{
+			Level:            1,
+			MaxHitPoints:     10,
+			CurrentHitPoints: 10,
+			Class:            testutils.CreateTestClass("paladin", "Paladin", 10),
+			Attributes: map[entities.Attribute]*entities.AbilityScore{
+				entities.AttributeCharisma: {Score: 14, Bonus: 2},
+			},
+		}
+
+		char.InitializeResources()
+
+		require.NotNil(t, char.Resources)
+
+		// Check lay on hands
+		layOnHands, exists := char.Resources.Abilities["lay-on-hands"]
+		require.True(t, exists)
+		assert.Equal(t, "lay-on-hands", layOnHands.Key)
+		assert.Equal(t, entities.AbilityTypeAction, layOnHands.ActionType)
+		assert.Equal(t, 5, layOnHands.UsesMax) // 5 HP per level
+		assert.Equal(t, 5, layOnHands.UsesRemaining)
+		assert.Equal(t, entities.RestTypeLong, layOnHands.RestType)
+		assert.Equal(t, 0, layOnHands.Duration) // Instant
+
+		// Check divine sense
+		divineSense, exists := char.Resources.Abilities["divine-sense"]
+		require.True(t, exists)
+		assert.Equal(t, "divine-sense", divineSense.Key)
+		assert.Equal(t, entities.AbilityTypeAction, divineSense.ActionType)
+		assert.Equal(t, 3, divineSense.UsesMax) // 1 + Charisma modifier
+		assert.Equal(t, 3, divineSense.UsesRemaining)
+		assert.Equal(t, entities.RestTypeLong, divineSense.RestType)
+		assert.Equal(t, 0, divineSense.Duration) // Until end of next turn
+	})
+
+	t.Run("bard with no charisma", func(t *testing.T) {
+		char := &entities.Character{
+			Level:            1,
+			MaxHitPoints:     8,
+			CurrentHitPoints: 8,
+			Class:            testutils.CreateTestClass("bard", "Bard", 8),
+			// No attributes set
+		}
+
+		char.InitializeResources()
+
+		require.NotNil(t, char.Resources)
+
+		// Check bardic inspiration with 0 Charisma modifier
+		bardicInspiration, exists := char.Resources.Abilities["bardic-inspiration"]
+		require.True(t, exists)
+		assert.Equal(t, 0, bardicInspiration.UsesMax) // 0 Charisma modifier
+		assert.Equal(t, 0, bardicInspiration.UsesRemaining)
+	})
 }
 
 func TestCharacter_GetResources(t *testing.T) {
