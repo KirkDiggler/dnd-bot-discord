@@ -127,13 +127,7 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 			damageBonus := abilityBonus // Base damage bonus from ability modifier
 
 			// Apply damage bonuses from active effects (e.g., rage)
-			if c.Resources != nil {
-				effectBonus := c.Resources.GetTotalDamageBonus("melee")
-				if effectBonus > 0 {
-					log.Printf("Applying damage bonus from effects: +%d", effectBonus)
-					damageBonus += effectBonus
-				}
-			}
+			damageBonus = c.applyActiveEffectDamageBonus(damageBonus, "melee")
 
 			log.Printf("Final attack bonus: +%d (ability: %d, proficiency: %d)", attackBonus, abilityBonus, proficiencyBonus)
 			log.Printf("Final damage bonus: +%d", damageBonus)
@@ -173,12 +167,8 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 					}
 
 					offHandAttackBonus := offHandAbilityBonus + offHandProficiencyBonus
-					offHandDamageBonus := offHandAbilityBonus
-
 					// Apply damage bonuses from active effects (e.g., rage) to off-hand
-					if c.Resources != nil {
-						offHandDamageBonus += c.Resources.GetTotalDamageBonus("melee")
-					}
+					offHandDamageBonus := c.applyActiveEffectDamageBonus(offHandAbilityBonus, "melee")
 
 					attak2, err := attack.RollAttack(offHandAttackBonus, offHandDamageBonus, offWeap.Damage)
 					if err != nil {
@@ -228,13 +218,7 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 			damageBonus := abilityBonus
 
 			// Apply damage bonuses from active effects (e.g., rage)
-			if c.Resources != nil {
-				effectBonus := c.Resources.GetTotalDamageBonus("melee")
-				if effectBonus > 0 {
-					log.Printf("Applying damage bonus from effects: +%d", effectBonus)
-					damageBonus += effectBonus
-				}
-			}
+			damageBonus = c.applyActiveEffectDamageBonus(damageBonus, "melee")
 
 			// Two-handed weapons often have special damage
 			var dmg *damage.Damage
@@ -299,14 +283,7 @@ func (c *Character) improvisedMelee() (*attack.Result, error) {
 	}
 
 	// Apply damage bonuses from active effects (e.g., rage) to improvised attacks
-	damageBonus := bonus
-	if c.Resources != nil {
-		effectBonus := c.Resources.GetTotalDamageBonus("melee")
-		if effectBonus > 0 {
-			log.Printf("Applying damage bonus from effects to improvised attack: +%d", effectBonus)
-			damageBonus += effectBonus
-		}
-	}
+	damageBonus := c.applyActiveEffectDamageBonus(bonus, "melee")
 
 	attackRoll, err := dice.Roll(1, 20, 0)
 	if err != nil {
@@ -330,6 +307,18 @@ func (c *Character) improvisedMelee() (*attack.Result, error) {
 			DamageType: damage.TypeBludgeoning,
 		},
 	}, nil
+}
+
+// applyActiveEffectDamageBonus applies damage bonuses from active effects like rage
+func (c *Character) applyActiveEffectDamageBonus(baseDamage int, damageType string) int {
+	if c.Resources != nil {
+		effectBonus := c.Resources.GetTotalDamageBonus(damageType)
+		if effectBonus > 0 {
+			log.Printf("Applying damage bonus from effects: +%d", effectBonus)
+			return baseDamage + effectBonus
+		}
+	}
+	return baseDamage
 }
 
 func (c *Character) getEquipment(key string) Equipment {
