@@ -128,6 +128,10 @@ type AttackResult struct {
 	DamageRolls []int // Individual damage dice rolls
 	DamageBonus int
 
+	// Weapon damage dice info (for proper display)
+	WeaponDiceCount int
+	WeaponDiceSize  int
+
 	// Combatant information
 	AttackerName string
 	TargetName   string
@@ -714,6 +718,18 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		result.AttackBonus = result.TotalAttack - result.AttackRoll // Calculate bonus from total minus d20
 		result.DiceRolls = attackResult.AttackResult.Rolls
 
+		// Log weapon damage info for debugging
+		if attackResult.WeaponDamage != nil {
+			log.Printf("Weapon damage info: %dd%d", attackResult.WeaponDamage.DiceCount, attackResult.WeaponDamage.DiceSize)
+			result.WeaponDiceCount = attackResult.WeaponDamage.DiceCount
+			result.WeaponDiceSize = attackResult.WeaponDamage.DiceSize
+		} else {
+			log.Printf("No weapon damage info available")
+			// Default to d4 for improvised
+			result.WeaponDiceCount = 1
+			result.WeaponDiceSize = 4
+		}
+
 		// Get weapon name
 		if char.EquippedSlots[entities.SlotMainHand] != nil {
 			result.WeaponName = char.EquippedSlots[entities.SlotMainHand].GetName()
@@ -733,6 +749,8 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			if attackResult.DamageResult != nil {
 				result.DamageRolls = attackResult.DamageResult.Rolls
 				result.DamageBonus = attackResult.DamageRoll - attackResult.DamageResult.Total
+				log.Printf("Damage calculation: total=%d, dice total=%d, bonus=%d",
+					attackResult.DamageRoll, attackResult.DamageResult.Total, result.DamageBonus)
 			}
 		}
 
@@ -861,42 +879,55 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		// Format damage dice with expression (e.g., "1d8: [4]+2")
 		damageRollStr := ""
 		if len(result.DamageRolls) > 0 {
-			// Try to reconstruct dice expression from the damage rolls
-			// For critical hits, we have double the dice, so use half the roll count
-			diceCount := len(result.DamageRolls)
-			if result.Critical && diceCount > 1 {
-				diceCount /= 2
-			}
+			var diceExpr string
+			var diceCount int
 
-			// Determine dice size from the maximum possible roll value
-			// This is more accurate than trying to guess from damage totals
-			maxRoll := 0
-			for _, roll := range result.DamageRolls[:diceCount] {
-				if roll > maxRoll {
-					maxRoll = roll
+			// Use actual weapon dice if available
+			if result.WeaponDiceSize > 0 {
+				diceCount = result.WeaponDiceCount
+				if result.Critical {
+					diceCount *= 2
 				}
-			}
+				diceExpr = fmt.Sprintf("%dd%d", diceCount, result.WeaponDiceSize)
+				log.Printf("Using weapon dice: %s", diceExpr)
+			} else {
+				// Fallback to guessing (for monster attacks)
+				diceCount = len(result.DamageRolls)
+				if result.Critical && diceCount > 1 {
+					diceCount /= 2
+				}
 
-			// Map max roll to dice size
-			var diceSize int
-			switch {
-			case maxRoll <= 4:
-				diceSize = 4
-			case maxRoll <= 6:
-				diceSize = 6
-			case maxRoll <= 8:
-				diceSize = 8
-			case maxRoll <= 10:
-				diceSize = 10
-			case maxRoll <= 12:
-				diceSize = 12
-			case maxRoll <= 20:
-				diceSize = 20
-			default:
-				diceSize = maxRoll // Fallback for unusual dice
-			}
+				// Determine dice size from the maximum possible roll value
+				maxRoll := 0
+				for _, roll := range result.DamageRolls[:diceCount] {
+					if roll > maxRoll {
+						maxRoll = roll
+					}
+				}
 
-			diceExpr := fmt.Sprintf("%dd%d", diceCount, diceSize)
+				log.Printf("Guessing dice from rolls: %v, max roll: %d", result.DamageRolls, maxRoll)
+
+				// Map max roll to dice size
+				var diceSize int
+				switch {
+				case maxRoll <= 4:
+					diceSize = 4
+				case maxRoll <= 6:
+					diceSize = 6
+				case maxRoll <= 8:
+					diceSize = 8
+				case maxRoll <= 10:
+					diceSize = 10
+				case maxRoll <= 12:
+					diceSize = 12
+				case maxRoll <= 20:
+					diceSize = 20
+				default:
+					diceSize = maxRoll // Fallback for unusual dice
+				}
+
+				diceExpr = fmt.Sprintf("%dd%d", diceCount, diceSize)
+			}
 
 			damageRollStr = fmt.Sprintf("%s: [%d", diceExpr, result.DamageRolls[0])
 			for i := 1; i < len(result.DamageRolls); i++ {
@@ -905,6 +936,12 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			damageRollStr += "]"
 			if result.DamageBonus != 0 {
 				damageRollStr += fmt.Sprintf("%+d", result.DamageBonus)
+
+				// Add note if damage bonus seems higher than just ability modifier
+				// This helps indicate rage or other effects
+				if attacker.Type == entities.CombatantTypePlayer && result.DamageBonus > 5 {
+					damageRollStr += " (includes effects)"
+				}
 			}
 		}
 
