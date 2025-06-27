@@ -383,6 +383,9 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 	// Log character details
 	log.Printf("AddPlayer - Retrieved character: ID=%s, Name=%s, OwnerID=%s", character.ID, character.Name, character.OwnerID)
 
+	// Ensure resources are initialized (lazy initialization)
+	character.GetResources()
+
 	// Verify character belongs to player
 	if character.OwnerID != playerID {
 		return nil, dnderr.PermissionDenied("character does not belong to player")

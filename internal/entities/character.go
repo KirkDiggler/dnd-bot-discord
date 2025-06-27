@@ -65,6 +65,9 @@ type Character struct {
 
 	Status CharacterStatus `json:"status"`
 
+	// Resources tracks HP, abilities, spell slots, etc
+	Resources *CharacterResources `json:"resources"`
+
 	mu sync.Mutex
 }
 
@@ -389,6 +392,89 @@ func (c *Character) SetHitpoints() {
 
 	c.MaxHitPoints = c.HitDie + c.Attributes[AttributeConstitution].Bonus
 	c.CurrentHitPoints = c.MaxHitPoints
+}
+
+// GetResources returns the character's resources, initializing if needed
+func (c *Character) GetResources() *CharacterResources {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.Resources == nil {
+		c.initializeResourcesInternal()
+	}
+	return c.Resources
+}
+
+// InitializeResources sets up the character's resources based on class and level
+func (c *Character) InitializeResources() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.initializeResourcesInternal()
+}
+
+// initializeResourcesInternal is the internal resource initialization (caller must hold lock)
+func (c *Character) initializeResourcesInternal() {
+	if c.Resources == nil {
+		c.Resources = &CharacterResources{}
+	}
+
+	// Initialize basic resources
+	if c.Class != nil {
+		c.Resources.Initialize(c.Class, c.Level)
+	}
+
+	// Set HP based on character's max HP (includes CON bonus)
+	c.Resources.HP = HPResource{
+		Current: c.CurrentHitPoints,
+		Max:     c.MaxHitPoints,
+	}
+
+	// Initialize class-specific abilities at level 1
+	c.initializeClassAbilities()
+}
+
+// initializeClassAbilities sets up level 1 class abilities
+func (c *Character) initializeClassAbilities() {
+	if c.Class == nil || c.Resources == nil {
+		return
+	}
+
+	// Initialize abilities map if needed
+	if c.Resources.Abilities == nil {
+		c.Resources.Abilities = make(map[string]*ActiveAbility)
+	}
+
+	// Add class-specific abilities based on class key
+	switch c.Class.Key {
+	case "barbarian":
+		c.Resources.Abilities["rage"] = &ActiveAbility{
+			Key:           "rage",
+			Name:          "Rage",
+			Description:   "Enter a battle fury gaining damage bonus and resistance",
+			FeatureKey:    "barbarian-rage",
+			ActionType:    AbilityTypeBonusAction,
+			UsesMax:       2, // 2 uses at level 1
+			UsesRemaining: 2,
+			RestType:      RestTypeLong,
+			Duration:      10, // 10 rounds (1 minute)
+		}
+	case "fighter":
+		c.Resources.Abilities["second-wind"] = &ActiveAbility{
+			Key:           "second-wind",
+			Name:          "Second Wind",
+			Description:   "Regain hit points equal to 1d10 + fighter level",
+			FeatureKey:    "fighter-second-wind",
+			ActionType:    AbilityTypeBonusAction,
+			UsesMax:       1,
+			UsesRemaining: 1,
+			RestType:      RestTypeShort,
+			Duration:      0, // Instant effect
+		}
+	case "monk":
+		// Monk abilities like Flurry of Blows will come with Ki points later
+	case "rogue":
+		// Sneak Attack is passive, doesn't use resources
+	}
 }
 
 func (c *Character) AddAttribute(attr Attribute, score int) {
@@ -740,6 +826,49 @@ func (c *Character) Clone() *Character {
 	// if c.Notes != nil {
 	// 	clone.Notes = append([]string(nil), c.Notes...)
 	// }
+
+	// Deep copy Resources
+	if c.Resources != nil {
+		clone.Resources = &CharacterResources{
+			HP:      c.Resources.HP,      // HPResource is a value type
+			HitDice: c.Resources.HitDice, // Also a value type
+		}
+
+		// Deep copy spell slots
+		if c.Resources.SpellSlots != nil {
+			clone.Resources.SpellSlots = make(map[int]SpellSlotInfo)
+			for level, slot := range c.Resources.SpellSlots {
+				clone.Resources.SpellSlots[level] = slot
+			}
+		}
+
+		// Deep copy abilities
+		if c.Resources.Abilities != nil {
+			clone.Resources.Abilities = make(map[string]*ActiveAbility)
+			for key, ability := range c.Resources.Abilities {
+				if ability != nil {
+					abilityCopy := *ability
+					clone.Resources.Abilities[key] = &abilityCopy
+				}
+			}
+		}
+
+		// Deep copy active effects
+		if c.Resources.ActiveEffects != nil {
+			clone.Resources.ActiveEffects = make([]*ActiveEffect, len(c.Resources.ActiveEffects))
+			for i, effect := range c.Resources.ActiveEffects {
+				if effect != nil {
+					effectCopy := *effect
+					// Deep copy modifiers
+					if effect.Modifiers != nil {
+						effectCopy.Modifiers = make([]Modifier, len(effect.Modifiers))
+						copy(effectCopy.Modifiers, effect.Modifiers)
+					}
+					clone.Resources.ActiveEffects[i] = &effectCopy
+				}
+			}
+		}
+	}
 
 	return clone
 }
