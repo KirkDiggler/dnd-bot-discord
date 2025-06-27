@@ -201,8 +201,8 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 		return respondEditError(s, i, "Failed to get updated encounter", err)
 	}
 
-	// Build detailed combat embed (like view status)
-	embed := buildDetailedCombatEmbed(enc)
+	// Use the standard combat embed for consistency
+	embed := BuildCombatStatusEmbed(enc, result.MonsterActions)
 
 	// Add attack result summary at the top
 	if result.PlayerAttack != nil {
