@@ -202,7 +202,7 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 	}
 
 	// Use the standard combat embed for consistency
-	embed := BuildCombatStatusEmbed(enc, result.MonsterActions)
+	embed := BuildCombatStatusEmbed(enc, result.MonsterAttacks)
 
 	// Add attack result summary at the top
 	if result.PlayerAttack != nil {
@@ -760,7 +760,7 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 
 	// Use the standard combat status embed for consistency
 	embed := BuildCombatStatusEmbedForPlayer(enc, nil, playerCombatant.Name)
-	
+
 	// Update title and description for personalized view
 	embed.Title = fmt.Sprintf("🎯 %s's Action Controller", playerCombatant.Name)
 	embed.Description = "Choose your action:"

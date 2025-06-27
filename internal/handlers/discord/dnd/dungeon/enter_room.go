@@ -241,7 +241,8 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 				UserID:      botID,
 				ActionIndex: 0, // Use first action
 			}
-			attackResult, err := h.services.EncounterService.PerformAttack(
+			var attackResult *encounter.AttackResult
+			attackResult, err = h.services.EncounterService.PerformAttack(
 				context.Background(),
 				attackInput,
 			)
@@ -606,20 +607,4 @@ func (h *EnterRoomHandler) generateCombatRoom(difficulty string, roomNumber int)
 		Monsters:    monsters,
 		Challenge:   fmt.Sprintf("Defeat all %d enemies!", len(monsters)),
 	}
-}
-
-// getHPBar returns an emoji HP indicator
-func getHPBar(current, maxValue int) string {
-	if maxValue == 0 {
-		return "💀"
-	}
-	percent := float64(current) / float64(maxValue)
-	if percent > 0.5 {
-		return "🟢"
-	} else if percent > 0.25 {
-		return "🟡"
-	} else if current > 0 {
-		return "🔴"
-	}
-	return "💀"
 }

@@ -19,64 +19,67 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 	sb.WriteString("────┼──────────────────┼─────────────────┼───\n")
 
 	for i, id := range enc.TurnOrder {
-		if c, exists := enc.Combatants[id]; exists && c.IsActive {
-			// Current turn indicator and initiative in fixed width
-			if i == enc.Turn {
-				sb.WriteString(fmt.Sprintf("▶%-2d", c.Initiative))
-			} else {
-				sb.WriteString(fmt.Sprintf(" %-2d", c.Initiative))
-			}
-			sb.WriteString(" │")
-
-			// Name with icon (truncated if needed)
-			icon := ""
-			if c.Type == entities.CombatantTypePlayer {
-				icon = getClassIcon(c.Class)
-			} else {
-				icon = "🐉" // Monster icon
-			}
-
-			name := c.Name
-			maxNameLen := 13 // Reduced to fit better
-			if len(name) > maxNameLen {
-				name = name[:maxNameLen-3] + "..."
-			}
-
-			// Format: "icon name" padded to 16 chars total
-			nameStr := fmt.Sprintf("%s %s", icon, name)
-			sb.WriteString(fmt.Sprintf("%-16s", nameStr))
-			sb.WriteString(" │")
-
-			// HP with visual bar and color coding
-			percent := float64(c.CurrentHP) / float64(c.MaxHP)
-			if c.CurrentHP == 0 {
-				sb.WriteString("\u001b[90m") // Gray for dead
-			} else if percent > 0.5 {
-				sb.WriteString("\u001b[32m") // Green
-			} else if percent > 0.25 {
-				sb.WriteString("\u001b[33m") // Yellow
-			} else {
-				sb.WriteString("\u001b[31m") // Red
-			}
-
-			hpBar := getCompactHPBar(c.CurrentHP, c.MaxHP)
-			sb.WriteString(hpBar)
-			sb.WriteString(fmt.Sprintf(" %3d/%-3d", c.CurrentHP, c.MaxHP))
-			sb.WriteString("\u001b[0m") // Reset color
-			sb.WriteString(" │")
-
-			// AC
-			sb.WriteString(fmt.Sprintf("%2d", c.AC))
-
-			// Status indicator
-			if c.CurrentHP == 0 {
-				sb.WriteString(" 💀")
-			} else if float64(c.CurrentHP)/float64(c.MaxHP) < 0.25 {
-				sb.WriteString(" ❗")
-			}
-
-			sb.WriteString("\n")
+		c, exists := enc.Combatants[id]
+		if !exists {
+			continue
 		}
+
+		// Current turn indicator and initiative in fixed width
+		if i == enc.Turn {
+			sb.WriteString(fmt.Sprintf("▶%-2d", c.Initiative))
+		} else {
+			sb.WriteString(fmt.Sprintf(" %-2d", c.Initiative))
+		}
+		sb.WriteString(" │")
+
+		// Name with icon (truncated if needed)
+		icon := ""
+		if c.Type == entities.CombatantTypePlayer {
+			icon = getClassIcon(c.Class)
+		} else {
+			icon = "🐉" // Monster icon
+		}
+
+		name := c.Name
+		maxNameLen := 13 // Reduced to fit better
+		if len(name) > maxNameLen {
+			name = name[:maxNameLen-3] + "..."
+		}
+
+		// Format: "icon name" padded to 16 chars total
+		nameStr := fmt.Sprintf("%s %s", icon, name)
+		sb.WriteString(fmt.Sprintf("%-16s", nameStr))
+		sb.WriteString(" │")
+
+		// HP with visual bar and color coding
+		percent := float64(c.CurrentHP) / float64(c.MaxHP)
+		if c.CurrentHP == 0 {
+			sb.WriteString("\u001b[90m") // Gray for dead
+		} else if percent > 0.5 {
+			sb.WriteString("\u001b[32m") // Green
+		} else if percent > 0.25 {
+			sb.WriteString("\u001b[33m") // Yellow
+		} else {
+			sb.WriteString("\u001b[31m") // Red
+		}
+
+		hpBar := getCompactHPBar(c.CurrentHP, c.MaxHP)
+		sb.WriteString(hpBar)
+		sb.WriteString(fmt.Sprintf(" %3d/%-3d", c.CurrentHP, c.MaxHP))
+		sb.WriteString("\u001b[0m") // Reset color
+		sb.WriteString(" │")
+
+		// AC
+		sb.WriteString(fmt.Sprintf("%2d", c.AC))
+
+		// Status indicator
+		if c.CurrentHP == 0 {
+			sb.WriteString(" 💀")
+		} else if float64(c.CurrentHP)/float64(c.MaxHP) < 0.25 {
+			sb.WriteString(" ❗")
+		}
+
+		sb.WriteString("\n")
 	}
 
 	sb.WriteString("```")
@@ -99,42 +102,45 @@ func BuildCompactInitiativeDisplay(enc *entities.Encounter) string {
 	sb.WriteString("─────────────────────────────────────────\n")
 
 	for i, id := range enc.TurnOrder {
-		if c, exists := enc.Combatants[id]; exists && c.IsActive {
-			// Current turn indicator
-			if i == enc.Turn {
-				sb.WriteString("▶ ")
-			} else {
-				sb.WriteString("  ")
-			}
-
-			// Initiative
-			sb.WriteString(fmt.Sprintf("[%2d] ", c.Initiative))
-
-			// Name with type indicator
-			typeIcon := "👤"
-			if c.Type == entities.CombatantTypeMonster {
-				typeIcon = "👹"
-			}
-
-			name := c.Name
-			if len(name) > 12 {
-				name = name[:10] + ".."
-			}
-			sb.WriteString(fmt.Sprintf("%s %-12s ", typeIcon, name))
-
-			// HP bar
-			sb.WriteString(fmt.Sprintf("HP[%s] ", getCompactHPBar(c.CurrentHP, c.MaxHP)))
-
-			// AC
-			sb.WriteString(fmt.Sprintf("AC:%2d", c.AC))
-
-			// Status effects (future enhancement)
-			// if c.HasConditions() {
-			//     sb.WriteString(" [!]")
-			// }
-
-			sb.WriteString("\n")
+		c, exists := enc.Combatants[id]
+		if !exists {
+			continue
 		}
+
+		// Current turn indicator
+		if i == enc.Turn {
+			sb.WriteString("▶ ")
+		} else {
+			sb.WriteString("  ")
+		}
+
+		// Initiative
+		sb.WriteString(fmt.Sprintf("[%2d] ", c.Initiative))
+
+		// Name with type indicator
+		typeIcon := "👤"
+		if c.Type == entities.CombatantTypeMonster {
+			typeIcon = "👹"
+		}
+
+		name := c.Name
+		if len(name) > 12 {
+			name = name[:10] + ".."
+		}
+		sb.WriteString(fmt.Sprintf("%s %-12s ", typeIcon, name))
+
+		// HP bar
+		sb.WriteString(fmt.Sprintf("HP[%s] ", getCompactHPBar(c.CurrentHP, c.MaxHP)))
+
+		// AC
+		sb.WriteString(fmt.Sprintf("AC:%2d", c.AC))
+
+		// Status effects (future enhancement)
+		// if c.HasConditions() {
+		//     sb.WriteString(" [!]")
+		// }
+
+		sb.WriteString("\n")
 	}
 
 	sb.WriteString("```")

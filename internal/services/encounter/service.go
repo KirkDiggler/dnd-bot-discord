@@ -877,7 +877,7 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 					diceExpr = "2d6" // Common for greatsword crits, etc.
 				}
 			}
-			
+
 			damageRollStr = fmt.Sprintf("%s: [%d", diceExpr, result.DamageRolls[0])
 			for i := 1; i < len(result.DamageRolls); i++ {
 				damageRollStr += fmt.Sprintf(",%d", result.DamageRolls[i])

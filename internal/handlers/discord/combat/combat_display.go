@@ -22,65 +22,68 @@ func BuildInitiativeDisplay(enc *entities.Encounter) string {
 
 	// Show combatants in initiative order
 	for i, id := range enc.TurnOrder {
-		if c, exists := enc.Combatants[id]; exists && c.IsActive {
-			// Current turn indicator
-			if i == enc.Turn {
-				sb.WriteString("\u001b[1;33m▶ ") // Bold yellow for current turn
-			} else {
-				sb.WriteString("  ")
-			}
-
-			// Initiative score
-			sb.WriteString(fmt.Sprintf("%2d", c.Initiative))
-			sb.WriteString(" │ ")
-
-			// Name with type coloring
-			if c.Type == entities.CombatantTypeMonster {
-				sb.WriteString("\u001b[1;31m") // Bold red for monsters
-			} else {
-				sb.WriteString("\u001b[1;32m") // Bold green for players
-			}
-
-			nameDisplay := c.Name
-			if c.Type == entities.CombatantTypePlayer && c.Class != "" {
-				nameDisplay = fmt.Sprintf("%s (%s)", c.Name, c.Class)
-			}
-			if len(nameDisplay) > 21 {
-				nameDisplay = nameDisplay[:18] + "..."
-			}
-			sb.WriteString(fmt.Sprintf("%-21s", nameDisplay))
-			sb.WriteString("\u001b[0m") // Reset color
-
-			sb.WriteString(" │ ")
-
-			// HP with color based on health
-			hpPercent := float64(c.CurrentHP) / float64(c.MaxHP)
-			if hpPercent > 0.5 {
-				sb.WriteString("\u001b[32m") // Green
-			} else if hpPercent > 0.25 {
-				sb.WriteString("\u001b[33m") // Yellow
-			} else if c.CurrentHP > 0 {
-				sb.WriteString("\u001b[31m") // Red
-			} else {
-				sb.WriteString("\u001b[90m") // Gray for dead
-			}
-
-			hpDisplay := fmt.Sprintf("%3d/%-3d", c.CurrentHP, c.MaxHP)
-			sb.WriteString(hpDisplay)
-			sb.WriteString("\u001b[0m") // Reset color
-
-			sb.WriteString(" │ ")
-
-			// AC
-			sb.WriteString(fmt.Sprintf("%2d", c.AC))
-
-			// End turn indicator if current
-			if i == enc.Turn {
-				sb.WriteString("\u001b[0m") // Ensure color reset
-			}
-
-			sb.WriteString("\n")
+		c, exists := enc.Combatants[id]
+		if !exists || !c.IsActive {
+			continue
 		}
+
+		// Current turn indicator
+		if i == enc.Turn {
+			sb.WriteString("\u001b[1;33m▶ ") // Bold yellow for current turn
+		} else {
+			sb.WriteString("  ")
+		}
+
+		// Initiative score
+		sb.WriteString(fmt.Sprintf("%2d", c.Initiative))
+		sb.WriteString(" │ ")
+
+		// Name with type coloring
+		if c.Type == entities.CombatantTypeMonster {
+			sb.WriteString("\u001b[1;31m") // Bold red for monsters
+		} else {
+			sb.WriteString("\u001b[1;32m") // Bold green for players
+		}
+
+		nameDisplay := c.Name
+		if c.Type == entities.CombatantTypePlayer && c.Class != "" {
+			nameDisplay = fmt.Sprintf("%s (%s)", c.Name, c.Class)
+		}
+		if len(nameDisplay) > 21 {
+			nameDisplay = nameDisplay[:18] + "..."
+		}
+		sb.WriteString(fmt.Sprintf("%-21s", nameDisplay))
+		sb.WriteString("\u001b[0m") // Reset color
+
+		sb.WriteString(" │ ")
+
+		// HP with color based on health
+		hpPercent := float64(c.CurrentHP) / float64(c.MaxHP)
+		if hpPercent > 0.5 {
+			sb.WriteString("\u001b[32m") // Green
+		} else if hpPercent > 0.25 {
+			sb.WriteString("\u001b[33m") // Yellow
+		} else if c.CurrentHP > 0 {
+			sb.WriteString("\u001b[31m") // Red
+		} else {
+			sb.WriteString("\u001b[90m") // Gray for dead
+		}
+
+		hpDisplay := fmt.Sprintf("%3d/%-3d", c.CurrentHP, c.MaxHP)
+		sb.WriteString(hpDisplay)
+		sb.WriteString("\u001b[0m") // Reset color
+
+		sb.WriteString(" │ ")
+
+		// AC
+		sb.WriteString(fmt.Sprintf("%2d", c.AC))
+
+		// End turn indicator if current
+		if i == enc.Turn {
+			sb.WriteString("\u001b[0m") // Ensure color reset
+		}
+
+		sb.WriteString("\n")
 	}
 
 	sb.WriteString("```")
