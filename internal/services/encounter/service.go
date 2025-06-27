@@ -778,6 +778,15 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			// Roll damage for each damage component
 			totalDamage := 0
 			var allDamageRolls []int
+			var totalDamageBonus int
+
+			// Store the primary damage dice info for display
+			if len(action.Damage) > 0 {
+				primaryDamage := action.Damage[0]
+				result.WeaponDiceCount = primaryDamage.DiceCount
+				result.WeaponDiceSize = primaryDamage.DiceSize
+				log.Printf("Monster action %s damage dice: %dd%d", action.Name, primaryDamage.DiceCount, primaryDamage.DiceSize)
+			}
 
 			for _, dmg := range action.Damage {
 				damageTotal, damageRolls, err := s.diceRoller.Roll(dmg.DiceCount, dmg.DiceSize, dmg.Bonus)
@@ -785,6 +794,9 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 					log.Printf("Error rolling damage: %v", err)
 					continue
 				}
+
+				// Track damage bonuses
+				totalDamageBonus += dmg.Bonus
 
 				// Double dice on critical
 				if result.Critical {
@@ -806,11 +818,14 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 
 			result.Damage = totalDamage
 			result.DamageRolls = allDamageRolls
+			result.DamageBonus = totalDamageBonus
 		}
 
 	} else {
 		// Unarmed strike fallback
 		result.WeaponName = "Unarmed Strike"
+		result.WeaponDiceCount = 1
+		result.WeaponDiceSize = 4 // Unarmed strike is always 1d4
 
 		// Roll attack
 		attackTotal, attackRolls, err := s.diceRoller.Roll(1, 20, 0)
@@ -845,6 +860,7 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			result.Damage = damageTotal
 			result.DamageRolls = damageRolls
 			result.DamageType = "bludgeoning"
+			result.DamageBonus = 0
 		}
 	}
 
@@ -882,7 +898,7 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			var diceExpr string
 			var diceCount int
 
-			// Use actual weapon dice if available
+			// Always use actual weapon dice - no guessing
 			if result.WeaponDiceSize > 0 {
 				diceCount = result.WeaponDiceCount
 				if result.Critical {
@@ -891,42 +907,9 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 				diceExpr = fmt.Sprintf("%dd%d", diceCount, result.WeaponDiceSize)
 				log.Printf("Using weapon dice: %s", diceExpr)
 			} else {
-				// Fallback to guessing (for monster attacks)
-				diceCount = len(result.DamageRolls)
-				if result.Critical && diceCount > 1 {
-					diceCount /= 2
-				}
-
-				// Determine dice size from the maximum possible roll value
-				maxRoll := 0
-				for _, roll := range result.DamageRolls[:diceCount] {
-					if roll > maxRoll {
-						maxRoll = roll
-					}
-				}
-
-				log.Printf("Guessing dice from rolls: %v, max roll: %d", result.DamageRolls, maxRoll)
-
-				// Map max roll to dice size
-				var diceSize int
-				switch {
-				case maxRoll <= 4:
-					diceSize = 4
-				case maxRoll <= 6:
-					diceSize = 6
-				case maxRoll <= 8:
-					diceSize = 8
-				case maxRoll <= 10:
-					diceSize = 10
-				case maxRoll <= 12:
-					diceSize = 12
-				case maxRoll <= 20:
-					diceSize = 20
-				default:
-					diceSize = maxRoll // Fallback for unusual dice
-				}
-
-				diceExpr = fmt.Sprintf("%dd%d", diceCount, diceSize)
+				// This should not happen - log error and use a fallback
+				log.Printf("ERROR: No weapon dice info available for attack. Using 1d4 fallback.")
+				diceExpr = "1d4"
 			}
 
 			damageRollStr = fmt.Sprintf("%s: [%d", diceExpr, result.DamageRolls[0])
