@@ -746,11 +746,16 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		if result.Hit {
 			result.Damage = attackResult.DamageRoll
 			result.DamageType = string(attackResult.AttackType)
-			if attackResult.DamageResult != nil {
-				result.DamageRolls = attackResult.DamageResult.Rolls
-				result.DamageBonus = attackResult.DamageRoll - attackResult.DamageResult.Total
+			if attackResult.AllDamageRolls != nil {
+				result.DamageRolls = attackResult.AllDamageRolls
+				// Calculate dice total from all rolls
+				diceTotal := 0
+				for _, roll := range attackResult.AllDamageRolls {
+					diceTotal += roll
+				}
+				result.DamageBonus = attackResult.DamageRoll - diceTotal
 				log.Printf("Damage calculation: total=%d, dice total=%d, bonus=%d",
-					attackResult.DamageRoll, attackResult.DamageResult.Total, result.DamageBonus)
+					attackResult.DamageRoll, diceTotal, result.DamageBonus)
 			}
 		}
 
