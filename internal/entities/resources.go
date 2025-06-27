@@ -67,8 +67,9 @@ type CharacterResources struct {
 
 // SpellSlotInfo tracks spell slots at a specific level
 type SpellSlotInfo struct {
-	Max       int `json:"max"`
-	Remaining int `json:"remaining"`
+	Max       int    `json:"max"`
+	Remaining int    `json:"remaining"`
+	Source    string `json:"source"` // "spellcasting" or "pact_magic"
 }
 
 // HitDiceResource tracks hit dice for healing
@@ -106,16 +107,28 @@ func (r *CharacterResources) Initialize(class *Class, level int) {
 func (r *CharacterResources) initializeSpellSlots(class *Class, level int) {
 	r.SpellSlots = make(map[int]SpellSlotInfo)
 
-	// Level 1 full casters (Cleric, Druid, Sorcerer, Wizard)
+	// Level 1 full casters (Cleric, Druid, Sorcerer, Wizard, Bard)
 	switch class.Key {
-	case "cleric", "druid", "sorcerer", "wizard":
-		r.SpellSlots[1] = SpellSlotInfo{Max: 2, Remaining: 2}
-	case "bard": // Bard is also full caster
-		r.SpellSlots[1] = SpellSlotInfo{Max: 2, Remaining: 2}
+	case "cleric", "druid", "sorcerer", "wizard", "bard":
+		r.SpellSlots[1] = SpellSlotInfo{
+			Max:       2,
+			Remaining: 2,
+			Source:    "spellcasting",
+		}
 	case "ranger", "paladin": // Half casters don't get slots until level 2
-		// No slots at level 1
+		if level >= 2 {
+			r.SpellSlots[1] = SpellSlotInfo{
+				Max:       2,
+				Remaining: 2,
+				Source:    "spellcasting",
+			}
+		}
 	case "warlock": // Pact magic - different progression
-		r.SpellSlots[1] = SpellSlotInfo{Max: 1, Remaining: 1}
+		r.SpellSlots[1] = SpellSlotInfo{
+			Max:       1,
+			Remaining: 1,
+			Source:    "pact_magic",
+		}
 	}
 }
 
@@ -129,6 +142,7 @@ func (r *CharacterResources) UseSpellSlot(level int) bool {
 	r.SpellSlots[level] = SpellSlotInfo{
 		Max:       slot.Max,
 		Remaining: slot.Remaining - 1,
+		Source:    slot.Source,
 	}
 	return true
 }
@@ -140,12 +154,14 @@ func (r *CharacterResources) ShortRest() {
 		ability.RestoreUses(RestTypeShort)
 	}
 
-	// Warlock spell slots restore on short rest
+	// Only warlock (pact magic) spell slots restore on short rest
 	for level, slot := range r.SpellSlots {
-		// Only warlock slots (we'd need to track this)
-		r.SpellSlots[level] = SpellSlotInfo{
-			Max:       slot.Max,
-			Remaining: slot.Max,
+		if slot.Source == "pact_magic" {
+			r.SpellSlots[level] = SpellSlotInfo{
+				Max:       slot.Max,
+				Remaining: slot.Max,
+				Source:    slot.Source,
+			}
 		}
 	}
 }
@@ -166,6 +182,7 @@ func (r *CharacterResources) LongRest() {
 		r.SpellSlots[level] = SpellSlotInfo{
 			Max:       slot.Max,
 			Remaining: slot.Max,
+			Source:    slot.Source,
 		}
 	}
 

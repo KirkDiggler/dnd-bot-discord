@@ -166,13 +166,49 @@ func TestCharacterResources_Initialize(t *testing.T) {
 		// Check no spell slots
 		assert.Empty(t, resources.SpellSlots)
 	})
+
+	t.Run("initialize ranger at level 1", func(t *testing.T) {
+		class := testutils.CreateTestClass("ranger", "Ranger", 10)
+
+		resources := &entities.CharacterResources{}
+		resources.Initialize(class, 1)
+
+		// Rangers don't get spell slots until level 2
+		assert.Empty(t, resources.SpellSlots)
+	})
+
+	t.Run("initialize ranger at level 2", func(t *testing.T) {
+		class := testutils.CreateTestClass("ranger", "Ranger", 10)
+
+		resources := &entities.CharacterResources{}
+		resources.Initialize(class, 2)
+
+		// Rangers get spell slots at level 2
+		require.Contains(t, resources.SpellSlots, 1)
+		assert.Equal(t, 2, resources.SpellSlots[1].Max)
+		assert.Equal(t, 2, resources.SpellSlots[1].Remaining)
+		assert.Equal(t, "spellcasting", resources.SpellSlots[1].Source)
+	})
+
+	t.Run("initialize warlock resources", func(t *testing.T) {
+		class := testutils.CreateTestClass("warlock", "Warlock", 8)
+
+		resources := &entities.CharacterResources{}
+		resources.Initialize(class, 1)
+
+		// Warlocks get pact magic at level 1
+		require.Contains(t, resources.SpellSlots, 1)
+		assert.Equal(t, 1, resources.SpellSlots[1].Max)
+		assert.Equal(t, 1, resources.SpellSlots[1].Remaining)
+		assert.Equal(t, "pact_magic", resources.SpellSlots[1].Source)
+	})
 }
 
 func TestCharacterResources_UseSpellSlot(t *testing.T) {
 	resources := &entities.CharacterResources{
 		SpellSlots: map[int]entities.SpellSlotInfo{
-			1: {Max: 2, Remaining: 2},
-			2: {Max: 1, Remaining: 1},
+			1: {Max: 2, Remaining: 2, Source: "spellcasting"},
+			2: {Max: 1, Remaining: 1, Source: "pact_magic"},
 		},
 	}
 
@@ -180,11 +216,13 @@ func TestCharacterResources_UseSpellSlot(t *testing.T) {
 	success := resources.UseSpellSlot(1)
 	assert.True(t, success)
 	assert.Equal(t, 1, resources.SpellSlots[1].Remaining)
+	assert.Equal(t, "spellcasting", resources.SpellSlots[1].Source) // Source preserved
 
 	// Use another 1st level slot
 	success = resources.UseSpellSlot(1)
 	assert.True(t, success)
 	assert.Equal(t, 0, resources.SpellSlots[1].Remaining)
+	assert.Equal(t, "spellcasting", resources.SpellSlots[1].Source) // Source preserved
 
 	// Try to use when none remaining
 	success = resources.UseSpellSlot(1)
@@ -193,6 +231,11 @@ func TestCharacterResources_UseSpellSlot(t *testing.T) {
 	// Try to use non-existent level
 	success = resources.UseSpellSlot(3)
 	assert.False(t, success)
+
+	// Verify pact magic source is preserved
+	assert.True(t, resources.UseSpellSlot(2))
+	assert.Equal(t, 0, resources.SpellSlots[2].Remaining)
+	assert.Equal(t, "pact_magic", resources.SpellSlots[2].Source) // Source preserved
 }
 
 func TestCharacterResources_Rest(t *testing.T) {
@@ -201,6 +244,10 @@ func TestCharacterResources_Rest(t *testing.T) {
 			HP: entities.HPResource{
 				Current: 5,
 				Max:     10,
+			},
+			SpellSlots: map[int]entities.SpellSlotInfo{
+				1: {Max: 2, Remaining: 0, Source: "spellcasting"}, // Regular spell slots
+				2: {Max: 1, Remaining: 0, Source: "pact_magic"},   // Warlock slots
 			},
 			Abilities: map[string]*entities.ActiveAbility{
 				"second-wind": {
@@ -226,6 +273,14 @@ func TestCharacterResources_Rest(t *testing.T) {
 
 		// Long rest ability should not restore
 		assert.Equal(t, 0, resources.Abilities["rage"].UsesRemaining)
+
+		// Regular spell slots should not restore on short rest
+		assert.Equal(t, 0, resources.SpellSlots[1].Remaining)
+		assert.Equal(t, "spellcasting", resources.SpellSlots[1].Source)
+
+		// Warlock pact magic slots SHOULD restore on short rest
+		assert.Equal(t, 1, resources.SpellSlots[2].Remaining)
+		assert.Equal(t, "pact_magic", resources.SpellSlots[2].Source)
 	})
 
 	t.Run("long rest", func(t *testing.T) {
@@ -241,7 +296,8 @@ func TestCharacterResources_Rest(t *testing.T) {
 				Remaining: 1,
 			},
 			SpellSlots: map[int]entities.SpellSlotInfo{
-				1: {Max: 2, Remaining: 0},
+				1: {Max: 2, Remaining: 0, Source: "spellcasting"},
+				2: {Max: 1, Remaining: 0, Source: "pact_magic"},
 			},
 			Abilities: map[string]*entities.ActiveAbility{
 				"rage": {
@@ -273,8 +329,11 @@ func TestCharacterResources_Rest(t *testing.T) {
 		// Half hit dice should restore (minimum 1)
 		assert.Equal(t, 3, resources.HitDice.Remaining) // 1 + (4/2)
 
-		// Spell slots should restore
+		// All spell slots should restore on long rest
 		assert.Equal(t, 2, resources.SpellSlots[1].Remaining)
+		assert.Equal(t, "spellcasting", resources.SpellSlots[1].Source)
+		assert.Equal(t, 1, resources.SpellSlots[2].Remaining)
+		assert.Equal(t, "pact_magic", resources.SpellSlots[2].Source)
 
 		// Abilities should restore and deactivate
 		assert.Equal(t, 2, resources.Abilities["rage"].UsesRemaining)
@@ -420,5 +479,44 @@ func TestCharacter_InitializeResources(t *testing.T) {
 		assert.Equal(t, 1, secondWind.UsesRemaining)
 		assert.Equal(t, entities.RestTypeShort, secondWind.RestType)
 		assert.Equal(t, 0, secondWind.Duration) // Instant effect
+	})
+}
+
+func TestCharacter_GetResources(t *testing.T) {
+	t.Run("lazy initialization", func(t *testing.T) {
+		char := &entities.Character{
+			Level:            1,
+			MaxHitPoints:     10,
+			CurrentHitPoints: 10,
+			Class:            testutils.CreateTestClass("fighter", "Fighter", 10),
+		}
+
+		// Resources should be nil initially
+		assert.Nil(t, char.Resources)
+
+		// GetResources should initialize and return resources
+		resources := char.GetResources()
+		require.NotNil(t, resources)
+		assert.NotNil(t, char.Resources)
+
+		// Should return same instance on subsequent calls
+		resources2 := char.GetResources()
+		assert.Same(t, resources, resources2)
+	})
+
+	t.Run("returns existing resources", func(t *testing.T) {
+		char := &entities.Character{
+			Resources: &entities.CharacterResources{
+				HP: entities.HPResource{
+					Current: 5,
+					Max:     10,
+				},
+			},
+		}
+
+		resources := char.GetResources()
+		assert.NotNil(t, resources)
+		assert.Equal(t, 5, resources.HP.Current)
+		assert.Equal(t, 10, resources.HP.Max)
 	})
 }
