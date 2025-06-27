@@ -201,8 +201,8 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 		return respondEditError(s, i, "Failed to get updated encounter", err)
 	}
 
-	// Build detailed combat embed (like view status)
-	embed := buildDetailedCombatEmbed(enc)
+	// Use the standard combat embed for consistency
+	embed := BuildCombatStatusEmbed(enc, result.MonsterAttacks)
 
 	// Add attack result summary at the top
 	if result.PlayerAttack != nil {
@@ -366,20 +366,25 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 		}
 	}
 
-	// Build detailed combat embed (like view status)
-	embed := buildDetailedCombatEmbed(enc)
+	// Build combat status embed with clearer display
+	embed := BuildCombatStatusEmbed(enc, monsterResults)
 
-	// Add monster actions summary if any
+	// Add round complete indicator if needed
 	if len(monsterResults) > 0 {
-		var monsterSummary strings.Builder
+		var roundActions strings.Builder
+		roundActions.WriteString("🔄 **Monster Actions This Turn:**\n")
 		for _, ma := range monsterResults {
 			if ma.Hit {
-				monsterSummary.WriteString(fmt.Sprintf("👹 **%s** attacked %s for %d damage!\n", ma.AttackerName, ma.TargetName, ma.Damage))
+				if ma.TargetDefeated {
+					roundActions.WriteString(fmt.Sprintf("• ⚔️ **%s** → **%s** | HIT 🩸 **%d** 💀\n", ma.AttackerName, ma.TargetName, ma.Damage))
+				} else {
+					roundActions.WriteString(fmt.Sprintf("• ⚔️ **%s** → **%s** | HIT 🩸 **%d**\n", ma.AttackerName, ma.TargetName, ma.Damage))
+				}
 			} else {
-				monsterSummary.WriteString(fmt.Sprintf("👹 **%s** missed %s!\n", ma.AttackerName, ma.TargetName))
+				roundActions.WriteString(fmt.Sprintf("• ❌ **%s** → **%s** | MISS\n", ma.AttackerName, ma.TargetName))
 			}
 		}
-		embed.Description = monsterSummary.String() + "\n" + embed.Description
+		embed.Description = roundActions.String() + "\n" + embed.Description
 	}
 
 	// Check whose turn it is now
@@ -753,11 +758,16 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 		isMyTurn = current.ID == playerCombatant.ID
 	}
 
-	// Build personalized action embed - focused on actions only
-	embed := &discordgo.MessageEmbed{
-		Title:       fmt.Sprintf("🎯 %s's Action Controller", playerCombatant.Name),
-		Description: "Choose your action:",
-		Color:       0x3498db, // Blue
+	// Use the standard combat status embed for consistency
+	embed := BuildCombatStatusEmbedForPlayer(enc, nil, playerCombatant.Name)
+
+	// Update title and description for personalized view
+	embed.Title = fmt.Sprintf("🎯 %s's Action Controller", playerCombatant.Name)
+	embed.Description = "Choose your action:"
+	if !isMyTurn && enc.Status == entities.EncounterStatusActive {
+		if current := enc.GetCurrentCombatant(); current != nil {
+			embed.Description = fmt.Sprintf("Waiting for %s's turn...", current.Name)
+		}
 	}
 
 	// Build action buttons - always enabled unless combat is not active
@@ -780,13 +790,6 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 				},
 			},
 		},
-	}
-
-	// Update description based on turn status
-	if !isMyTurn && enc.Status == entities.EncounterStatusActive {
-		if current := enc.GetCurrentCombatant(); current != nil {
-			embed.Description = fmt.Sprintf("Waiting for %s's turn...", current.Name)
-		}
 	}
 
 	// TODO: Add more action types in the future:

@@ -12,21 +12,47 @@ import (
 // buildCombatStatusEmbed creates a status embed with optional monster actions
 // BuildCombatStatusEmbed creates the main combat status embed
 func BuildCombatStatusEmbed(enc *entities.Encounter, monsterActions []*encounter.AttackResult) *discordgo.MessageEmbed {
-	current := enc.GetCurrentCombatant()
+	return BuildCombatStatusEmbedForPlayer(enc, monsterActions, "")
+}
 
+// BuildCombatStatusEmbedForPlayer creates a player-focused combat status embed
+func BuildCombatStatusEmbedForPlayer(enc *entities.Encounter, monsterActions []*encounter.AttackResult, playerName string) *discordgo.MessageEmbed {
 	embed := &discordgo.MessageEmbed{
 		Title:  fmt.Sprintf("⚔️ Combat - Round %d", enc.Round),
 		Color:  0x3498db,
 		Fields: []*discordgo.MessageEmbedField{},
 	}
 
-	// Current turn
-	if current != nil {
-		embed.Description = fmt.Sprintf("**%s's turn** (HP: %d/%d)", current.Name, current.CurrentHP, current.MaxHP)
-	}
+	// Use combat summary for description
+	embed.Description = BuildCombatSummaryDisplay(enc)
 
-	// Monster actions if any
-	if len(monsterActions) > 0 {
+	// Create round summary if we have actions
+	if len(monsterActions) > 0 && playerName != "" {
+		roundSummary := NewRoundSummary(enc.Round)
+
+		// Record monster actions
+		for _, ma := range monsterActions {
+			roundSummary.RecordAttack(AttackInfo{
+				AttackerName: ma.AttackerName,
+				TargetName:   ma.TargetName,
+				Damage:       ma.Damage,
+				Hit:          ma.Hit,
+				Critical:     ma.Critical,
+				WeaponName:   ma.WeaponName,
+			})
+		}
+
+		// Add player-focused summary
+		playerSummary := roundSummary.GetPlayerSummary(playerName)
+		if playerSummary != "" {
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "⚔️ Your Combat Summary",
+				Value:  playerSummary,
+				Inline: false,
+			})
+		}
+	} else if len(monsterActions) > 0 {
+		// Fallback to old style for non-player-specific views
 		for _, ma := range monsterActions {
 			var value string
 			if ma.Hit {
@@ -42,46 +68,9 @@ func BuildCombatStatusEmbed(enc *entities.Encounter, monsterActions []*encounter
 		}
 	}
 
-	// Active combatants
-	var enemies, allies strings.Builder
-	for _, c := range enc.Combatants {
-		if !c.IsActive {
-			continue
-		}
-
-		hpBar := getHPBar(c.CurrentHP, c.MaxHP)
-
-		if c.Type == entities.CombatantTypeMonster {
-			line := fmt.Sprintf("%s **%s** - %d/%d HP\n", hpBar, c.Name, c.CurrentHP, c.MaxHP)
-			enemies.WriteString(line)
-		} else {
-			// For players, show class icon, name, class, HP, and AC
-			classIcon := getClassIcon(c.Class)
-			classInfo := ""
-			if c.Class != "" {
-				classInfo = fmt.Sprintf(" (%s)", c.Class)
-			}
-			line := fmt.Sprintf("%s %s **%s**%s - %d/%d HP | AC %d\n",
-				classIcon, hpBar, c.Name, classInfo, c.CurrentHP, c.MaxHP, c.AC)
-			allies.WriteString(line)
-		}
-	}
-
-	if enemies.Len() > 0 {
-		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:   "🐉 Enemies",
-			Value:  enemies.String(),
-			Inline: true,
-		})
-	}
-
-	if allies.Len() > 0 {
-		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:   "🛡️ Allies",
-			Value:  allies.String(),
-			Inline: true,
-		})
-	}
+	// Add initiative order using the new field format
+	initiativeFields := BuildInitiativeFields(enc)
+	embed.Fields = append(embed.Fields, initiativeFields...)
 
 	// Add combat history - last 5 entries
 	if len(enc.CombatLog) > 0 {

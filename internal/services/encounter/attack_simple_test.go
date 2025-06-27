@@ -139,12 +139,12 @@ func TestPerformAttack_MonsterVsMonster_WithMockDice(t *testing.T) {
 	assert.Equal(t, 7, result.TargetNewHP) // 15 - 8 = 7
 	assert.False(t, result.TargetDefeated)
 
-	// Check the log entry
-	assert.Contains(t, result.LogEntry, "Goblin attacks Orc")
-	assert.Contains(t, result.LogEntry, "Scimitar")
-	assert.Contains(t, result.LogEntry, "15 + 4 = **19**")
-	assert.Contains(t, result.LogEntry, "HIT")
-	assert.Contains(t, result.LogEntry, "8 slashing damage")
+	// Check the log entry with spoiler format
+	assert.Contains(t, result.LogEntry, "⚔️ **Goblin** → **Orc**")
+	assert.Contains(t, result.LogEntry, "HIT 🩸 **8**")
+	assert.Contains(t, result.LogEntry, "||d20:15+4=19")
+	assert.Contains(t, result.LogEntry, "vs AC:13")
+	assert.Contains(t, result.LogEntry, "dmg:1d6: [6]||") // damage roll in spoiler
 }
 
 func TestPerformAttack_UnarmedStrike_WithMockDice(t *testing.T) {

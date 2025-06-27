@@ -7,9 +7,9 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/combat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
 	"github.com/bwmarrin/discordgo"
@@ -214,7 +214,6 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 	}
 
 	// Process initial monster turns if they go first
-	var monsterActions []string
 	for enc.Status == entities.EncounterStatusActive {
 		current := enc.GetCurrentCombatant()
 		if current == nil || current.Type != entities.CombatantTypeMonster {
@@ -233,52 +232,31 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 			}
 		}
 
-		if target != nil && len(current.Actions) > 0 {
-			// Use first available action
-			action := current.Actions[0]
-
-			// Roll attack
-			attackResult, rollErr := dice.Roll(1, 20, 0)
-			if rollErr != nil {
-				log.Printf("Failed to roll attack: %v", rollErr)
-				//TODO: Handle error
+		if target != nil {
+			// Use PerformAttack for consistency with combat flow
+			attackInput := &encounter.AttackInput{
+				EncounterID: enc.ID,
+				AttackerID:  current.ID,
+				TargetID:    target.ID,
+				UserID:      botID,
+				ActionIndex: 0, // Use first action
 			}
-			attackRoll := attackResult.Total
-			totalAttack := attackRoll + action.AttackBonus
-
-			// Check if hit
-			hit := totalAttack >= target.AC
-			if hit && len(action.Damage) > 0 {
-				totalDamage := 0
-				for _, dmg := range action.Damage {
-					diceCount := dmg.DiceCount
-					if attackRoll == 20 { // Critical hit doubles dice
-						diceCount *= 2
-					}
-					rollResult, rollErr := dice.Roll(diceCount, dmg.DiceSize, dmg.Bonus)
-					if rollErr != nil {
-						log.Printf("Failed to roll damage: %v", rollErr)
-						//TODO: Handle error
-					}
-					totalDamage += rollResult.Total
-				}
-
-				// Apply damage
-				err = h.services.EncounterService.ApplyDamage(context.Background(), enc.ID, target.ID, botID, totalDamage)
-				if err != nil {
-					log.Printf("Error applying initial monster damage: %v", err)
-				}
-
-				monsterActions = append(monsterActions, fmt.Sprintf("%s attacks %s with %s for %d damage!", current.Name, target.Name, action.Name, totalDamage))
-			} else {
-				monsterActions = append(monsterActions, fmt.Sprintf("%s misses %s with %s!", current.Name, target.Name, action.Name))
+			var attackResult *encounter.AttackResult
+			attackResult, err = h.services.EncounterService.PerformAttack(
+				context.Background(),
+				attackInput,
+			)
+			if err != nil {
+				log.Printf("Error performing monster attack: %v", err)
+			} else if attackResult != nil {
+				log.Printf("Monster attack result: %s", attackResult.LogEntry)
 			}
 		}
 
-		// Advance turn
+		// Advance turn after monster attack
 		err = h.services.EncounterService.NextTurn(context.Background(), enc.ID, botID)
 		if err != nil {
-			log.Printf("Error advancing initial monster turn: %v", err)
+			log.Printf("Error advancing turn after monster attack: %v", err)
 			break
 		}
 
@@ -290,86 +268,17 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		}
 	}
 
-	// Build detailed combat display
-	embed := &discordgo.MessageEmbed{
-		Title:       fmt.Sprintf("⚔️ %s", enc.Name),
-		Description: fmt.Sprintf("**%s**\n\n**Status:** %s | **Round:** %d", room.Description, enc.Status, enc.Round),
-		Color:       0xe74c3c, // Red
-		Fields:      []*discordgo.MessageEmbedField{},
-	}
+	// Use the combat embed builder for consistent formatting
+	// Don't pass monsterAttackResults since they're already in the combat log
+	embed := combat.BuildCombatStatusEmbed(enc, nil)
 
-	// Show initiative rolls sorted by turn order
-	if len(enc.CombatLog) > 0 && len(enc.TurnOrder) > 0 {
-		var initiativeRolls strings.Builder
-		// Show initiative rolls in turn order (highest to lowest)
-		for position, combatantID := range enc.TurnOrder {
-			if combatant, exists := enc.Combatants[combatantID]; exists {
-				// Find the log entry for this combatant
-				for _, logEntry := range enc.CombatLog {
-					if strings.Contains(logEntry, combatant.Name) && strings.Contains(logEntry, "rolls initiative:") {
-						initiativeRolls.WriteString(fmt.Sprintf("%d. %s\n", position+1, logEntry))
-						break
-					}
-				}
-			}
-		}
-		if initiativeRolls.Len() > 0 {
-			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-				Name:   "🎲 Initiative Rolls (Sorted by Turn Order)",
-				Value:  initiativeRolls.String(),
-				Inline: false,
-			})
-		}
+	// Add room description to the embed
+	if embed.Description != "" {
+		embed.Description = fmt.Sprintf("**%s**\n\n%s", room.Description, embed.Description)
+	} else {
+		embed.Description = fmt.Sprintf("**%s**", room.Description)
 	}
-
-	// Turn order with details
-	var turnOrder strings.Builder
-	for i, id := range enc.TurnOrder {
-		if c, exists := enc.Combatants[id]; exists && c.IsActive {
-			prefix := "  "
-			if i == enc.Turn {
-				prefix = "▶️"
-			}
-			turnOrder.WriteString(fmt.Sprintf("%s %s (Init: %d)\n", prefix, c.Name, c.Initiative))
-		}
-	}
-
-	if turnOrder.Len() > 0 {
-		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:   "📋 Initiative Order",
-			Value:  turnOrder.String(),
-			Inline: false,
-		})
-	}
-
-	// All combatants with details (like View Status)
-	var combatantList strings.Builder
-	for _, c := range enc.Combatants {
-		if c.IsActive {
-			hpBar := getHPBar(c.CurrentHP, c.MaxHP)
-			status := fmt.Sprintf("%s %d/%d HP | AC %d", hpBar, c.CurrentHP, c.MaxHP, c.AC)
-			combatantList.WriteString(fmt.Sprintf("**%s**\n%s\n\n", c.Name, status))
-		}
-	}
-
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-		Name:   "⚔️ Combatants",
-		Value:  combatantList.String(),
-		Inline: false,
-	})
-
-	// Show monster actions if any occurred
-	if len(monsterActions) > 0 {
-		var recentActions strings.Builder
-		for _, action := range monsterActions {
-			recentActions.WriteString("• " + action + "\n")
-		}
-		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:   "📜 Recent Actions",
-			Value:  recentActions.String(),
-			Inline: false,
-		})
-	}
+	embed.Title = fmt.Sprintf("⚔️ %s", enc.Name)
 
 	// Check if it's a player's turn
 	isPlayerTurn := false
@@ -698,20 +607,4 @@ func (h *EnterRoomHandler) generateCombatRoom(difficulty string, roomNumber int)
 		Monsters:    monsters,
 		Challenge:   fmt.Sprintf("Defeat all %d enemies!", len(monsters)),
 	}
-}
-
-// getHPBar returns an emoji HP indicator
-func getHPBar(current, maxValue int) string {
-	if maxValue == 0 {
-		return "💀"
-	}
-	percent := float64(current) / float64(maxValue)
-	if percent > 0.5 {
-		return "🟢"
-	} else if percent > 0.25 {
-		return "🟡"
-	} else if current > 0 {
-		return "🔴"
-	}
-	return "💀"
 }

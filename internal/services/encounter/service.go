@@ -853,26 +853,78 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		}
 	}
 
-	// Generate log entry
+	// Generate log entry with dice rolls
 	if result.Hit {
+		// Format damage dice with expression (e.g., "1d8: [4]+2")
+		damageRollStr := ""
+		if len(result.DamageRolls) > 0 {
+			// Try to reconstruct dice expression from the damage rolls
+			// For critical hits, we have double the dice, so use half the roll count
+			diceCount := len(result.DamageRolls)
+			if result.Critical && diceCount > 1 {
+				diceCount /= 2
+			}
+
+			// Determine dice size from the maximum possible roll value
+			// This is more accurate than trying to guess from damage totals
+			maxRoll := 0
+			for _, roll := range result.DamageRolls[:diceCount] {
+				if roll > maxRoll {
+					maxRoll = roll
+				}
+			}
+
+			// Map max roll to dice size
+			var diceSize int
+			switch {
+			case maxRoll <= 4:
+				diceSize = 4
+			case maxRoll <= 6:
+				diceSize = 6
+			case maxRoll <= 8:
+				diceSize = 8
+			case maxRoll <= 10:
+				diceSize = 10
+			case maxRoll <= 12:
+				diceSize = 12
+			case maxRoll <= 20:
+				diceSize = 20
+			default:
+				diceSize = maxRoll // Fallback for unusual dice
+			}
+
+			diceExpr := fmt.Sprintf("%dd%d", diceCount, diceSize)
+
+			damageRollStr = fmt.Sprintf("%s: [%d", diceExpr, result.DamageRolls[0])
+			for i := 1; i < len(result.DamageRolls); i++ {
+				damageRollStr += fmt.Sprintf(",%d", result.DamageRolls[i])
+			}
+			damageRollStr += "]"
+			if result.DamageBonus != 0 {
+				damageRollStr += fmt.Sprintf("%+d", result.DamageBonus)
+			}
+		}
+
 		if result.Critical {
-			result.LogEntry = fmt.Sprintf("⚔️ **CRITICAL HIT!** %s attacks %s with %s: %d + %d = **%d** vs AC %d - **HIT** for %d %s damage!",
-				result.AttackerName, result.TargetName, result.WeaponName,
+			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | 💥 CRIT! 🩸 **%d** ||d20:**%d**%+d=%d vs AC:%d, dmg:%s||",
+				result.AttackerName, result.TargetName,
+				result.Damage,
 				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
-				result.Damage, result.DamageType)
+				damageRollStr)
 		} else {
-			result.LogEntry = fmt.Sprintf("⚔️ %s attacks %s with %s: %d + %d = **%d** vs AC %d - **HIT** for %d %s damage",
-				result.AttackerName, result.TargetName, result.WeaponName,
+			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | HIT 🩸 **%d** ||d20:%d%+d=%d vs AC:%d, dmg:%s||",
+				result.AttackerName, result.TargetName,
+				result.Damage,
 				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
-				result.Damage, result.DamageType)
+				damageRollStr)
 		}
 
 		if result.TargetDefeated {
-			result.LogEntry += fmt.Sprintf("\n💀 **%s has been defeated!**", result.TargetName)
+			result.LogEntry += " 💀"
 		}
 	} else {
-		result.LogEntry = fmt.Sprintf("⚔️ %s attacks %s with %s: %d + %d = **%d** vs AC %d - **MISS**",
-			result.AttackerName, result.TargetName, result.WeaponName,
+		result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | ❌ MISS ||d20:%d%+d=%d vs AC:%d||",
+			result.AttackerName, result.TargetName,
 			result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC)
 	}
 

@@ -3192,89 +3192,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					return
 				}
 
-				// Build combat tracker display
-				embed := &discordgo.MessageEmbed{
-					Title:       "⚔️ Combat Started!",
-					Description: fmt.Sprintf("**%s** - Round %d", encounterResult.Name, encounterResult.Round),
-					Color:       0xe74c3c, // Red
-					Fields:      []*discordgo.MessageEmbedField{},
-				}
+				// Use the standard combat embed for consistency
+				embed := combat.BuildCombatStatusEmbed(encounterResult, nil)
+				embed.Title = "⚔️ Combat Started!"
 
-				// Show current turn
-				if current := encounterResult.GetCurrentCombatant(); current != nil {
-					embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-						Name:   "🎯 Current Turn",
-						Value:  fmt.Sprintf("**%s** (HP: %d/%d | AC: %d)", current.Name, current.CurrentHP, current.MaxHP, current.AC),
-						Inline: false,
-					})
-				}
-
-				// Show turn order
-				var turnOrder strings.Builder
-				for i, combatantID := range encounterResult.TurnOrder {
-					if combatant, exists := encounterResult.Combatants[combatantID]; exists && combatant.IsActive {
-						prefix := "  "
-						if i == encounterResult.Turn {
-							prefix = "▶️"
-						}
-						turnOrder.WriteString(fmt.Sprintf("%s %s (Initiative: %d)\n", prefix, combatant.Name, combatant.Initiative))
-					}
-				}
-
-				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-					Name:   "📋 Turn Order",
-					Value:  turnOrder.String(),
-					Inline: false,
+				// Use standard combat components
+				components := combat.BuildCombatComponents(encounterResult.ID, &encounter.ExecuteAttackResult{
+					CombatEnded: false,
 				})
 
-				// Add combat action buttons
-				components := []discordgo.MessageComponent{
-					discordgo.ActionsRow{
-						Components: []discordgo.MessageComponent{
-							discordgo.Button{
-								Label:    "Attack",
-								Style:    discordgo.DangerButton,
-								CustomID: fmt.Sprintf("encounter:attack:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
-							},
-							discordgo.Button{
-								Label:    "Apply Damage",
-								Style:    discordgo.DangerButton,
-								CustomID: fmt.Sprintf("encounter:damage:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "💥"},
-							},
-							discordgo.Button{
-								Label:    "Heal",
-								Style:    discordgo.SuccessButton,
-								CustomID: fmt.Sprintf("encounter:heal:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "💚"},
-							},
-							discordgo.Button{
-								Label:    "Next Turn",
-								Style:    discordgo.PrimaryButton,
-								CustomID: fmt.Sprintf("encounter:next_turn:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
-							},
-						},
-					},
-					discordgo.ActionsRow{
-						Components: []discordgo.MessageComponent{
-							discordgo.Button{
-								Label:    "View Full",
-								Style:    discordgo.SecondaryButton,
-								CustomID: fmt.Sprintf("encounter:view_full:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "📊"},
-							},
-							discordgo.Button{
-								Label:    "End Combat",
-								Style:    discordgo.SecondaryButton,
-								CustomID: fmt.Sprintf("encounter:end:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "🏁"},
-							},
-						},
-					},
-				}
-
+				// Send the combat message
 				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -3284,6 +3211,20 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				})
 				if err != nil {
 					log.Printf("Error showing combat started: %v", err)
+					return
+				}
+
+				// Store the message ID for future updates
+				if response, err := s.InteractionResponse(i.Interaction); err == nil {
+					err = h.ServiceProvider.EncounterService.UpdateMessageID(
+						context.Background(),
+						encounterResult.ID,
+						response.ID,
+						response.ChannelID,
+					)
+					if err != nil {
+						log.Printf("Error storing message ID: %v", err)
+					}
 				}
 			case "next_turn":
 				// Advance to next turn
