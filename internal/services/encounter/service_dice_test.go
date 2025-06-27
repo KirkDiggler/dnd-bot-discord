@@ -154,12 +154,15 @@ func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 	assert.Contains(t, possibleTotals, totalsByName["Skeleton"])
 
 	// Verify the totals match the bonuses
+	// Player has +3, so could be 23 (20+3), 13 (10+3), or 8 (5+3)
 	playerTotal := totalsByName["Player"]
-	assert.Equal(t, 3, playerTotal%10, "Player should have +3 bonus")
+	assert.True(t, playerTotal == 23 || playerTotal == 13 || playerTotal == 8,
+		"Player total should be one of the rolls + 3")
 
+	// Goblin has +2, so could be 22 (20+2), 12 (10+2), or 7 (5+2)
 	goblinTotal := totalsByName["Goblin"]
 	assert.True(t, goblinTotal == 22 || goblinTotal == 12 || goblinTotal == 7,
-		"Goblin total should be roll + 2")
+		"Goblin total should be one of the rolls + 2")
 
 	// Verify turn order (should be sorted by initiative descending)
 	assert.Len(t, enc.TurnOrder, 3)

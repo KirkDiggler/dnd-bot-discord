@@ -323,6 +323,12 @@ func (c *Character) improvisedMelee() (*attack.Result, error) {
 		AttackType:   damage.TypeBludgeoning,
 		AttackResult: attackRoll,
 		DamageResult: damageRoll,
+		WeaponDamage: &damage.Damage{
+			DiceCount:  1,
+			DiceSize:   4,
+			Bonus:      0,
+			DamageType: damage.TypeBludgeoning,
+		},
 	}, nil
 }
 

@@ -389,10 +389,14 @@ func TestCharacter_Attack_WithRageBonus(t *testing.T) {
 	// - STR bonus (+3)
 	// - Proficiency bonus (+2 at level 1)
 	// Total attack bonus should be +5
-	expectedAttackBonus := 5
-	actualAttackBonus := attack.AttackRoll - attack.AttackResult.Total
-	if actualAttackBonus != expectedAttackBonus {
-		t.Errorf("Expected attack bonus +%d, got +%d", expectedAttackBonus, actualAttackBonus)
+	// Note: Natural 1 is automatic miss (attack roll set to 0)
+	if attack.AttackResult.Rolls[0] != 1 && attack.AttackResult.Rolls[0] != 20 {
+		// Only check attack bonus on non-critical rolls
+		expectedAttackBonus := 5
+		actualAttackBonus := attack.AttackRoll - attack.AttackResult.Total
+		if actualAttackBonus != expectedAttackBonus {
+			t.Errorf("Expected attack bonus +%d, got +%d", expectedAttackBonus, actualAttackBonus)
+		}
 	}
 
 	// Damage roll should include:

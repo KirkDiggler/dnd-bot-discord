@@ -13,6 +13,8 @@ type Result struct {
 	DamageRoll   int
 	AttackResult *dice.RollResult
 	DamageResult *dice.RollResult
+	// Weapon damage info for proper display
+	WeaponDamage *damage.Damage
 }
 
 func (r *Result) String() string {
@@ -53,5 +55,6 @@ func RollAttack(attackBonus, damageBonus int, dmg *damage.Damage) (*Result, erro
 		DamageRoll:   damageBonus + dmgValue,
 		AttackResult: attackResult,
 		DamageResult: dmgResult,
+		WeaponDamage: dmg,
 	}, nil
 }
