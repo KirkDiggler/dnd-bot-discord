@@ -858,25 +858,42 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		// Format damage dice with expression (e.g., "1d8: [4]+2")
 		damageRollStr := ""
 		if len(result.DamageRolls) > 0 {
-			// Try to reconstruct dice expression from the weapon name
-			diceExpr := fmt.Sprintf("%dd?", len(result.DamageRolls))
-			if result.WeaponName != "" {
-				// Common weapon dice - this is a simple heuristic
-				switch {
-				case len(result.DamageRolls) == 1:
-					if result.Damage-result.DamageBonus <= 4 {
-						diceExpr = "1d4"
-					} else if result.Damage-result.DamageBonus <= 6 {
-						diceExpr = "1d6"
-					} else if result.Damage-result.DamageBonus <= 8 {
-						diceExpr = "1d8"
-					} else {
-						diceExpr = "1d10"
-					}
-				case len(result.DamageRolls) == 2:
-					diceExpr = "2d6" // Common for greatsword crits, etc.
+			// Try to reconstruct dice expression from the damage rolls
+			// For critical hits, we have double the dice, so use half the roll count
+			diceCount := len(result.DamageRolls)
+			if result.Critical && diceCount > 1 {
+				diceCount /= 2
+			}
+
+			// Determine dice size from the maximum possible roll value
+			// This is more accurate than trying to guess from damage totals
+			maxRoll := 0
+			for _, roll := range result.DamageRolls[:diceCount] {
+				if roll > maxRoll {
+					maxRoll = roll
 				}
 			}
+
+			// Map max roll to dice size
+			var diceSize int
+			switch {
+			case maxRoll <= 4:
+				diceSize = 4
+			case maxRoll <= 6:
+				diceSize = 6
+			case maxRoll <= 8:
+				diceSize = 8
+			case maxRoll <= 10:
+				diceSize = 10
+			case maxRoll <= 12:
+				diceSize = 12
+			case maxRoll <= 20:
+				diceSize = 20
+			default:
+				diceSize = maxRoll // Fallback for unusual dice
+			}
+
+			diceExpr := fmt.Sprintf("%dd%d", diceCount, diceSize)
 
 			damageRollStr = fmt.Sprintf("%s: [%d", diceExpr, result.DamageRolls[0])
 			for i := 1; i < len(result.DamageRolls); i++ {
