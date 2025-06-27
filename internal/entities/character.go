@@ -433,6 +433,17 @@ func (c *Character) initializeResourcesInternal() {
 	c.initializeClassAbilities()
 }
 
+// getCharismaModifier returns the character's Charisma modifier
+func (c *Character) getCharismaModifier() int {
+	if c.Attributes == nil {
+		return 0
+	}
+	if cha, exists := c.Attributes[AttributeCharisma]; exists && cha != nil {
+		return cha.Bonus
+	}
+	return 0
+}
+
 // initializeClassAbilities sets up level 1 class abilities
 func (c *Character) initializeClassAbilities() {
 	if c.Class == nil || c.Resources == nil {
@@ -469,6 +480,41 @@ func (c *Character) initializeClassAbilities() {
 			UsesRemaining: 1,
 			RestType:      RestTypeShort,
 			Duration:      0, // Instant effect
+		}
+	case "bard":
+		c.Resources.Abilities["bardic-inspiration"] = &ActiveAbility{
+			Key:           "bardic-inspiration",
+			Name:          "Bardic Inspiration",
+			Description:   "Grant an ally a d6 to add to one ability check, attack roll, or saving throw",
+			FeatureKey:    "bard-bardic-inspiration",
+			ActionType:    AbilityTypeBonusAction,
+			UsesMax:       c.getCharismaModifier(), // Uses equal to Charisma modifier
+			UsesRemaining: c.getCharismaModifier(),
+			RestType:      RestTypeLong,
+			Duration:      10, // 10 minutes (100 rounds), but usually consumed on use
+		}
+	case "paladin":
+		c.Resources.Abilities["lay-on-hands"] = &ActiveAbility{
+			Key:           "lay-on-hands",
+			Name:          "Lay on Hands",
+			Description:   "Heal wounds with a pool of hit points equal to 5 × paladin level",
+			FeatureKey:    "paladin-lay-on-hands",
+			ActionType:    AbilityTypeAction,
+			UsesMax:       5 * c.Level, // 5 HP per level
+			UsesRemaining: 5 * c.Level,
+			RestType:      RestTypeLong,
+			Duration:      0, // Instant effect
+		}
+		c.Resources.Abilities["divine-sense"] = &ActiveAbility{
+			Key:           "divine-sense",
+			Name:          "Divine Sense",
+			Description:   "Detect celestials, fiends, and undead within 60 feet",
+			FeatureKey:    "paladin-divine-sense",
+			ActionType:    AbilityTypeAction,
+			UsesMax:       1 + c.getCharismaModifier(), // 1 + Charisma modifier
+			UsesRemaining: 1 + c.getCharismaModifier(),
+			RestType:      RestTypeLong,
+			Duration:      0, // Until end of next turn
 		}
 	case "monk":
 		// Monk abilities like Flurry of Blows will come with Ki points later
