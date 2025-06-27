@@ -179,11 +179,12 @@ func apiWeaponToWeapon(input *apiEntities.Weapon) *entities.Weapon {
 			Weight: input.Weight,
 			Cost:   apiCostToCost(input.Cost),
 		},
-		WeaponCategory: input.WeaponCategory,
-		WeaponRange:    input.WeaponRange,
-		CategoryRange:  input.CategoryRange,
-		Properties:     apiReferenceItemsToReferenceItems(input.Properties),
-		Damage:         apiDamageToDamage(input.Damage),
+		WeaponCategory:  input.WeaponCategory,
+		WeaponRange:     input.WeaponRange,
+		CategoryRange:   input.CategoryRange,
+		Properties:      apiReferenceItemsToReferenceItems(input.Properties),
+		Damage:          apiDamageToDamage(input.Damage),
+		TwoHandedDamage: apiDamageToDamage(input.TwoHandedDamage),
 	}
 }
 
