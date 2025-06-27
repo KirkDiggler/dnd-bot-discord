@@ -3,6 +3,7 @@ package combat
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
@@ -156,9 +157,16 @@ func (h *Handler) handleUseAbility(s *discordgo.Session, i *discordgo.Interactio
 	current := enc.GetCurrentCombatant()
 	if current == nil || current.ID != playerCombatant.ID {
 		// Not their turn - show a friendly message
+		var currentName string
+		if current == nil {
+			currentName = "Unknown"
+		} else {
+			currentName = current.Name
+		}
+
 		embed := &discordgo.MessageEmbed{
 			Title:       "⏳ Not Your Turn",
-			Description: fmt.Sprintf("It's currently **%s's** turn.", current.Name),
+			Description: fmt.Sprintf("It's currently **%s's** turn.", currentName),
 			Color:       0xf39c12, // Orange
 			Footer: &discordgo.MessageEmbedFooter{
 				Text: "Wait for your turn to use abilities",
@@ -204,12 +212,19 @@ func (h *Handler) handleUseAbility(s *discordgo.Session, i *discordgo.Interactio
 		}
 	}
 
+	// Special handling for abilities that need value selection
+	if abilityKey == "lay-on-hands" {
+		// Show heal amount selection UI
+		return h.showLayOnHandsAmountSelection(s, i, encounterID, playerCombatant)
+	}
+
 	// Use the ability
 	result, err := h.abilityService.UseAbility(context.Background(), &ability.UseAbilityInput{
 		CharacterID: playerCombatant.CharacterID,
 		AbilityKey:  abilityKey,
 		TargetID:    targetID,
 		EncounterID: encounterID,
+		Value:       0, // Default value for abilities that don't need it
 	})
 	if err != nil {
 		return respondError(s, i, "Failed to use ability", err)
@@ -379,4 +394,192 @@ func isHealingAbility(abilityKey string) bool {
 		}
 	}
 	return false
+}
+
+// showLayOnHandsAmountSelection shows UI for selecting heal amount
+func (h *Handler) showLayOnHandsAmountSelection(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string, playerCombatant *entities.Combatant) error {
+	// Get character to check available healing pool
+	char, err := h.abilityService.GetAvailableAbilities(context.Background(), playerCombatant.CharacterID)
+	if err != nil {
+		return respondError(s, i, "Failed to get character abilities", err)
+	}
+
+	// Find lay on hands ability to check remaining pool
+	var layOnHands *entities.ActiveAbility
+	for _, avail := range char {
+		if avail.Ability.Key == "lay-on-hands" {
+			layOnHands = avail.Ability
+			break
+		}
+	}
+
+	if layOnHands == nil {
+		return respondError(s, i, "Lay on Hands ability not found", nil)
+	}
+
+	// Create buttons for common heal amounts
+	var buttons []discordgo.MessageComponent
+	healAmounts := []int{1, 2, 3, 5, layOnHands.UsesRemaining}
+
+	for _, amount := range healAmounts {
+		if amount > 0 && amount <= layOnHands.UsesRemaining {
+			buttons = append(buttons, discordgo.Button{
+				Label:    fmt.Sprintf("%d HP", amount),
+				Style:    discordgo.PrimaryButton,
+				CustomID: fmt.Sprintf("combat:lay_on_hands_amount:%s:%d", encounterID, amount),
+				Disabled: amount > layOnHands.UsesRemaining,
+			})
+		}
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Title:       "🙏 Lay on Hands",
+		Description: fmt.Sprintf("Select how many hit points to heal (Pool: %d/%d)", layOnHands.UsesRemaining, layOnHands.UsesMax),
+		Color:       0x3498db, // Blue
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: "Choose the amount of healing",
+		},
+	}
+
+	components := []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: buttons,
+		},
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.Button{
+					Label:    "Cancel",
+					Style:    discordgo.SecondaryButton,
+					CustomID: fmt.Sprintf("combat:abilities:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "❌"},
+				},
+			},
+		},
+	}
+
+	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Embeds:     []*discordgo.MessageEmbed{embed},
+			Components: components,
+		},
+	})
+}
+
+// handleLayOnHandsAmount processes the selected heal amount
+func (h *Handler) handleLayOnHandsAmount(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string) error {
+	// Parse amount from custom ID: combat:lay_on_hands_amount:encounterID:amount
+	parts := parseCustomID(i.MessageComponentData().CustomID)
+	if len(parts) < 4 {
+		return respondError(s, i, "Invalid heal amount selection", nil)
+	}
+
+	amount, err := strconv.Atoi(parts[3])
+	if err != nil {
+		return respondError(s, i, "Invalid heal amount", err)
+	}
+
+	// Get encounter
+	enc, err := h.encounterService.GetEncounter(context.Background(), encounterID)
+	if err != nil {
+		return respondError(s, i, "Failed to get encounter", err)
+	}
+
+	// Find the player's combatant
+	var playerCombatant *entities.Combatant
+	for _, c := range enc.Combatants {
+		if c.PlayerID == i.Member.User.ID && c.IsActive {
+			playerCombatant = c
+			break
+		}
+	}
+
+	if playerCombatant == nil {
+		return respondError(s, i, "You are not in this combat!", nil)
+	}
+
+	// Use lay on hands with the selected amount
+	result, err := h.abilityService.UseAbility(context.Background(), &ability.UseAbilityInput{
+		CharacterID: playerCombatant.CharacterID,
+		AbilityKey:  "lay-on-hands",
+		TargetID:    playerCombatant.CharacterID, // Self-target for now
+		EncounterID: encounterID,
+		Value:       amount,
+	})
+	if err != nil {
+		return respondError(s, i, "Failed to use Lay on Hands", err)
+	}
+
+	// Build result embed (reuse existing logic)
+	var embed *discordgo.MessageEmbed
+	if result.Success {
+		embed = &discordgo.MessageEmbed{
+			Title:       fmt.Sprintf("✨ %s Used!", "Lay on Hands"),
+			Description: result.Message,
+			Color:       0x00ff00, // Green
+			Fields:      []*discordgo.MessageEmbedField{},
+		}
+
+		if result.HealingDone > 0 {
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "Healing",
+				Value:  fmt.Sprintf("%d HP restored (New HP: %d)", result.HealingDone, result.TargetNewHP),
+				Inline: true,
+			})
+		}
+
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "Pool Remaining",
+			Value:  fmt.Sprintf("%d HP", result.UsesRemaining),
+			Inline: true,
+		})
+
+		// Add to combat log
+		if err := h.encounterService.LogCombatAction(context.Background(), encounterID,
+			fmt.Sprintf("**%s** used **Lay on Hands**: %s", playerCombatant.Name, result.Message)); err != nil {
+			// Log the error but don't fail the ability use
+			fmt.Printf("Failed to log combat action: %v\n", err)
+		}
+	} else {
+		embed = &discordgo.MessageEmbed{
+			Title:       "❌ Lay on Hands Failed",
+			Description: result.Message,
+			Color:       0xff0000, // Red
+		}
+	}
+
+	// Components for navigation
+	components := []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.Button{
+					Label:    "End Turn",
+					Style:    discordgo.SuccessButton,
+					CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "✅"},
+					Disabled: !result.Success,
+				},
+				discordgo.Button{
+					Label:    "More Abilities",
+					Style:    discordgo.PrimaryButton,
+					CustomID: fmt.Sprintf("combat:abilities:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "✨"},
+				},
+				discordgo.Button{
+					Label:    "Back to Actions",
+					Style:    discordgo.SecondaryButton,
+					CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
+				},
+			},
+		},
+	}
+
+	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Embeds:     []*discordgo.MessageEmbed{embed},
+			Components: components,
+		},
+	})
 }

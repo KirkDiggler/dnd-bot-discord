@@ -80,6 +80,8 @@ func (h *Handler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCre
 		return h.handleShowAbilities(s, i, encounterID)
 	case "use_ability":
 		return h.handleUseAbility(s, i, encounterID)
+	case "lay_on_hands_amount":
+		return h.handleLayOnHandsAmount(s, i, encounterID)
 	default:
 		return fmt.Errorf("unknown combat action: %s", action)
 	}
