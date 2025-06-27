@@ -896,6 +896,9 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 		}
 	}
 
+	// Initialize resources before finalizing
+	char.InitializeResources()
+
 	// Update status to active
 	char.Status = entities.CharacterStatusActive
 
