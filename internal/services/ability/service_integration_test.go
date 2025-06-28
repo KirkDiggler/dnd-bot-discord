@@ -275,10 +275,11 @@ func (s *AbilityServiceIntegrationSuite) TestMultipleRageUses() {
 
 	// Try to use rage when out of uses (should fail)
 	// First deactivate current rage
-	_, _ = s.abilityService.UseAbility(s.ctx, &UseAbilityInput{
+	_, err = s.abilityService.UseAbility(s.ctx, &UseAbilityInput{
 		CharacterID: char.ID,
 		AbilityKey:  "rage",
 	})
+	require.NoError(s.T(), err)
 
 	// Now try to activate again
 	result4, err := s.abilityService.UseAbility(s.ctx, &UseAbilityInput{

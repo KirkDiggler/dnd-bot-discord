@@ -1,6 +1,8 @@
 package entities
 
 import (
+	"log"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/attack"
 )

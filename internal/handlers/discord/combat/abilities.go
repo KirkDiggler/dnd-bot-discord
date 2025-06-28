@@ -419,15 +419,23 @@ func (h *Handler) showLayOnHandsAmountSelection(s *discordgo.Session, i *discord
 
 	// Create buttons for common heal amounts
 	var buttons []discordgo.MessageComponent
-	healAmounts := []int{1, 2, 3, 5, layOnHands.UsesRemaining}
+	healAmounts := []int{1, 2, 3, 5}
+
+	// Add the full remaining pool if it's not already in the list
+	if layOnHands.UsesRemaining > 5 {
+		healAmounts = append(healAmounts, layOnHands.UsesRemaining)
+	}
+
+	// Use a map to track which amounts we've already added to avoid duplicates
+	addedAmounts := make(map[int]bool)
 
 	for _, amount := range healAmounts {
-		if amount > 0 && amount <= layOnHands.UsesRemaining {
+		if amount > 0 && amount <= layOnHands.UsesRemaining && !addedAmounts[amount] {
+			addedAmounts[amount] = true
 			buttons = append(buttons, discordgo.Button{
 				Label:    fmt.Sprintf("%d HP", amount),
 				Style:    discordgo.PrimaryButton,
 				CustomID: fmt.Sprintf("combat:lay_on_hands_amount:%s:%d", encounterID, amount),
-				Disabled: amount > layOnHands.UsesRemaining,
 			})
 		}
 	}
