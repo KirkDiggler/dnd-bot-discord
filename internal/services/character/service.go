@@ -1032,6 +1032,12 @@ func (s *service) GetByID(characterID string) (*entities.Character, error) {
 			WithMeta("character_id", characterID)
 	}
 
+	// Ensure Resources are initialized
+	if char.Resources == nil && char.Class != nil {
+		log.Printf("Character %s (%s) has no Resources, initializing...", char.ID, char.Name)
+		char.InitializeResources()
+	}
+
 	return char, nil
 }
 

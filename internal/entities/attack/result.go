@@ -13,6 +13,10 @@ type Result struct {
 	DamageRoll   int
 	AttackResult *dice.RollResult
 	DamageResult *dice.RollResult
+	// Weapon damage info for proper display
+	WeaponDamage *damage.Damage
+	// All damage dice rolls (including crits)
+	AllDamageRolls []int
 }
 
 func (r *Result) String() string {
@@ -31,6 +35,9 @@ func RollAttack(attackBonus, damageBonus int, dmg *damage.Damage) (*Result, erro
 	}
 	dmgValue := dmgResult.Total
 	attackRoll := attackResult.Total
+	allRolls := make([]int, 0, len(dmgResult.Rolls))
+	allRolls = append(allRolls, dmgResult.Rolls...)
+
 	switch attackResult.Total {
 	case 20:
 		critDmg, err := dice.Roll(dmg.DiceCount, dmg.DiceSize, 0)
@@ -40,6 +47,8 @@ func RollAttack(attackBonus, damageBonus int, dmg *damage.Damage) (*Result, erro
 
 		dmgValue += critDmg.Total
 		attackRoll += attackBonus
+		// Add critical damage rolls
+		allRolls = append(allRolls, critDmg.Rolls...)
 	case 1:
 		attackRoll = 0
 	default:
@@ -48,10 +57,12 @@ func RollAttack(attackBonus, damageBonus int, dmg *damage.Damage) (*Result, erro
 	}
 
 	return &Result{
-		AttackRoll:   attackRoll,
-		AttackType:   dmg.DamageType,
-		DamageRoll:   damageBonus + dmgValue,
-		AttackResult: attackResult,
-		DamageResult: dmgResult,
+		AttackRoll:     attackRoll,
+		AttackType:     dmg.DamageType,
+		DamageRoll:     damageBonus + dmgValue,
+		AttackResult:   attackResult,
+		DamageResult:   dmgResult,
+		WeaponDamage:   dmg,
+		AllDamageRolls: allRolls,
 	}, nil
 }

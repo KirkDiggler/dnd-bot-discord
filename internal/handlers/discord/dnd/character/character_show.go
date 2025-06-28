@@ -148,6 +148,43 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 		}
 	}
 
+	// Resources and Active Effects
+	if character.Resources != nil {
+		// Active Effects
+		if len(character.Resources.ActiveEffects) > 0 {
+			effectsValue := ""
+			for _, effect := range character.Resources.ActiveEffects {
+				effectsValue += fmt.Sprintf("• **%s** (%d rounds)\n", effect.Name, effect.Duration)
+			}
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "✨ Active Effects",
+				Value:  effectsValue,
+				Inline: false,
+			})
+		}
+
+		// Abilities with uses
+		if len(character.Resources.Abilities) > 0 {
+			abilitiesValue := ""
+			for _, ability := range character.Resources.Abilities {
+				if ability.UsesMax > 0 {
+					abilitiesValue += fmt.Sprintf("• **%s**: %d/%d uses", ability.Name, ability.UsesRemaining, ability.UsesMax)
+					if ability.IsActive {
+						abilitiesValue += " (Active)"
+					}
+					abilitiesValue += "\n"
+				}
+			}
+			if abilitiesValue != "" {
+				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+					Name:   "⚡ Abilities",
+					Value:  abilitiesValue,
+					Inline: false,
+				})
+			}
+		}
+	}
+
 	// Inventory summary
 	if len(character.Inventory) > 0 {
 		invCount := 0
