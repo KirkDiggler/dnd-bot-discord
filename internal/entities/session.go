@@ -38,7 +38,7 @@ type Session struct {
 	Settings          *SessionSettings          `json:"settings"`
 	Encounters        []string                  `json:"encounters"` // List of encounter IDs
 	ActiveEncounterID *string                   `json:"active_encounter_id,omitempty"`
-	Metadata          map[string]interface{}    `json:"metadata,omitempty"` // Custom metadata for the session
+	Metadata          Metadata                  `json:"metadata,omitempty"` // Custom metadata for the session
 	CreatedAt         time.Time                 `json:"created_at"`
 	StartedAt         *time.Time                `json:"started_at"`
 	EndedAt           *time.Time                `json:"ended_at"`
@@ -226,4 +226,45 @@ func (s *Session) IsUserInSession(userID string) bool {
 // UpdateActivity updates the last active timestamp
 func (s *Session) UpdateActivity() {
 	s.LastActive = time.Now()
+}
+
+// IsDungeon checks if this is a dungeon session
+func (s *Session) IsDungeon() bool {
+	if s.Metadata == nil {
+		return false
+	}
+	sessionType := s.Metadata.GetStringOrDefault(string(MetadataKeySessionType), "")
+	return SessionType(sessionType) == SessionTypeDungeon
+}
+
+// GetSessionType returns the session type
+func (s *Session) GetSessionType() SessionType {
+	if s.Metadata == nil {
+		return ""
+	}
+	return SessionType(s.Metadata.GetStringOrDefault(string(MetadataKeySessionType), ""))
+}
+
+// SetSessionType sets the session type
+func (s *Session) SetSessionType(sessionType SessionType) {
+	if s.Metadata == nil {
+		s.Metadata = make(Metadata)
+	}
+	s.Metadata.Set(string(MetadataKeySessionType), string(sessionType))
+}
+
+// GetDifficulty returns the session difficulty
+func (s *Session) GetDifficulty() string {
+	if s.Metadata == nil {
+		return "medium"
+	}
+	return s.Metadata.GetStringOrDefault(string(MetadataKeyDifficulty), "medium")
+}
+
+// GetRoomNumber returns the current room number for dungeon sessions
+func (s *Session) GetRoomNumber() int {
+	if s.Metadata == nil {
+		return 1
+	}
+	return s.Metadata.GetIntOrDefault(string(MetadataKeyRoomNumber), 1)
 }

@@ -4203,16 +4203,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 					if freshSess != nil && freshSess.Metadata != nil {
 						// Get stored message ID from session metadata
-						if messageID, ok := freshSess.Metadata["lobbyMessageID"].(string); ok {
-							if channelID, ok := freshSess.Metadata["lobbyChannelID"].(string); ok {
-								log.Printf("Updating dungeon lobby message %s with new party member", messageID)
+						messageID, msgErr := freshSess.Metadata.GetString(string(entities.MetadataKeyLobbyMessage))
+						channelID, chanErr := freshSess.Metadata.GetString(string(entities.MetadataKeyLobbyChannel))
+						if msgErr == nil && chanErr == nil {
+							log.Printf("Updating dungeon lobby message %s with new party member", messageID)
 
-								// Use the helper function to update the lobby message
-								if updateErr := dungeon.UpdateDungeonLobbyMessage(s, h.ServiceProvider.SessionService, h.ServiceProvider.CharacterService, sessionID, messageID, channelID); updateErr != nil {
-									log.Printf("Failed to update dungeon lobby message: %v", updateErr)
-								} else {
-									log.Printf("Successfully updated dungeon lobby with new party member")
-								}
+							// Use the helper function to update the lobby message
+							if updateErr := dungeon.UpdateDungeonLobbyMessage(s, h.ServiceProvider.SessionService, h.ServiceProvider.CharacterService, sessionID, messageID, channelID); updateErr != nil {
+								log.Printf("Failed to update dungeon lobby message: %v", updateErr)
+							} else {
+								log.Printf("Successfully updated dungeon lobby with new party member")
 							}
 						} else {
 							log.Printf("No lobby message ID found in session metadata")
