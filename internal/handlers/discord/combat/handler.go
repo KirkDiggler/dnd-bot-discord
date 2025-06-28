@@ -779,6 +779,20 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 		}
 	}
 
+	// Add player status field showing HP, AC, and active effects
+	statusValue := fmt.Sprintf("**HP:** %d/%d | **AC:** %d", playerCombatant.CurrentHP, playerCombatant.MaxHP, playerCombatant.AC)
+
+	// TODO: Add active effects display when character service is accessible through encounter service
+	// For now, we'll need to enhance the encounter service to expose character data for effects
+
+	// Add status as first field
+	statusField := &discordgo.MessageEmbedField{
+		Name:   "📊 Your Status",
+		Value:  statusValue,
+		Inline: false,
+	}
+	embed.Fields = append([]*discordgo.MessageEmbedField{statusField}, embed.Fields...)
+
 	// Build action buttons - always enabled unless combat is not active
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{

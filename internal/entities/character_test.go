@@ -3,6 +3,7 @@ package entities
 import (
 	"testing"
 
+	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -311,4 +312,163 @@ func (s *suiteEquip) TestTwoHandedOverwritesSlots() {
 
 func TestSuiteEquip(t *testing.T) {
 	suite.Run(t, new(suiteEquip))
+}
+
+func TestCharacter_Attack_WithRageBonus(t *testing.T) {
+	// Create a barbarian character with a weapon
+	char := &Character{
+		Name:  "Ragnar",
+		Level: 1,
+		Class: &Class{Key: "barbarian", Name: "Barbarian"},
+		Attributes: map[Attribute]*AbilityScore{
+			AttributeStrength: {Score: 16, Bonus: 3}, // +3 STR modifier
+		},
+		EquippedSlots: map[Slot]Equipment{
+			SlotMainHand: &Weapon{
+				Base: BasicEquipment{
+					Key:  "greataxe",
+					Name: "Greataxe",
+				},
+				WeaponRange: "Melee",
+				Damage: &damage.Damage{
+					DiceCount:  1,
+					DiceSize:   12,
+					Bonus:      0,
+					DamageType: damage.TypeSlashing,
+				},
+			},
+		},
+		Proficiencies: map[ProficiencyType][]*Proficiency{
+			ProficiencyTypeWeapon: {
+				{Key: "greataxe", Name: "Greataxe"},
+			},
+		},
+	}
+
+	// Initialize resources
+	char.InitializeResources()
+
+	// Verify rage ability exists
+	rage, exists := char.Resources.Abilities["rage"]
+	if !exists {
+		t.Fatal("Rage ability not found")
+	}
+
+	// Activate rage (simulate the effect being added)
+	char.Resources.AddEffect(&ActiveEffect{
+		ID:           "rage-effect",
+		Name:         "Rage",
+		Source:       "rage",
+		DurationType: DurationTypeRounds,
+		Duration:     10,
+		Modifiers: []Modifier{
+			{
+				Type:        ModifierTypeDamageBonus,
+				Value:       2,
+				DamageTypes: []string{"melee"},
+			},
+		},
+	})
+
+	// Mark rage as active
+	rage.IsActive = true
+
+	// Perform attack
+	attacks, err := char.Attack()
+	if err != nil {
+		t.Fatalf("Attack failed: %v", err)
+	}
+
+	if len(attacks) != 1 {
+		t.Fatalf("Expected 1 attack, got %d", len(attacks))
+	}
+
+	attack := attacks[0]
+
+	// Attack roll should include:
+	// - STR bonus (+3)
+	// - Proficiency bonus (+2 at level 1)
+	// Total attack bonus should be +5
+	// Note: Natural 1 is automatic miss (attack roll set to 0)
+	if attack.AttackResult.Rolls[0] != 1 && attack.AttackResult.Rolls[0] != 20 {
+		// Only check attack bonus on non-critical rolls
+		expectedAttackBonus := 5
+		actualAttackBonus := attack.AttackRoll - attack.AttackResult.Total
+		if actualAttackBonus != expectedAttackBonus {
+			t.Errorf("Expected attack bonus +%d, got +%d", expectedAttackBonus, actualAttackBonus)
+		}
+	}
+
+	// Damage roll should include:
+	// - STR bonus (+3)
+	// - Rage bonus (+2)
+	// Total damage bonus should be +5
+	expectedDamageBonus := 5
+	actualDamageBonus := attack.DamageRoll - attack.DamageResult.Total
+	if actualDamageBonus != expectedDamageBonus {
+		t.Errorf("Expected damage bonus +%d, got +%d (damage roll: %d, dice total: %d)",
+			expectedDamageBonus, actualDamageBonus, attack.DamageRoll, attack.DamageResult.Total)
+	}
+}
+
+func TestCharacter_Attack_WithoutRage(t *testing.T) {
+	// Create a barbarian character with a weapon but no rage active
+	char := &Character{
+		Name:  "Ragnar",
+		Level: 1,
+		Class: &Class{Key: "barbarian", Name: "Barbarian"},
+		Attributes: map[Attribute]*AbilityScore{
+			AttributeStrength: {Score: 16, Bonus: 3}, // +3 STR modifier
+		},
+		EquippedSlots: map[Slot]Equipment{
+			SlotMainHand: &Weapon{
+				Base: BasicEquipment{
+					Key:  "greataxe",
+					Name: "Greataxe",
+				},
+				WeaponRange: "Melee",
+				Damage: &damage.Damage{
+					DiceCount:  1,
+					DiceSize:   12,
+					Bonus:      0,
+					DamageType: damage.TypeSlashing,
+				},
+			},
+		},
+		Proficiencies: map[ProficiencyType][]*Proficiency{
+			ProficiencyTypeWeapon: {
+				{Key: "greataxe", Name: "Greataxe"},
+			},
+		},
+	}
+
+	// Initialize resources but don't activate rage
+	char.InitializeResources()
+
+	// Perform attack
+	attacks, err := char.Attack()
+	if err != nil {
+		t.Fatalf("Attack failed: %v", err)
+	}
+
+	if len(attacks) != 1 {
+		t.Fatalf("Expected 1 attack, got %d", len(attacks))
+	}
+
+	attack := attacks[0]
+
+	// Damage roll should only include STR bonus (+3), no rage bonus
+	expectedDamageBonus := 3
+
+	// For critical hits, we need to account for doubled dice
+	if attack.AttackResult.Rolls[0] == 20 {
+		// Critical hit - damage includes doubled dice plus bonus once
+		// Skip this check for criticals as the math is different
+		t.Logf("Critical hit rolled - damage includes doubled dice")
+	} else {
+		actualDamageBonus := attack.DamageRoll - attack.DamageResult.Total
+		if actualDamageBonus != expectedDamageBonus {
+			t.Errorf("Expected damage bonus +%d, got +%d", expectedDamageBonus, actualDamageBonus)
+		}
+	}
 }

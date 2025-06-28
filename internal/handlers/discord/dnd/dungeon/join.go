@@ -160,6 +160,20 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 	}
 	log.Printf("Successfully selected character %s for user %s", playerChar.Name, i.Member.User.ID)
 
+	// Perform a long rest for the character when entering dungeon
+	// This ensures fresh resources for each dungeon run
+	if playerChar.Resources != nil {
+		log.Printf("Performing long rest for %s before dungeon entry", playerChar.Name)
+		playerChar.Resources.LongRest()
+
+		// Save the rested character
+		if updateErr := h.services.CharacterService.UpdateEquipment(playerChar); updateErr != nil {
+			log.Printf("Warning: Failed to save character after rest: %v", updateErr)
+		} else {
+			log.Printf("Character %s has been rested and saved", playerChar.Name)
+		}
+	}
+
 	// Verify the character was set
 	sess, getErr := h.services.SessionService.GetSession(context.Background(), sessionID)
 	if getErr == nil && sess != nil {

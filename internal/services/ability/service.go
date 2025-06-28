@@ -117,8 +117,16 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 	}
 
 	// Save character state
+	log.Printf("=== SAVING CHARACTER AFTER ABILITY USE ===")
+	log.Printf("Character: %s", character.Name)
+	if character.Resources != nil {
+		log.Printf("Active effects before save: %d", len(character.Resources.ActiveEffects))
+	}
+
 	if err := s.characterService.UpdateEquipment(character); err != nil {
 		log.Printf("Failed to save character state after ability use: %v", err)
+	} else {
+		log.Printf("Character saved successfully")
 	}
 
 	return result, nil
@@ -152,6 +160,13 @@ func (s *service) handleRage(character *entities.Character, ability *entities.Ac
 	resources.AddEffect(effect)
 	ability.IsActive = true
 	ability.Duration = 10
+
+	log.Printf("=== RAGE ACTIVATION DEBUG ===")
+	log.Printf("Character: %s", character.Name)
+	log.Printf("Effect added: %s (ID: %s)", effect.Name, effect.ID)
+	log.Printf("Active effects after adding rage: %d", len(resources.ActiveEffects))
+	log.Printf("Rage uses remaining: %d/%d", ability.UsesRemaining, ability.UsesMax)
+	log.Printf("Rage is active: %v", ability.IsActive)
 
 	result.Message = "You enter a rage! +2 damage to melee attacks, resistance to physical damage"
 	result.EffectApplied = true
