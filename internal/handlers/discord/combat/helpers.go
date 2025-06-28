@@ -15,7 +15,10 @@ func parseCustomID(customID string) []string {
 
 // isEphemeralInteraction checks if an interaction originated from an ephemeral message
 func isEphemeralInteraction(i *discordgo.InteractionCreate) bool {
-	return i.Message != nil && i.Message.Flags&discordgo.MessageFlagsEphemeral != 0
+	if i == nil || i.Interaction == nil || i.Message == nil {
+		return false
+	}
+	return i.Message.Flags&discordgo.MessageFlagsEphemeral != 0
 }
 
 // respondError sends an error response
