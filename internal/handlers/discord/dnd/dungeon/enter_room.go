@@ -103,20 +103,8 @@ func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 
 func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *entities.Session) error {
 	// Get difficulty and room number from session metadata
-	difficulty := "medium"
-	roomNumber := 1
-	if sess.Metadata != nil {
-		if diff, ok := sess.Metadata["difficulty"].(string); ok {
-			difficulty = diff
-		}
-		// Try different type assertions for roomNumber
-		switch roomNum := sess.Metadata["roomNumber"].(type) {
-		case float64:
-			roomNumber = int(roomNum)
-		case int:
-			roomNumber = roomNum
-		}
-	}
+	difficulty := sess.GetDifficulty()
+	roomNumber := sess.GetRoomNumber()
 	fmt.Printf("Combat room - Difficulty: %s, Room Number: %d\n", difficulty, roomNumber)
 
 	// Generate a combat room
