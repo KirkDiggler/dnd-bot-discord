@@ -69,6 +69,9 @@ func TestBuildCharacterSheetEmbed(t *testing.T) {
 				Type:        entities.FeatureTypeClass,
 				Level:       1,
 				Source:      "Ranger",
+				Metadata: map[string]any{
+					"enemy_type": "orc",
+				},
 			},
 			{
 				Key:         "natural_explorer",
@@ -89,8 +92,8 @@ func TestBuildCharacterSheetEmbed(t *testing.T) {
 	assert.Contains(t, embed.Description, "**AC:** 16")
 	assert.Contains(t, embed.Description, "**Initiative:** +2")
 
-	// Verify fields
-	require.Len(t, embed.Fields, 4)
+	// Verify fields (5 because ranger has features/effects)
+	require.Len(t, embed.Fields, 5)
 
 	// Check ability scores field
 	assert.Equal(t, "📊 Ability Scores", embed.Fields[0].Name)

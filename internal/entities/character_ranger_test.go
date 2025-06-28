@@ -28,6 +28,16 @@ func TestCharacter_RangerInitialization(t *testing.T) {
 		},
 		MaxHitPoints:     11, // d10 + 1 CON
 		CurrentHitPoints: 11,
+		Features: []*CharacterFeature{
+			{
+				Key:  "favored_enemy",
+				Name: "Favored Enemy",
+				Type: FeatureTypeClass,
+				Metadata: map[string]any{
+					"enemy_type": "orc",
+				},
+			},
+		},
 	}
 
 	// Initialize resources which should add ranger status effects
@@ -106,6 +116,16 @@ func TestCharacter_RangerMultipleEffects(t *testing.T) {
 		Class: &Class{
 			Key:  "ranger",
 			Name: "Ranger",
+		},
+		Features: []*CharacterFeature{
+			{
+				Key:  "favored_enemy",
+				Name: "Favored Enemy",
+				Type: FeatureTypeClass,
+				Metadata: map[string]any{
+					"enemy_type": "undead",
+				},
+			},
 		},
 	}
 

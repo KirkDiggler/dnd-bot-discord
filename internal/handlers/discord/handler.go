@@ -56,6 +56,7 @@ type Handler struct {
 	characterEquipmentHandler             *character.EquipmentHandler
 	characterSheetHandler                 *character.SheetHandler
 	characterDeleteHandler                *character.DeleteHandler
+	characterClassFeaturesHandler         *character.ClassFeaturesHandler
 
 	// Session handlers
 	sessionCreateHandler *sessionHandler.CreateHandler
@@ -142,8 +143,9 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		characterEquipmentHandler: character.NewEquipmentHandler(&character.EquipmentHandlerConfig{
 			ServiceProvider: cfg.ServiceProvider,
 		}),
-		characterSheetHandler:  character.NewSheetHandler(cfg.ServiceProvider),
-		characterDeleteHandler: character.NewDeleteHandler(cfg.ServiceProvider),
+		characterSheetHandler:         character.NewSheetHandler(cfg.ServiceProvider),
+		characterDeleteHandler:        character.NewDeleteHandler(cfg.ServiceProvider),
+		characterClassFeaturesHandler: character.NewClassFeaturesHandler(cfg.ServiceProvider.CharacterService),
 
 		// Initialize session handlers
 		sessionCreateHandler: sessionHandler.NewCreateHandler(cfg.ServiceProvider),
@@ -952,18 +954,18 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				// Get draft character and update with ability scores
 				log.Printf("Parsed ability scores: %+v", abilityScores)
 				if len(abilityScores) == 6 {
-					draftChar, err := h.ServiceProvider.CharacterService.GetOrCreateDraftCharacter(
+					updatedDraftChar, err := h.ServiceProvider.CharacterService.GetOrCreateDraftCharacter(
 						context.Background(),
 						i.Member.User.ID,
 						i.GuildID,
 					)
 					if err == nil {
-						log.Printf("Updating draft character %s with ability scores and race/class", draftChar.ID)
+						log.Printf("Updating draft character %s with ability scores and race/class", updatedDraftChar.ID)
 						raceKey := parts[2]
 						classKey := parts[3]
 						_, err = h.ServiceProvider.CharacterService.UpdateDraftCharacter(
 							context.Background(),
-							draftChar.ID,
+							updatedDraftChar.ID,
 							&characterService.UpdateDraftInput{
 								AbilityScores: abilityScores,
 								RaceKey:       &raceKey,
@@ -982,15 +984,48 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					log.Printf("Warning: Only parsed %d ability scores, expected 6", len(abilityScores))
 				}
 
-				// Move to proficiency choices
-				req := &character.ProficiencyChoicesRequest{
-					Session:     s,
-					Interaction: i,
-					RaceKey:     parts[2],
-					ClassKey:    parts[3],
+				// Check if this class needs feature selections (e.g., ranger)
+				classKey := parts[3]
+				needsFeatureSelection := false
+
+				// Get the character to check if they need class feature selections
+				if draftChar != nil {
+					// For rangers, check if they need to select favored enemy or natural explorer
+					if classKey == "ranger" {
+						// Check if ranger features are already selected
+						hasSelectedFeatures := false
+						for _, feature := range draftChar.Features {
+							if feature.Key == "favored_enemy" && feature.Metadata != nil && feature.Metadata["enemy_type"] != nil {
+								hasSelectedFeatures = true
+								break
+							}
+						}
+						needsFeatureSelection = !hasSelectedFeatures
+					}
+					// Add other classes with level 1 choices here (cleric, warlock, etc.)
 				}
-				if err := h.characterProficiencyChoicesHandler.Handle(req); err != nil {
-					log.Printf("Error handling confirm abilities: %v", err)
+
+				if needsFeatureSelection {
+					// Show class feature selection
+					req := &character.InteractionRequest{
+						Session:     s,
+						Interaction: i,
+						CharacterID: draftChar.ID,
+					}
+					if err := h.characterClassFeaturesHandler.ShowFavoredEnemySelection(req); err != nil {
+						log.Printf("Error showing class features: %v", err)
+					}
+				} else {
+					// Move to proficiency choices
+					req := &character.ProficiencyChoicesRequest{
+						Session:     s,
+						Interaction: i,
+						RaceKey:     parts[2],
+						ClassKey:    parts[3],
+					}
+					if err := h.characterProficiencyChoicesHandler.Handle(req); err != nil {
+						log.Printf("Error handling confirm abilities: %v", err)
+					}
 				}
 			}
 		case "select_proficiencies":
@@ -1412,6 +1447,75 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				})
 				if err != nil {
 					log.Printf("Error showing name modal: %v", err)
+				}
+			}
+		case "class_features":
+			// Handle class feature selections (e.g., favored enemy, natural explorer)
+			if len(parts) >= 4 {
+				characterID := parts[2]
+				featureType := parts[3]
+
+				if len(i.MessageComponentData().Values) > 0 {
+					selection := i.MessageComponentData().Values[0]
+
+					req := &character.ClassFeaturesRequest{
+						Session:     s,
+						Interaction: i,
+						CharacterID: characterID,
+						FeatureType: featureType,
+						Selection:   selection,
+					}
+
+					if err := h.characterClassFeaturesHandler.Handle(req); err != nil {
+						log.Printf("Error handling class feature selection: %v", err)
+						return
+					}
+
+					// After handling the feature, check if we need more features
+					// Get the updated character
+					char, err := h.ServiceProvider.CharacterService.GetByID(characterID)
+					if err != nil {
+						log.Printf("Error getting character after feature selection: %v", err)
+						return
+					}
+
+					// Check if we need to show natural explorer after favored enemy
+					if featureType == "favored_enemy" && char.Class != nil && char.Class.Key == "ranger" {
+						// Check if natural explorer is selected
+						needsNaturalExplorer := true
+						for _, feature := range char.Features {
+							if feature.Key == "natural_explorer" && feature.Metadata != nil && feature.Metadata["terrain_type"] != nil {
+								needsNaturalExplorer = false
+								break
+							}
+						}
+
+						if needsNaturalExplorer {
+							req := &character.InteractionRequest{
+								Session:     s,
+								Interaction: i,
+								CharacterID: characterID,
+							}
+							if err := h.characterClassFeaturesHandler.ShowNaturalExplorerSelection(req); err != nil {
+								log.Printf("Error showing natural explorer selection: %v", err)
+							}
+							return
+						}
+					}
+
+					// All class features selected, move to proficiencies
+					// Get race and class keys from the character
+					if char.Race != nil && char.Class != nil {
+						req := &character.ProficiencyChoicesRequest{
+							Session:     s,
+							Interaction: i,
+							RaceKey:     char.Race.Key,
+							ClassKey:    char.Class.Key,
+						}
+						if err := h.characterProficiencyChoicesHandler.Handle(req); err != nil {
+							log.Printf("Error moving to proficiency choices: %v", err)
+						}
+					}
 				}
 			}
 		}

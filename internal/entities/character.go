@@ -663,11 +663,23 @@ func (c *Character) initializeClassAbilities() {
 		// Sneak Attack is passive, doesn't use resources
 	case "ranger":
 		// Rangers get passive features that we'll add as permanent status effects
-		// For now, we'll add a default favored enemy effect
-		// TODO: Allow player to choose favored enemy type during character creation
-		favoredEnemyEffect := effects.BuildFavoredEnemyEffect("orc") // Default to orc for now
-		if err := c.addStatusEffectInternal(favoredEnemyEffect); err == nil {
-			log.Printf("Added Favored Enemy effect for ranger")
+		// Check if favored enemy is already selected (from character creation)
+		var favoredEnemyType string
+		for _, feature := range c.Features {
+			if feature.Key == "favored_enemy" && feature.Metadata != nil {
+				if enemyType, ok := feature.Metadata["enemy_type"].(string); ok {
+					favoredEnemyType = enemyType
+					break
+				}
+			}
+		}
+
+		// If we have a favored enemy selection, apply the effect
+		if favoredEnemyType != "" {
+			favoredEnemyEffect := effects.BuildFavoredEnemyEffect(favoredEnemyType)
+			if err := c.addStatusEffectInternal(favoredEnemyEffect); err == nil {
+				log.Printf("Added Favored Enemy effect for ranger: %s", favoredEnemyType)
+			}
 		}
 
 		// Natural Explorer is also passive but doesn't have mechanical effects yet
@@ -1267,15 +1279,21 @@ func (c *Character) syncResourcestoEffectManager() {
 			// Rebuild rage effect with proper modifiers
 			rageEffect := effects.BuildRageEffect(c.Level)
 			rageEffect.ID = oldEffect.ID // Keep the same ID
-			_ = c.EffectManager.AddEffect(rageEffect)
+			if err := c.EffectManager.AddEffect(rageEffect); err != nil {
+				log.Printf("Failed to add rage effect: %v", err)
+			}
 		} else if oldEffect.Name == "Favored Enemy" && oldEffect.Source == string(effects.SourceFeature) {
 			// Rebuild favored enemy effect
 			favoredEnemyEffect := effects.BuildFavoredEnemyEffect("orc") // TODO: Store enemy type
 			favoredEnemyEffect.ID = oldEffect.ID
-			_ = c.EffectManager.AddEffect(favoredEnemyEffect)
+			if err := c.EffectManager.AddEffect(favoredEnemyEffect); err != nil {
+				log.Printf("Failed to add favored enemy effect: %v", err)
+			}
 		} else {
 			// Add generic effect
-			_ = c.EffectManager.AddEffect(newEffect)
+			if err := c.EffectManager.AddEffect(newEffect); err != nil {
+				log.Printf("Failed to add effect %s: %v", newEffect.Name, err)
+			}
 		}
 	}
 }
