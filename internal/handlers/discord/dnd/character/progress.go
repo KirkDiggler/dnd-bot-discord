@@ -26,7 +26,7 @@ func BuildProgressValue(classKey, currentStep string) string {
 		featureStepName := fmt.Sprintf("Step %d: Class Features", nextStep)
 		steps = append(steps, ProgressStep{
 			Name:      featureStepName,
-			Completed: currentStep != "class_features" && currentStep != "abilities",
+			Completed: isClassFeaturesStepCompleted(currentStep),
 		})
 		nextStep++
 	}
@@ -68,4 +68,11 @@ func needsClassFeatures(classKey string) bool {
 	default:
 		return false
 	}
+}
+
+// isClassFeaturesStepCompleted returns true if the class features step is completed
+func isClassFeaturesStepCompleted(currentStep string) bool {
+	// Class features are completed if we're past that step
+	// (i.e., not currently on "class_features" or "abilities")
+	return currentStep != "class_features" && currentStep != "abilities"
 }
