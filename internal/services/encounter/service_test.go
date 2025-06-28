@@ -250,6 +250,17 @@ func TestAddPlayer(t *testing.T) {
 			GetByID(characterID).
 			Return(testChar, nil)
 
+		// Mock session service - return non-dungeon session
+		mockSessionService.EXPECT().
+			GetSession(gomock.Any(), sessionID).
+			Return(&entities.Session{
+				ID: sessionID,
+				Metadata: map[string]interface{}{
+					"sessionType": "combat", // Not a dungeon
+				},
+			}, nil).
+			AnyTimes()
+
 		// Add player
 		combatant, err := svc.AddPlayer(context.Background(), encounterID, playerID, characterID)
 

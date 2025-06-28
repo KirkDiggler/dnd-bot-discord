@@ -396,7 +396,25 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 	log.Printf("AddPlayer - Retrieved character: ID=%s, Name=%s, OwnerID=%s", character.ID, character.Name, character.OwnerID)
 
 	// Ensure resources are initialized (lazy initialization)
-	character.GetResources()
+	resources := character.GetResources()
+
+	// Check if this is a dungeon session - if so, perform a long rest
+	// to reset abilities like rage uses and lay on hands
+	if encounter.SessionID != "" {
+		session, err := s.sessionService.GetSession(ctx, encounter.SessionID)
+		if err == nil && session.Metadata != nil {
+			if sessionType, ok := session.Metadata["sessionType"].(string); ok && sessionType == "dungeon" {
+				log.Printf("AddPlayer - Dungeon session detected, performing long rest for %s", character.Name)
+				resources.LongRest()
+
+				// Save the character to persist the reset abilities
+				if err := s.characterService.UpdateEquipment(character); err != nil {
+					log.Printf("AddPlayer - Warning: failed to save character after long rest: %v", err)
+					// Continue anyway - the abilities are reset in memory
+				}
+			}
+		}
+	}
 
 	// Verify character belongs to player
 	if character.OwnerID != playerID {
