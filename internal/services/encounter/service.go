@@ -701,6 +701,26 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			return nil, dnderr.Wrap(err, "failed to get character")
 		}
 
+		// Log character state before attack
+		log.Printf("=== PLAYER ATTACK DEBUG ===")
+		log.Printf("Character: %s (ID: %s)", char.Name, char.ID)
+		log.Printf("STR Score: %d, Bonus: %d", char.Attributes[entities.AttributeStrength].Score, char.Attributes[entities.AttributeStrength].Bonus)
+		if char.Resources != nil {
+			log.Printf("Resources initialized: YES")
+			log.Printf("Active effects count: %d", len(char.Resources.ActiveEffects))
+			for i, effect := range char.Resources.ActiveEffects {
+				log.Printf("  Effect %d: %s (Duration: %d)", i+1, effect.Name, effect.Duration)
+				for _, mod := range effect.Modifiers {
+					log.Printf("    - Modifier: %s, Value: %d", mod.Type, mod.Value)
+				}
+			}
+			if rage, exists := char.Resources.Abilities["rage"]; exists {
+				log.Printf("Rage ability: Uses %d/%d, Active: %v", rage.UsesRemaining, rage.UsesMax, rage.IsActive)
+			}
+		} else {
+			log.Printf("Resources initialized: NO")
+		}
+
 		// Use character's attack method
 		attackResults, err := char.Attack()
 		if err != nil {
@@ -754,8 +774,13 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 					diceTotal += roll
 				}
 				result.DamageBonus = attackResult.DamageRoll - diceTotal
-				log.Printf("Damage calculation: total=%d, dice total=%d, bonus=%d",
-					attackResult.DamageRoll, diceTotal, result.DamageBonus)
+				log.Printf("=== DAMAGE CALCULATION DEBUG ===")
+				log.Printf("Total damage roll: %d", attackResult.DamageRoll)
+				log.Printf("All dice rolls: %v", attackResult.AllDamageRolls)
+				log.Printf("Dice total: %d", diceTotal)
+				log.Printf("Calculated damage bonus: %d", result.DamageBonus)
+				log.Printf("Critical hit: %v", result.Critical)
+				log.Printf("Weapon dice: %dd%d", result.WeaponDiceCount, result.WeaponDiceSize)
 			}
 		}
 
