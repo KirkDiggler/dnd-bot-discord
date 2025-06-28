@@ -1283,8 +1283,17 @@ func (c *Character) syncResourcestoEffectManager() {
 				log.Printf("Failed to add rage effect: %v", err)
 			}
 		} else if oldEffect.Name == "Favored Enemy" && oldEffect.Source == string(effects.SourceFeature) {
-			// Rebuild favored enemy effect
-			favoredEnemyEffect := effects.BuildFavoredEnemyEffect("orc") // TODO: Store enemy type
+			// Rebuild favored enemy effect with the selected enemy type
+			enemyType := "humanoids" // default fallback
+			for _, feature := range c.Features {
+				if feature.Key == "favored_enemy" && feature.Metadata != nil {
+					if et, ok := feature.Metadata["enemy_type"].(string); ok {
+						enemyType = et
+						break
+					}
+				}
+			}
+			favoredEnemyEffect := effects.BuildFavoredEnemyEffect(enemyType)
 			favoredEnemyEffect.ID = oldEffect.ID
 			if err := c.EffectManager.AddEffect(favoredEnemyEffect); err != nil {
 				log.Printf("Failed to add favored enemy effect: %v", err)
