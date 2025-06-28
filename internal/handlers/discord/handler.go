@@ -219,10 +219,11 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 									Required:    true,
 								},
 								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "item",
-									Description: "Weapon or shield key (e.g., 'longsword', 'shield')",
-									Required:    true,
+									Type:         discordgo.ApplicationCommandOptionString,
+									Name:         "item",
+									Description:  "Weapon or shield key (e.g., 'longsword', 'shield')",
+									Required:     true,
+									Autocomplete: true,
 								},
 							},
 						},
@@ -430,6 +431,8 @@ func (h *Handler) HandleInteraction(s *discordgo.Session, i *discordgo.Interacti
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		h.handleCommand(s, i)
+	case discordgo.InteractionApplicationCommandAutocomplete:
+		h.handleAutocomplete(s, i)
 	case discordgo.InteractionMessageComponent:
 		h.handleComponent(s, i)
 	case discordgo.InteractionModalSubmit:
@@ -717,6 +720,106 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 			}
 			if err := h.encounterAddMonsterHandler.Handle(req); err != nil {
 				log.Printf("Error handling add monster: %v", err)
+			}
+		}
+	}
+}
+
+// handleAutocomplete handles autocomplete interactions for slash commands
+func (h *Handler) handleAutocomplete(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	data := i.ApplicationCommandData()
+
+	// Only handle autocomplete for the equip command
+	if data.Name == "dnd" && len(data.Options) > 0 && data.Options[0].Name == "character" {
+		if len(data.Options[0].Options) > 0 && data.Options[0].Options[0].Name == "equip" {
+			// Find which option is focused (being typed)
+			var characterID string
+			var focusedOption *discordgo.ApplicationCommandInteractionDataOption
+
+			for _, opt := range data.Options[0].Options[0].Options {
+				if opt.Name == "character_id" && opt.StringValue() != "" {
+					characterID = opt.StringValue()
+				}
+				if opt.Focused {
+					focusedOption = opt
+				}
+			}
+
+			// If the item field is focused and we have a character ID
+			if focusedOption != nil && focusedOption.Name == "item" && characterID != "" {
+				// Get the character to see their inventory
+				char, err := h.ServiceProvider.CharacterService.GetByID(characterID)
+				if err != nil {
+					log.Printf("Failed to get character for autocomplete: %v", err)
+					// Return empty choices on error
+					if respErr := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+						Data: &discordgo.InteractionResponseData{
+							Choices: []*discordgo.ApplicationCommandOptionChoice{},
+						},
+					}); respErr != nil {
+						log.Printf("Error sending empty autocomplete response: %v", respErr)
+					}
+					return
+				}
+
+				// Build choices from character's inventory
+				choices := []*discordgo.ApplicationCommandOptionChoice{}
+				currentInput := strings.ToLower(focusedOption.StringValue())
+
+				// Add weapons
+				if weapons, exists := char.Inventory[entities.EquipmentTypeWeapon]; exists {
+					for _, weapon := range weapons {
+						weaponKey := weapon.GetKey()
+						weaponName := weapon.GetName()
+
+						// Filter based on current input
+						if currentInput == "" ||
+							strings.Contains(strings.ToLower(weaponKey), currentInput) ||
+							strings.Contains(strings.ToLower(weaponName), currentInput) {
+							choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+								Name:  fmt.Sprintf("%s (%s)", weaponName, weaponKey),
+								Value: weaponKey,
+							})
+						}
+					}
+				}
+
+				// Add shields
+				if armors, exists := char.Inventory[entities.EquipmentTypeArmor]; exists {
+					for _, armor := range armors {
+						if armorItem, ok := armor.(*entities.Armor); ok && armorItem.ArmorCategory == entities.ArmorCategoryShield {
+							shieldKey := armor.GetKey()
+							shieldName := armor.GetName()
+
+							// Filter based on current input
+							if currentInput == "" ||
+								strings.Contains(strings.ToLower(shieldKey), currentInput) ||
+								strings.Contains(strings.ToLower(shieldName), currentInput) {
+								choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+									Name:  fmt.Sprintf("%s (%s)", shieldName, shieldKey),
+									Value: shieldKey,
+								})
+							}
+						}
+					}
+				}
+
+				// Discord limits to 25 choices
+				if len(choices) > 25 {
+					choices = choices[:25]
+				}
+
+				// Send autocomplete response
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+					Data: &discordgo.InteractionResponseData{
+						Choices: choices,
+					},
+				})
+				if err != nil {
+					log.Printf("Error sending autocomplete response: %v", err)
+				}
 			}
 		}
 	}
