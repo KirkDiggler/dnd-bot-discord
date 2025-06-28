@@ -63,6 +63,9 @@ type CharacterResources struct {
 	Abilities     map[string]*ActiveAbility `json:"abilities"`   // key -> ability
 	ActiveEffects []*ActiveEffect           `json:"active_effects"`
 	HitDice       HitDiceResource           `json:"hit_dice"`
+
+	// Combat state tracking
+	SneakAttackUsedThisTurn bool `json:"sneak_attack_used_this_turn"`
 }
 
 // SpellSlotInfo tracks spell slots at a specific level
