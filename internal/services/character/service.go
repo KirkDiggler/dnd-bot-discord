@@ -163,6 +163,7 @@ type ChoiceOption struct {
 	Key         string
 	Name        string
 	Description string
+	BundleItems []string // Equipment keys that come with this choice (e.g., shield with weapon+shield)
 }
 
 // service implements the Service interface
@@ -733,6 +734,8 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 			equipment, err := s.dndClient.GetEquipment(equipKey)
 			if err == nil && equipment != nil {
 				char.AddInventory(equipment)
+			} else if err != nil {
+				log.Printf("Failed to get equipment '%s': %v", equipKey, err)
 			}
 		}
 

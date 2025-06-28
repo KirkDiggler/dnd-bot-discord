@@ -257,6 +257,21 @@ func apiDamageTypeToDamageType(input *apiEntities.ReferenceItem) damage.Type {
 }
 
 func apiArmorToArmor(input *apiEntities.Armor) *entities.Armor {
+	// Determine armor category from the API data
+	var category entities.ArmorCategory
+	switch strings.ToLower(input.ArmorCategory) {
+	case "light":
+		category = entities.ArmorCategoryLight
+	case "medium":
+		category = entities.ArmorCategoryMedium
+	case "heavy":
+		category = entities.ArmorCategoryHeavy
+	case "shield":
+		category = entities.ArmorCategoryShield
+	default:
+		category = entities.ArmorCategoryUnknown
+	}
+
 	return &entities.Armor{
 		Base: entities.BasicEquipment{
 			Key:    input.Key,
@@ -264,6 +279,7 @@ func apiArmorToArmor(input *apiEntities.Armor) *entities.Armor {
 			Weight: input.Weight,
 			Cost:   apiCostToCost(input.Cost),
 		},
+		ArmorCategory: category,
 		ArmorClass: &entities.ArmorClass{
 			Base:     input.ArmorClass.Base,
 			DexBonus: input.ArmorClass.DexBonus,

@@ -210,6 +210,7 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 			// Handle bundles like "weapon and shield" or "two weapons"
 			names := []string{}
 			descriptions := []string{}
+			bundleItems := []string{} // Track non-choice items in the bundle
 			bundleKey := o.Key
 			if bundleKey == "" {
 				bundleKey = fmt.Sprintf("bundle-%d", len(result))
@@ -230,6 +231,9 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 						}
 						names = append(names, itemName)
 
+						// Track this as a bundle item (e.g., shield in weapon+shield)
+						bundleItems = append(bundleItems, itemRef.Reference.Key)
+
 						// Get description for this item
 						if desc := r.getEquipmentDescription(itemRef.Reference.Key, itemRef.Reference.Name); desc != "" {
 							descriptions = append(descriptions, fmt.Sprintf("%s (%s)", itemRef.Reference.Name, desc))
@@ -238,6 +242,9 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 				case *entities.ReferenceOption:
 					if itemRef.Reference != nil && itemRef.Reference.Key != "" && itemRef.Reference.Name != "" {
 						names = append(names, itemRef.Reference.Name)
+
+						// Track this as a bundle item
+						bundleItems = append(bundleItems, itemRef.Reference.Key)
 
 						// Get description for this item
 						if desc := r.getEquipmentDescription(itemRef.Reference.Key, itemRef.Reference.Name); desc != "" {
@@ -269,6 +276,8 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 					if nestedChoiceDesc != "" {
 						choiceOpt.Description = nestedChoiceDesc
 					}
+					// Add bundle items to the nested choice
+					choiceOpt.BundleItems = bundleItems
 				} else if len(descriptions) > 0 {
 					choiceOpt.Description = strings.Join(descriptions, ", ")
 				}

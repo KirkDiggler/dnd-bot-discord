@@ -1182,6 +1182,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 					selectionCount := 1
 					category := "martial-weapons"
+					var bundleItems []string
 
 					if resolveErr == nil && choiceIndex < len(choices.EquipmentChoices) {
 						// Find the selected option in the choice
@@ -1192,6 +1193,8 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 								if strings.Contains(opt.Description, "Choose 2") || strings.Contains(opt.Name, "2") || strings.Contains(opt.Name, "two") {
 									selectionCount = 2
 								}
+								// Get bundle items
+								bundleItems = opt.BundleItems
 								// Could also parse category from description if needed
 								break
 							}
@@ -1208,6 +1211,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						BundleKey:      selectedValues[0],
 						SelectionCount: selectionCount,
 						Category:       category,
+						BundleItems:    bundleItems,
 					}
 					if selectNestedErr := h.characterSelectNestedEquipmentHandler.Handle(req); selectNestedErr != nil {
 						log.Printf("Error handling nested equipment selection: %v", selectNestedErr)
@@ -1229,18 +1233,30 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					// Note: We would need to track equipment selections in the draft character
 					// For now, just use the new selections
 
-					// Update the draft with selected equipment
-					_, updateDraftErr := h.ServiceProvider.CharacterService.UpdateDraftCharacter(
-						context.Background(),
-						draftChar.ID,
-						&characterService.UpdateDraftInput{
-							Equipment: append(existingEquipment, selectedValues...),
-						},
-					)
-					if updateDraftErr != nil {
-						log.Printf("Error updating draft with equipment: %v", updateDraftErr)
+					// Filter out bundle keys - they're not real equipment
+					validEquipment := []string{}
+					for _, value := range selectedValues {
+						if !strings.HasPrefix(value, "bundle-") && !strings.HasPrefix(value, "nested-") {
+							validEquipment = append(validEquipment, value)
+						}
+					}
+
+					// Only update if we have valid equipment keys
+					if len(validEquipment) > 0 {
+						_, updateDraftErr := h.ServiceProvider.CharacterService.UpdateDraftCharacter(
+							context.Background(),
+							draftChar.ID,
+							&characterService.UpdateDraftInput{
+								Equipment: append(existingEquipment, validEquipment...),
+							},
+						)
+						if updateDraftErr != nil {
+							log.Printf("Error updating draft with equipment: %v", updateDraftErr)
+						} else {
+							log.Printf("Successfully updated draft with equipment: %v", validEquipment)
+						}
 					} else {
-						log.Printf("Successfully updated draft with equipment")
+						log.Printf("No valid equipment to add (bundles will be resolved later)")
 					}
 				} else {
 					log.Printf("Error getting draft character: %v", err)
@@ -1295,6 +1311,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					i.Member.User.ID,
 					i.GuildID,
 				)
+
+				// Get choice information to check for bundle items and determine next step
+				choices, resolveErr := h.ServiceProvider.CharacterService.ResolveChoices(
+					context.Background(),
+					&characterService.ResolveChoicesInput{
+						RaceKey:  parts[2],
+						ClassKey: parts[3],
+					},
+				)
+
 				if err == nil {
 					// Get existing equipment
 					existingEquipment := []string{}
@@ -1303,9 +1329,19 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					// Add selected weapons
 					allEquipment := slices.Concat(existingEquipment, selectedWeapons)
 
-					// If this was "weapon + shield" choice, add shield
-					if strings.Contains(strings.ToLower(bundleKey), "shield") && len(selectedWeapons) == 1 {
-						allEquipment = append(allEquipment, "shield")
+					if resolveErr == nil && choiceIndex < len(choices.EquipmentChoices) {
+						// Find the bundle option that was selected
+						choice := choices.EquipmentChoices[choiceIndex]
+						for _, opt := range choice.Options {
+							if opt.Key == bundleKey {
+								// Add any bundle items (e.g., shield from weapon+shield)
+								if len(opt.BundleItems) > 0 {
+									log.Printf("Adding bundle items for %s: %v", bundleKey, opt.BundleItems)
+									allEquipment = append(allEquipment, opt.BundleItems...)
+								}
+								break
+							}
+						}
 					}
 
 					// Update draft with equipment
@@ -1322,15 +1358,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 
 				// Continue to next equipment choice or character details
-				// Since the interaction is already acknowledged, we need to check if there are more choices
-				choices, err := h.ServiceProvider.CharacterService.ResolveChoices(
-					context.Background(),
-					&characterService.ResolveChoicesInput{
-						RaceKey:  parts[2],
-						ClassKey: parts[3],
-					},
-				)
-				if err == nil && choiceIndex+1 < len(choices.EquipmentChoices) {
+				if resolveErr == nil && choiceIndex+1 < len(choices.EquipmentChoices) {
 					// More equipment choices available
 					req := &character.SelectEquipmentRequest{
 						Session:     s,

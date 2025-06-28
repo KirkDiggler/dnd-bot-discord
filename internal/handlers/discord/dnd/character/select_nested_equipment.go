@@ -3,6 +3,7 @@ package character
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
@@ -32,9 +33,10 @@ type SelectNestedEquipmentRequest struct {
 	RaceKey        string
 	ClassKey       string
 	ChoiceIndex    int
-	BundleKey      string // e.g., "nested-0"
-	SelectionCount int    // How many to select (1 or 2)
-	Category       string // e.g., "martial-weapons"
+	BundleKey      string   // e.g., "nested-0"
+	SelectionCount int      // How many to select (1 or 2)
+	Category       string   // e.g., "martial-weapons"
+	BundleItems    []string // Additional items that come with this choice (e.g., shield)
 }
 
 // Handle processes nested equipment selection
@@ -75,9 +77,26 @@ func (h *SelectNestedEquipmentHandler) Handle(req *SelectNestedEquipmentRequest)
 		title = "Select Weapon"
 	}
 
+	description := fmt.Sprintf("**Race:** %s\n**Class:** %s\n\nChoose from the available weapons.", race.Name, class.Name)
+
+	// If this bundle includes additional items, mention them
+	if len(req.BundleItems) > 0 {
+		bundleItemNames := []string{}
+		for _, itemKey := range req.BundleItems {
+			// Try to get friendly names
+			switch itemKey {
+			case "shield":
+				bundleItemNames = append(bundleItemNames, "a shield")
+			default:
+				bundleItemNames = append(bundleItemNames, itemKey)
+			}
+		}
+		description += fmt.Sprintf("\n\n🛡️ **Note:** This choice includes %s with your selected weapon.", strings.Join(bundleItemNames, " and "))
+	}
+
 	embed := &discordgo.MessageEmbed{
 		Title:       title,
-		Description: fmt.Sprintf("**Race:** %s\n**Class:** %s\n\nChoose from the available weapons.", race.Name, class.Name),
+		Description: description,
 		Color:       0x5865F2,
 		Fields:      []*discordgo.MessageEmbedField{},
 	}

@@ -98,6 +98,9 @@ func BuildCharacterSheetEmbed(char *entities.Character) *discordgo.MessageEmbed 
 	// Build proficiencies summary
 	proficiencyLines := buildProficiencySummary(char)
 
+	// Build features summary
+	featureLines := buildFeatureSummary(char)
+
 	embed := &discordgo.MessageEmbed{
 		Title:       title,
 		Description: hpAcLine,
@@ -116,6 +119,11 @@ func BuildCharacterSheetEmbed(char *entities.Character) *discordgo.MessageEmbed 
 			{
 				Name:   "📚 Proficiencies",
 				Value:  strings.Join(proficiencyLines, "\n"),
+				Inline: false,
+			},
+			{
+				Name:   "✨ Features",
+				Value:  strings.Join(featureLines, "\n"),
 				Inline: false,
 			},
 		},
@@ -234,6 +242,67 @@ func BuildCharacterSheetComponents(characterID string) []discordgo.MessageCompon
 			},
 		},
 	}
+}
+
+// buildFeatureSummary builds a summary of character features
+func buildFeatureSummary(char *entities.Character) []string {
+	lines := []string{}
+
+	if len(char.Features) == 0 {
+		lines = append(lines, "*No features*")
+		return lines
+	}
+
+	// Group features by type
+	classFeatures := []*entities.CharacterFeature{}
+	racialFeatures := []*entities.CharacterFeature{}
+	otherFeatures := []*entities.CharacterFeature{}
+
+	for _, feature := range char.Features {
+		if feature == nil {
+			continue
+		}
+		switch feature.Type {
+		case entities.FeatureTypeClass:
+			classFeatures = append(classFeatures, feature)
+		case entities.FeatureTypeRacial:
+			racialFeatures = append(racialFeatures, feature)
+		default:
+			otherFeatures = append(otherFeatures, feature)
+		}
+	}
+
+	// Add class features
+	if len(classFeatures) > 0 {
+		lines = append(lines, "**Class Features:**")
+		for _, feat := range classFeatures {
+			lines = append(lines, fmt.Sprintf("• %s", feat.Name))
+		}
+	}
+
+	// Add racial features
+	if len(racialFeatures) > 0 {
+		if len(lines) > 0 {
+			lines = append(lines, "") // Add spacing
+		}
+		lines = append(lines, "**Racial Features:**")
+		for _, feat := range racialFeatures {
+			lines = append(lines, fmt.Sprintf("• %s", feat.Name))
+		}
+	}
+
+	// Add other features
+	if len(otherFeatures) > 0 {
+		if len(lines) > 0 {
+			lines = append(lines, "") // Add spacing
+		}
+		lines = append(lines, "**Other Features:**")
+		for _, feat := range otherFeatures {
+			lines = append(lines, fmt.Sprintf("• %s", feat.Name))
+		}
+	}
+
+	return lines
 }
 
 // respondWithError sends an error message as ephemeral

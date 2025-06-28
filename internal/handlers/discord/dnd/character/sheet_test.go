@@ -61,6 +61,24 @@ func TestBuildCharacterSheetEmbed(t *testing.T) {
 				{Key: "perception", Name: "Perception"},
 			},
 		},
+		Features: []*entities.CharacterFeature{
+			{
+				Key:         "favored_enemy",
+				Name:        "Favored Enemy",
+				Description: "You have advantage on Wisdom (Survival) checks to track your favored enemies.",
+				Type:        entities.FeatureTypeClass,
+				Level:       1,
+				Source:      "Ranger",
+			},
+			{
+				Key:         "natural_explorer",
+				Name:        "Natural Explorer",
+				Description: "You are particularly familiar with one type of natural environment.",
+				Type:        entities.FeatureTypeClass,
+				Level:       1,
+				Source:      "Ranger",
+			},
+		},
 	}
 
 	embed := BuildCharacterSheetEmbed(char)
@@ -72,7 +90,7 @@ func TestBuildCharacterSheetEmbed(t *testing.T) {
 	assert.Contains(t, embed.Description, "**Initiative:** +2")
 
 	// Verify fields
-	require.Len(t, embed.Fields, 3)
+	require.Len(t, embed.Fields, 4)
 
 	// Check ability scores field
 	assert.Equal(t, "📊 Ability Scores", embed.Fields[0].Name)
@@ -88,6 +106,12 @@ func TestBuildCharacterSheetEmbed(t *testing.T) {
 	assert.Equal(t, "📚 Proficiencies", embed.Fields[2].Name)
 	assert.Contains(t, embed.Fields[2].Value, "**Weapons:** Simple Weapons, Martial Weapons")
 	assert.Contains(t, embed.Fields[2].Value, "**Skills:** Survival, Perception")
+
+	// Check features field
+	assert.Equal(t, "✨ Features", embed.Fields[3].Name)
+	assert.Contains(t, embed.Fields[3].Value, "**Class Features:**")
+	assert.Contains(t, embed.Fields[3].Value, "• Favored Enemy")
+	assert.Contains(t, embed.Fields[3].Value, "• Natural Explorer")
 }
 
 func TestBuildCharacterSheetComponents(t *testing.T) {
