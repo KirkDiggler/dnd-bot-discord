@@ -48,7 +48,7 @@ func TestManager_AddEffect(t *testing.T) {
 			Source:       SourceAbility,
 			StackingRule: StackingReplace,
 		}
-		_ = replaceManager.AddEffect(effect1)
+		require.NoError(t, replaceManager.AddEffect(effect1))
 
 		// Add second effect with same name and source
 		effect2 := &StatusEffect{
@@ -57,7 +57,7 @@ func TestManager_AddEffect(t *testing.T) {
 			Source:       SourceAbility,
 			StackingRule: StackingReplace,
 		}
-		_ = replaceManager.AddEffect(effect2)
+		require.NoError(t, replaceManager.AddEffect(effect2))
 
 		active := replaceManager.GetActiveEffects()
 		assert.Len(t, active, 1)
@@ -75,7 +75,7 @@ func TestManager_AddEffect(t *testing.T) {
 				Source:       SourceSpell,
 				StackingRule: StackingStack,
 			}
-			_ = manager.AddEffect(effect)
+			require.NoError(t, manager.AddEffect(effect))
 		}
 
 		active := manager.GetActiveEffects()
@@ -91,7 +91,7 @@ func TestManager_RemoveEffect(t *testing.T) {
 		Name:   "Test Effect",
 		Source: SourceAbility,
 	}
-	_ = manager.AddEffect(effect)
+	require.NoError(t, manager.AddEffect(effect))
 
 	manager.RemoveEffect("test_effect")
 	active := manager.GetActiveEffects()
@@ -108,7 +108,7 @@ func TestManager_RemoveEffectsBySource(t *testing.T) {
 		Source:   SourceSpell,
 		SourceID: "bless_spell",
 	}
-	_ = manager.AddEffect(spellEffect)
+	require.NoError(t, manager.AddEffect(spellEffect))
 
 	abilityEffect := &StatusEffect{
 		ID:       "ability_1",
@@ -116,7 +116,7 @@ func TestManager_RemoveEffectsBySource(t *testing.T) {
 		Source:   SourceAbility,
 		SourceID: "barbarian_rage",
 	}
-	_ = manager.AddEffect(abilityEffect)
+	require.NoError(t, manager.AddEffect(abilityEffect))
 
 	// Remove all spell effects
 	manager.RemoveEffectsBySource(SourceSpell, "bless_spell")
@@ -131,7 +131,7 @@ func TestManager_GetModifiers(t *testing.T) {
 
 	t.Run("gets modifiers for target", func(t *testing.T) {
 		effect := BuildRageEffect(1)
-		_ = manager.AddEffect(effect)
+		require.NoError(t, manager.AddEffect(effect))
 
 		// Get damage modifiers
 		modifiers := manager.GetModifiers(TargetDamage, map[string]string{
@@ -144,7 +144,7 @@ func TestManager_GetModifiers(t *testing.T) {
 
 	t.Run("respects modifier conditions", func(t *testing.T) {
 		effect := BuildRageEffect(1)
-		_ = manager.AddEffect(effect)
+		require.NoError(t, manager.AddEffect(effect))
 
 		// Get damage modifiers for ranged attack (should not apply)
 		modifiers := manager.GetModifiers(TargetDamage, map[string]string{
@@ -156,7 +156,7 @@ func TestManager_GetModifiers(t *testing.T) {
 
 	t.Run("respects effect conditions", func(t *testing.T) {
 		effect := BuildFavoredEnemyEffect("orc")
-		_ = manager.AddEffect(effect)
+		require.NoError(t, manager.AddEffect(effect))
 
 		// Get modifiers when fighting an orc
 		modifiers := manager.GetModifiers(TargetSkillCheck, map[string]string{
@@ -181,7 +181,7 @@ func TestManager_Expiration(t *testing.T) {
 			Name:     "Instant Effect",
 			Duration: Duration{Type: DurationInstant},
 		}
-		_ = manager.AddEffect(effect)
+		require.NoError(t, manager.AddEffect(effect))
 
 		// Sleep to ensure time passes
 		time.Sleep(10 * time.Millisecond)
@@ -196,7 +196,7 @@ func TestManager_Expiration(t *testing.T) {
 			Name:     "Permanent Effect",
 			Duration: Duration{Type: DurationPermanent},
 		}
-		_ = manager.AddEffect(effect)
+		require.NoError(t, manager.AddEffect(effect))
 
 		active := manager.GetActiveEffects()
 		assert.Len(t, active, 1)
@@ -208,11 +208,11 @@ func TestManager_ClearConcentration(t *testing.T) {
 
 	// Add concentration effect
 	concentrationEffect := BuildBlessEffect()
-	_ = manager.AddEffect(concentrationEffect)
+	require.NoError(t, manager.AddEffect(concentrationEffect))
 
 	// Add non-concentration effect
 	normalEffect := BuildRageEffect(1)
-	_ = manager.AddEffect(normalEffect)
+	require.NoError(t, manager.AddEffect(normalEffect))
 
 	// Clear concentration
 	manager.ClearConcentration()

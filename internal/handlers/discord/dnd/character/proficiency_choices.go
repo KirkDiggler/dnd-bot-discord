@@ -163,7 +163,7 @@ func (h *ProficiencyChoicesHandler) Handle(req *ProficiencyChoicesRequest) error
 	// Progress
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 		Name:   "Progress",
-		Value:  "✅ Step 1: Race\n✅ Step 2: Class\n✅ Step 3: Abilities\n⏳ Step 4: Proficiencies\n⏳ Step 5: Details",
+		Value:  BuildProgressValue(req.ClassKey, "proficiencies"),
 		Inline: false,
 	})
 

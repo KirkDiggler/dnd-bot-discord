@@ -51,6 +51,16 @@ func TestBuildActiveEffectsDisplay(t *testing.T) {
 			Name:  "Legolas",
 			Level: 1,
 			Class: &entities.Class{Key: "ranger"},
+			Features: []*entities.CharacterFeature{
+				{
+					Key:  "favored_enemy",
+					Name: "Favored Enemy",
+					Type: entities.FeatureTypeClass,
+					Metadata: map[string]any{
+						"enemy_type": "orc",
+					},
+				},
+			},
 		}
 
 		// Initialize resources - this should add the favored enemy effect

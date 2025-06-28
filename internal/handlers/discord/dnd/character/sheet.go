@@ -10,6 +10,8 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/utils"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // SheetHandler handles the character sheet display command
@@ -284,8 +286,27 @@ func buildFeatureSummary(char *entities.Character) []string {
 	// Add class features
 	if len(classFeatures) > 0 {
 		lines = append(lines, "**Class Features:**")
+		caser := cases.Title(language.English)
 		for _, feat := range classFeatures {
-			lines = append(lines, fmt.Sprintf("• %s", feat.Name))
+			featName := feat.Name
+			// Add specific selections from metadata
+			if feat.Key == "favored_enemy" && feat.Metadata != nil {
+				if enemyType, ok := feat.Metadata["enemy_type"].(string); ok {
+					// Capitalize the enemy type for display
+					enemyDisplay := caser.String(enemyType)
+					if enemyType == "humanoids" {
+						enemyDisplay = "Two Humanoid Races"
+					}
+					featName = fmt.Sprintf("%s (%s)", feat.Name, enemyDisplay)
+				}
+			} else if feat.Key == "natural_explorer" && feat.Metadata != nil {
+				if terrainType, ok := feat.Metadata["terrain_type"].(string); ok {
+					// Capitalize the terrain type
+					terrainDisplay := caser.String(terrainType)
+					featName = fmt.Sprintf("%s (%s)", feat.Name, terrainDisplay)
+				}
+			}
+			lines = append(lines, fmt.Sprintf("• %s", featName))
 		}
 	}
 

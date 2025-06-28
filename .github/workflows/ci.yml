@@ -93,19 +93,32 @@ jobs:
         export PATH=$PATH:$(go env GOPATH)/bin
         go generate ./...
 
-    - name: Run unit tests (minimal - build issues being fixed)
+    - name: Run unit tests
       run: |
-        echo "### Running minimal test suite" >> $GITHUB_STEP_SUMMARY
-        echo "Note: Full test suite temporarily disabled due to build issues" >> $GITHUB_STEP_SUMMARY
+        echo "### Running full test suite" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
         
-        # Only test packages that can build
-        go test ./internal/entities -run="TestAbilityBonus|TestAbilityScore" -v -short || echo "entities tests skipped"
-        go test ./internal/repositories/characters -v -short || echo "repositories tests skipped"
-        go test ./internal/dice/... -v -short 2>/dev/null || echo "dice tests skipped"
-        go test ./internal/utils/... -v -short 2>/dev/null || echo "utils tests skipped"
+        # Run all tests with race detector
+        go test ./... -v -short -race | tee test_output.txt
+        
+        # Capture exit code
+        TEST_EXIT_CODE=${PIPESTATUS[0]}
         
         echo '```' >> $GITHUB_STEP_SUMMARY
+        
+        # Add test summary
+        if [ $TEST_EXIT_CODE -eq 0 ]; then
+          echo "✅ All tests passed!" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Some tests failed!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Failed tests:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep -E "^--- FAIL:|FAIL\s+github.com" test_output.txt >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        exit $TEST_EXIT_CODE
 
     # Integration tests temporarily disabled
     # - name: Run integration tests
