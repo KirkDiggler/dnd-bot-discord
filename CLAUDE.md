@@ -390,6 +390,47 @@ The interactive character sheet aims to provide a rich, real-time D&D experience
 - Real-time character sheet updates via WebSocket
 - Advanced visualizations (3D dice, battle maps)
 
+### Rogue Sneak Attack Implementation (June 27, 2025)
+
+**Issue #136: Rogue Sneak Attack** ✅
+- **Branch**: `implement-rogue-sneak-attack`
+- **Status**: Implementation complete using TDD approach
+- **Problem Solved**: Rogues needed their signature Sneak Attack ability for proper combat mechanics
+
+#### What Was Implemented:
+1. **Character Resources Update**:
+   - Added `SneakAttackUsedThisTurn` bool to track once-per-turn limitation
+   
+2. **Sneak Attack Methods** (`character_sneak_attack.go`):
+   - `CanSneakAttack()` - Checks weapon eligibility and combat conditions
+   - `GetSneakAttackDice()` - Returns d6 count based on level (1d6 at level 1, +1d6 every 2 levels)
+   - `ApplySneakAttack()` - Rolls damage and marks as used
+   - `StartNewTurn()` - Resets the used flag
+
+3. **Combat Integration**:
+   - Modified `AttackInput` to include `HasAdvantage`, `HasDisadvantage`, and `AllyAdjacent` fields
+   - Updated `PerformAttack` to check sneak attack eligibility and apply bonus damage
+   - Added sneak attack info to combat log entries (shows as "🗡️ 3d6 Sneak Attack: 12")
+   - Integrated turn reset in `NextTurn` when a new round starts
+
+4. **D&D 5e Rules Implemented**:
+   - Requires finesse or ranged weapon
+   - Needs advantage OR ally adjacent to target
+   - Once per turn (not per round)
+   - Damage scales: 1d6 at level 1-2, 2d6 at 3-4, etc.
+   - Critical hits double sneak attack dice
+   - Cannot sneak attack if advantage and disadvantage cancel out
+
+#### Key Design Decisions:
+- **No Position Tracking**: Since the combat system doesn't have a grid, advantage and adjacency are passed as parameters
+- **Persistence**: The `SneakAttackUsedThisTurn` flag is saved to character data via `UpdateEquipment` method
+- **Turn Management**: All characters get `StartNewTurn()` called when a new round begins
+
+#### Testing:
+- Comprehensive unit tests for all sneak attack scenarios
+- Tests for eligibility, damage scaling, critical hits, and turn resets
+- All tests passing with proper TDD approach
+
 ### Session Summary - November 16, 2024
 
 **Issue #98: Get My Actions Button Implementation** ✅

@@ -107,6 +107,11 @@ type AttackInput struct {
 	TargetID    string
 	UserID      string // User requesting the attack
 	ActionIndex int    // For monsters with multiple attacks (0 = first action)
+
+	// Combat modifiers (optional - used for abilities like sneak attack)
+	HasAdvantage    bool // Attacker has advantage on this attack
+	HasDisadvantage bool // Attacker has disadvantage on this attack
+	AllyAdjacent    bool // An ally is within 5 feet of the target (for sneak attack)
 }
 
 // AttackResult contains the results of an attack
@@ -128,6 +133,9 @@ type AttackResult struct {
 	DamageRolls []int // Individual damage dice rolls
 	DamageBonus int
 
+	// Sneak attack information
+	SneakAttackDamage int
+	SneakAttackDice   int // Number of d6s rolled
 	// Weapon damage dice info (for proper display)
 	WeaponDiceCount int
 	WeaponDiceSize  int
@@ -624,8 +632,34 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 		}
 	}
 
+	// Track the previous round
+	prevRound := encounter.Round
+
 	// Advance turn
 	encounter.NextTurn()
+
+	// Check if a new round started
+	if encounter.Round > prevRound {
+		// Reset per-turn abilities for all player characters
+		for _, combatant := range encounter.Combatants {
+			if combatant.Type == entities.CombatantTypePlayer && combatant.CharacterID != "" {
+				// Get the character
+				char, err := s.characterService.GetByID(combatant.CharacterID)
+				if err != nil {
+					log.Printf("Failed to get character %s for turn reset: %v", combatant.CharacterID, err)
+					continue
+				}
+
+				// Reset per-turn abilities
+				char.StartNewTurn()
+
+				// Save character to persist the reset
+				if err := s.characterService.UpdateEquipment(char); err != nil {
+					log.Printf("Failed to update character %s after turn reset: %v", combatant.CharacterID, err)
+				}
+			}
+		}
+	}
 
 	// Save changes
 	if err := s.repository.Update(ctx, encounter); err != nil {
@@ -781,6 +815,43 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 				log.Printf("Calculated damage bonus: %d", result.DamageBonus)
 				log.Printf("Critical hit: %v", result.Critical)
 				log.Printf("Weapon dice: %dd%d", result.WeaponDiceCount, result.WeaponDiceSize)
+			}
+
+			// Check for sneak attack
+			if char.Class != nil && char.Class.Key == "rogue" {
+				// Get the weapon used
+				var weapon *entities.Weapon
+				if char.EquippedSlots[entities.SlotMainHand] != nil {
+					if w, ok := char.EquippedSlots[entities.SlotMainHand].(*entities.Weapon); ok {
+						weapon = w
+					}
+				} else if char.EquippedSlots[entities.SlotTwoHanded] != nil {
+					if w, ok := char.EquippedSlots[entities.SlotTwoHanded].(*entities.Weapon); ok {
+						weapon = w
+					}
+				}
+
+				// Check if sneak attack is eligible
+				if weapon != nil && char.CanSneakAttack(weapon, input.HasAdvantage, input.AllyAdjacent, input.HasDisadvantage) {
+					// Create combat context for sneak attack
+					ctx := &entities.CombatContext{
+						AttackResult: attackResult,
+						IsCritical:   result.Critical,
+					}
+
+					// Apply sneak attack damage
+					sneakDamage := char.ApplySneakAttack(ctx)
+					if sneakDamage > 0 {
+						result.SneakAttackDamage = sneakDamage
+						result.SneakAttackDice = char.GetSneakAttackDice()
+						result.Damage += sneakDamage
+
+						// Save character to persist SneakAttackUsedThisTurn flag
+						if err := s.characterService.UpdateEquipment(char); err != nil {
+							log.Printf("Failed to update character after sneak attack: %v", err)
+						}
+					}
+				}
 			}
 		}
 
@@ -958,18 +1029,28 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			}
 		}
 
+		// Add sneak attack to damage description if applicable
+		sneakAttackStr := ""
+		if result.SneakAttackDamage > 0 {
+			diceCount := result.SneakAttackDice
+			if result.Critical {
+				diceCount *= 2
+			}
+			sneakAttackStr = fmt.Sprintf(" + 🗡️ %dd6 Sneak Attack: %d", diceCount, result.SneakAttackDamage)
+		}
+
 		if result.Critical {
-			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | 💥 CRIT! 🩸 **%d** ||d20:**%d**%+d=%d vs AC:%d, dmg:%s||",
+			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | 💥 CRIT! 🩸 **%d** ||d20:**%d**%+d=%d vs AC:%d, dmg:%s%s||",
 				result.AttackerName, result.TargetName,
 				result.Damage,
 				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
-				damageRollStr)
+				damageRollStr, sneakAttackStr)
 		} else {
-			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | HIT 🩸 **%d** ||d20:%d%+d=%d vs AC:%d, dmg:%s||",
+			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | HIT 🩸 **%d** ||d20:%d%+d=%d vs AC:%d, dmg:%s%s||",
 				result.AttackerName, result.TargetName,
 				result.Damage,
 				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
-				damageRollStr)
+				damageRollStr, sneakAttackStr)
 		}
 
 		if result.TargetDefeated {
