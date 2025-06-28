@@ -120,6 +120,24 @@ var ClassFeatures = map[string][]entities.CharacterFeature{
 			Source:      "Cleric",
 		},
 	},
+	"ranger": {
+		{
+			Key:         "favored_enemy",
+			Name:        "Favored Enemy",
+			Description: "You have significant experience studying, tracking, hunting, and even talking to a certain type of enemy. Choose a type of favored enemy: aberrations, beasts, celestials, constructs, dragons, elementals, fey, fiends, giants, monstrosities, oozes, plants, or undead. Alternatively, you can select two races of humanoid (such as gnolls and orcs) as favored enemies. You have advantage on Wisdom (Survival) checks to track your favored enemies, as well as on Intelligence checks to recall information about them.",
+			Type:        entities.FeatureTypeClass,
+			Level:       1,
+			Source:      "Ranger",
+		},
+		{
+			Key:         "natural_explorer",
+			Name:        "Natural Explorer",
+			Description: "You are particularly familiar with one type of natural environment and are adept at traveling and surviving in such regions. Choose one type of favored terrain: arctic, coast, desert, forest, grassland, mountain, swamp, or the Underdark. When traveling for an hour or more in your favored terrain, you gain benefits including: difficult terrain doesn't slow your party's travel, your group can't become lost except by magical means, you remain alert to danger while tracking/foraging/navigating, you can move stealthily at a normal pace when alone, you find food and water for up to 6 people daily, and you can track creatures while moving at a fast pace.",
+			Type:        entities.FeatureTypeClass,
+			Level:       1,
+			Source:      "Ranger",
+		},
+	},
 }
 
 // RacialFeatures defines features for each race
