@@ -278,9 +278,6 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 					}
 					// Add bundle items to the nested choice
 					choiceOpt.BundleItems = bundleItems
-					if len(bundleItems) > 0 {
-						fmt.Printf("DEBUG: Created nested choice %s with bundle items: %v\n", choiceOpt.Key, bundleItems)
-					}
 				} else if len(descriptions) > 0 {
 					choiceOpt.Description = strings.Join(descriptions, ", ")
 				}

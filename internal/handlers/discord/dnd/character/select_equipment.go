@@ -7,6 +7,8 @@ import (
 
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // SelectEquipmentHandler handles individual equipment selection
@@ -123,10 +125,21 @@ func (h *SelectEquipmentHandler) Handle(req *SelectEquipmentRequest) error {
 		// If this is a nested choice with bundle items, enhance the description
 		if strings.HasPrefix(opt.Key, "nested-") && len(opt.BundleItems) > 0 {
 			// Show what's included in the bundle
+			bundleItemNames := []string{}
+			for _, itemKey := range opt.BundleItems {
+				// Try to get a friendly name for the item
+				if itemKey == "shield" {
+					bundleItemNames = append(bundleItemNames, "shield")
+				} else {
+					bundleItemNames = append(bundleItemNames, itemKey)
+				}
+			}
+
+			includesText := fmt.Sprintf("includes %s", strings.Join(bundleItemNames, ", "))
 			if opt.Description != "" {
-				option.Description = opt.Description + " (includes shield)"
+				option.Description = fmt.Sprintf("%s (%s)", opt.Description, includesText)
 			} else {
-				option.Description = "Includes shield"
+				option.Description = cases.Title(language.English).String(includesText)
 			}
 		}
 

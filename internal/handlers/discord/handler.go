@@ -1182,6 +1182,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 					selectionCount := 1
 					category := "martial-weapons"
+					var bundleItems []string
 
 					if resolveErr == nil && choiceIndex < len(choices.EquipmentChoices) {
 						// Find the selected option in the choice
@@ -1192,6 +1193,8 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 								if strings.Contains(opt.Description, "Choose 2") || strings.Contains(opt.Name, "2") || strings.Contains(opt.Name, "two") {
 									selectionCount = 2
 								}
+								// Get bundle items
+								bundleItems = opt.BundleItems
 								// Could also parse category from description if needed
 								break
 							}
@@ -1208,6 +1211,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						BundleKey:      selectedValues[0],
 						SelectionCount: selectionCount,
 						Category:       category,
+						BundleItems:    bundleItems,
 					}
 					if selectNestedErr := h.characterSelectNestedEquipmentHandler.Handle(req); selectNestedErr != nil {
 						log.Printf("Error handling nested equipment selection: %v", selectNestedErr)
