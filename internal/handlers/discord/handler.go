@@ -1332,18 +1332,30 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					// Note: We would need to track equipment selections in the draft character
 					// For now, just use the new selections
 
-					// Update the draft with selected equipment
-					_, updateDraftErr := h.ServiceProvider.CharacterService.UpdateDraftCharacter(
-						context.Background(),
-						draftChar.ID,
-						&characterService.UpdateDraftInput{
-							Equipment: append(existingEquipment, selectedValues...),
-						},
-					)
-					if updateDraftErr != nil {
-						log.Printf("Error updating draft with equipment: %v", updateDraftErr)
+					// Filter out bundle keys - they're not real equipment
+					validEquipment := []string{}
+					for _, value := range selectedValues {
+						if !strings.HasPrefix(value, "bundle-") && !strings.HasPrefix(value, "nested-") {
+							validEquipment = append(validEquipment, value)
+						}
+					}
+
+					// Only update if we have valid equipment keys
+					if len(validEquipment) > 0 {
+						_, updateDraftErr := h.ServiceProvider.CharacterService.UpdateDraftCharacter(
+							context.Background(),
+							draftChar.ID,
+							&characterService.UpdateDraftInput{
+								Equipment: append(existingEquipment, validEquipment...),
+							},
+						)
+						if updateDraftErr != nil {
+							log.Printf("Error updating draft with equipment: %v", updateDraftErr)
+						} else {
+							log.Printf("Successfully updated draft with equipment: %v", validEquipment)
+						}
 					} else {
-						log.Printf("Successfully updated draft with equipment")
+						log.Printf("No valid equipment to add (bundles will be resolved later)")
 					}
 				} else {
 					log.Printf("Error getting draft character: %v", err)
