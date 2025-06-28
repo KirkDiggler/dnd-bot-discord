@@ -185,12 +185,26 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 	targetID := parts[3]
 
 	// Check if this interaction came from an ephemeral message
-	if !isEphemeralInteraction(i) {
-		// Only defer for non-ephemeral messages
+	isEphemeral := isEphemeralInteraction(i)
+
+	if isEphemeral {
+		// For ephemeral messages, defer with ephemeral flag
+		if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Flags: discordgo.MessageFlagsEphemeral,
+			},
+		}); err != nil {
+			log.Printf("Failed to defer ephemeral interaction response: %v", err)
+			return fmt.Errorf("failed to defer ephemeral: %w", err)
+		}
+	} else {
+		// For non-ephemeral messages, defer update
 		if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseDeferredMessageUpdate,
 		}); err != nil {
 			log.Printf("Failed to defer interaction response: %v", err)
+			return fmt.Errorf("failed to defer: %w", err)
 		}
 	}
 
@@ -238,7 +252,7 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 	// Build components based on state
 	components := BuildCombatComponents(encounterID, result)
 
-	if isEphemeralInteraction(i) {
+	if isEphemeral {
 		// For ephemeral interactions, we need to:
 		// 1. Respond to the ephemeral interaction
 		// 2. Update the main shared combat message
@@ -263,47 +277,29 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 		// Add combat end information to ephemeral message
 		attackSummary += getCombatEndMessage(result.CombatEnded, result.PlayersWon)
 
-		resultEmbed := &discordgo.MessageEmbed{
-			Title:       "⚔️ Attack Result",
-			Description: attackSummary,
-			Color:       0x2ecc71, // Green
-			Footer: &discordgo.MessageEmbedFooter{
-				Text: "Click below to return to your action controller",
-			},
+		// Show full combat status in ephemeral response, just like the shared message
+		ephemeralEmbed := BuildCombatStatusEmbed(enc, result.MonsterAttacks)
+
+		// Prepend the attack result to the description
+		if result.PlayerAttack != nil {
+			ephemeralEmbed.Description = attackSummary + "\n\n" + ephemeralEmbed.Description
 		}
 
-		// Button options based on combat state
-		var resultComponents []discordgo.MessageComponent
-		if result.CombatEnded {
-			// Combat ended - no buttons needed in ephemeral message
-			resultComponents = []discordgo.MessageComponent{}
-		} else {
-			// Combat continues - show back to actions
-			resultComponents = []discordgo.MessageComponent{
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.Button{
-							Label:    "Back to Actions",
-							Style:    discordgo.PrimaryButton,
-							CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
-							Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
-						},
-					},
-				},
-			}
-		}
+		// Add combat end information if applicable
+		appendCombatEndMessage(ephemeralEmbed, result.CombatEnded, result.PlayersWon)
+
+		// Use the same components as the shared message
+		// BuildCombatComponents already includes "Get My Actions" button
+		ephemeralComponents := BuildCombatComponents(encounterID, result)
 
 		// Update the ephemeral message with the result
-		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseUpdateMessage,
-			Data: &discordgo.InteractionResponseData{
-				Embeds:     []*discordgo.MessageEmbed{resultEmbed},
-				Components: resultComponents,
-				Flags:      discordgo.MessageFlagsEphemeral,
-			},
+		_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Embeds:     &[]*discordgo.MessageEmbed{ephemeralEmbed},
+			Components: &ephemeralComponents,
 		})
 		if err != nil {
 			log.Printf("Failed to update ephemeral message with result: %v", err)
+			return fmt.Errorf("failed to edit ephemeral: %w", err)
 		}
 
 		// Now update the main shared combat message

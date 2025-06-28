@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/attack"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 )
@@ -68,6 +69,9 @@ type Character struct {
 	// Resources tracks HP, abilities, spell slots, etc
 	Resources *CharacterResources `json:"resources"`
 
+	// EffectManager tracks all active status effects
+	EffectManager *effects.Manager `json:"-"`
+
 	mu sync.Mutex
 }
 
@@ -125,14 +129,20 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 			damageBonus := abilityBonus // Base damage bonus from ability modifier
 
 			// Apply damage bonuses from active effects (e.g., rage)
-			damageBonus = c.applyActiveEffectDamageBonus(damageBonus, "melee")
+			// Use the weapon's actual range type
+			attackType := strings.ToLower(weap.WeaponRange)
+			var err error
+			damageBonus, err = c.applyActiveEffectDamageBonus(damageBonus, attackType)
+			if err != nil {
+				log.Printf("ERROR: Failed to apply active effect damage bonus: %v", err)
+				// Continue with base damage bonus
+			}
 
 			log.Printf("Final attack bonus: +%d (ability: %d, proficiency: %d)", attackBonus, abilityBonus, proficiencyBonus)
 			log.Printf("Final damage bonus: +%d", damageBonus)
 
 			// Roll the attack
 			var attak1 *attack.Result
-			var err error
 			if weap.IsTwoHanded() && weap.TwoHandedDamage != nil {
 				attak1, err = attack.RollAttack(attackBonus, damageBonus, weap.TwoHandedDamage)
 			} else {
@@ -167,7 +177,11 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 
 					offHandAttackBonus := offHandAbilityBonus + offHandProficiencyBonus
 					// Apply damage bonuses from active effects (e.g., rage) to off-hand
-					offHandDamageBonus := c.applyActiveEffectDamageBonus(offHandAbilityBonus, "melee")
+					offHandDamageBonus, err := c.applyActiveEffectDamageBonus(offHandAbilityBonus, "melee")
+					if err != nil {
+						log.Printf("ERROR: Failed to apply active effect damage bonus to off-hand: %v", err)
+						offHandDamageBonus = offHandAbilityBonus // Fall back to base
+					}
 
 					attak2, err := attack.RollAttack(offHandAttackBonus, offHandDamageBonus, offWeap.Damage)
 					if err != nil {
@@ -222,7 +236,14 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 			damageBonus := abilityBonus
 
 			// Apply damage bonuses from active effects (e.g., rage)
-			damageBonus = c.applyActiveEffectDamageBonus(damageBonus, "melee")
+			// Use the weapon's actual range type
+			attackType := strings.ToLower(weap.WeaponRange)
+			var err error
+			damageBonus, err = c.applyActiveEffectDamageBonus(damageBonus, attackType)
+			if err != nil {
+				log.Printf("ERROR: Failed to apply active effect damage bonus: %v", err)
+				// Continue with base damage bonus
+			}
 
 			log.Printf("Final attack bonus: +%d (ability: %d, proficiency: %d)", attackBonus, abilityBonus, proficiencyBonus)
 			log.Printf("Final damage bonus: +%d", damageBonus)
@@ -347,7 +368,11 @@ func (c *Character) improvisedMelee() (*attack.Result, error) {
 	}
 
 	// Apply damage bonuses from active effects (e.g., rage) to improvised attacks
-	damageBonus := c.applyActiveEffectDamageBonus(bonus, "melee")
+	damageBonus, err := c.applyActiveEffectDamageBonus(bonus, "melee")
+	if err != nil {
+		log.Printf("ERROR: Failed to apply active effect damage bonus to improvised: %v", err)
+		damageBonus = bonus // Fall back to base
+	}
 
 	attackRoll, err := dice.Roll(1, 20, 0)
 	if err != nil {
@@ -374,15 +399,35 @@ func (c *Character) improvisedMelee() (*attack.Result, error) {
 }
 
 // applyActiveEffectDamageBonus applies damage bonuses from active effects like rage
-func (c *Character) applyActiveEffectDamageBonus(baseDamage int, damageType string) int {
-	if c.Resources != nil {
-		effectBonus := c.Resources.GetTotalDamageBonus(damageType)
-		if effectBonus > 0 {
-			log.Printf("Applying damage bonus from effects: +%d", effectBonus)
-			return baseDamage + effectBonus
+// Returns the modified damage and any error encountered
+func (c *Character) applyActiveEffectDamageBonus(baseDamage int, damageType string) (int, error) {
+	// Get damage modifiers from the new status effect system
+	conditions := map[string]string{
+		"attack_type": damageType,
+	}
+
+	modifiers := c.getDamageModifiersInternal(conditions)
+	effectBonus := 0
+
+	for _, mod := range modifiers {
+		// Parse modifier value (e.g., "+2", "+3", "+4")
+		if mod.Value != "" && mod.Value[0] == '+' {
+			var parsedBonus int
+			if n, err := fmt.Sscanf(mod.Value, "+%d", &parsedBonus); err == nil && n == 1 {
+				effectBonus += parsedBonus
+			}
 		}
 	}
-	return baseDamage
+
+	baseDamage += effectBonus
+
+	// Also check the old system for backward compatibility
+	if c.Resources != nil {
+		oldEffectBonus := c.Resources.GetTotalDamageBonus(damageType)
+		baseDamage += oldEffectBonus
+	}
+
+	return baseDamage, nil
 }
 
 func (c *Character) getEquipment(key string) Equipment {
@@ -616,6 +661,17 @@ func (c *Character) initializeClassAbilities() {
 		// Monk abilities like Flurry of Blows will come with Ki points later
 	case "rogue":
 		// Sneak Attack is passive, doesn't use resources
+	case "ranger":
+		// Rangers get passive features that we'll add as permanent status effects
+		// For now, we'll add a default favored enemy effect
+		// TODO: Allow player to choose favored enemy type during character creation
+		favoredEnemyEffect := effects.BuildFavoredEnemyEffect("orc") // Default to orc for now
+		if err := c.addStatusEffectInternal(favoredEnemyEffect); err == nil {
+			log.Printf("Added Favored Enemy effect for ranger")
+		}
+
+		// Natural Explorer is also passive but doesn't have mechanical effects yet
+		// TODO: Implement Natural Explorer when terrain tracking is added
 	}
 }
 
@@ -1147,4 +1203,220 @@ func (c *Character) RollSkillCheck(skillKey string, attribute Attribute) (*dice.
 	}
 
 	return result, result.Total, nil
+}
+
+// GetEffectManager returns the character's effect manager, initializing it if needed
+func (c *Character) GetEffectManager() *effects.Manager {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.getEffectManagerInternal()
+}
+
+// getEffectManagerInternal returns the effect manager without locking (caller must hold lock)
+func (c *Character) getEffectManagerInternal() *effects.Manager {
+	if c.EffectManager == nil {
+		c.EffectManager = effects.NewManager()
+		// Restore effects from persisted data
+		c.syncResourcestoEffectManager()
+	}
+	return c.EffectManager
+}
+
+// syncResourcestoEffectManager restores EffectManager from persisted ActiveEffects
+func (c *Character) syncResourcestoEffectManager() {
+	if c.Resources == nil || c.Resources.ActiveEffects == nil {
+		return
+	}
+
+	// Convert old ActiveEffect format back to new StatusEffect format
+	for _, oldEffect := range c.Resources.ActiveEffects {
+		if oldEffect == nil {
+			continue
+		}
+
+		// Create new status effect
+		newEffect := &effects.StatusEffect{
+			ID:          oldEffect.ID,
+			Name:        oldEffect.Name,
+			Description: oldEffect.Description,
+			Source:      effects.EffectSource(oldEffect.Source),
+			SourceID:    oldEffect.SourceID,
+			Duration: effects.Duration{
+				Rounds: oldEffect.Duration,
+			},
+			Modifiers:  []effects.Modifier{}, // TODO: Convert modifiers if needed
+			Conditions: []effects.Condition{},
+			Active:     true,
+		}
+
+		// Set duration type
+		switch oldEffect.DurationType {
+		case DurationTypePermanent:
+			newEffect.Duration.Type = effects.DurationPermanent
+		case DurationTypeRounds:
+			newEffect.Duration.Type = effects.DurationRounds
+		case DurationTypeUntilRest:
+			newEffect.Duration.Type = effects.DurationUntilRest
+		default:
+			newEffect.Duration.Type = effects.DurationPermanent
+		}
+
+		// For well-known effects, rebuild them properly
+		if oldEffect.Name == "Rage" && oldEffect.Source == string(effects.SourceAbility) {
+			// Rebuild rage effect with proper modifiers
+			rageEffect := effects.BuildRageEffect(c.Level)
+			rageEffect.ID = oldEffect.ID // Keep the same ID
+			_ = c.EffectManager.AddEffect(rageEffect)
+		} else if oldEffect.Name == "Favored Enemy" && oldEffect.Source == string(effects.SourceFeature) {
+			// Rebuild favored enemy effect
+			favoredEnemyEffect := effects.BuildFavoredEnemyEffect("orc") // TODO: Store enemy type
+			favoredEnemyEffect.ID = oldEffect.ID
+			_ = c.EffectManager.AddEffect(favoredEnemyEffect)
+		} else {
+			// Add generic effect
+			_ = c.EffectManager.AddEffect(newEffect)
+		}
+	}
+}
+
+// AddStatusEffect adds a new status effect to the character
+func (c *Character) AddStatusEffect(effect *effects.StatusEffect) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.addStatusEffectInternal(effect)
+}
+
+// addStatusEffectInternal adds a status effect without locking (caller must hold lock)
+func (c *Character) addStatusEffectInternal(effect *effects.StatusEffect) error {
+	err := c.getEffectManagerInternal().AddEffect(effect)
+	if err != nil {
+		return err
+	}
+
+	// Also sync to the persisted ActiveEffects for backward compatibility
+	c.syncEffectManagerToResources()
+	return nil
+}
+
+// syncEffectManagerToResources syncs EffectManager to the persisted ActiveEffects
+func (c *Character) syncEffectManagerToResources() {
+	if c.EffectManager == nil || c.Resources == nil {
+		return
+	}
+
+	// Get active effects from manager
+	activeEffects := c.EffectManager.GetActiveEffects()
+
+	// Clear old active effects
+	c.Resources.ActiveEffects = []*ActiveEffect{}
+
+	// Convert new status effects to old ActiveEffect format for persistence
+	for _, effect := range activeEffects {
+		if effect == nil {
+			continue
+		}
+
+		// Convert to old format (simplified for now)
+		oldEffect := &ActiveEffect{
+			ID:           effect.ID,
+			Name:         effect.Name,
+			Description:  effect.Description,
+			Source:       string(effect.Source),
+			SourceID:     effect.SourceID,
+			Duration:     effect.Duration.Rounds,
+			DurationType: DurationTypeRounds, // Simplified
+			Modifiers:    []Modifier{},       // TODO: Convert modifiers if needed
+		}
+
+		// Set duration type based on new system
+		switch effect.Duration.Type {
+		case effects.DurationPermanent:
+			oldEffect.DurationType = DurationTypePermanent
+		case effects.DurationRounds:
+			oldEffect.DurationType = DurationTypeRounds
+		case effects.DurationInstant:
+			oldEffect.DurationType = DurationTypeRounds // Instant effects map to rounds
+		case effects.DurationWhileEquipped:
+			oldEffect.DurationType = DurationTypePermanent
+		case effects.DurationUntilRest:
+			oldEffect.DurationType = DurationTypeUntilRest
+		}
+
+		c.Resources.ActiveEffects = append(c.Resources.ActiveEffects, oldEffect)
+	}
+}
+
+// RemoveStatusEffect removes a status effect by ID
+func (c *Character) RemoveStatusEffect(effectID string) {
+	c.GetEffectManager().RemoveEffect(effectID)
+}
+
+// GetActiveStatusEffects returns all active status effects
+func (c *Character) GetActiveStatusEffects() []*effects.StatusEffect {
+	return c.GetEffectManager().GetActiveEffects()
+}
+
+// GetAttackModifiers returns all modifiers that apply to attack rolls
+func (c *Character) GetAttackModifiers(conditions map[string]string) []effects.Modifier {
+	return c.GetEffectManager().GetModifiers(effects.TargetAttackRoll, conditions)
+}
+
+// GetDamageModifiers returns all modifiers that apply to damage rolls
+func (c *Character) GetDamageModifiers(conditions map[string]string) []effects.Modifier {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.getDamageModifiersInternal(conditions)
+}
+
+// getDamageModifiersInternal returns damage modifiers without locking (caller must hold lock)
+func (c *Character) getDamageModifiersInternal(conditions map[string]string) []effects.Modifier {
+	return c.getEffectManagerInternal().GetModifiers(effects.TargetDamage, conditions)
+}
+
+// ApplyDamageResistance applies resistance/vulnerability/immunity from status effects
+func (c *Character) ApplyDamageResistance(damageType damage.Type, amount int) int {
+	conditions := map[string]string{
+		"damage_type": string(damageType),
+	}
+
+	// Check for immunities
+	immunities := c.GetEffectManager().GetModifiers(effects.TargetImmunity, conditions)
+	for _, mod := range immunities {
+		if mod.DamageType == string(damageType) {
+			return 0 // Immune to this damage type
+		}
+	}
+
+	// Check for resistances
+	resistances := c.GetEffectManager().GetModifiers(effects.TargetResistance, conditions)
+	hasResistance := false
+	for _, mod := range resistances {
+		if mod.DamageType == string(damageType) {
+			hasResistance = true
+			break
+		}
+	}
+
+	// Check for vulnerabilities
+	vulnerabilities := c.GetEffectManager().GetModifiers(effects.TargetVulnerability, conditions)
+	hasVulnerability := false
+	for _, mod := range vulnerabilities {
+		if mod.DamageType == string(damageType) {
+			hasVulnerability = true
+			break
+		}
+	}
+
+	// Apply modifiers
+	if hasVulnerability {
+		amount *= 2
+	}
+	if hasResistance {
+		amount /= 2
+	}
+
+	return amount
 }

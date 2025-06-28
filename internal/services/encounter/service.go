@@ -11,6 +11,7 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/interfaces"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
@@ -960,7 +961,65 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 	// Apply damage if hit
 	if result.Hit && result.Damage > 0 {
 		// Use the ApplyDamage method which handles defeat and combat end detection
-		target.ApplyDamage(result.Damage)
+		// Apply damage with resistance check if target is a player character
+		finalDamage := result.Damage
+		if target.Type == entities.CombatantTypePlayer && target.CharacterID != "" {
+			// Get the character to check for resistances
+			if targetChar, err := s.characterService.GetByID(target.CharacterID); err == nil {
+				// Apply resistance/vulnerability/immunity
+				damageType := damage.TypeSlashing // Default for weapons
+				if result.DamageType != "" {
+					// Convert damage type string to damage.Type
+					switch strings.ToLower(result.DamageType) {
+					case "bludgeoning":
+						damageType = damage.TypeBludgeoning
+					case "piercing":
+						damageType = damage.TypePiercing
+					case "slashing":
+						damageType = damage.TypeSlashing
+					case "fire":
+						damageType = damage.TypeFire
+					case "cold":
+						damageType = damage.TypeCold
+					case "lightning":
+						damageType = damage.TypeLightning
+					case "thunder":
+						damageType = damage.TypeThunder
+					case "acid":
+						damageType = damage.TypeAcid
+					case "poison":
+						damageType = damage.TypePoison
+					case "necrotic":
+						damageType = damage.TypeNecrotic
+					case "radiant":
+						damageType = damage.TypeRadiant
+					case "psychic":
+						damageType = damage.TypePsychic
+					case "force":
+						damageType = damage.TypeForce
+					}
+				}
+
+				originalDamage := finalDamage
+				finalDamage = targetChar.ApplyDamageResistance(damageType, finalDamage)
+				if finalDamage != originalDamage {
+					log.Printf("Damage modified by resistance/vulnerability: %d -> %d", originalDamage, finalDamage)
+					// Add to combat log
+					if finalDamage < originalDamage {
+						encounter.CombatLog = append(encounter.CombatLog, fmt.Sprintf("%s's resistance reduces damage from %d to %d", target.Name, originalDamage, finalDamage))
+					} else if finalDamage > originalDamage {
+						encounter.CombatLog = append(encounter.CombatLog, fmt.Sprintf("%s's vulnerability increases damage from %d to %d", target.Name, originalDamage, finalDamage))
+					}
+				}
+			}
+		}
+
+		// Update the result damage to reflect the actual damage dealt
+		if finalDamage != result.Damage {
+			result.Damage = finalDamage
+		}
+
+		target.ApplyDamage(finalDamage)
 		result.TargetNewHP = target.CurrentHP
 		result.TargetDefeated = target.CurrentHP == 0
 
@@ -1064,7 +1123,7 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 }
 
 // ApplyDamage applies damage to a combatant
-func (s *service) ApplyDamage(ctx context.Context, encounterID, combatantID, userID string, damage int) error {
+func (s *service) ApplyDamage(ctx context.Context, encounterID, combatantID, userID string, damageAmount int) error {
 	// Get encounter
 	encounter, err := s.repository.Get(ctx, encounterID)
 	if err != nil {
@@ -1093,16 +1152,16 @@ func (s *service) ApplyDamage(ctx context.Context, encounterID, combatantID, use
 	}
 
 	// Apply damage
-	combatant.ApplyDamage(damage)
+	combatant.ApplyDamage(damageAmount)
 
 	// Add to combat log if damage was dealt
-	if damage > 0 {
+	if damageAmount > 0 {
 		// Find attacker name (could be current turn or explicit)
 		attackerName := "Unknown"
 		if current := encounter.GetCurrentCombatant(); current != nil {
 			attackerName = current.Name
 		}
-		encounter.AddCombatLogEntry(fmt.Sprintf("%s hit %s for %d damage", attackerName, combatant.Name, damage))
+		encounter.AddCombatLogEntry(fmt.Sprintf("%s hit %s for %d damage", attackerName, combatant.Name, damageAmount))
 
 		if combatant.CurrentHP == 0 {
 			encounter.AddCombatLogEntry(fmt.Sprintf("%s was defeated!", combatant.Name))

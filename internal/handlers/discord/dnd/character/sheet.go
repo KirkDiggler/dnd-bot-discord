@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/utils"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
@@ -101,6 +102,9 @@ func BuildCharacterSheetEmbed(char *entities.Character) *discordgo.MessageEmbed 
 	// Build features summary
 	featureLines := buildFeatureSummary(char)
 
+	// Build active effects summary
+	effectLines := buildActiveEffectsDisplay(char)
+
 	embed := &discordgo.MessageEmbed{
 		Title:       title,
 		Description: hpAcLine,
@@ -124,6 +128,11 @@ func BuildCharacterSheetEmbed(char *entities.Character) *discordgo.MessageEmbed 
 			{
 				Name:   "✨ Features",
 				Value:  strings.Join(featureLines, "\n"),
+				Inline: false,
+			},
+			{
+				Name:   "🔮 Active Effects",
+				Value:  strings.Join(effectLines, "\n"),
 				Inline: false,
 			},
 		},
@@ -300,6 +309,117 @@ func buildFeatureSummary(char *entities.Character) []string {
 		for _, feat := range otherFeatures {
 			lines = append(lines, fmt.Sprintf("• %s", feat.Name))
 		}
+	}
+
+	return lines
+}
+
+// buildActiveEffectsDisplay builds the active effects section
+func buildActiveEffectsDisplay(char *entities.Character) []string {
+	lines := []string{}
+
+	// Get active status effects
+	activeEffects := char.GetActiveStatusEffects()
+
+	if len(activeEffects) == 0 {
+		lines = append(lines, "*No active effects*")
+		return lines
+	}
+
+	// Group effects by source
+	abilityEffects := []string{}
+	spellEffects := []string{}
+	featureEffects := []string{}
+	itemEffects := []string{}
+	conditionEffects := []string{}
+
+	for _, effect := range activeEffects {
+		if effect == nil {
+			continue
+		}
+
+		// Format duration
+		durationStr := ""
+		switch effect.Duration.Type {
+		case effects.DurationPermanent:
+			durationStr = "permanent"
+		case effects.DurationRounds:
+			durationStr = fmt.Sprintf("%d rounds", effect.Duration.Rounds)
+		case effects.DurationInstant:
+			durationStr = "instant"
+		case effects.DurationWhileEquipped:
+			durationStr = "while equipped"
+		case effects.DurationUntilRest:
+			durationStr = "until rest"
+		}
+
+		if effect.Duration.Concentration {
+			if durationStr != "" {
+				durationStr += ", concentration"
+			} else {
+				durationStr = "concentration"
+			}
+		}
+
+		effectDisplay := fmt.Sprintf("• **%s**", effect.Name)
+		if durationStr != "" && durationStr != "permanent" {
+			effectDisplay += fmt.Sprintf(" (%s)", durationStr)
+		}
+
+		// Group by source type
+		switch effect.Source {
+		case effects.SourceAbility:
+			abilityEffects = append(abilityEffects, effectDisplay)
+		case effects.SourceSpell:
+			spellEffects = append(spellEffects, effectDisplay)
+		case effects.SourceFeature:
+			featureEffects = append(featureEffects, effectDisplay)
+		case effects.SourceItem:
+			itemEffects = append(itemEffects, effectDisplay)
+		case effects.SourceCondition:
+			conditionEffects = append(conditionEffects, effectDisplay)
+		default:
+			// Default to features for unknown sources
+			featureEffects = append(featureEffects, effectDisplay)
+		}
+	}
+
+	// Add grouped effects
+	if len(abilityEffects) > 0 {
+		lines = append(lines, "**Abilities:**")
+		lines = append(lines, abilityEffects...)
+	}
+
+	if len(spellEffects) > 0 {
+		if len(lines) > 0 {
+			lines = append(lines, "")
+		}
+		lines = append(lines, "**Spells:**")
+		lines = append(lines, spellEffects...)
+	}
+
+	if len(featureEffects) > 0 {
+		if len(lines) > 0 {
+			lines = append(lines, "")
+		}
+		lines = append(lines, "**Features:**")
+		lines = append(lines, featureEffects...)
+	}
+
+	if len(itemEffects) > 0 {
+		if len(lines) > 0 {
+			lines = append(lines, "")
+		}
+		lines = append(lines, "**Items:**")
+		lines = append(lines, itemEffects...)
+	}
+
+	if len(conditionEffects) > 0 {
+		if len(lines) > 0 {
+			lines = append(lines, "")
+		}
+		lines = append(lines, "**Conditions:**")
+		lines = append(lines, conditionEffects...)
 	}
 
 	return lines

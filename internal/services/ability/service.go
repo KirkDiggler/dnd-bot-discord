@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/interfaces"
@@ -134,45 +135,44 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 
 // handleRage handles the Barbarian's Rage ability
 func (s *service) handleRage(character *entities.Character, ability *entities.ActiveAbility, result *UseAbilityResult) *UseAbilityResult {
-	// Create rage effect
-	resources := character.GetResources()
-	effect := &entities.ActiveEffect{
-		ID:           fmt.Sprintf("rage_%s", character.ID),
-		Name:         "Rage",
-		Description:  "Advantage on Strength checks and saves, resistance to physical damage, +2 melee damage",
-		Source:       "barbarian-rage",
-		SourceID:     character.ID,
-		Duration:     10, // 10 rounds
-		DurationType: entities.DurationTypeRounds,
-		Modifiers: []entities.Modifier{
-			{
-				Type:        entities.ModifierTypeDamageBonus,
-				Value:       2,
-				DamageTypes: []string{"melee"},
-			},
-			{
-				Type:        entities.ModifierTypeDamageResistance,
-				DamageTypes: []string{"bludgeoning", "piercing", "slashing"},
-			},
-		},
+	// Create rage effect using the new status effect system
+	rageEffect := effects.BuildRageEffect(character.Level)
+
+	// Add the effect to the character
+	err := character.AddStatusEffect(rageEffect)
+	if err != nil {
+		log.Printf("Failed to add rage effect: %v", err)
+		result.Success = false
+		result.Message = "Failed to enter rage"
+		// Restore the use since we didn't actually use it
+		ability.UsesRemaining++
+		return result
 	}
 
-	resources.AddEffect(effect)
+	// Mark ability as active
 	ability.IsActive = true
 	ability.Duration = 10
 
 	log.Printf("=== RAGE ACTIVATION DEBUG ===")
 	log.Printf("Character: %s", character.Name)
-	log.Printf("Effect added: %s (ID: %s)", effect.Name, effect.ID)
-	log.Printf("Active effects after adding rage: %d", len(resources.ActiveEffects))
+	log.Printf("Effect added: %s (ID: %s)", rageEffect.Name, rageEffect.ID)
+	log.Printf("Active effects after adding rage: %d", len(character.GetActiveStatusEffects()))
 	log.Printf("Rage uses remaining: %d/%d", ability.UsesRemaining, ability.UsesMax)
 	log.Printf("Rage is active: %v", ability.IsActive)
 
-	result.Message = "You enter a rage! +2 damage to melee attacks, resistance to physical damage"
+	// Calculate damage bonus based on level
+	damageBonus := "+2"
+	if character.Level >= 16 {
+		damageBonus = "+4"
+	} else if character.Level >= 9 {
+		damageBonus = "+3"
+	}
+
+	result.Message = fmt.Sprintf("You enter a rage! %s damage to melee attacks, resistance to physical damage", damageBonus)
 	result.EffectApplied = true
-	result.EffectID = effect.ID
-	result.EffectName = effect.Name
-	result.Duration = effect.Duration
+	result.EffectID = rageEffect.ID
+	result.EffectName = rageEffect.Name
+	result.Duration = rageEffect.Duration.Rounds
 
 	return result
 }

@@ -4021,6 +4021,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 
 				// Use the new service method to handle the complete attack sequence
+				log.Printf("About to execute attack with target: %s", targetID)
 				attackResult, err := h.ServiceProvider.EncounterService.ExecuteAttackWithTarget(
 					context.Background(),
 					&encounter.ExecuteAttackInput{
@@ -4167,12 +4168,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					},
 				}
 
+				log.Printf("About to edit interaction response with attack results")
 				_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
 					Embeds:     &[]*discordgo.MessageEmbed{embed},
 					Components: &components,
 				})
 				if err != nil {
 					log.Printf("Error showing attack result: %v", err)
+				} else {
+					log.Printf("Successfully edited interaction response")
 				}
 			default:
 				log.Printf("Unknown encounter action: %s", action)

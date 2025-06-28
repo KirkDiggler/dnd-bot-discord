@@ -39,7 +39,6 @@ func TestAbilityService_UseAbility(t *testing.T) {
 				UsesRemaining: 1, // Started with 2, used 1
 				Message:       "You enter a rage! +2 damage to melee attacks, resistance to physical damage",
 				EffectApplied: true,
-				EffectID:      "rage_char_123",
 				EffectName:    "Rage",
 				Duration:      10,
 			},
@@ -49,11 +48,15 @@ func TestAbilityService_UseAbility(t *testing.T) {
 				assert.True(t, rage.IsActive)
 				assert.Equal(t, 10, rage.Duration)
 
-				// Check effect was added
-				assert.Len(t, char.Resources.ActiveEffects, 1)
-				effect := char.Resources.ActiveEffects[0]
+				// Check effect was added using the new status effect system
+				activeEffects := char.GetActiveStatusEffects()
+				assert.Len(t, activeEffects, 1)
+				effect := activeEffects[0]
 				assert.Equal(t, "Rage", effect.Name)
-				assert.Equal(t, 10, effect.Duration)
+				assert.Equal(t, 10, effect.Duration.Rounds)
+
+				// Verify the rage effect ID format
+				assert.Contains(t, effect.ID, "Rage_")
 			},
 		},
 		{
@@ -222,6 +225,11 @@ func TestAbilityService_UseAbility(t *testing.T) {
 			assert.Equal(t, tt.wantResult.TargetNewHP, result.TargetNewHP)
 			assert.Equal(t, tt.wantResult.EffectApplied, result.EffectApplied)
 			assert.Equal(t, tt.wantResult.Duration, result.Duration)
+
+			// For rage, check that EffectID contains "Rage_"
+			if tt.input.AbilityKey == "rage" && result.EffectID != "" {
+				assert.Contains(t, result.EffectID, "Rage_")
+			}
 
 			if tt.validateChar != nil {
 				tt.validateChar(t, tt.character)
