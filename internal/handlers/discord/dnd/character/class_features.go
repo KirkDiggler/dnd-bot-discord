@@ -146,6 +146,17 @@ func (h *ClassFeaturesHandler) ShowFavoredEnemySelection(req *InteractionRequest
 		},
 	}
 
+	// Add progress field
+	classKey := ""
+	if char.Class != nil {
+		classKey = char.Class.Key
+	}
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+		Name:   "Progress",
+		Value:  BuildProgressValue(classKey, "class_features"),
+		Inline: false,
+	})
+
 	// Create components
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
@@ -159,12 +170,15 @@ func (h *ClassFeaturesHandler) ShowFavoredEnemySelection(req *InteractionRequest
 		},
 	}
 
-	// Update the interaction
-	_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
-		Embeds:     &[]*discordgo.MessageEmbed{embed},
-		Components: &components,
+	// Update the interaction response
+	return req.Session.InteractionRespond(req.Interaction.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Embeds:     []*discordgo.MessageEmbed{embed},
+			Components: components,
+			Flags:      discordgo.MessageFlagsEphemeral,
+		},
 	})
-	return err
 }
 
 // ShowNaturalExplorerSelection displays the natural explorer terrain selection UI
@@ -201,6 +215,17 @@ func (h *ClassFeaturesHandler) ShowNaturalExplorerSelection(req *InteractionRequ
 		},
 	}
 
+	// Add progress field
+	classKey := ""
+	if char.Class != nil {
+		classKey = char.Class.Key
+	}
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+		Name:   "Progress",
+		Value:  BuildProgressValue(classKey, "class_features"),
+		Inline: false,
+	})
+
 	// Create components
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
@@ -214,12 +239,15 @@ func (h *ClassFeaturesHandler) ShowNaturalExplorerSelection(req *InteractionRequ
 		},
 	}
 
-	// Update the interaction
-	_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
-		Embeds:     &[]*discordgo.MessageEmbed{embed},
-		Components: &components,
+	// Update the interaction response
+	return req.Session.InteractionRespond(req.Interaction.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Embeds:     []*discordgo.MessageEmbed{embed},
+			Components: components,
+			Flags:      discordgo.MessageFlagsEphemeral,
+		},
 	})
-	return err
 }
 
 // ShouldShowClassFeatures checks if a character needs to select class features
