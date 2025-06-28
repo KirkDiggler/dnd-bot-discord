@@ -733,6 +733,8 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 			equipment, err := s.dndClient.GetEquipment(equipKey)
 			if err == nil && equipment != nil {
 				char.AddInventory(equipment)
+			} else if err != nil {
+				log.Printf("Failed to get equipment '%s': %v", equipKey, err)
 			}
 		}
 
