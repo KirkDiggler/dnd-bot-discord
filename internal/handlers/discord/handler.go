@@ -907,17 +907,49 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					i.GuildID,
 				)
 
-				// If we already have ability scores, skip parsing and go straight to proficiencies
+				// If we already have ability scores, check if we need class feature selections
 				if err == nil && draftChar.Attributes != nil && len(draftChar.Attributes) == 6 {
-					log.Printf("Ability scores already saved, moving to proficiencies")
-					req := &character.ProficiencyChoicesRequest{
-						Session:     s,
-						Interaction: i,
-						RaceKey:     parts[2],
-						ClassKey:    parts[3],
+					log.Printf("Ability scores already saved, checking for class feature requirements")
+
+					// Check if this class needs feature selections (e.g., ranger)
+					classKey := parts[3]
+					needsFeatureSelection := false
+
+					// For rangers, check if they need to select favored enemy or natural explorer
+					if classKey == "ranger" {
+						// Check if ranger features are already selected
+						hasSelectedFeatures := false
+						for _, feature := range draftChar.Features {
+							if feature.Key == "favored_enemy" && feature.Metadata != nil && feature.Metadata["enemy_type"] != nil {
+								hasSelectedFeatures = true
+								break
+							}
+						}
+						needsFeatureSelection = !hasSelectedFeatures
 					}
-					if err := h.characterProficiencyChoicesHandler.Handle(req); err != nil {
-						log.Printf("Error handling confirm abilities: %v", err)
+					// Add other classes with level 1 choices here (cleric, warlock, etc.)
+
+					if needsFeatureSelection {
+						// Show class feature selection
+						req := &character.InteractionRequest{
+							Session:     s,
+							Interaction: i,
+							CharacterID: draftChar.ID,
+						}
+						if err := h.characterClassFeaturesHandler.ShowFavoredEnemySelection(req); err != nil {
+							log.Printf("Error showing class features: %v", err)
+						}
+					} else {
+						// Move to proficiency choices
+						req := &character.ProficiencyChoicesRequest{
+							Session:     s,
+							Interaction: i,
+							RaceKey:     parts[2],
+							ClassKey:    parts[3],
+						}
+						if err := h.characterProficiencyChoicesHandler.Handle(req); err != nil {
+							log.Printf("Error handling confirm abilities: %v", err)
+						}
 					}
 					return
 				}
@@ -976,56 +1008,61 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							log.Printf("Error updating draft with ability scores: %v", err)
 						} else {
 							log.Printf("Successfully updated draft with ability scores and race/class")
+
+							// Get the updated character to check for feature requirements
+							updatedChar, updateErr := h.ServiceProvider.CharacterService.GetOrCreateDraftCharacter(
+								context.Background(),
+								i.Member.User.ID,
+								i.GuildID,
+							)
+							if updateErr == nil {
+								// Check if this class needs feature selections (e.g., ranger)
+								classKey := parts[3]
+								needsFeatureSelection := false
+
+								// For rangers, check if they need to select favored enemy or natural explorer
+								if classKey == "ranger" {
+									// Check if ranger features are already selected
+									hasSelectedFeatures := false
+									for _, feature := range updatedChar.Features {
+										if feature.Key == "favored_enemy" && feature.Metadata != nil && feature.Metadata["enemy_type"] != nil {
+											hasSelectedFeatures = true
+											break
+										}
+									}
+									needsFeatureSelection = !hasSelectedFeatures
+								}
+								// Add other classes with level 1 choices here (cleric, warlock, etc.)
+
+								if needsFeatureSelection {
+									// Show class feature selection
+									req := &character.InteractionRequest{
+										Session:     s,
+										Interaction: i,
+										CharacterID: updatedChar.ID,
+									}
+									if featErr := h.characterClassFeaturesHandler.ShowFavoredEnemySelection(req); featErr != nil {
+										log.Printf("Error showing class features: %v", featErr)
+									}
+								} else {
+									// Move to proficiency choices
+									req := &character.ProficiencyChoicesRequest{
+										Session:     s,
+										Interaction: i,
+										RaceKey:     parts[2],
+										ClassKey:    parts[3],
+									}
+									if profErr := h.characterProficiencyChoicesHandler.Handle(req); profErr != nil {
+										log.Printf("Error handling proficiency choices: %v", profErr)
+									}
+								}
+							}
 						}
 					} else {
 						log.Printf("Error getting draft character: %v", err)
 					}
 				} else {
 					log.Printf("Warning: Only parsed %d ability scores, expected 6", len(abilityScores))
-				}
-
-				// Check if this class needs feature selections (e.g., ranger)
-				classKey := parts[3]
-				needsFeatureSelection := false
-
-				// Get the character to check if they need class feature selections
-				if draftChar != nil {
-					// For rangers, check if they need to select favored enemy or natural explorer
-					if classKey == "ranger" {
-						// Check if ranger features are already selected
-						hasSelectedFeatures := false
-						for _, feature := range draftChar.Features {
-							if feature.Key == "favored_enemy" && feature.Metadata != nil && feature.Metadata["enemy_type"] != nil {
-								hasSelectedFeatures = true
-								break
-							}
-						}
-						needsFeatureSelection = !hasSelectedFeatures
-					}
-					// Add other classes with level 1 choices here (cleric, warlock, etc.)
-				}
-
-				if needsFeatureSelection {
-					// Show class feature selection
-					req := &character.InteractionRequest{
-						Session:     s,
-						Interaction: i,
-						CharacterID: draftChar.ID,
-					}
-					if err := h.characterClassFeaturesHandler.ShowFavoredEnemySelection(req); err != nil {
-						log.Printf("Error showing class features: %v", err)
-					}
-				} else {
-					// Move to proficiency choices
-					req := &character.ProficiencyChoicesRequest{
-						Session:     s,
-						Interaction: i,
-						RaceKey:     parts[2],
-						ClassKey:    parts[3],
-					}
-					if err := h.characterProficiencyChoicesHandler.Handle(req); err != nil {
-						log.Printf("Error handling confirm abilities: %v", err)
-					}
 				}
 			}
 		case "select_proficiencies":
