@@ -425,6 +425,47 @@ The interactive character sheet aims to provide a rich, real-time D&D experience
 - **Turn Order Sync**: May need additional testing with 3+ players
 - **Button Limits**: Discord's 25-button limit may affect future action additions
 
+### Rage Ability Implementation (PR #134) - June 28, 2025
+
+**Branch**: `implement-rage-damage-bonus`
+**Status**: Implementation complete, persistence fixed
+
+#### What Was Implemented:
+1. **Rage Ability System**:
+   - Toggle ability with 10-round duration
+   - Limited uses per long rest (based on barbarian level)
+   - Automatically deactivates after duration expires
+   - Activated as a bonus action
+
+2. **Rage Effects**:
+   - +2 damage bonus to all melee weapon attacks
+   - Resistance to physical damage (bludgeoning, piercing, slashing)
+   - Effects tracked in `CharacterResources.ActiveEffects`
+   - Proper integration with attack calculations
+
+3. **Persistence Fix**:
+   - Added `Resources` field to `CharacterData` struct in redis.go
+   - Updated `toCharacterData()` method to include Resources (line 488)
+   - Updated `fromCharacterData()` method to restore Resources (line 541)
+   - Rage state now persists across bot restarts
+
+4. **Combat Integration**:
+   - Attack messages show "(includes effects)" when rage bonus applies
+   - Damage calculations properly include rage bonus for all melee attacks
+   - Works with main hand, off-hand, two-handed, and improvised weapons
+
+#### Key Files Modified:
+- `internal/repositories/characters/redis.go` - Fixed persistence layer
+- `internal/entities/character.go` - Attack() method uses active effects
+- `internal/entities/active_ability.go` - Rage ability definition
+- `internal/services/ability_service.go` - Rage activation logic
+
+#### Testing:
+- Rage properly activates and adds damage bonus
+- State persists to Redis and survives bot restarts
+- Effects expire after 10 rounds as expected
+- Build passes all tests with `make build`
+
 ### Contact
 - GitHub Issues: https://github.com/KirkDiggler/dnd-bot-discord/issues
 - GitHub Project: https://github.com/users/KirkDiggler/projects/6
