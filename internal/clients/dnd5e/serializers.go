@@ -179,7 +179,7 @@ func apiWeaponToWeapon(input *apiEntities.Weapon) *entities.Weapon {
 			Weight: input.Weight,
 			Cost:   apiCostToCost(input.Cost),
 		},
-		WeaponCategory:  input.WeaponCategory,
+		WeaponCategory:  strings.ToLower(input.WeaponCategory), // Normalize to lowercase
 		WeaponRange:     input.WeaponRange,
 		CategoryRange:   input.CategoryRange,
 		Properties:      apiReferenceItemsToReferenceItems(input.Properties),

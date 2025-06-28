@@ -393,7 +393,7 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 	}
 
 	// Log character details
-	log.Printf("AddPlayer - Retrieved character: ID=%s, Name=%s, OwnerID=%s", character.ID, character.Name, character.OwnerID)
+	// Character retrieved successfully
 
 	// Ensure resources are initialized (lazy initialization)
 	resources := character.GetResources()
@@ -404,12 +404,12 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 		session, err := s.sessionService.GetSession(ctx, encounter.SessionID)
 		if err == nil && session.Metadata != nil {
 			if sessionType, ok := session.Metadata["sessionType"].(string); ok && sessionType == "dungeon" {
-				log.Printf("AddPlayer - Dungeon session detected, performing long rest for %s", character.Name)
+				// Dungeon session detected, performing long rest
 				resources.LongRest()
 
 				// Save the character to persist the reset abilities
 				if err := s.characterService.UpdateEquipment(character); err != nil {
-					log.Printf("AddPlayer - Warning: failed to save character after long rest: %v", err)
+					log.Printf("Failed to save character after long rest: %v", err)
 					// Continue anyway - the abilities are reset in memory
 				}
 			}
@@ -664,7 +664,7 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 				// Get the character
 				char, err := s.characterService.GetByID(combatant.CharacterID)
 				if err != nil {
-					log.Printf("Failed to get character %s for turn reset: %v", combatant.CharacterID, err)
+					// Failed to get character for turn reset - continue anyway
 					continue
 				}
 
@@ -673,7 +673,7 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 
 				// Save character to persist the reset
 				if err := s.characterService.UpdateEquipment(char); err != nil {
-					log.Printf("Failed to update character %s after turn reset: %v", combatant.CharacterID, err)
+					log.Printf("Failed to update character %s after turn reset: %v", char.ID, err)
 				}
 			}
 		}
@@ -753,25 +753,7 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			return nil, dnderr.Wrap(err, "failed to get character")
 		}
 
-		// Log character state before attack
-		log.Printf("=== PLAYER ATTACK DEBUG ===")
-		log.Printf("Character: %s (ID: %s)", char.Name, char.ID)
-		log.Printf("STR Score: %d, Bonus: %d", char.Attributes[entities.AttributeStrength].Score, char.Attributes[entities.AttributeStrength].Bonus)
-		if char.Resources != nil {
-			log.Printf("Resources initialized: YES")
-			log.Printf("Active effects count: %d", len(char.Resources.ActiveEffects))
-			for i, effect := range char.Resources.ActiveEffects {
-				log.Printf("  Effect %d: %s (Duration: %d)", i+1, effect.Name, effect.Duration)
-				for _, mod := range effect.Modifiers {
-					log.Printf("    - Modifier: %s, Value: %d", mod.Type, mod.Value)
-				}
-			}
-			if rage, exists := char.Resources.Abilities["rage"]; exists {
-				log.Printf("Rage ability: Uses %d/%d, Active: %v", rage.UsesRemaining, rage.UsesMax, rage.IsActive)
-			}
-		} else {
-			log.Printf("Resources initialized: NO")
-		}
+		// Attack debug logs removed - too verbose during combat
 
 		// Use character's attack method
 		attackResults, err := char.Attack()
@@ -790,13 +772,11 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		result.AttackBonus = result.TotalAttack - result.AttackRoll // Calculate bonus from total minus d20
 		result.DiceRolls = attackResult.AttackResult.Rolls
 
-		// Log weapon damage info for debugging
+		// Set weapon damage info
 		if attackResult.WeaponDamage != nil {
-			log.Printf("Weapon damage info: %dd%d", attackResult.WeaponDamage.DiceCount, attackResult.WeaponDamage.DiceSize)
 			result.WeaponDiceCount = attackResult.WeaponDamage.DiceCount
 			result.WeaponDiceSize = attackResult.WeaponDamage.DiceSize
 		} else {
-			log.Printf("No weapon damage info available")
 			// Default to d4 for improvised
 			result.WeaponDiceCount = 1
 			result.WeaponDiceSize = 4
@@ -826,13 +806,7 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 					diceTotal += roll
 				}
 				result.DamageBonus = attackResult.DamageRoll - diceTotal
-				log.Printf("=== DAMAGE CALCULATION DEBUG ===")
-				log.Printf("Total damage roll: %d", attackResult.DamageRoll)
-				log.Printf("All dice rolls: %v", attackResult.AllDamageRolls)
-				log.Printf("Dice total: %d", diceTotal)
-				log.Printf("Calculated damage bonus: %d", result.DamageBonus)
-				log.Printf("Critical hit: %v", result.Critical)
-				log.Printf("Weapon dice: %dd%d", result.WeaponDiceCount, result.WeaponDiceSize)
+				// Damage calculation debug logs removed
 			}
 
 			// Check for sneak attack

@@ -26,9 +26,12 @@ func TestCharacterAbilityAssignment_RedisIntegration(t *testing.T) {
 	}
 
 	// Set up Redis client
+	// IMPORTANT: Use REDIS_URL from environment to avoid wiping dev data
+	// The Makefile sets REDIS_URL to use DB 15 for tests
 	redisURL := os.Getenv("REDIS_URL")
 	if redisURL == "" {
-		redisURL = "redis://localhost:6379/0"
+		// Default to test database (15) if not set
+		redisURL = "redis://localhost:6379/15"
 	}
 
 	opts, err := redis.ParseURL(redisURL)

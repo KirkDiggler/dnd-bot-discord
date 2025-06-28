@@ -57,11 +57,11 @@ type DiscordSession interface {
 // updateSharedCombatMessage updates the main shared combat message if MessageID is stored
 func updateSharedCombatMessage(s DiscordSession, encounterID, messageID, channelID string, embed *discordgo.MessageEmbed, components []discordgo.MessageComponent) error {
 	if messageID == "" || channelID == "" {
-		log.Printf("WARNING: Cannot update shared combat message - MessageID=%s, ChannelID=%s", messageID, channelID)
-		return nil // Not an error, just can't update
+		// Cannot update without message/channel IDs
+		return nil
 	}
 
-	log.Printf("Updating shared combat message: EncounterID=%s, MessageID=%s, ChannelID=%s", encounterID, messageID, channelID)
+	// Update the shared combat message
 
 	_, err := s.ChannelMessageEditComplex(&discordgo.MessageEdit{
 		ID:         messageID,
@@ -71,8 +71,8 @@ func updateSharedCombatMessage(s DiscordSession, encounterID, messageID, channel
 	})
 
 	if err != nil {
-		log.Printf("Failed to update shared combat message: %v", err)
 		// Don't return error - combat should continue even if message update fails
+		return nil
 	}
 
 	return nil

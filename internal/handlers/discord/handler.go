@@ -413,13 +413,14 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 		},
 	}
 
-	for _, cmd := range commands {
-		_, err := s.ApplicationCommandCreate(s.State.User.ID, guildID, cmd)
-		if err != nil {
-			return fmt.Errorf("failed to create command %s: %w", cmd.Name, err)
-		}
-		log.Printf("Registered command: %s", cmd.Name)
+	// Use BulkOverwrite to ensure clean command registration
+	// This replaces ALL commands, removing any outdated ones
+	_, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, guildID, commands)
+	if err != nil {
+		return fmt.Errorf("failed to register commands: %w", err)
 	}
+
+	log.Printf("Successfully registered %d commands using BulkOverwrite", len(commands))
 
 	return nil
 }

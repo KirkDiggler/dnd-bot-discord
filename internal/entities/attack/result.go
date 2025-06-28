@@ -38,23 +38,21 @@ func RollAttack(attackBonus, damageBonus int, dmg *damage.Damage) (*Result, erro
 	allRolls := make([]int, 0, len(dmgResult.Rolls))
 	allRolls = append(allRolls, dmgResult.Rolls...)
 
-	switch attackResult.Total {
-	case 20:
+	// Always add attack bonus to the roll
+	attackRoll += attackBonus
+
+	// Handle critical hit (natural 20)
+	if attackResult.Total == 20 {
 		critDmg, err := dice.Roll(dmg.DiceCount, dmg.DiceSize, 0)
 		if err != nil {
 			return nil, err
 		}
 
 		dmgValue += critDmg.Total
-		attackRoll += attackBonus
 		// Add critical damage rolls
 		allRolls = append(allRolls, critDmg.Rolls...)
-	case 1:
-		attackRoll = 0
-	default:
-		attackRoll += attackBonus
-
 	}
+	// Natural 1 is still an automatic miss, but we keep the modifiers for display
 
 	return &Result{
 		AttackRoll:     attackRoll,

@@ -25,7 +25,7 @@ func TestCharacterCreationFlow_FullIntegration(t *testing.T) {
 	// Set up Redis client
 	redisURL := os.Getenv("REDIS_URL")
 	if redisURL == "" {
-		redisURL = "redis://localhost:6379/0"
+		redisURL = "redis://localhost:6379/15" // Use test database
 	}
 
 	opts, err := redis.ParseURL(redisURL)

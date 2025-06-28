@@ -130,7 +130,7 @@
 ```bash
 # Run tests
 make test
-make test-integration
+make test-integration  # Uses Redis DB 15 to protect dev data
 
 # Run linter
 make lint

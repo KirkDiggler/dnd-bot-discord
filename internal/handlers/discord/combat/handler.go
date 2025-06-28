@@ -57,7 +57,7 @@ func NewHandler(encounterService encounter.Service, abilityService ability.Servi
 
 // HandleButton handles combat button interactions
 func (h *Handler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCreate, action, encounterID string) error {
-	log.Printf("Combat button: action=%s, encounter=%s, user=%s", action, encounterID, i.Member.User.ID)
+	// Removed verbose button logging - too noisy during combat
 
 	switch action {
 	case "attack":
@@ -100,7 +100,7 @@ func (h *Handler) handleAttack(s *discordgo.Session, i *discordgo.InteractionCre
 	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredMessageUpdate,
 	}); err != nil {
-		log.Printf("Failed to defer response: %v", err)
+		log.Printf("Failed to defer interaction response: %v", err)
 	}
 
 	// Get encounter to build target list
@@ -190,7 +190,7 @@ func (h *Handler) handleSelectTarget(s *discordgo.Session, i *discordgo.Interact
 		if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseDeferredMessageUpdate,
 		}); err != nil {
-			log.Printf("Failed to defer response: %v", err)
+			log.Printf("Failed to defer interaction response: %v", err)
 		}
 	}
 
@@ -337,7 +337,7 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 		if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseDeferredMessageUpdate,
 		}); err != nil {
-			log.Printf("Failed to defer response: %v", err)
+			log.Printf("Failed to defer interaction response: %v", err)
 		}
 	}
 
@@ -478,7 +478,7 @@ func (h *Handler) handleView(s *discordgo.Session, i *discordgo.InteractionCreat
 	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredMessageUpdate,
 	}); err != nil {
-		log.Printf("Failed to defer response: %v", err)
+		log.Printf("Failed to defer interaction response: %v", err)
 	}
 
 	enc, err := h.encounterService.GetEncounter(context.Background(), encounterID)
@@ -529,7 +529,7 @@ func (h *Handler) handleContinueRound(s *discordgo.Session, i *discordgo.Interac
 	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseDeferredMessageUpdate,
 	}); err != nil {
-		log.Printf("Failed to defer response: %v", err)
+		log.Printf("Failed to defer interaction response: %v", err)
 	}
 
 	// Start next round

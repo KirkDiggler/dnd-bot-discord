@@ -72,14 +72,12 @@ type Character struct {
 }
 
 func (c *Character) Attack() ([]*attack.Result, error) {
-	log.Printf("Character.Attack() called for %s, acquiring mutex...", c.Name)
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	log.Printf("Character.Attack() mutex acquired for %s", c.Name)
 
 	if c.EquippedSlots == nil {
 		// Improvised weapon range or melee
-		log.Printf("No equipped slots, using improvised melee")
+		// No equipped slots, using improvised melee
 		a, err := c.improvisedMelee()
 		if err != nil {
 			return nil, err
@@ -91,17 +89,16 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 
 	}
 
-	log.Printf("Checking main hand slot...")
+	// Check main hand slot
 	if c.EquippedSlots[SlotMainHand] != nil {
-		log.Printf("Main hand has equipment: %v", c.EquippedSlots[SlotMainHand])
 		if weap, ok := c.EquippedSlots[SlotMainHand].(*Weapon); ok {
-			log.Printf("Main hand weapon found: %s", weap.GetName())
 			attacks := make([]*attack.Result, 0)
 
 			// Check proficiency while we have the mutex
-			isProficient := c.hasWeaponProficiencyInternal(weap.GetKey()) ||
-				c.hasWeaponCategoryProficiency(weap.WeaponCategory)
-			log.Printf("Weapon proficiency check for %s (category: %s): %v", weap.GetKey(), weap.WeaponCategory, isProficient)
+			directProf := c.hasWeaponProficiencyInternal(weap.GetKey())
+			categoryProf := c.hasWeaponCategoryProficiency(weap.WeaponCategory)
+			isProficient := directProf || categoryProf
+			// Proficiency check completed
 
 			// Calculate ability bonus based on weapon type
 			var abilityBonus int
@@ -191,10 +188,14 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 
 	if c.EquippedSlots[SlotTwoHanded] != nil {
 		log.Printf("Checking two-handed slot...")
+		log.Printf("Two-handed slot type: %T", c.EquippedSlots[SlotTwoHanded])
 		if weap, ok := c.EquippedSlots[SlotTwoHanded].(*Weapon); ok {
+			log.Printf("Two-handed weapon found: %s", weap.GetName())
 			// Check proficiency while we have the mutex
-			isProficient := c.hasWeaponProficiencyInternal(weap.GetKey()) ||
-				c.hasWeaponCategoryProficiency(weap.WeaponCategory)
+			directProf := c.hasWeaponProficiencyInternal(weap.GetKey())
+			categoryProf := c.hasWeaponCategoryProficiency(weap.WeaponCategory)
+			isProficient := directProf || categoryProf
+			// Proficiency check completed
 
 			// Calculate ability bonus based on weapon type
 			var abilityBonus int
@@ -222,6 +223,9 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 
 			// Apply damage bonuses from active effects (e.g., rage)
 			damageBonus = c.applyActiveEffectDamageBonus(damageBonus, "melee")
+
+			log.Printf("Final attack bonus: +%d (ability: %d, proficiency: %d)", attackBonus, abilityBonus, proficiencyBonus)
+			log.Printf("Final damage bonus: +%d", damageBonus)
 
 			// Two-handed weapons often have special damage
 			var dmg *damage.Damage
@@ -262,9 +266,23 @@ func (c *Character) HasWeaponProficiency(weaponKey string) bool {
 		return true
 	}
 
-	// If we don't have the weapon loaded, we can't check its category
-	// This is a limitation of the current design where we only have the key
-	// TODO: Consider loading weapon data to check category proficiency
+	// Check if we have the weapon to get its category
+	weapon := c.getEquipment(weaponKey)
+	if weapon != nil {
+		if w, ok := weapon.(*Weapon); ok && w.WeaponCategory != "" {
+			return c.hasWeaponCategoryProficiency(w.WeaponCategory)
+		}
+	}
+
+	// Also check equipped weapons
+	for _, equipped := range c.EquippedSlots {
+		if equipped != nil && equipped.GetKey() == weaponKey {
+			if w, ok := equipped.(*Weapon); ok && w.WeaponCategory != "" {
+				return c.hasWeaponCategoryProficiency(w.WeaponCategory)
+			}
+		}
+	}
+
 	return false
 }
 
@@ -300,13 +318,15 @@ func (c *Character) hasWeaponCategoryProficiency(weaponCategory string) bool {
 		return false
 	}
 
-	// Map weapon categories to proficiency keys
+	// Map weapon categories to proficiency keys (case-insensitive)
 	categoryMap := map[string]string{
 		"simple":  "simple-weapons",
 		"martial": "martial-weapons",
 	}
 
-	profKey, exists := categoryMap[weaponCategory]
+	// Convert to lowercase for case-insensitive comparison
+	lowerCategory := strings.ToLower(weaponCategory)
+	profKey, exists := categoryMap[lowerCategory]
 	if !exists {
 		return false
 	}
