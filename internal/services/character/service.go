@@ -163,6 +163,7 @@ type ChoiceOption struct {
 	Key         string
 	Name        string
 	Description string
+	BundleItems []string // Equipment keys that come with this choice (e.g., shield with weapon+shield)
 }
 
 // service implements the Service interface

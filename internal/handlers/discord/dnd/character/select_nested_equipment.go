@@ -3,6 +3,7 @@ package character
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
@@ -75,9 +76,16 @@ func (h *SelectNestedEquipmentHandler) Handle(req *SelectNestedEquipmentRequest)
 		title = "Select Weapon"
 	}
 
+	description := fmt.Sprintf("**Race:** %s\n**Class:** %s\n\nChoose from the available weapons.", race.Name, class.Name)
+
+	// If this bundle includes a shield, mention it
+	if strings.Contains(req.BundleKey, "nested-") {
+		description += "\n\n🛡️ **Note:** This choice includes a shield with your selected weapon."
+	}
+
 	embed := &discordgo.MessageEmbed{
 		Title:       title,
-		Description: fmt.Sprintf("**Race:** %s\n**Class:** %s\n\nChoose from the available weapons.", race.Name, class.Name),
+		Description: description,
 		Color:       0x5865F2,
 		Fields:      []*discordgo.MessageEmbedField{},
 	}

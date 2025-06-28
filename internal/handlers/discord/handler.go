@@ -1410,6 +1410,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					i.Member.User.ID,
 					i.GuildID,
 				)
+
+				// Get choice information to check for bundle items and determine next step
+				choices, resolveErr := h.ServiceProvider.CharacterService.ResolveChoices(
+					context.Background(),
+					&characterService.ResolveChoicesInput{
+						RaceKey:  parts[2],
+						ClassKey: parts[3],
+					},
+				)
+
 				if err == nil {
 					// Get existing equipment
 					existingEquipment := []string{}
@@ -1418,9 +1428,19 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					// Add selected weapons
 					allEquipment := slices.Concat(existingEquipment, selectedWeapons)
 
-					// If this was "weapon + shield" choice, add shield
-					if strings.Contains(strings.ToLower(bundleKey), "shield") && len(selectedWeapons) == 1 {
-						allEquipment = append(allEquipment, "shield")
+					if resolveErr == nil && choiceIndex < len(choices.EquipmentChoices) {
+						// Find the bundle option that was selected
+						choice := choices.EquipmentChoices[choiceIndex]
+						for _, opt := range choice.Options {
+							if opt.Key == bundleKey {
+								// Add any bundle items (e.g., shield from weapon+shield)
+								if len(opt.BundleItems) > 0 {
+									log.Printf("Adding bundle items for %s: %v", bundleKey, opt.BundleItems)
+									allEquipment = append(allEquipment, opt.BundleItems...)
+								}
+								break
+							}
+						}
 					}
 
 					// Update draft with equipment
@@ -1437,15 +1457,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 
 				// Continue to next equipment choice or character details
-				// Since the interaction is already acknowledged, we need to check if there are more choices
-				choices, err := h.ServiceProvider.CharacterService.ResolveChoices(
-					context.Background(),
-					&characterService.ResolveChoicesInput{
-						RaceKey:  parts[2],
-						ClassKey: parts[3],
-					},
-				)
-				if err == nil && choiceIndex+1 < len(choices.EquipmentChoices) {
+				if resolveErr == nil && choiceIndex+1 < len(choices.EquipmentChoices) {
 					// More equipment choices available
 					req := &character.SelectEquipmentRequest{
 						Session:     s,

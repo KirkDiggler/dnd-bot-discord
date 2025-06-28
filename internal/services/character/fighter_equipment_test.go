@@ -2,9 +2,10 @@ package character_test
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
 
-	"errors"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
@@ -80,7 +81,30 @@ func TestFighterWeaponPlusShieldFlow(t *testing.T) {
 	// 2. Select "weapon + shield" bundle - this would be filtered out by handler
 	// Handler would see "bundle-0" and skip it (as per our fix)
 
-	// 3. Select specific martial weapon (this is when shield should be added)
+	// 3. Test that the choice resolver properly tracks bundle items
+	choices, err := service.ResolveChoices(ctx, &character.ResolveChoicesInput{
+		RaceKey:  "human",
+		ClassKey: "fighter",
+	})
+	require.NoError(t, err)
+
+	// Find the weapon + shield choice
+	var weaponShieldOption *character.ChoiceOption
+	for _, choice := range choices.EquipmentChoices {
+		for _, opt := range choice.Options {
+			if strings.Contains(opt.Name, "shield") && strings.Contains(opt.Name, "weapon") {
+				weaponShieldOption = &opt
+				break
+			}
+		}
+	}
+
+	// Verify shield is in bundle items
+	if weaponShieldOption != nil {
+		assert.Contains(t, weaponShieldOption.BundleItems, "shield", "Shield should be in bundle items")
+	}
+
+	// 4. Select specific martial weapon and shield (simulating what handler would do)
 	_, err = service.UpdateDraftCharacter(ctx, draftChar.ID, &character.UpdateDraftInput{
 		Equipment: []string{"warhammer", "shield"},
 	})

@@ -120,6 +120,16 @@ func (h *SelectEquipmentHandler) Handle(req *SelectEquipmentRequest) error {
 			option.Description = opt.Description
 		}
 
+		// If this is a nested choice with bundle items, enhance the description
+		if strings.HasPrefix(opt.Key, "nested-") && len(opt.BundleItems) > 0 {
+			// Show what's included in the bundle
+			if opt.Description != "" {
+				option.Description = opt.Description + " (includes shield)"
+			} else {
+				option.Description = "Includes shield"
+			}
+		}
+
 		selectOptions = append(selectOptions, option)
 	}
 
