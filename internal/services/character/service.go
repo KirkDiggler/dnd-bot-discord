@@ -878,6 +878,38 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 	// Calculate AC using the features package
 	char.AC = features.CalculateAC(char)
 
+	// Add starting proficiencies from class if not already present
+	if s.dndClient != nil && char.Class != nil && char.Class.Proficiencies != nil {
+		// Check if we already have class proficiencies (in case they were added earlier)
+		hasClassProficiencies := false
+		if weaponProfs, exists := char.Proficiencies[entities.ProficiencyTypeWeapon]; exists && len(weaponProfs) > 0 {
+			hasClassProficiencies = true
+		}
+
+		if !hasClassProficiencies {
+			for _, prof := range char.Class.Proficiencies {
+				if prof != nil {
+					proficiency, err := s.dndClient.GetProficiency(prof.Key)
+					if err == nil && proficiency != nil {
+						char.AddProficiency(proficiency)
+					}
+				}
+			}
+		}
+	}
+
+	// Add starting proficiencies from race if not already present
+	if s.dndClient != nil && char.Race != nil && char.Race.StartingProficiencies != nil {
+		for _, prof := range char.Race.StartingProficiencies {
+			if prof != nil {
+				proficiency, err := s.dndClient.GetProficiency(prof.Key)
+				if err == nil && proficiency != nil {
+					char.AddProficiency(proficiency)
+				}
+			}
+		}
+	}
+
 	// Add starting equipment if class is set and DND client is available
 	if s.dndClient != nil && char.Class != nil && char.Class.StartingEquipment != nil {
 		for _, se := range char.Class.StartingEquipment {

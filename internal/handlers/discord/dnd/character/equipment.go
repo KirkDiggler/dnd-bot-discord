@@ -10,41 +10,41 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-type WeaponHandler struct {
+type EquipmentHandler struct {
 	ServiceProvider *services.Provider
 }
 
-type WeaponHandlerConfig struct {
+type EquipmentHandlerConfig struct {
 	ServiceProvider *services.Provider
 }
 
-func NewWeaponHandler(cfg *WeaponHandlerConfig) *WeaponHandler {
-	return &WeaponHandler{
+func NewEquipmentHandler(cfg *EquipmentHandlerConfig) *EquipmentHandler {
+	return &EquipmentHandler{
 		ServiceProvider: cfg.ServiceProvider,
 	}
 }
 
-// HandleEquip handles the /dnd character equip command
-func (h *WeaponHandler) HandleEquip(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+// HandleEquip handles the /dnd character equip command for weapons and shields
+func (h *EquipmentHandler) HandleEquip(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	// Get character ID from command options
 	options := i.ApplicationCommandData().Options[0].Options[0].Options // dnd -> character -> equip
 	var characterID string
-	var weaponKey string
+	var itemKey string
 
 	for _, opt := range options {
 		switch opt.Name {
 		case "character_id":
 			characterID = opt.StringValue()
-		case "weapon":
-			weaponKey = opt.StringValue()
+		case "item":
+			itemKey = opt.StringValue()
 		}
 	}
 
-	if characterID == "" || weaponKey == "" {
+	if characterID == "" || itemKey == "" {
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "❌ Both character ID and weapon are required!",
+				Content: "❌ Both character ID and weapon/shield are required!",
 				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
@@ -68,17 +68,17 @@ func (h *WeaponHandler) HandleEquip(s *discordgo.Session, i *discordgo.Interacti
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "❌ You can only equip weapons on your own characters!",
+				Content: "❌ You can only equip items on your own characters!",
 				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
 	}
 
-	// Find item in inventory (weapon or armor/shield)
+	// Find item in inventory (weapon or shield)
 	var foundItem entities.Equipment
 	for _, equipmentList := range char.Inventory {
 		for _, equipment := range equipmentList {
-			if equipment.GetKey() == weaponKey {
+			if equipment.GetKey() == itemKey {
 				foundItem = equipment
 				break
 			}
@@ -92,19 +92,19 @@ func (h *WeaponHandler) HandleEquip(s *discordgo.Session, i *discordgo.Interacti
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("❌ Item '%s' not found in your inventory!", weaponKey),
+				Content: fmt.Sprintf("❌ Item '%s' not found in your inventory!", itemKey),
 				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
 	}
 
-	// Equip the weapon
-	success := char.Equip(weaponKey)
+	// Equip the item
+	success := char.Equip(itemKey)
 	if !success {
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "❌ Failed to equip weapon!",
+				Content: "❌ Failed to equip item!",
 				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
@@ -141,43 +141,29 @@ func (h *WeaponHandler) HandleEquip(s *discordgo.Session, i *discordgo.Interacti
 		},
 	}
 
-	// Add item-specific stats
-	switch item := foundItem.(type) {
-	case *entities.Weapon:
-		if item.Damage != nil {
+	// Add weapon stats if it's a weapon
+	if weapon, ok := foundItem.(*entities.Weapon); ok {
+		if weapon.Damage != nil {
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 				Name:   "Damage",
-				Value:  fmt.Sprintf("%dd%d+%d %s", item.Damage.DiceCount, item.Damage.DiceSize, item.Damage.Bonus, item.Damage.DamageType),
+				Value:  fmt.Sprintf("%dd%d+%d %s", weapon.Damage.DiceCount, weapon.Damage.DiceSize, weapon.Damage.Bonus, weapon.Damage.DamageType),
 				Inline: true,
 			})
 		}
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   "Type",
-			Value:  fmt.Sprintf("%s %s", item.WeaponRange, item.WeaponCategory),
+			Value:  fmt.Sprintf("%s %s", weapon.WeaponRange, weapon.WeaponCategory),
 			Inline: true,
 		})
-	case *entities.Armor:
-		if item.ArmorClass != nil {
-			acBonus := item.ArmorClass.Base
-			if item.ArmorCategory == entities.ArmorCategoryShield {
-				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-					Name:   "AC Bonus",
-					Value:  fmt.Sprintf("+%d", acBonus),
-					Inline: true,
-				})
-			} else {
-				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-					Name:   "Armor Class",
-					Value:  fmt.Sprintf("%d", acBonus),
-					Inline: true,
-				})
-			}
+	} else if armor, ok := foundItem.(*entities.Armor); ok && armor.ArmorCategory == entities.ArmorCategoryShield {
+		// Add shield stats
+		if armor.ArmorClass != nil {
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "AC Bonus",
+				Value:  fmt.Sprintf("+%d", armor.ArmorClass.Base),
+				Inline: true,
+			})
 		}
-		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:   "Type",
-			Value:  string(item.ArmorCategory),
-			Inline: true,
-		})
 	}
 
 	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -190,7 +176,7 @@ func (h *WeaponHandler) HandleEquip(s *discordgo.Session, i *discordgo.Interacti
 }
 
 // HandleUnequip handles the /dnd character unequip command
-func (h *WeaponHandler) HandleUnequip(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+func (h *EquipmentHandler) HandleUnequip(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	// Get character ID and slot from command options
 	options := i.ApplicationCommandData().Options[0].Options[0].Options // dnd -> character -> unequip
 	var characterID string
@@ -233,7 +219,7 @@ func (h *WeaponHandler) HandleUnequip(s *discordgo.Session, i *discordgo.Interac
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "❌ You can only unequip weapons from your own characters!",
+				Content: "❌ You can only unequip items from your own characters!",
 				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
@@ -288,7 +274,7 @@ func (h *WeaponHandler) HandleUnequip(s *discordgo.Session, i *discordgo.Interac
 }
 
 // HandleInventory shows the character's weapon inventory with equip buttons
-func (h *WeaponHandler) HandleInventory(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+func (h *EquipmentHandler) HandleInventory(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	// Get character ID from command options
 	options := i.ApplicationCommandData().Options[0].Options[0].Options // dnd -> character -> inventory
 	var characterID string
@@ -387,24 +373,26 @@ func (h *WeaponHandler) HandleInventory(s *discordgo.Session, i *discordgo.Inter
 		})
 	}
 
-	// Show available armor/shields
-	var armorList []string
+	// Show available shields
+	var shieldList []string
 	if armor, exists := char.Inventory[entities.EquipmentTypeArmor]; exists {
 		for _, item := range armor {
-			armorList = append(armorList, fmt.Sprintf("• %s (%s)", item.GetName(), item.GetKey()))
+			if armorItem, ok := item.(*entities.Armor); ok && armorItem.ArmorCategory == entities.ArmorCategoryShield {
+				shieldList = append(shieldList, fmt.Sprintf("• %s (%s)", item.GetName(), item.GetKey()))
+			}
 		}
 	}
 
-	if len(armorList) > 0 {
+	if len(shieldList) > 0 {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:   "🛡️ Available Armor",
-			Value:  strings.Join(armorList, "\n"),
+			Name:   "🛡️ Available Shields",
+			Value:  strings.Join(shieldList, "\n"),
 			Inline: false,
 		})
 	} else {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:   "🛡️ Available Armor",
-			Value:  "*No armor in inventory*",
+			Name:   "🛡️ Available Shields",
+			Value:  "*No shields in inventory*",
 			Inline: false,
 		})
 	}

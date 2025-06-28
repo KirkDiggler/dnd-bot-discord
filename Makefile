@@ -32,12 +32,12 @@ test-unit-no-race:
 	@CGO_ENABLED=0 go test ./... -short -v
 
 test-integration:
-	@echo "Running integration tests..."
-	@go test ./... -tags=integration -race -v
+	@echo "Running integration tests (using Redis DB 15)..."
+	@REDIS_URL="redis://localhost:6379/15" go test ./... -tags=integration -race -v
 
 test-integration-no-race:
-	@echo "Running integration tests without race detector..."
-	@CGO_ENABLED=0 go test ./... -tags=integration -v
+	@echo "Running integration tests without race detector (using Redis DB 15)..."
+	@REDIS_URL="redis://localhost:6379/15" CGO_ENABLED=0 go test ./... -tags=integration -v
 
 test-all: test-unit test-integration
 

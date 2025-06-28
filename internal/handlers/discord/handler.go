@@ -53,7 +53,7 @@ type Handler struct {
 	characterDetailsHandler               *character.CharacterDetailsHandler
 	characterListHandler                  *character.ListHandler
 	characterShowHandler                  *character.ShowHandler
-	characterWeaponHandler                *character.WeaponHandler
+	characterEquipmentHandler             *character.EquipmentHandler
 	characterSheetHandler                 *character.SheetHandler
 	characterDeleteHandler                *character.DeleteHandler
 
@@ -139,7 +139,7 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		}),
 		characterListHandler: character.NewListHandler(cfg.ServiceProvider),
 		characterShowHandler: character.NewShowHandler(cfg.ServiceProvider),
-		characterWeaponHandler: character.NewWeaponHandler(&character.WeaponHandlerConfig{
+		characterEquipmentHandler: character.NewEquipmentHandler(&character.EquipmentHandlerConfig{
 			ServiceProvider: cfg.ServiceProvider,
 		}),
 		characterSheetHandler:  character.NewSheetHandler(cfg.ServiceProvider),
@@ -206,6 +206,62 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 							Name:        "delete",
 							Description: "Delete one of your characters",
 							Type:        discordgo.ApplicationCommandOptionSubCommand,
+						},
+						{
+							Name:        "equip",
+							Description: "Equip a weapon or shield",
+							Type:        discordgo.ApplicationCommandOptionSubCommand,
+							Options: []*discordgo.ApplicationCommandOption{
+								{
+									Type:        discordgo.ApplicationCommandOptionString,
+									Name:        "character_id",
+									Description: "Character ID",
+									Required:    true,
+								},
+								{
+									Type:        discordgo.ApplicationCommandOptionString,
+									Name:        "item",
+									Description: "Weapon or shield key (e.g., 'longsword', 'shield')",
+									Required:    true,
+								},
+							},
+						},
+						{
+							Name:        "unequip",
+							Description: "Unequip an item from a slot",
+							Type:        discordgo.ApplicationCommandOptionSubCommand,
+							Options: []*discordgo.ApplicationCommandOption{
+								{
+									Type:        discordgo.ApplicationCommandOptionString,
+									Name:        "character_id",
+									Description: "Character ID",
+									Required:    true,
+								},
+								{
+									Type:        discordgo.ApplicationCommandOptionString,
+									Name:        "slot",
+									Description: "Slot to unequip (main-hand, off-hand, body)",
+									Required:    true,
+									Choices: []*discordgo.ApplicationCommandOptionChoice{
+										{Name: "Main Hand", Value: "main-hand"},
+										{Name: "Off Hand", Value: "off-hand"},
+										{Name: "Body", Value: "body"},
+									},
+								},
+							},
+						},
+						{
+							Name:        "inventory",
+							Description: "Show character's inventory",
+							Type:        discordgo.ApplicationCommandOptionSubCommand,
+							Options: []*discordgo.ApplicationCommandOption{
+								{
+									Type:        discordgo.ApplicationCommandOptionString,
+									Name:        "character_id",
+									Description: "Character ID",
+									Required:    true,
+								},
+							},
 						},
 					},
 				},
@@ -357,13 +413,14 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 		},
 	}
 
-	for _, cmd := range commands {
-		_, err := s.ApplicationCommandCreate(s.State.User.ID, guildID, cmd)
-		if err != nil {
-			return fmt.Errorf("failed to create command %s: %w", cmd.Name, err)
-		}
-		log.Printf("Registered command: %s", cmd.Name)
+	// Use BulkOverwrite to ensure clean command registration
+	// This replaces ALL commands, removing any outdated ones
+	_, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, guildID, commands)
+	if err != nil {
+		return fmt.Errorf("failed to register commands: %w", err)
 	}
+
+	log.Printf("Successfully registered %d commands using BulkOverwrite", len(commands))
 
 	return nil
 }
@@ -482,6 +539,18 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 			}
 			if err := h.characterDeleteHandler.Handle(req); err != nil {
 				log.Printf("Error handling character delete: %v", err)
+			}
+		case "equip":
+			if err := h.characterEquipmentHandler.HandleEquip(s, i); err != nil {
+				log.Printf("Error handling character equip: %v", err)
+			}
+		case "unequip":
+			if err := h.characterEquipmentHandler.HandleUnequip(s, i); err != nil {
+				log.Printf("Error handling character unequip: %v", err)
+			}
+		case "inventory":
+			if err := h.characterEquipmentHandler.HandleInventory(s, i); err != nil {
+				log.Printf("Error handling character inventory: %v", err)
 			}
 		}
 	} else if subcommandGroup.Name == "session" && len(subcommandGroup.Options) > 0 {

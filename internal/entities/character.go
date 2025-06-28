@@ -72,14 +72,12 @@ type Character struct {
 }
 
 func (c *Character) Attack() ([]*attack.Result, error) {
-	log.Printf("Character.Attack() called for %s, acquiring mutex...", c.Name)
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	log.Printf("Character.Attack() mutex acquired for %s", c.Name)
 
 	if c.EquippedSlots == nil {
 		// Improvised weapon range or melee
-		log.Printf("No equipped slots, using improvised melee")
+		// No equipped slots, using improvised melee
 		a, err := c.improvisedMelee()
 		if err != nil {
 			return nil, err
@@ -91,16 +89,16 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 
 	}
 
-	log.Printf("Checking main hand slot...")
+	// Check main hand slot
 	if c.EquippedSlots[SlotMainHand] != nil {
-		log.Printf("Main hand has equipment: %v", c.EquippedSlots[SlotMainHand])
 		if weap, ok := c.EquippedSlots[SlotMainHand].(*Weapon); ok {
-			log.Printf("Main hand weapon found: %s", weap.GetName())
 			attacks := make([]*attack.Result, 0)
 
 			// Check proficiency while we have the mutex
-			isProficient := c.hasWeaponProficiencyInternal(weap.GetKey())
-			log.Printf("Weapon proficiency check: %v", isProficient)
+			directProf := c.hasWeaponProficiencyInternal(weap.GetKey())
+			categoryProf := c.hasWeaponCategoryProficiency(weap.WeaponCategory)
+			isProficient := directProf || categoryProf
+			// Proficiency check completed
 
 			// Calculate ability bonus based on weapon type
 			var abilityBonus int
@@ -151,7 +149,8 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 			if c.EquippedSlots[SlotOffHand] != nil {
 				if offWeap, offOk := c.EquippedSlots[SlotOffHand].(*Weapon); offOk {
 					// Same process for off-hand weapon
-					offHandProficient := c.hasWeaponProficiencyInternal(offWeap.GetKey())
+					offHandProficient := c.hasWeaponProficiencyInternal(offWeap.GetKey()) ||
+						c.hasWeaponCategoryProficiency(offWeap.WeaponCategory)
 
 					var offHandAbilityBonus int
 					switch offWeap.WeaponRange {
@@ -189,9 +188,14 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 
 	if c.EquippedSlots[SlotTwoHanded] != nil {
 		log.Printf("Checking two-handed slot...")
+		log.Printf("Two-handed slot type: %T", c.EquippedSlots[SlotTwoHanded])
 		if weap, ok := c.EquippedSlots[SlotTwoHanded].(*Weapon); ok {
+			log.Printf("Two-handed weapon found: %s", weap.GetName())
 			// Check proficiency while we have the mutex
-			isProficient := c.hasWeaponProficiencyInternal(weap.GetKey())
+			directProf := c.hasWeaponProficiencyInternal(weap.GetKey())
+			categoryProf := c.hasWeaponCategoryProficiency(weap.WeaponCategory)
+			isProficient := directProf || categoryProf
+			// Proficiency check completed
 
 			// Calculate ability bonus based on weapon type
 			var abilityBonus int
@@ -219,6 +223,9 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 
 			// Apply damage bonuses from active effects (e.g., rage)
 			damageBonus = c.applyActiveEffectDamageBonus(damageBonus, "melee")
+
+			log.Printf("Final attack bonus: +%d (ability: %d, proficiency: %d)", attackBonus, abilityBonus, proficiencyBonus)
+			log.Printf("Final damage bonus: +%d", damageBonus)
 
 			// Two-handed weapons often have special damage
 			var dmg *damage.Damage
@@ -253,7 +260,30 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 func (c *Character) HasWeaponProficiency(weaponKey string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.hasWeaponProficiencyInternal(weaponKey)
+
+	// First check direct weapon proficiency
+	if c.hasWeaponProficiencyInternal(weaponKey) {
+		return true
+	}
+
+	// Check if we have the weapon to get its category
+	weapon := c.getEquipment(weaponKey)
+	if weapon != nil {
+		if w, ok := weapon.(*Weapon); ok && w.WeaponCategory != "" {
+			return c.hasWeaponCategoryProficiency(w.WeaponCategory)
+		}
+	}
+
+	// Also check equipped weapons
+	for _, equipped := range c.EquippedSlots {
+		if equipped != nil && equipped.GetKey() == weaponKey {
+			if w, ok := equipped.(*Weapon); ok && w.WeaponCategory != "" {
+				return c.hasWeaponCategoryProficiency(w.WeaponCategory)
+			}
+		}
+	}
+
+	return false
 }
 
 // hasWeaponProficiencyInternal checks proficiency without locking (must be called with mutex held)
@@ -269,6 +299,40 @@ func (c *Character) hasWeaponProficiencyInternal(weaponKey string) bool {
 
 	for _, prof := range weaponProficiencies {
 		if prof.Key == weaponKey {
+			return true
+		}
+	}
+
+	return false
+}
+
+// hasWeaponCategoryProficiency checks if the character has proficiency with a weapon category
+// This handles proficiencies like "simple-weapons" or "martial-weapons"
+func (c *Character) hasWeaponCategoryProficiency(weaponCategory string) bool {
+	if c.Proficiencies == nil || weaponCategory == "" {
+		return false
+	}
+
+	weaponProficiencies, exists := c.Proficiencies[ProficiencyTypeWeapon]
+	if !exists {
+		return false
+	}
+
+	// Map weapon categories to proficiency keys (case-insensitive)
+	categoryMap := map[string]string{
+		"simple":  "simple-weapons",
+		"martial": "martial-weapons",
+	}
+
+	// Convert to lowercase for case-insensitive comparison
+	lowerCategory := strings.ToLower(weaponCategory)
+	profKey, exists := categoryMap[lowerCategory]
+	if !exists {
+		return false
+	}
+
+	for _, prof := range weaponProficiencies {
+		if prof.Key == profKey {
 			return true
 		}
 	}
