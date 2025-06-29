@@ -12,17 +12,23 @@
 **Goal**: Build the foundation for D&D 5e action economy
 
 ### Milestone Issues
-1. **Bonus Action System** (#187)
+1. **Enhanced Effects System** (#202) 🎯 FORCE MULTIPLIER
+   - Foundation for spells, conditions, items, features
+   - Advantage/disadvantage, rerolls, immunities
+   - Save DCs, concentration, triggers
+   - Makes everything else easier!
+
+2. **Bonus Action System** (#187)
    - Required for: Monk attacks, Second Wind, many spells
    - Design: Action tracking per turn
    - UI: Separate bonus action buttons
 
-2. **Reaction System** (#201)
+3. **Reaction System** (#201)
    - Required for: Shield spell, Protection style, Opportunity attacks
    - Design: Interrupt/trigger mechanism
    - UI: Ephemeral prompts with timeout
 
-3. **Combat State Machine** (#87)
+4. **Combat State Machine** (#87)
    - Better turn/round tracking
    - Action economy enforcement
    - Combat event system
@@ -56,6 +62,33 @@
 - [ ] All non-caster classes fully playable at level 1
 - [ ] All fighting styles working correctly
 - [ ] Clear documentation for players
+
+## Why Effects System First?
+
+The effects system turns complex features into data:
+
+```go
+// Instead of hard-coding spell logic:
+func CastBless(caster *Character, targets []*Character) {
+    // Complex logic for adding bonuses...
+}
+
+// We define spells as effects:
+var BlessSpell = Effect{
+    Name: "Bless",
+    Modifiers: []Modifier{
+        {Target: TargetAttackRoll, Value: "1d4"},
+        {Target: TargetSavingThrow, Value: "1d4"},
+    },
+}
+```
+
+This means:
+- **90% of spells** become effect definitions
+- **Conditions** (poisoned, stunned) are just effects
+- **Magic items** (+1 sword) are equipment with effects
+- **Class features** (rage, bardic inspiration) are effects
+- **Environmental** (difficult terrain) are area effects
 
 ## Phase 1.5: Basic Spellcasting 🧙‍♂️
 **Goal**: Implement core spell system with one full caster
