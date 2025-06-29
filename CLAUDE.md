@@ -151,6 +151,13 @@ make generate-mocks
 DISCORD_TOKEN=xxx REDIS_URL=redis://localhost:6379 ./bin/dnd-bot
 ```
 
+### PR Review Workflow
+1. **Check for inline feedback**: `gh pr view --web` or `gh pr checks`
+2. **Address all comments** before requesting re-review
+3. **Run pre-commit**: `make pre-commit` (never use --no-verify)
+4. **Update PR description** if scope changes
+5. **Use conventional commits**: feat:, fix:, refactor:, docs:, test:
+
 #### Pre-Commit Workflow
 **IMPORTANT**: Always run `make pre-commit` before committing code. This will:
 1. Format all Go code with `go fmt`
@@ -591,6 +598,28 @@ attackRoll += attackBonus
 2. Implement finesse weapon property
 3. Create weapon category constants
 4. Continue with other class implementations
+
+### Issue Management Guidelines
+
+#### Label Usage
+**IMPORTANT**: Always use appropriate labels when creating issues. This helps with organization and filtering.
+
+**Common Labels**:
+- **Class Labels**: `monk`, `ranger`, `fighter`, `rogue`, `barbarian`, etc.
+- **Feature Labels**: `combat`, `enhancement`, `bug`, `documentation`
+- **Priority Labels**: `high-priority`, `low-priority`
+- **System Labels**: `ui`, `database`, `api`
+
+**When Creating Issues**:
+1. Add relevant class label if it's class-specific (e.g., `monk` for Martial Arts)
+2. Add feature type label (e.g., `combat` for attack mechanics)
+3. Add priority if applicable
+4. Consider multiple labels when appropriate (e.g., `monk`, `combat`, `enhancement`)
+
+**Example**:
+```bash
+gh issue create --title "Implement Ki points system" --label "monk,combat,enhancement"
+```
 
 ### Contact
 - GitHub Issues: https://github.com/KirkDiggler/dnd-bot-discord/issues
