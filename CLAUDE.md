@@ -592,6 +592,28 @@ attackRoll += attackBonus
 3. Create weapon category constants
 4. Continue with other class implementations
 
+### Issue Management Guidelines
+
+#### Label Usage
+**IMPORTANT**: Always use appropriate labels when creating issues. This helps with organization and filtering.
+
+**Common Labels**:
+- **Class Labels**: `monk`, `ranger`, `fighter`, `rogue`, `barbarian`, etc.
+- **Feature Labels**: `combat`, `enhancement`, `bug`, `documentation`
+- **Priority Labels**: `high-priority`, `low-priority`
+- **System Labels**: `ui`, `database`, `api`
+
+**When Creating Issues**:
+1. Add relevant class label if it's class-specific (e.g., `monk` for Martial Arts)
+2. Add feature type label (e.g., `combat` for attack mechanics)
+3. Add priority if applicable
+4. Consider multiple labels when appropriate (e.g., `monk`, `combat`, `enhancement`)
+
+**Example**:
+```bash
+gh issue create --title "Implement Ki points system" --label "monk,combat,enhancement"
+```
+
 ### Contact
 - GitHub Issues: https://github.com/KirkDiggler/dnd-bot-discord/issues
 - GitHub Project: https://github.com/users/KirkDiggler/projects/6
