@@ -48,9 +48,18 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 			name = name[:maxNameLen-3] + "..."
 		}
 
-		// Format: "icon name" padded to 16 chars total
+		// Format: "icon name" padded to visual width of 16
 		nameStr := fmt.Sprintf("%s %s", icon, name)
-		sb.WriteString(fmt.Sprintf("%-16s", nameStr))
+
+		// Some emojis have variation selectors (️) that make them wider
+		// These need less padding to align properly
+		visualWidth := 16
+		if strings.Contains(icon, "️") {
+			// Icons with variation selectors need adjustment
+			visualWidth = 14
+		}
+
+		sb.WriteString(fmt.Sprintf("%-*s", visualWidth, nameStr))
 		sb.WriteString(" │")
 
 		// HP with visual bar and color coding
