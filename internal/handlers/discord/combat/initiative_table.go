@@ -32,33 +32,8 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 		}
 		sb.WriteString(" │")
 
-		// Name with icon (truncated if needed)
-		icon := ""
-		if c.CurrentHP == 0 {
-			icon = "💀" // Dead indicator replaces type icon
-		} else if c.Type == entities.CombatantTypePlayer {
-			icon = getClassIcon(c.Class)
-		} else {
-			icon = "🐉" // Monster icon
-		}
-
-		name := c.Name
-		maxNameLen := 13 // Reduced to fit better
-		if len(name) > maxNameLen {
-			name = name[:maxNameLen-3] + "..."
-		}
-
-		// Format: "icon name" padded to visual width of 16
-		nameStr := fmt.Sprintf("%s %s", icon, name)
-
-		// Some emojis have variation selectors (️) that make them wider
-		// These need less padding to align properly
-		visualWidth := 16
-		if strings.Contains(icon, "️") {
-			// Icons with variation selectors need adjustment
-			visualWidth = 15
-		}
-
+		// Format and write the name column
+		nameStr, visualWidth := formatCombatantName(c)
 		sb.WriteString(fmt.Sprintf("%-*s", visualWidth, nameStr))
 		sb.WriteString(" │")
 
@@ -98,6 +73,39 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 			Inline: false,
 		},
 	}
+}
+
+// formatCombatantName formats a combatant's name with appropriate icon and calculates visual width
+func formatCombatantName(c *entities.Combatant) (nameStr string, visualWidth int) {
+	// Select appropriate icon
+	icon := ""
+	if c.CurrentHP == 0 {
+		icon = "💀" // Dead indicator replaces type icon
+	} else if c.Type == entities.CombatantTypePlayer {
+		icon = getClassIcon(c.Class)
+	} else {
+		icon = "🐉" // Monster icon
+	}
+
+	// Truncate name if needed
+	name := c.Name
+	maxNameLen := 13 // Reduced to fit better
+	if len(name) > maxNameLen {
+		name = name[:maxNameLen-3] + "..."
+	}
+
+	// Format name with icon
+	nameStr = fmt.Sprintf("%s %s", icon, name)
+
+	// Calculate visual width for proper alignment
+	// Some emojis have variation selectors (️) that make them wider
+	visualWidth = 16
+	if strings.Contains(icon, "️") {
+		// Icons with variation selectors need adjustment
+		visualWidth = 15
+	}
+
+	return nameStr, visualWidth
 }
 
 // BuildCompactInitiativeDisplay creates a compact single-line display for each combatant

@@ -133,3 +133,79 @@ func TestBuildInitiativeFields_LowHealthWarning(t *testing.T) {
 		}
 	}
 }
+
+func TestFormatCombatantName(t *testing.T) {
+	tests := []struct {
+		name          string
+		combatant     *entities.Combatant
+		expectedName  string
+		expectedWidth int
+	}{
+		{
+			name: "living player with regular icon",
+			combatant: &entities.Combatant{
+				Name:      "Gandalf",
+				Type:      entities.CombatantTypePlayer,
+				Class:     "Wizard",
+				CurrentHP: 10,
+				MaxHP:     10,
+			},
+			expectedName:  "🧙 Gandalf",
+			expectedWidth: 16,
+		},
+		{
+			name: "living player with variation selector icon",
+			combatant: &entities.Combatant{
+				Name:      "Stanthony",
+				Type:      entities.CombatantTypePlayer,
+				Class:     "Fighter",
+				CurrentHP: 10,
+				MaxHP:     10,
+			},
+			expectedName:  "⚔️ Stanthony",
+			expectedWidth: 15,
+		},
+		{
+			name: "dead player",
+			combatant: &entities.Combatant{
+				Name:      "Fallen Hero",
+				Type:      entities.CombatantTypePlayer,
+				Class:     "Fighter",
+				CurrentHP: 0,
+				MaxHP:     10,
+			},
+			expectedName:  "💀 Fallen Hero",
+			expectedWidth: 16,
+		},
+		{
+			name: "living monster",
+			combatant: &entities.Combatant{
+				Name:      "Goblin",
+				Type:      entities.CombatantTypeMonster,
+				CurrentHP: 5,
+				MaxHP:     7,
+			},
+			expectedName:  "🐉 Goblin",
+			expectedWidth: 16,
+		},
+		{
+			name: "long name gets truncated",
+			combatant: &entities.Combatant{
+				Name:      "Very Long Monster Name",
+				Type:      entities.CombatantTypeMonster,
+				CurrentHP: 10,
+				MaxHP:     10,
+			},
+			expectedName:  "🐉 Very Long ...",
+			expectedWidth: 16,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			name, width := formatCombatantName(tt.combatant)
+			assert.Equal(t, tt.expectedName, name)
+			assert.Equal(t, tt.expectedWidth, width)
+		})
+	}
+}
