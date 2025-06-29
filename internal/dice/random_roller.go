@@ -1,94 +1,41 @@
 package dice
 
-import (
-	"github.com/KirkDiggler/dnd-bot-discord/internal/interfaces"
-)
-
-// RandomRoller implements DiceRoller using the existing dice package
-type RandomRoller struct{}
+// randomRoller implements Roller using the existing dice package
+type randomRoller struct{}
 
 // NewRandomRoller creates a new random dice roller
-func NewRandomRoller() interfaces.DiceRoller {
-	return &RandomRoller{}
+func NewRandomRoller() Roller {
+	return &randomRoller{}
 }
 
-// Roll implements DiceRoller.Roll
-func (r *RandomRoller) Roll(count, sides, bonus int) (total int, rolls []int, err error) {
-	result, err := Roll(count, sides, bonus)
-	if err != nil {
-		return 0, nil, err
-	}
-	return result.Total, result.Rolls, nil
-}
-
-// RollWithAdvantage implements DiceRoller.RollWithAdvantage
-func (r *RandomRoller) RollWithAdvantage(sides, bonus int) (total, roll int, err error) {
-	result1, err := Roll(1, sides, 0)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	result2, err := Roll(1, sides, 0)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	// Take the higher roll
-	higherRoll := result1.Rolls[0]
-	if result2.Rolls[0] > higherRoll {
-		higherRoll = result2.Rolls[0]
-	}
-
-	return higherRoll + bonus, higherRoll, nil
-}
-
-// RollWithDisadvantage implements DiceRoller.RollWithDisadvantage
-func (r *RandomRoller) RollWithDisadvantage(sides, bonus int) (total, roll int, err error) {
-	result1, err := Roll(1, sides, 0)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	result2, err := Roll(1, sides, 0)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	// Take the lower roll
-	lowerRoll := result1.Rolls[0]
-	if result2.Rolls[0] < lowerRoll {
-		lowerRoll = result2.Rolls[0]
-	}
-
-	return lowerRoll + bonus, lowerRoll, nil
-}
-
-// RandomRollerV2 implements DiceRollerV2 using the existing dice package
-type RandomRollerV2 struct{}
-
-// NewRandomRollerV2 creates a new random dice roller with detailed results
-func NewRandomRollerV2() interfaces.DiceRollerV2 {
-	return &RandomRollerV2{}
-}
-
-// Roll implements DiceRollerV2.Roll
-func (r *RandomRollerV2) Roll(count, sides, bonus int) (*interfaces.RollResult, error) {
+// Roll implements Roller.Roll
+func (r *randomRoller) Roll(count, sides, bonus int) (*RollResult, error) {
 	result, err := Roll(count, sides, bonus)
 	if err != nil {
 		return nil, err
 	}
 
-	return &interfaces.RollResult{
-		Total: result.Total,
-		Rolls: result.Rolls,
-		Bonus: bonus,
-		Count: count,
-		Sides: sides,
-	}, nil
+	// Convert old RollResult to new format
+	rollResult := &RollResult{
+		Total:    result.Total,
+		Rolls:    result.Rolls,
+		Bonus:    bonus,
+		Count:    count,
+		Sides:    sides,
+		RawTotal: result.Total - bonus,
+	}
+
+	// Check for crit/fumble on d20
+	if count == 1 && sides == 20 && len(result.Rolls) > 0 {
+		rollResult.IsCrit = result.Rolls[0] == 20
+		rollResult.IsFumble = result.Rolls[0] == 1
+	}
+
+	return rollResult, nil
 }
 
-// RollWithAdvantage implements DiceRollerV2.RollWithAdvantage
-func (r *RandomRollerV2) RollWithAdvantage(sides, bonus int) (*interfaces.RollResult, error) {
+// RollWithAdvantage implements Roller.RollWithAdvantage
+func (r *randomRoller) RollWithAdvantage(sides, bonus int) (*RollResult, error) {
 	result1, err := Roll(1, sides, 0)
 	if err != nil {
 		return nil, err
@@ -100,24 +47,33 @@ func (r *RandomRollerV2) RollWithAdvantage(sides, bonus int) (*interfaces.RollRe
 	}
 
 	// Take the higher roll
-	higherRoll := result1.Rolls[0]
-	lowerRoll := result2.Rolls[0]
-	if result2.Rolls[0] > higherRoll {
-		higherRoll = result2.Rolls[0]
-		lowerRoll = result1.Rolls[0]
+	roll1 := result1.Rolls[0]
+	roll2 := result2.Rolls[0]
+	higherRoll := roll1
+	if roll2 > roll1 {
+		higherRoll = roll2
 	}
 
-	return &interfaces.RollResult{
-		Total: higherRoll + bonus,
-		Rolls: []int{higherRoll, lowerRoll}, // Show both rolls
-		Bonus: bonus,
-		Count: 1,
-		Sides: sides,
-	}, nil
+	result := &RollResult{
+		Total:    higherRoll + bonus,
+		Rolls:    []int{roll1, roll2}, // Show both rolls
+		Bonus:    bonus,
+		Count:    1,
+		Sides:    sides,
+		RawTotal: higherRoll,
+	}
+
+	// Check for crit/fumble on d20
+	if sides == 20 {
+		result.IsCrit = higherRoll == 20
+		result.IsFumble = higherRoll == 1
+	}
+
+	return result, nil
 }
 
-// RollWithDisadvantage implements DiceRollerV2.RollWithDisadvantage
-func (r *RandomRollerV2) RollWithDisadvantage(sides, bonus int) (*interfaces.RollResult, error) {
+// RollWithDisadvantage implements Roller.RollWithDisadvantage
+func (r *randomRoller) RollWithDisadvantage(sides, bonus int) (*RollResult, error) {
 	result1, err := Roll(1, sides, 0)
 	if err != nil {
 		return nil, err
@@ -129,18 +85,27 @@ func (r *RandomRollerV2) RollWithDisadvantage(sides, bonus int) (*interfaces.Rol
 	}
 
 	// Take the lower roll
-	lowerRoll := result1.Rolls[0]
-	higherRoll := result2.Rolls[0]
-	if result2.Rolls[0] < lowerRoll {
-		lowerRoll = result2.Rolls[0]
-		higherRoll = result1.Rolls[0]
+	roll1 := result1.Rolls[0]
+	roll2 := result2.Rolls[0]
+	lowerRoll := roll1
+	if roll2 < roll1 {
+		lowerRoll = roll2
 	}
 
-	return &interfaces.RollResult{
-		Total: lowerRoll + bonus,
-		Rolls: []int{lowerRoll, higherRoll}, // Show both rolls
-		Bonus: bonus,
-		Count: 1,
-		Sides: sides,
-	}, nil
+	result := &RollResult{
+		Total:    lowerRoll + bonus,
+		Rolls:    []int{roll1, roll2}, // Show both rolls
+		Bonus:    bonus,
+		Count:    1,
+		Sides:    sides,
+		RawTotal: lowerRoll,
+	}
+
+	// Check for crit/fumble on d20
+	if sides == 20 {
+		result.IsCrit = lowerRoll == 20
+		result.IsFumble = lowerRoll == 1
+	}
+
+	return result, nil
 }

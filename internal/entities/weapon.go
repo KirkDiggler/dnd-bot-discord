@@ -38,13 +38,13 @@ func (w *Weapon) Attack(char *Character) (*attack.Result, error) {
 
 	if w.IsTwoHanded() {
 		if w.TwoHandedDamage == nil {
-			return attack.RollAttack(attackBonus, damageBonus, w.Damage)
+			return attack.RollAttack(char.getDiceRoller(), attackBonus, damageBonus, w.Damage)
 		}
 
-		return attack.RollAttack(attackBonus, damageBonus, w.TwoHandedDamage)
+		return attack.RollAttack(char.getDiceRoller(), attackBonus, damageBonus, w.TwoHandedDamage)
 	}
 
-	return attack.RollAttack(attackBonus, damageBonus, w.Damage)
+	return attack.RollAttack(char.getDiceRoller(), attackBonus, damageBonus, w.Damage)
 }
 
 func (w *Weapon) IsRanged() bool {

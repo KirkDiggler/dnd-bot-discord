@@ -37,6 +37,7 @@ const (
 // Handler handles all Discord interactions
 type Handler struct {
 	ServiceProvider                       *services.Provider
+	diceRoller                            dice.Roller
 	characterCreateHandler                *character.CreateHandler
 	characterRaceSelectHandler            *character.RaceSelectHandler
 	characterShowClassesHandler           *character.ShowClassesHandler
@@ -90,12 +91,20 @@ type Handler struct {
 // HandlerConfig holds configuration for the Discord handler
 type HandlerConfig struct {
 	ServiceProvider *services.Provider
+	DiceRoller      dice.Roller
 }
 
 // NewHandler creates a new Discord handler
 func NewHandler(cfg *HandlerConfig) *Handler {
+	// Default to random roller if none provided
+	diceRoller := cfg.DiceRoller
+	if diceRoller == nil {
+		diceRoller = dice.NewRandomRoller()
+	}
+
 	return &Handler{
 		ServiceProvider: cfg.ServiceProvider,
+		diceRoller:      diceRoller,
 		characterCreateHandler: character.NewCreateHandler(&character.CreateHandlerConfig{
 			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
@@ -3519,7 +3528,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						action := current.Actions[0]
 
 						// Roll attack
-						attackResult, rollErr := dice.Roll(1, 20, 0)
+						attackResult, rollErr := h.diceRoller.Roll(1, 20, 0)
 						if rollErr != nil {
 							log.Printf("Failed to roll attack: %v", rollErr)
 
@@ -3563,12 +3572,12 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 								if attackRoll == 20 { // Critical hit doubles dice
 									diceCount *= 2
 								}
-								rollResult, rollErr := dice.Roll(diceCount, dmg.DiceSize, dmg.Bonus)
+								dmgResult, rollErr := h.diceRoller.Roll(diceCount, dmg.DiceSize, dmg.Bonus)
 								if rollErr != nil {
 									log.Printf("Failed to roll damage: %v", rollErr)
 									//TODO: Handle error
 								}
-								dmgTotal := rollResult.Total
+								dmgTotal := dmgResult.Total
 								totalDamage += dmgTotal
 								damageDetails.WriteString(fmt.Sprintf("🎲 %dd%d+%d = **%d** %s\n", diceCount, dmg.DiceSize, dmg.Bonus, dmgTotal, dmg.DamageType))
 							}

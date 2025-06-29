@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
+	mockdice "github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/testutils"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +17,7 @@ import (
 func TestAbilityService_UseAbility(t *testing.T) {
 	tests := []struct {
 		name         string
-		setupMocks   func(*mockchar.MockService, *dice.MockRoller)
+		setupMocks   func(*mockchar.MockService, *mockdice.ManualMockRoller)
 		input        *UseAbilityInput
 		character    *entities.Character
 		wantResult   *UseAbilityResult
@@ -26,7 +26,7 @@ func TestAbilityService_UseAbility(t *testing.T) {
 	}{
 		{
 			name: "barbarian rage success",
-			setupMocks: func(charSvc *mockchar.MockService, roller *dice.MockRoller) {
+			setupMocks: func(charSvc *mockchar.MockService, roller *mockdice.ManualMockRoller) {
 				// No dice rolls needed for rage
 			},
 			input: &UseAbilityInput{
@@ -61,7 +61,7 @@ func TestAbilityService_UseAbility(t *testing.T) {
 		},
 		{
 			name: "fighter second wind healing",
-			setupMocks: func(charSvc *mockchar.MockService, roller *dice.MockRoller) {
+			setupMocks: func(charSvc *mockchar.MockService, roller *mockdice.ManualMockRoller) {
 				// Mock healing roll: 1d10+1 = 7
 				roller.SetRolls([]int{6})
 			},
@@ -88,7 +88,7 @@ func TestAbilityService_UseAbility(t *testing.T) {
 		},
 		{
 			name: "bard bardic inspiration",
-			setupMocks: func(charSvc *mockchar.MockService, roller *dice.MockRoller) {
+			setupMocks: func(charSvc *mockchar.MockService, roller *mockdice.ManualMockRoller) {
 				// No dice rolls for giving inspiration
 			},
 			input: &UseAbilityInput{
@@ -108,7 +108,7 @@ func TestAbilityService_UseAbility(t *testing.T) {
 		},
 		{
 			name: "paladin lay on hands self heal",
-			setupMocks: func(charSvc *mockchar.MockService, roller *dice.MockRoller) {
+			setupMocks: func(charSvc *mockchar.MockService, roller *mockdice.ManualMockRoller) {
 				// No dice rolls for lay on hands
 			},
 			input: &UseAbilityInput{
@@ -135,7 +135,7 @@ func TestAbilityService_UseAbility(t *testing.T) {
 		},
 		{
 			name: "paladin divine sense",
-			setupMocks: func(charSvc *mockchar.MockService, roller *dice.MockRoller) {
+			setupMocks: func(charSvc *mockchar.MockService, roller *mockdice.ManualMockRoller) {
 				// No dice rolls for divine sense
 			},
 			input: &UseAbilityInput{
@@ -154,7 +154,7 @@ func TestAbilityService_UseAbility(t *testing.T) {
 		},
 		{
 			name:       "no uses remaining",
-			setupMocks: func(charSvc *mockchar.MockService, roller *dice.MockRoller) {},
+			setupMocks: func(charSvc *mockchar.MockService, roller *mockdice.ManualMockRoller) {},
 			input: &UseAbilityInput{
 				CharacterID: "char_123",
 				AbilityKey:  "second-wind",
@@ -172,7 +172,7 @@ func TestAbilityService_UseAbility(t *testing.T) {
 		},
 		{
 			name:       "ability not found",
-			setupMocks: func(charSvc *mockchar.MockService, roller *dice.MockRoller) {},
+			setupMocks: func(charSvc *mockchar.MockService, roller *mockdice.ManualMockRoller) {},
 			input: &UseAbilityInput{
 				CharacterID: "char_123",
 				AbilityKey:  "fireball", // Not a level 1 ability
@@ -188,7 +188,7 @@ func TestAbilityService_UseAbility(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockCharSvc := mockchar.NewMockService(ctrl)
-			mockRoller := dice.NewMockRoller()
+			mockRoller := mockdice.NewManualMockRoller()
 
 			// Setup character service to return our test character
 			mockCharSvc.EXPECT().

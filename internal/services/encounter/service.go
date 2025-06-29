@@ -13,7 +13,6 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/interfaces"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
 	charService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	sessService "github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
@@ -183,7 +182,7 @@ type service struct {
 	sessionService   sessService.Service
 	characterService charService.Service
 	uuidGenerator    uuid.Generator
-	diceRoller       interfaces.DiceRoller
+	diceRoller       dice.Roller
 }
 
 // ServiceConfig holds configuration for the service
@@ -192,7 +191,7 @@ type ServiceConfig struct {
 	SessionService   sessService.Service
 	CharacterService charService.Service
 	UUIDGenerator    uuid.Generator
-	DiceRoller       interfaces.DiceRoller
+	DiceRoller       dice.Roller
 }
 
 // NewService creates a new encounter service
@@ -538,17 +537,17 @@ func (s *service) RollInitiative(ctx context.Context, encounterID, userID string
 	initiatives := make(map[string]int)
 	for _, id := range combatantIDs {
 		combatant := encounter.Combatants[id]
-		total, rolls, err := s.diceRoller.Roll(1, 20, combatant.InitiativeBonus)
+		result, err := s.diceRoller.Roll(1, 20, combatant.InitiativeBonus)
 		if err != nil {
 			return dnderr.Wrap(err, "failed to roll initiative")
 		}
-		combatant.Initiative = total
+		combatant.Initiative = result.Total
 		initiatives[id] = combatant.Initiative
 
 		// Log the initiative roll
 		logEntry := fmt.Sprintf("**%s** rolls initiative: %v + %d = **%d**",
 			combatant.Name,
-			rolls[0], // The d20 roll
+			result.Rolls[0], // The d20 roll
 			combatant.InitiativeBonus,
 			combatant.Initiative)
 		encounter.CombatLog = append(encounter.CombatLog, logEntry)
@@ -854,15 +853,15 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		result.WeaponName = action.Name
 
 		// Roll attack
-		attackTotal, attackRolls, err := s.diceRoller.Roll(1, 20, action.AttackBonus)
+		attackResult, err := s.diceRoller.Roll(1, 20, action.AttackBonus)
 		if err != nil {
 			return nil, dnderr.Wrap(err, "failed to roll attack")
 		}
 
-		result.AttackRoll = attackRolls[0]
+		result.AttackRoll = attackResult.Rolls[0]
 		result.AttackBonus = action.AttackBonus
-		result.TotalAttack = attackTotal
-		result.DiceRolls = attackRolls
+		result.TotalAttack = attackResult.Total
+		result.DiceRolls = attackResult.Rolls
 
 		// Check hit
 		result.Hit = result.TotalAttack >= target.AC
@@ -883,7 +882,7 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			}
 
 			for _, dmg := range action.Damage {
-				damageTotal, damageRolls, err := s.diceRoller.Roll(dmg.DiceCount, dmg.DiceSize, dmg.Bonus)
+				damageResult, err := s.diceRoller.Roll(dmg.DiceCount, dmg.DiceSize, dmg.Bonus)
 				if err != nil {
 					log.Printf("Error rolling damage: %v", err)
 					continue
@@ -894,15 +893,15 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 
 				// Double dice on critical
 				if result.Critical {
-					critTotal, critRolls, err := s.diceRoller.Roll(dmg.DiceCount, dmg.DiceSize, 0)
+					critResult, err := s.diceRoller.Roll(dmg.DiceCount, dmg.DiceSize, 0)
 					if err == nil {
-						damageTotal += critTotal
-						damageRolls = append(damageRolls, critRolls...)
+						damageResult.Total += critResult.Total
+						damageResult.Rolls = append(damageResult.Rolls, critResult.Rolls...)
 					}
 				}
 
-				totalDamage += damageTotal
-				allDamageRolls = append(allDamageRolls, damageRolls...)
+				totalDamage += damageResult.Total
+				allDamageRolls = append(allDamageRolls, damageResult.Rolls...)
 
 				// Use first damage type found
 				if result.DamageType == "" && dmg.DamageType != "" {
@@ -922,15 +921,15 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		result.WeaponDiceSize = 4 // Unarmed strike is always 1d4
 
 		// Roll attack
-		attackTotal, attackRolls, err := s.diceRoller.Roll(1, 20, 0)
+		attackResult, err := s.diceRoller.Roll(1, 20, 0)
 		if err != nil {
 			return nil, dnderr.Wrap(err, "failed to roll attack")
 		}
 
-		result.AttackRoll = attackRolls[0]
+		result.AttackRoll = attackResult.Rolls[0]
 		result.AttackBonus = 0
-		result.TotalAttack = attackTotal
-		result.DiceRolls = attackRolls
+		result.TotalAttack = attackResult.Total
+		result.DiceRolls = attackResult.Rolls
 
 		// Check hit
 		result.Hit = result.TotalAttack >= target.AC
@@ -938,21 +937,21 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 
 		if result.Hit {
 			// Roll damage
-			damageTotal, damageRolls, err := s.diceRoller.Roll(1, 4, 0)
+			damageResult, err := s.diceRoller.Roll(1, 4, 0)
 			if err != nil {
 				return nil, dnderr.Wrap(err, "failed to roll damage")
 			}
 
 			if result.Critical {
-				critTotal, critRolls, err := s.diceRoller.Roll(1, 4, 0)
+				critResult, err := s.diceRoller.Roll(1, 4, 0)
 				if err == nil {
-					damageTotal += critTotal
-					damageRolls = append(damageRolls, critRolls...)
+					damageResult.Total += critResult.Total
+					damageResult.Rolls = append(damageResult.Rolls, critResult.Rolls...)
 				}
 			}
 
-			result.Damage = damageTotal
-			result.DamageRolls = damageRolls
+			result.Damage = damageResult.Total
+			result.DamageRolls = damageResult.Rolls
 			result.DamageType = "bludgeoning"
 			result.DamageBonus = 0
 		}

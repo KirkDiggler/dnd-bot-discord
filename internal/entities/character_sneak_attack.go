@@ -3,7 +3,6 @@ package entities
 import (
 	"log"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/attack"
 )
 
@@ -80,7 +79,7 @@ func (c *Character) ApplySneakAttack(ctx *CombatContext) int {
 	}
 
 	// Roll sneak attack damage
-	result, err := dice.Roll(diceCount, 6, 0)
+	result, err := c.getDiceRoller().Roll(diceCount, 6, 0)
 	if err != nil {
 		log.Printf("Error rolling sneak attack damage dice: %v", err)
 		return 0

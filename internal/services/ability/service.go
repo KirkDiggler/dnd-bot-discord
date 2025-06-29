@@ -9,7 +9,6 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/interfaces"
 	charService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	encounterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
 )
@@ -17,14 +16,14 @@ import (
 type service struct {
 	characterService charService.Service
 	encounterService encounterService.Service
-	diceRoller       interfaces.DiceRoller
+	diceRoller       dice.Roller
 }
 
 // ServiceConfig holds configuration for the ability service
 type ServiceConfig struct {
 	CharacterService charService.Service
 	EncounterService encounterService.Service
-	DiceRoller       interfaces.DiceRoller
+	DiceRoller       dice.Roller
 }
 
 // NewService creates a new ability service
@@ -180,7 +179,7 @@ func (s *service) handleRage(character *entities.Character, ability *entities.Ac
 // handleSecondWind handles the Fighter's Second Wind ability
 func (s *service) handleSecondWind(character *entities.Character, result *UseAbilityResult) *UseAbilityResult {
 	// Roll 1d10 + fighter level
-	total, _, err := s.diceRoller.Roll(1, 10, character.Level)
+	rollResult, err := s.diceRoller.Roll(1, 10, character.Level)
 	if err != nil {
 		result.Success = false
 		result.Message = "Failed to roll healing"
@@ -188,10 +187,10 @@ func (s *service) handleSecondWind(character *entities.Character, result *UseAbi
 	}
 
 	resources := character.GetResources()
-	healingDone := resources.HP.Heal(total)
+	healingDone := resources.HP.Heal(rollResult.Total)
 	character.CurrentHitPoints = resources.HP.Current
 
-	result.Message = fmt.Sprintf("Second Wind heals you for %d HP (rolled %d)", healingDone, total)
+	result.Message = fmt.Sprintf("Second Wind heals you for %d HP (rolled %d)", healingDone, rollResult.Total)
 	result.HealingDone = healingDone
 	result.TargetNewHP = resources.HP.Current
 

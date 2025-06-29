@@ -72,7 +72,31 @@ type Character struct {
 	// EffectManager tracks all active status effects
 	EffectManager *effects.Manager `json:"-"`
 
+	// diceRoller is the injected dice roller (defaults to random)
+	diceRoller dice.Roller `json:"-"`
+
 	mu sync.Mutex
+}
+
+// NewCharacter creates a new character with default dice roller
+func NewCharacter() *Character {
+	return &Character{
+		diceRoller: dice.NewRandomRoller(),
+	}
+}
+
+// WithDiceRoller sets a custom dice roller (for testing)
+func (c *Character) WithDiceRoller(roller dice.Roller) *Character {
+	c.diceRoller = roller
+	return c
+}
+
+// getDiceRoller returns the dice roller, initializing if needed
+func (c *Character) getDiceRoller() dice.Roller {
+	if c.diceRoller == nil {
+		c.diceRoller = dice.NewRandomRoller()
+	}
+	return c.diceRoller
 }
 
 func (c *Character) Attack() ([]*attack.Result, error) {
@@ -147,9 +171,9 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 			// Roll the attack
 			var attak1 *attack.Result
 			if weap.IsTwoHanded() && weap.TwoHandedDamage != nil {
-				attak1, err = attack.RollAttack(attackBonus, damageBonus, weap.TwoHandedDamage)
+				attak1, err = attack.RollAttack(c.getDiceRoller(), attackBonus, damageBonus, weap.TwoHandedDamage)
 			} else {
-				attak1, err = attack.RollAttack(attackBonus, damageBonus, weap.Damage)
+				attak1, err = attack.RollAttack(c.getDiceRoller(), attackBonus, damageBonus, weap.Damage)
 			}
 
 			if err != nil {
@@ -191,7 +215,7 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 						// Continue with current bonus
 					}
 
-					attak2, err := attack.RollAttack(offHandAttackBonus, offHandDamageBonus, offWeap.Damage)
+					attak2, err := attack.RollAttack(c.getDiceRoller(), offHandAttackBonus, offHandDamageBonus, offWeap.Damage)
 					if err != nil {
 						return nil, err
 					}
@@ -267,7 +291,7 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 				dmg = weap.Damage
 			}
 
-			a, err := attack.RollAttack(attackBonus, damageBonus, dmg)
+			a, err := attack.RollAttack(c.getDiceRoller(), attackBonus, damageBonus, dmg)
 			if err != nil {
 				return nil, err
 			}
@@ -385,21 +409,21 @@ func (c *Character) improvisedMelee() (*attack.Result, error) {
 		damageBonus = bonus // Fall back to base
 	}
 
-	attackRoll, err := dice.Roll(1, 20, 0)
+	attackResult, err := c.getDiceRoller().Roll(1, 20, 0)
 	if err != nil {
 		return nil, err
 	}
-	damageRoll, err := dice.Roll(1, 4, 0)
+	damageResult, err := c.getDiceRoller().Roll(1, 4, 0)
 	if err != nil {
 		return nil, err
 	}
 
 	return &attack.Result{
-		AttackRoll:   attackRoll.Total + bonus,
-		DamageRoll:   damageRoll.Total + damageBonus,
+		AttackRoll:   attackResult.Total + bonus,
+		DamageRoll:   damageResult.Total + damageBonus,
 		AttackType:   damage.TypeBludgeoning,
-		AttackResult: attackRoll,
-		DamageResult: damageRoll,
+		AttackResult: attackResult,
+		DamageResult: damageResult,
 		WeaponDamage: &damage.Damage{
 			DiceCount:  1,
 			DiceSize:   4,
@@ -1181,7 +1205,7 @@ func (c *Character) RollSavingThrow(attribute Attribute) (*dice.RollResult, int,
 	bonus := c.GetSavingThrowBonus(attribute)
 
 	// Roll 1d20
-	result, err := dice.Roll(1, 20, bonus)
+	result, err := c.getDiceRoller().Roll(1, 20, bonus)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to roll saving throw: %w", err)
 	}
@@ -1242,7 +1266,7 @@ func (c *Character) RollSkillCheck(skillKey string, attribute Attribute) (*dice.
 	bonus := c.GetSkillBonus(skillKey, attribute)
 
 	// Roll 1d20
-	result, err := dice.Roll(1, 20, bonus)
+	result, err := c.getDiceRoller().Roll(1, 20, bonus)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to roll skill check: %w", err)
 	}
