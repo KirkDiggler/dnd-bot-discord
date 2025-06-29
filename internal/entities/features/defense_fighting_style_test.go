@@ -136,6 +136,15 @@ func TestCalculateAC_MonkBarbarianUnarmoredDefense(t *testing.T) {
 		ac = CalculateAC(char)
 		// Uses armor: 11 + 3 (DEX) = 14
 		assert.Equal(t, 14, ac, "Uses armor AC when worn")
+
+		// Remove armor and test with shield
+		delete(char.EquippedSlots, entities.SlotBody)
+		char.EquippedSlots[entities.SlotOffHand] = &entities.Armor{
+			Base: entities.BasicEquipment{Key: "shield"},
+		}
+		ac = CalculateAC(char)
+		// Should be: 10 + 3 (DEX) + 2 (WIS) + 2 (shield) = 17
+		assert.Equal(t, 17, ac, "Shield bonus correctly added to monk unarmored defense")
 	})
 
 	t.Run("barbarian unarmored defense is implemented", func(t *testing.T) {
@@ -157,8 +166,7 @@ func TestCalculateAC_MonkBarbarianUnarmoredDefense(t *testing.T) {
 			Base: entities.BasicEquipment{Key: "shield"},
 		}
 		ac = CalculateAC(char)
-		// Currently returns 15 because unarmored defense returns early before shield check
-		// TODO: Fix CalculateAC to add shield bonus to unarmored defense
-		assert.Equal(t, 15, ac, "Shield bonus not added to barbarian unarmored defense (bug)")
+		// Should be: 10 + 2 (DEX) + 3 (CON) + 2 (shield) = 17
+		assert.Equal(t, 17, ac, "Shield bonus correctly added to barbarian unarmored defense")
 	})
 }

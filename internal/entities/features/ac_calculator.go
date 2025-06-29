@@ -103,23 +103,26 @@ func CalculateAC(character *entities.Character) int {
 		classFeatures = GetClassFeatures(character.Class.Key, character.Level)
 	}
 
-	// Check for Unarmored Defense
+	// Calculate AC based on armor or unarmored defense
+	var ac int
 	if !hasArmor {
-		// Monk Unarmored Defense
+		// Check for Unarmored Defense
 		if HasFeature(classFeatures, "unarmored_defense_monk") {
-			return 10 + dexMod + wisMod
+			// Monk Unarmored Defense
+			ac = 10 + dexMod + wisMod
+		} else if HasFeature(classFeatures, "unarmored_defense_barbarian") {
+			// Barbarian Unarmored Defense
+			ac = 10 + dexMod + conMod
+		} else {
+			// No armor and no unarmored defense
+			ac = 10 + dexMod
 		}
-
-		// Barbarian Unarmored Defense
-		if HasFeature(classFeatures, "unarmored_defense_barbarian") {
-			return 10 + dexMod + conMod
-		}
+	} else {
+		// Standard AC with armor
+		ac = baseAC + dexMod
 	}
 
-	// Standard AC calculation
-	ac := baseAC + dexMod
-
-	// Check for shield
+	// Check for shield (works with any AC calculation including unarmored defense)
 	hasShield := false
 	if character.EquippedSlots != nil {
 		for _, item := range character.EquippedSlots {
