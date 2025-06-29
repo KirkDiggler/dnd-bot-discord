@@ -108,14 +108,12 @@ func getCompletedSteps(currentStep string) map[string]bool {
 		completed[step] = i < currentIndex
 	}
 
-	// Special case: race is always completed once we're past race selection
-	if currentStep != "" && currentStep != "race" {
+	// Special handling for when we're showing progress after selecting a class
+	// The "class" step passed to BuildProgressValue means we just selected a class
+	if currentStep == "class" {
 		completed["race"] = true
-	}
-
-	// Special case: class is completed once we're at or past class step
-	if currentStep != "" && currentStep != "race" {
 		completed["class"] = true
+		// abilities and beyond are not completed yet
 	}
 
 	return completed
