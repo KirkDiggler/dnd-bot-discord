@@ -363,11 +363,12 @@ func (c *Character) improvisedMelee() (*attack.Result, error) {
 	// Determine damage dice size based on monk level
 	diceSize := 4 // Default for non-monks and level 1-4 monks
 	if hasMartialArts {
-		if c.Level >= 17 {
+		switch {
+		case c.Level >= 17:
 			diceSize = 10
-		} else if c.Level >= 11 {
+		case c.Level >= 11:
 			diceSize = 8
-		} else if c.Level >= 5 {
+		case c.Level >= 5:
 			diceSize = 6
 		}
 	}
