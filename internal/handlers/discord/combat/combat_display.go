@@ -16,8 +16,8 @@ func BuildInitiativeDisplay(enc *entities.Encounter) string {
 
 	// Header with color
 	sb.WriteString("\u001b[1;36m") // Bold cyan for header
-	sb.WriteString("Init │ Name                  │ HP         │ AC \n")
-	sb.WriteString("─────┼───────────────────────┼────────────┼────\n")
+	sb.WriteString("Init │ Name                  │ HP       │ AC \n")
+	sb.WriteString("─────┼─────────────────────┼────────┼────\n")
 	sb.WriteString("\u001b[0m") // Reset color
 
 	// Show combatants in initiative order
