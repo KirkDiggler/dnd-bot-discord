@@ -1490,18 +1490,23 @@ func (c *Character) applyFightingStyleBonuses(weapon *Weapon, attackBonus, damag
 func (c *Character) applyFightingStyleBonusesWithHand(weapon *Weapon, attackBonus, damageBonus int, hand Slot) (finalAttackBonus, finalDamageBonus int) {
 	// Check if the character has fighting style feature
 	var fightingStyle string
+	log.Printf("DEBUG: Checking for fighting style among %d features", len(c.Features))
 	for _, feature := range c.Features {
+		log.Printf("DEBUG: Feature key=%s, metadata=%v", feature.Key, feature.Metadata)
 		if feature.Key == "fighting_style" && feature.Metadata != nil {
 			if style, ok := feature.Metadata["style"].(string); ok {
 				fightingStyle = style
+				log.Printf("DEBUG: Found fighting style: %s", style)
 				break
 			}
 		}
 	}
 
 	if fightingStyle == "" {
+		log.Printf("DEBUG: No fighting style found")
 		return attackBonus, damageBonus
 	}
+	log.Printf("DEBUG: Applying fighting style: %s", fightingStyle)
 
 	// Apply fighting style bonuses
 	switch fightingStyle {
@@ -1514,12 +1519,28 @@ func (c *Character) applyFightingStyleBonusesWithHand(weapon *Weapon, attackBonu
 		// +1 to AC while wearing armor (handled elsewhere in AC calculation)
 		// No attack/damage bonus
 	case "dueling":
-		// +2 damage with one-handed weapons when no other weapon equipped
+		// +2 damage with one-handed weapons when no other weapon equipped (shields are OK)
+		log.Printf("DEBUG: Checking dueling for weapon %s, IsMelee=%v, IsTwoHanded=%v", weapon.GetName(), weapon.IsMelee(), weapon.IsTwoHanded())
 		if weapon.IsMelee() && !weapon.IsTwoHanded() {
-			// Check if off-hand is empty (no dual wielding)
-			if c.EquippedSlots[SlotOffHand] == nil {
-				damageBonus += 2
+			// Check if off-hand has a weapon (shields are allowed)
+			offHand := c.EquippedSlots[SlotOffHand]
+			log.Printf("DEBUG: Off-hand equipment: %v", offHand)
+
+			offHandHasWeapon := false
+			if offHand != nil {
+				_, isWeapon := offHand.(*Weapon)
+				offHandHasWeapon = isWeapon
+				log.Printf("DEBUG: Off-hand has weapon: %v (type: %T)", offHandHasWeapon, offHand)
 			}
+
+			if !offHandHasWeapon {
+				log.Printf("DEBUG: Applying dueling bonus +2")
+				damageBonus += 2
+			} else {
+				log.Printf("DEBUG: Not applying dueling bonus - weapon in off-hand")
+			}
+		} else {
+			log.Printf("DEBUG: Not applying dueling - weapon not melee one-handed")
 		}
 	case "great_weapon":
 		// Reroll 1s and 2s on damage with two-handed weapons
