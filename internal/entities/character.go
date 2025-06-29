@@ -1492,12 +1492,18 @@ func (c *Character) applyFightingStyleBonusesWithHand(weapon *Weapon, attackBonu
 	var fightingStyle string
 	log.Printf("DEBUG: Checking for fighting style among %d features", len(c.Features))
 	for _, feature := range c.Features {
-		log.Printf("DEBUG: Feature key=%s, metadata=%v", feature.Key, feature.Metadata)
-		if feature.Key == "fighting_style" && feature.Metadata != nil {
-			if style, ok := feature.Metadata["style"].(string); ok {
-				fightingStyle = style
-				log.Printf("DEBUG: Found fighting style: %s", style)
-				break
+		if feature.Key == "fighting_style" {
+			log.Printf("DEBUG: Found fighting_style feature, metadata=%v", feature.Metadata)
+			if feature.Metadata != nil {
+				if style, ok := feature.Metadata["style"].(string); ok {
+					fightingStyle = style
+					log.Printf("DEBUG: Found fighting style: %s", style)
+					break
+				} else {
+					log.Printf("DEBUG: Fighting style metadata exists but no 'style' key or wrong type")
+				}
+			} else {
+				log.Printf("DEBUG: Fighting style feature found but metadata is nil")
 			}
 		}
 	}

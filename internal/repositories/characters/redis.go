@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -269,6 +270,12 @@ func (r *redisRepo) Get(ctx context.Context, id string) (*entities.Character, er
 		return nil, fmt.Errorf("failed to unmarshal character: %w", unmarshalErr)
 	}
 
+	// Debug: Log features being loaded
+	log.Printf("DEBUG REDIS: Loading character %s with %d features", data.Name, len(data.Features))
+	for i, feature := range data.Features {
+		log.Printf("DEBUG REDIS: Loaded Feature %d: key=%s, metadata=%v", i, feature.Key, feature.Metadata)
+	}
+
 	// Convert to entity
 	char, err := r.fromCharacterData(&data)
 	if err != nil {
@@ -364,6 +371,12 @@ func (r *redisRepo) Update(ctx context.Context, character *entities.Character) e
 	}
 	data.CreatedAt = existing.CreatedAt // Preserve creation time
 	data.UpdatedAt = time.Now().UTC()
+
+	// Debug: Log features being saved
+	log.Printf("DEBUG REDIS: Saving character %s with %d features", character.Name, len(data.Features))
+	for i, feature := range data.Features {
+		log.Printf("DEBUG REDIS: Feature %d: key=%s, metadata=%v", i, feature.Key, feature.Metadata)
+	}
 
 	// Serialize updated character
 	jsonData, err := json.Marshal(data)

@@ -32,11 +32,14 @@ type ClassFeaturesRequest struct {
 
 // Handle processes class feature selections
 func (h *ClassFeaturesHandler) Handle(req *ClassFeaturesRequest) error {
+	log.Printf("DEBUG: ClassFeaturesHandler.Handle called with FeatureType=%s, Selection=%s, CharacterID=%s", req.FeatureType, req.Selection, req.CharacterID)
+
 	// Get the character
 	char, err := h.characterService.GetByID(req.CharacterID)
 	if err != nil {
 		return fmt.Errorf("failed to get character: %w", err)
 	}
+	log.Printf("DEBUG: Got character %s with %d features", char.Name, len(char.Features))
 
 	// Store the selection based on feature type
 	switch req.FeatureType {
@@ -56,9 +59,17 @@ func (h *ClassFeaturesHandler) Handle(req *ClassFeaturesRequest) error {
 	}
 
 	// Save the character (using UpdateEquipment which saves the whole character)
+	log.Printf("DEBUG: Saving character %s with %d features", char.Name, len(char.Features))
+	for _, feature := range char.Features {
+		if feature.Key == "fighting_style" {
+			log.Printf("DEBUG: Fighting style feature metadata: %v", feature.Metadata)
+		}
+	}
 	if err := h.characterService.UpdateEquipment(char); err != nil {
+		log.Printf("DEBUG: Error saving character: %v", err)
 		return fmt.Errorf("failed to update character: %w", err)
 	}
+	log.Printf("DEBUG: Character saved successfully")
 
 	return nil
 }
@@ -103,18 +114,31 @@ func (h *ClassFeaturesHandler) handleNaturalExplorer(req *ClassFeaturesRequest, 
 
 // handleFightingStyle stores the fighter's fighting style selection
 func (h *ClassFeaturesHandler) handleFightingStyle(req *ClassFeaturesRequest, char *entities.Character) error {
+	log.Printf("DEBUG: handleFightingStyle called with selection: %s", req.Selection)
+
 	// Find the fighting style feature and update its metadata
+	found := false
 	for _, feature := range char.Features {
+		log.Printf("DEBUG: Checking feature %s (key=%s)", feature.Name, feature.Key)
 		if feature.Key == "fighting_style" {
+			found = true
+			log.Printf("DEBUG: Found fighting_style feature, current metadata: %v", feature.Metadata)
 			if feature.Metadata == nil {
+				log.Printf("DEBUG: Creating new metadata map")
 				feature.Metadata = make(map[string]any)
 			}
+			log.Printf("DEBUG: Setting style to: %s", req.Selection)
 			feature.Metadata["style"] = req.Selection
+			log.Printf("DEBUG: Metadata after setting: %v", feature.Metadata)
 
 			// Log for debugging
 			log.Printf("Set fighting style for %s to %s", char.Name, req.Selection)
 			break
 		}
+	}
+
+	if !found {
+		log.Printf("DEBUG: ERROR - fighting_style feature not found!")
 	}
 
 	return nil
