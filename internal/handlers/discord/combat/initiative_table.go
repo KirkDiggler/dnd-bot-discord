@@ -34,7 +34,9 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 
 		// Name with icon (truncated if needed)
 		icon := ""
-		if c.Type == entities.CombatantTypePlayer {
+		if c.CurrentHP == 0 {
+			icon = "💀" // Dead indicator replaces type icon
+		} else if c.Type == entities.CombatantTypePlayer {
 			icon = getClassIcon(c.Class)
 		} else {
 			icon = "🐉" // Monster icon
@@ -71,13 +73,6 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 
 		// AC
 		sb.WriteString(fmt.Sprintf("%2d", c.AC))
-
-		// Status indicator
-		if c.CurrentHP == 0 {
-			sb.WriteString(" 💀")
-		} else if float64(c.CurrentHP)/float64(c.MaxHP) < 0.25 {
-			sb.WriteString(" ❗")
-		}
 
 		sb.WriteString("\n")
 	}
