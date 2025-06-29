@@ -16,7 +16,7 @@ var ClassFeatures = map[string][]entities.CharacterFeature{
 		{
 			Key:         "martial_arts",
 			Name:        "Martial Arts",
-			Description: "You can use Dexterity instead of Strength for attack and damage rolls of unarmed strikes and monk weapons. You can roll a d4 in place of the normal damage. When you use the Attack action, you can make one unarmed strike as a bonus action.",
+			Description: "You can use Dexterity instead of Strength for attack and damage rolls of unarmed strikes and monk weapons. Your unarmed strikes use a d4 for damage. This die changes as you gain monk levels: d6 at 5th level, d8 at 11th level, and d10 at 17th level. When you use the Attack action, you can make one unarmed strike as a bonus action.",
 			Type:        entities.FeatureTypeClass,
 			Level:       1,
 			Source:      "Monk",
