@@ -97,6 +97,22 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 		}, nil
 	}
 
+	// Update action economy based on ability type
+	if character.Resources != nil {
+		switch ability.ActionType {
+		case entities.AbilityTypeAction:
+			character.Resources.ActionEconomy.ActionUsed = true
+			character.Resources.ActionEconomy.RecordAction("action", "ability", ability.Key)
+		case entities.AbilityTypeBonusAction:
+			character.Resources.ActionEconomy.BonusActionUsed = true
+			character.Resources.ActionEconomy.RecordAction("bonus_action", "ability", ability.Key)
+		case entities.AbilityTypeReaction:
+			character.Resources.ActionEconomy.ReactionUsed = true
+			character.Resources.ActionEconomy.RecordAction("reaction", "ability", ability.Key)
+			// AbilityTypeFree doesn't consume any actions
+		}
+	}
+
 	// Handle ability effects based on key
 	result := &UseAbilityResult{
 		Success:       true,
@@ -134,12 +150,6 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 
 // handleRage handles the Barbarian's Rage ability
 func (s *service) handleRage(character *entities.Character, ability *entities.ActiveAbility, result *UseAbilityResult) *UseAbilityResult {
-	// Rage uses a bonus action - mark it as used
-	if character.Resources != nil {
-		character.Resources.ActionEconomy.BonusActionUsed = true
-		character.Resources.ActionEconomy.RecordAction("bonus_action", "ability", "rage")
-	}
-
 	// Create rage effect using the new status effect system
 	rageEffect := effects.BuildRageEffect(character.Level)
 
