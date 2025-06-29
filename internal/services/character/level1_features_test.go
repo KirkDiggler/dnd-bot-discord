@@ -179,7 +179,7 @@ func TestLevel1Features(t *testing.T) {
 						assert.Equal(t, 1, feat.Level)
 						assert.Equal(t, "Monk", feat.Source)
 					}
-					if feat.Key == "martial_arts" {
+					if feat.Key == "martial-arts" {
 						hasMartialArts = true
 						assert.Equal(t, "Martial Arts", feat.Name)
 					}
