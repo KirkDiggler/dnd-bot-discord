@@ -2,7 +2,7 @@ package services
 
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/interfaces"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/dungeons"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
@@ -25,7 +25,7 @@ type Provider struct {
 	MonsterService   monsterService.Service
 	LootService      lootService.Service
 	AbilityService   abilityService.Service
-	DiceRoller       interfaces.DiceRoller
+	DiceRoller       dice.Roller
 }
 
 // ProviderConfig holds configuration for creating services
@@ -35,7 +35,7 @@ type ProviderConfig struct {
 	SessionRepository   gamesessions.Repository
 	EncounterRepository encounters.Repository
 	DungeonRepository   dungeons.Repository
-	DiceRoller          interfaces.DiceRoller
+	DiceRoller          dice.Roller
 }
 
 // NewProvider creates a new service provider with all services initialized

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
@@ -21,7 +21,7 @@ import (
 
 func TestCombatEndIntegration_MonstersDefeatPlayer(t *testing.T) {
 	ctx := context.Background()
-	mockDice := dice.NewMockRoller()
+	mockDice := mockdice.NewManualMockRoller()
 
 	// Create services
 	charRepo := characters.NewInMemoryRepository()
@@ -166,7 +166,7 @@ func TestCombatEndIntegration_PlayerDefeatsLastMonster(t *testing.T) {
 	// Since we control monster attacks with mocked dice, this test is reliable
 	t.Run("Monster defeats last player", func(t *testing.T) {
 		ctx := context.Background()
-		mockDice := dice.NewMockRoller()
+		mockDice := mockdice.NewManualMockRoller()
 
 		// Create services
 		charRepo := characters.NewInMemoryRepository()

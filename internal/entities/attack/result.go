@@ -23,16 +23,17 @@ func (r *Result) String() string {
 	return fmt.Sprintf("attack: %d, type: %s, damage: %d", r.AttackRoll, r.AttackType, r.DamageRoll)
 }
 
-func RollAttack(attackBonus, damageBonus int, dmg *damage.Damage) (*Result, error) {
-	attackResult, err := dice.Roll(1, 20, 0)
+func RollAttack(roller dice.Roller, attackBonus, damageBonus int, dmg *damage.Damage) (*Result, error) {
+	attackResult, err := roller.Roll(1, 20, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	dmgResult, err := dice.Roll(dmg.DiceCount, dmg.DiceSize, 0)
+	dmgResult, err := roller.Roll(dmg.DiceCount, dmg.DiceSize, 0)
 	if err != nil {
 		return nil, err
 	}
+
 	dmgValue := dmgResult.Total
 	attackRoll := attackResult.Total
 	allRolls := make([]int, 0, len(dmgResult.Rolls))
@@ -42,15 +43,15 @@ func RollAttack(attackBonus, damageBonus int, dmg *damage.Damage) (*Result, erro
 	attackRoll += attackBonus
 
 	// Handle critical hit (natural 20)
-	if attackResult.Total == 20 {
-		critDmg, err := dice.Roll(dmg.DiceCount, dmg.DiceSize, 0)
+	if attackResult.IsCrit {
+		critResult, err := roller.Roll(dmg.DiceCount, dmg.DiceSize, 0)
 		if err != nil {
 			return nil, err
 		}
 
-		dmgValue += critDmg.Total
+		dmgValue += critResult.Total
 		// Add critical damage rolls
-		allRolls = append(allRolls, critDmg.Rolls...)
+		allRolls = append(allRolls, critResult.Rolls...)
 	}
 	// Natural 1 is still an automatic miss, but we keep the modifiers for display
 

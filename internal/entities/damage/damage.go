@@ -28,10 +28,10 @@ type Damage struct {
 	DamageType Type
 }
 
-func (d *Damage) Deal() int {
-	base, err := dice.Roll(d.DiceCount, d.DiceSize, 0)
+func (d *Damage) Deal(roller dice.Roller) int {
+	result, err := roller.Roll(d.DiceCount, d.DiceSize, 0)
 	if err != nil {
 		return 0
 	}
-	return base.Total + d.Bonus
+	return result.Total + d.Bonus
 }

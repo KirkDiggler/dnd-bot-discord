@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
@@ -21,7 +21,7 @@ import (
 func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 	// Setup
 	ctx := context.Background()
-	mockDice := dice.NewMockRoller()
+	mockDice := mockdice.NewManualMockRoller()
 
 	// Set deterministic rolls for initiative
 	mockDice.SetRolls([]int{
@@ -190,7 +190,7 @@ func TestEncounterService_CombatScenario_WithMockDice(t *testing.T) {
 	// with predetermined dice rolls
 
 	ctx := context.Background()
-	mockDice := dice.NewMockRoller()
+	mockDice := mockdice.NewManualMockRoller()
 
 	// Set up a complete combat scenario:
 	// The dice rolls will be assigned in alphabetical order of combatant IDs

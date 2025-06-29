@@ -37,6 +37,7 @@ const (
 // Handler handles all Discord interactions
 type Handler struct {
 	ServiceProvider                       *services.Provider
+	diceRoller                            dice.Roller
 	characterCreateHandler                *character.CreateHandler
 	characterRaceSelectHandler            *character.RaceSelectHandler
 	characterShowClassesHandler           *character.ShowClassesHandler
@@ -90,12 +91,20 @@ type Handler struct {
 // HandlerConfig holds configuration for the Discord handler
 type HandlerConfig struct {
 	ServiceProvider *services.Provider
+	DiceRoller      dice.Roller
 }
 
 // NewHandler creates a new Discord handler
 func NewHandler(cfg *HandlerConfig) *Handler {
+	// Default to random roller if none provided
+	diceRoller := cfg.DiceRoller
+	if diceRoller == nil {
+		diceRoller = dice.NewRandomRoller()
+	}
+
 	return &Handler{
 		ServiceProvider: cfg.ServiceProvider,
+		diceRoller:      diceRoller,
 		characterCreateHandler: character.NewCreateHandler(&character.CreateHandlerConfig{
 			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
@@ -3519,7 +3528,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						action := current.Actions[0]
 
 						// Roll attack
-						attackResult, rollErr := dice.Roll(1, 20, 0)
+						attackResult, rollErr := h.diceRoller.Roll(1, 20, 0)
 						if rollErr != nil {
 							log.Printf("Failed to roll attack: %v", rollErr)
 
@@ -3563,12 +3572,12 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 								if attackRoll == 20 { // Critical hit doubles dice
 									diceCount *= 2
 								}
-								rollResult, rollErr := dice.Roll(diceCount, dmg.DiceSize, dmg.Bonus)
+								dmgResult, rollErr := h.diceRoller.Roll(diceCount, dmg.DiceSize, dmg.Bonus)
 								if rollErr != nil {
 									log.Printf("Failed to roll damage: %v", rollErr)
 									//TODO: Handle error
 								}
-								dmgTotal := rollResult.Total
+								dmgTotal := dmgResult.Total
 								totalDamage += dmgTotal
 								damageDetails.WriteString(fmt.Sprintf("🎲 %dd%d+%d = **%d** %s\n", diceCount, dmg.DiceSize, dmg.Bonus, dmgTotal, dmg.DamageType))
 							}
@@ -4675,61 +4684,17 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				return
 			}
 
-			// Show success with character details
-			description := fmt.Sprintf("**Name:** %s", finalChar.Name)
-			if finalChar.Race != nil {
-				description += fmt.Sprintf("\n**Race:** %s", finalChar.Race.Name)
-			}
-			if finalChar.Class != nil {
-				description += fmt.Sprintf("\n**Class:** %s", finalChar.Class.Name)
-			}
-
-			embed := &discordgo.MessageEmbed{
-				Title:       "Character Created!",
-				Description: description,
-				Color:       0x00ff00,
-				Fields:      []*discordgo.MessageEmbedField{},
-			}
-
-			// Only add ability scores if we have them
-			if len(abilityScores) > 0 {
-				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-					Name: "💪 Base Abilities",
-					Value: fmt.Sprintf("STR: %d, DEX: %d, CON: %d\nINT: %d, WIS: %d, CHA: %d",
-						abilityScores["STR"], abilityScores["DEX"], abilityScores["CON"],
-						abilityScores["INT"], abilityScores["WIS"], abilityScores["CHA"],
-					),
-					Inline: true,
-				})
-			}
-
-			// Add other fields
-			embed.Fields = append(embed.Fields,
-				&discordgo.MessageEmbedField{
-					Name:   "❤️ Hit Points",
-					Value:  fmt.Sprintf("%d", finalChar.MaxHitPoints),
-					Inline: true,
-				},
-				&discordgo.MessageEmbedField{
-					Name:   "🛡️ Hit Die",
-					Value:  fmt.Sprintf("d%d", finalChar.HitDie),
-					Inline: true,
-				},
-				&discordgo.MessageEmbedField{
-					Name:   "✅ Character Complete",
-					Value:  "Your character has been created and saved successfully!",
-					Inline: false,
-				},
-			)
-
-			embed.Footer = &discordgo.MessageEmbedFooter{
-				Text: "Ready for adventure!",
-			}
+			// For modal submissions, Discord seems to have issues with complex components
+			// So we'll show a simple success message with a button to view the full character sheet
+			embed, components := character.BuildCreationSuccessResponse(finalChar)
+			log.Printf("DEBUG: Character sheet components created: %d components", len(components))
 
 			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Embeds: []*discordgo.MessageEmbed{embed},
+					Embeds:     []*discordgo.MessageEmbed{embed},
+					Components: components,
+					Flags:      discordgo.MessageFlagsEphemeral,
 				},
 			})
 

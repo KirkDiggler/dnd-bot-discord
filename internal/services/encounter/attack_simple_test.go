@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
@@ -20,7 +20,7 @@ import (
 
 func TestPerformAttack_MonsterVsMonster_WithMockDice(t *testing.T) {
 	ctx := context.Background()
-	mockDice := dice.NewMockRoller()
+	mockDice := mockdice.NewManualMockRoller()
 
 	// Set up deterministic rolls
 	mockDice.SetRolls([]int{
@@ -149,7 +149,7 @@ func TestPerformAttack_MonsterVsMonster_WithMockDice(t *testing.T) {
 
 func TestPerformAttack_UnarmedStrike_WithMockDice(t *testing.T) {
 	ctx := context.Background()
-	mockDice := dice.NewMockRoller()
+	mockDice := mockdice.NewManualMockRoller()
 
 	// Set up deterministic rolls
 	mockDice.SetRolls([]int{

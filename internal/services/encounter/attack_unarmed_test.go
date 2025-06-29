@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
@@ -102,7 +102,7 @@ func TestPerformAttack_UnarmedStrike_AllScenarios(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			mockDice := dice.NewMockRoller()
+			mockDice := mockdice.NewManualMockRoller()
 
 			// Set up deterministic rolls
 			mockDice.SetRolls([]int{

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
+	mockdice "github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
@@ -21,7 +22,7 @@ import (
 func TestPerformAttack_PlayerVsMonster(t *testing.T) {
 	t.Skip("Skipping test until dice roller is refactored to use dependency injection - Issue #116")
 	ctx := context.Background()
-	mockDice := dice.NewMockRoller()
+	mockDice := mockdice.NewManualMockRoller()
 
 	// Set up deterministic rolls
 	mockDice.SetRolls([]int{
@@ -166,7 +167,7 @@ func TestPerformAttack_PlayerVsMonster(t *testing.T) {
 func TestPerformAttack_MonsterVsPlayer(t *testing.T) {
 	t.Skip("Skipping test until dice roller is refactored to use dependency injection - Issue #116")
 	ctx := context.Background()
-	mockDice := dice.NewMockRoller()
+	mockDice := mockdice.NewManualMockRoller()
 
 	// Set up deterministic rolls
 	mockDice.SetRolls([]int{
@@ -297,7 +298,7 @@ func TestPerformAttack_MonsterVsPlayer(t *testing.T) {
 func TestPerformAttack_CriticalHit(t *testing.T) {
 	t.Skip("Skipping test until dice roller is refactored to use dependency injection - Issue #116")
 	ctx := context.Background()
-	mockDice := dice.NewMockRoller()
+	mockDice := mockdice.NewManualMockRoller()
 
 	// Set up deterministic rolls for critical hit
 	mockDice.SetRolls([]int{
