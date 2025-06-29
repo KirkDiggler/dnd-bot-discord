@@ -572,7 +572,8 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		}
 		// Add new racial features
 		for _, feat := range racialFeatures {
-			newFeatures = append(newFeatures, &feat)
+			featCopy := feat
+			newFeatures = append(newFeatures, &featCopy)
 		}
 		char.Features = newFeatures
 
@@ -619,7 +620,8 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 				newFeatures = append(newFeatures, existing)
 			} else {
 				// Add new feature from template
-				newFeatures = append(newFeatures, &feat)
+				featCopy := feat
+				newFeatures = append(newFeatures, &featCopy)
 			}
 		}
 		char.Features = newFeatures
