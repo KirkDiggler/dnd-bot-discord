@@ -204,7 +204,7 @@ func (h *ClassSelectHandler) buildSummaryEmbed(race *entities.Race, class *entit
 		},
 		&discordgo.MessageEmbedField{
 			Name:   "Progress",
-			Value:  "✅ Step 1: Race\n✅ Step 2: Class\n⏳ Step 3: Abilities\n⏳ Step 4: Details",
+			Value:  BuildProgressValue(class.Key, "class"),
 			Inline: false,
 		},
 		&discordgo.MessageEmbedField{

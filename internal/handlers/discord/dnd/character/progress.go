@@ -14,10 +14,17 @@ type ProgressStep struct {
 // BuildProgressValue creates a progress field value for character creation
 // It dynamically adjusts based on the character's class
 func BuildProgressValue(classKey, currentStep string) string {
+	// Determine which steps are completed based on current step
+	completedSteps := getCompletedSteps(currentStep)
+
+	raceCompleted := completedSteps["race"]
+	classCompleted := completedSteps["class"]
+	abilitiesCompleted := completedSteps["abilities"]
+
 	steps := []ProgressStep{
-		{Name: "Step 1: Race", Completed: true},
-		{Name: "Step 2: Class", Completed: true},
-		{Name: "Step 3: Abilities", Completed: true},
+		{Name: "Step 1: Race", Completed: raceCompleted},
+		{Name: "Step 2: Class", Completed: classCompleted},
+		{Name: "Step 3: Abilities", Completed: abilitiesCompleted},
 	}
 
 	// Add class features step for classes that need it
@@ -72,7 +79,42 @@ func needsClassFeatures(classKey string) bool {
 
 // isClassFeaturesStepCompleted returns true if the class features step is completed
 func isClassFeaturesStepCompleted(currentStep string) bool {
-	// Class features are completed if we're past that step
-	// (i.e., not currently on "class_features" or "abilities")
-	return currentStep != "class_features" && currentStep != "abilities"
+	// Class features are completed only if we're past that step
+	completedSteps := map[string]bool{
+		"proficiencies": true,
+		"equipment":     true,
+		"details":       true,
+	}
+	return completedSteps[currentStep]
+}
+
+// getCompletedSteps returns which steps are completed based on the current step
+func getCompletedSteps(currentStep string) map[string]bool {
+	// Define the order of steps
+	stepOrder := []string{"race", "class", "abilities", "class_features", "proficiencies", "equipment", "details"}
+
+	// Find current step index
+	currentIndex := -1
+	for i, step := range stepOrder {
+		if step == currentStep {
+			currentIndex = i
+			break
+		}
+	}
+
+	// Mark all steps before current as completed
+	completed := make(map[string]bool)
+	for i, step := range stepOrder {
+		completed[step] = i < currentIndex
+	}
+
+	// Special handling for when we're showing progress after selecting a class
+	// The "class" step passed to BuildProgressValue means we just selected a class
+	if currentStep == "class" {
+		completed["race"] = true
+		completed["class"] = true
+		// abilities and beyond are not completed yet
+	}
+
+	return completed
 }

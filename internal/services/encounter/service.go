@@ -11,6 +11,7 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/attack"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
@@ -139,6 +140,9 @@ type AttackResult struct {
 	// Weapon damage dice info (for proper display)
 	WeaponDiceCount int
 	WeaponDiceSize  int
+
+	// Great Weapon Fighting reroll information
+	RerollInfo []attack.DieReroll
 
 	// Combatant information
 	AttackerName string
@@ -809,6 +813,11 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 				// Damage calculation debug logs removed
 			}
 
+			// Copy reroll information for Great Weapon Fighting display
+			if attackResult.RerollInfo != nil {
+				result.RerollInfo = attackResult.RerollInfo
+			}
+
 			// Check for sneak attack
 			if char.Class != nil && char.Class.Key == "rogue" {
 				// Get the weapon used
@@ -1063,10 +1072,42 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 				diceExpr = "1d4"
 			}
 
-			damageRollStr = fmt.Sprintf("%s: [%d", diceExpr, result.DamageRolls[0])
-			for i := 1; i < len(result.DamageRolls); i++ {
-				damageRollStr += fmt.Sprintf(",%d", result.DamageRolls[i])
+			// Build damage roll string with Great Weapon Fighting reroll display
+			damageRollStr = fmt.Sprintf("%s: [", diceExpr)
+
+			// If we have reroll info, use it to show rerolls with strikethrough
+			if len(result.RerollInfo) > 0 {
+				// Create a map of positions to reroll info for quick lookup
+				rerollMap := make(map[int]attack.DieReroll)
+				for _, reroll := range result.RerollInfo {
+					rerollMap[reroll.Position] = reroll
+				}
+
+				// Build the display string showing rerolls
+				for i, finalRoll := range result.DamageRolls {
+					if i > 0 {
+						damageRollStr += ", "
+					}
+
+					// Check if this position had a reroll
+					if reroll, hasReroll := rerollMap[i]; hasReroll {
+						// Show original roll with strikethrough and new roll
+						damageRollStr += fmt.Sprintf("~~%d~~ %d", reroll.OriginalRoll, reroll.NewRoll)
+					} else {
+						// Show normal roll
+						damageRollStr += fmt.Sprintf("%d", finalRoll)
+					}
+				}
+			} else {
+				// Standard damage roll display (no rerolls)
+				for i, roll := range result.DamageRolls {
+					if i > 0 {
+						damageRollStr += ", "
+					}
+					damageRollStr += fmt.Sprintf("%d", roll)
+				}
 			}
+
 			damageRollStr += "]"
 			if result.DamageBonus != 0 {
 				damageRollStr += fmt.Sprintf("%+d", result.DamageBonus)
