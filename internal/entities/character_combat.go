@@ -131,6 +131,8 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 				log.Printf("Weapon attack error: %v", err)
 				return nil, err
 			}
+			// Set the weapon key for action economy tracking
+			attak1.WeaponKey = weap.GetKey()
 			log.Printf("Weapon attack successful")
 			attacks = append(attacks, attak1)
 
@@ -165,6 +167,8 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 					if err != nil {
 						return nil, err
 					}
+					// Set the weapon key for off-hand attack
+					attak2.WeaponKey = offWeap.GetKey()
 					attacks = append(attacks, attak2)
 				}
 			}
@@ -245,6 +249,9 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 			if err != nil {
 				return nil, err
 			}
+
+			// Set the weapon key for two-handed weapon
+			a.WeaponKey = weap.GetKey()
 
 			return []*attack.Result{
 				a,

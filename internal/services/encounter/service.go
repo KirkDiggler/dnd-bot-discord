@@ -776,11 +776,15 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		attackResult := attackResults[0]
 
 		// Record the attack action for action economy
-		weaponKey := ""
-		if char.EquippedSlots[entities.SlotMainHand] != nil {
-			weaponKey = char.EquippedSlots[entities.SlotMainHand].GetKey()
-		} else if char.EquippedSlots[entities.SlotTwoHanded] != nil {
-			weaponKey = char.EquippedSlots[entities.SlotTwoHanded].GetKey()
+		// Use the weapon key from the attack result if available
+		weaponKey := attackResult.WeaponKey
+		if weaponKey == "" {
+			// Fallback to equipped weapon if not in result (for backward compatibility)
+			if char.EquippedSlots[entities.SlotMainHand] != nil {
+				weaponKey = char.EquippedSlots[entities.SlotMainHand].GetKey()
+			} else if char.EquippedSlots[entities.SlotTwoHanded] != nil {
+				weaponKey = char.EquippedSlots[entities.SlotTwoHanded].GetKey()
+			}
 		}
 		char.RecordAction("attack", "weapon", weaponKey)
 

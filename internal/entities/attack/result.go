@@ -19,6 +19,8 @@ type Result struct {
 	AllDamageRolls []int
 	// Reroll information for Great Weapon Fighting display
 	RerollInfo []DieReroll
+	// Weapon key used for this attack (for action economy tracking)
+	WeaponKey string
 }
 
 // DieReroll tracks information about rerolled dice for display
