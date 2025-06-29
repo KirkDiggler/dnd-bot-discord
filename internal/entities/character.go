@@ -412,8 +412,33 @@ func (c *Character) hasWeaponCategoryProficiency(weaponCategory string) bool {
 }
 
 func (c *Character) improvisedMelee() (*attack.Result, error) {
+	// Check if character has Martial Arts feature (monks)
+	hasMartialArts := false
+	for _, feature := range c.Features {
+		if feature != nil && feature.Key == "martial-arts" {
+			hasMartialArts = true
+			break
+		}
+	}
+
+	// Determine ability bonus - monks can use DEX instead of STR
 	bonus := 0
-	if c.Attributes != nil && c.Attributes[AttributeStrength] != nil {
+	if hasMartialArts && c.Attributes != nil {
+		// Use the higher of STR or DEX for monks
+		strBonus := 0
+		dexBonus := 0
+		if c.Attributes[AttributeStrength] != nil {
+			strBonus = c.Attributes[AttributeStrength].Bonus
+		}
+		if c.Attributes[AttributeDexterity] != nil {
+			dexBonus = c.Attributes[AttributeDexterity].Bonus
+		}
+		bonus = strBonus
+		if dexBonus > strBonus {
+			bonus = dexBonus
+		}
+	} else if c.Attributes != nil && c.Attributes[AttributeStrength] != nil {
+		// Non-monks use STR
 		bonus = c.Attributes[AttributeStrength].Bonus
 	}
 
