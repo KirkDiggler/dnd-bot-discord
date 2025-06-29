@@ -911,33 +911,32 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				if err == nil && draftChar.Attributes != nil && len(draftChar.Attributes) == 6 {
 					log.Printf("Ability scores already saved, checking for class feature requirements")
 
-					// Check if this class needs feature selections (e.g., ranger)
-					classKey := parts[3]
-					needsFeatureSelection := false
-
-					// For rangers, check if they need to select favored enemy or natural explorer
-					if classKey == "ranger" {
-						// Check if ranger features are already selected
-						hasSelectedFeatures := false
-						for _, feature := range draftChar.Features {
-							if feature.Key == "favored_enemy" && feature.Metadata != nil && feature.Metadata["enemy_type"] != nil {
-								hasSelectedFeatures = true
-								break
-							}
-						}
-						needsFeatureSelection = !hasSelectedFeatures
-					}
-					// Add other classes with level 1 choices here (cleric, warlock, etc.)
+					// Check if this class needs feature selections using centralized logic
+					needsFeatureSelection, _ := h.characterClassFeaturesHandler.ShouldShowClassFeatures(draftChar)
 
 					if needsFeatureSelection {
-						// Show class feature selection
+						// Show class feature selection based on class
 						req := &character.InteractionRequest{
 							Session:     s,
 							Interaction: i,
 							CharacterID: draftChar.ID,
 						}
-						if err := h.characterClassFeaturesHandler.ShowFavoredEnemySelection(req); err != nil {
-							log.Printf("Error showing class features: %v", err)
+
+						// Determine which feature to show first
+						needsFeatures, featureType := h.characterClassFeaturesHandler.ShouldShowClassFeatures(draftChar)
+						if needsFeatures {
+							switch featureType {
+							case "favored_enemy":
+								if err := h.characterClassFeaturesHandler.ShowFavoredEnemySelection(req); err != nil {
+									log.Printf("Error showing favored enemy selection: %v", err)
+								}
+							case "fighting_style":
+								if err := h.characterClassFeaturesHandler.ShowFightingStyleSelection(req); err != nil {
+									log.Printf("Error showing fighting style selection: %v", err)
+								}
+							default:
+								log.Printf("Unknown feature type to show: %s", featureType)
+							}
 						}
 					} else {
 						// Move to proficiency choices
@@ -1016,33 +1015,28 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 								i.GuildID,
 							)
 							if updateErr == nil {
-								// Check if this class needs feature selections (e.g., ranger)
-								classKey := parts[3]
-								needsFeatureSelection := false
-
-								// For rangers, check if they need to select favored enemy or natural explorer
-								if classKey == "ranger" {
-									// Check if ranger features are already selected
-									hasSelectedFeatures := false
-									for _, feature := range updatedChar.Features {
-										if feature.Key == "favored_enemy" && feature.Metadata != nil && feature.Metadata["enemy_type"] != nil {
-											hasSelectedFeatures = true
-											break
-										}
-									}
-									needsFeatureSelection = !hasSelectedFeatures
-								}
-								// Add other classes with level 1 choices here (cleric, warlock, etc.)
+								// Check if this class needs feature selections using centralized logic
+								needsFeatureSelection, featureType := h.characterClassFeaturesHandler.ShouldShowClassFeatures(updatedChar)
 
 								if needsFeatureSelection {
-									// Show class feature selection
+									// Show class feature selection based on class
 									req := &character.InteractionRequest{
 										Session:     s,
 										Interaction: i,
 										CharacterID: updatedChar.ID,
 									}
-									if featErr := h.characterClassFeaturesHandler.ShowFavoredEnemySelection(req); featErr != nil {
-										log.Printf("Error showing class features: %v", featErr)
+
+									switch featureType {
+									case "favored_enemy":
+										if featErr := h.characterClassFeaturesHandler.ShowFavoredEnemySelection(req); featErr != nil {
+											log.Printf("Error showing favored enemy selection: %v", featErr)
+										}
+									case "fighting_style":
+										if featErr := h.characterClassFeaturesHandler.ShowFightingStyleSelection(req); featErr != nil {
+											log.Printf("Error showing fighting style selection: %v", featErr)
+										}
+									default:
+										log.Printf("Unknown feature type to show: %s", featureType)
 									}
 								} else {
 									// Move to proficiency choices

@@ -572,7 +572,8 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		}
 		// Add new racial features
 		for _, feat := range racialFeatures {
-			newFeatures = append(newFeatures, &feat)
+			featCopy := feat
+			newFeatures = append(newFeatures, &featCopy)
 		}
 		char.Features = newFeatures
 
@@ -598,16 +599,30 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		if char.Features == nil {
 			char.Features = []*entities.CharacterFeature{}
 		}
-		// Remove existing class features
+		// Create map of existing class features to preserve metadata
+		existingClassFeatures := make(map[string]*entities.CharacterFeature)
 		newFeatures := []*entities.CharacterFeature{}
+
 		for _, f := range char.Features {
-			if f.Type != entities.FeatureTypeClass {
+			if f.Type == entities.FeatureTypeClass {
+				// Store existing class features by key to preserve metadata
+				existingClassFeatures[f.Key] = f
+			} else {
+				// Keep non-class features as-is
 				newFeatures = append(newFeatures, f)
 			}
 		}
-		// Add new class features
+
+		// Add class features, preserving existing ones with metadata
 		for _, feat := range classFeatures {
-			newFeatures = append(newFeatures, &feat)
+			if existing, exists := existingClassFeatures[feat.Key]; exists {
+				// Preserve existing feature with its metadata
+				newFeatures = append(newFeatures, existing)
+			} else {
+				// Add new feature from template
+				featCopy := feat
+				newFeatures = append(newFeatures, &featCopy)
+			}
 		}
 		char.Features = newFeatures
 
@@ -848,26 +863,42 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 		char.HitDie = char.Class.HitDie
 	}
 
-	// Apply features if not already loaded
-	if len(char.Features) == 0 {
+	// Ensure all required features are present, preserving existing metadata
+	if char.Features == nil {
 		char.Features = []*entities.CharacterFeature{}
+	}
 
-		// Apply racial features
-		if char.Race != nil {
-			racialFeatures := features.GetRacialFeatures(char.Race.Key)
-			for _, feat := range racialFeatures {
-				featCopy := feat // Make a copy to avoid reference issues
+	// Create a map of existing features by key for quick lookup
+	existingFeatures := make(map[string]*entities.CharacterFeature)
+	for _, feat := range char.Features {
+		existingFeatures[feat.Key] = feat
+	}
+
+	// Add missing racial features (preserve existing ones with metadata)
+	if char.Race != nil {
+		racialFeatures := features.GetRacialFeatures(char.Race.Key)
+		for _, templateFeat := range racialFeatures {
+			if _, exists := existingFeatures[templateFeat.Key]; !exists {
+				// Feature doesn't exist, add it from template
+				featCopy := templateFeat // Make a copy to avoid reference issues
 				char.Features = append(char.Features, &featCopy)
+				existingFeatures[templateFeat.Key] = &featCopy
 			}
+			// If feature already exists, keep it as-is with its metadata
 		}
+	}
 
-		// Apply class features
-		if char.Class != nil {
-			classFeatures := features.GetClassFeatures(char.Class.Key, char.Level)
-			for _, feat := range classFeatures {
-				featCopy := feat // Make a copy to avoid reference issues
+	// Add missing class features (preserve existing ones with metadata)
+	if char.Class != nil {
+		classFeatures := features.GetClassFeatures(char.Class.Key, char.Level)
+		for _, templateFeat := range classFeatures {
+			if _, exists := existingFeatures[templateFeat.Key]; !exists {
+				// Feature doesn't exist, add it from template
+				featCopy := templateFeat // Make a copy to avoid reference issues
 				char.Features = append(char.Features, &featCopy)
+				existingFeatures[templateFeat.Key] = &featCopy
 			}
+			// If feature already exists, keep it as-is with its metadata
 		}
 	}
 

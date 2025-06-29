@@ -32,11 +32,14 @@ type ClassFeaturesRequest struct {
 
 // Handle processes class feature selections
 func (h *ClassFeaturesHandler) Handle(req *ClassFeaturesRequest) error {
+	log.Printf("DEBUG: ClassFeaturesHandler.Handle called with FeatureType=%s, Selection=%s, CharacterID=%s", req.FeatureType, req.Selection, req.CharacterID)
+
 	// Get the character
 	char, err := h.characterService.GetByID(req.CharacterID)
 	if err != nil {
 		return fmt.Errorf("failed to get character: %w", err)
 	}
+	log.Printf("DEBUG: Got character %s with %d features", char.Name, len(char.Features))
 
 	// Store the selection based on feature type
 	switch req.FeatureType {
@@ -44,7 +47,9 @@ func (h *ClassFeaturesHandler) Handle(req *ClassFeaturesRequest) error {
 		err = h.handleFavoredEnemy(req, char)
 	case "natural_explorer":
 		err = h.handleNaturalExplorer(req, char)
-	// Add other class features here (divine_domain, fighting_style, etc.)
+	case "fighting_style":
+		err = h.handleFightingStyle(req, char)
+	// Add other class features here (divine_domain, patron, etc.)
 	default:
 		err = fmt.Errorf("unknown feature type: %s", req.FeatureType)
 	}
@@ -54,9 +59,17 @@ func (h *ClassFeaturesHandler) Handle(req *ClassFeaturesRequest) error {
 	}
 
 	// Save the character (using UpdateEquipment which saves the whole character)
+	log.Printf("DEBUG: Saving character %s with %d features", char.Name, len(char.Features))
+	for _, feature := range char.Features {
+		if feature.Key == "fighting_style" {
+			log.Printf("DEBUG: Fighting style feature metadata: %v", feature.Metadata)
+		}
+	}
 	if err := h.characterService.UpdateEquipment(char); err != nil {
+		log.Printf("DEBUG: Error saving character: %v", err)
 		return fmt.Errorf("failed to update character: %w", err)
 	}
+	log.Printf("DEBUG: Character saved successfully")
 
 	return nil
 }
@@ -94,6 +107,38 @@ func (h *ClassFeaturesHandler) handleNaturalExplorer(req *ClassFeaturesRequest, 
 			log.Printf("Set natural explorer terrain for %s to %s", char.Name, req.Selection)
 			break
 		}
+	}
+
+	return nil
+}
+
+// handleFightingStyle stores the fighter's fighting style selection
+func (h *ClassFeaturesHandler) handleFightingStyle(req *ClassFeaturesRequest, char *entities.Character) error {
+	log.Printf("DEBUG: handleFightingStyle called with selection: %s", req.Selection)
+
+	// Find the fighting style feature and update its metadata
+	found := false
+	for _, feature := range char.Features {
+		log.Printf("DEBUG: Checking feature %s (key=%s)", feature.Name, feature.Key)
+		if feature.Key == "fighting_style" {
+			found = true
+			log.Printf("DEBUG: Found fighting_style feature, current metadata: %v", feature.Metadata)
+			if feature.Metadata == nil {
+				log.Printf("DEBUG: Creating new metadata map")
+				feature.Metadata = make(map[string]any)
+			}
+			log.Printf("DEBUG: Setting style to: %s", req.Selection)
+			feature.Metadata["style"] = req.Selection
+			log.Printf("DEBUG: Metadata after setting: %v", feature.Metadata)
+
+			// Log for debugging
+			log.Printf("Set fighting style for %s to %s", char.Name, req.Selection)
+			break
+		}
+	}
+
+	if !found {
+		log.Printf("DEBUG: ERROR - fighting_style feature not found!")
 	}
 
 	return nil
@@ -276,7 +321,14 @@ func (h *ClassFeaturesHandler) ShouldShowClassFeatures(char *entities.Character)
 	case "cleric":
 		// TODO: Check for divine domain selection
 	case "fighter":
-		// TODO: Check for fighting style selection
+		// Check if fighter has selected fighting style
+		for _, feature := range char.Features {
+			if feature.Key == "fighting_style" {
+				if feature.Metadata == nil || feature.Metadata["style"] == nil {
+					return true, "fighting_style"
+				}
+			}
+		}
 	case "warlock":
 		// TODO: Check for patron selection
 	case "sorcerer":
@@ -284,4 +336,71 @@ func (h *ClassFeaturesHandler) ShouldShowClassFeatures(char *entities.Character)
 	}
 
 	return false, ""
+}
+
+// ShowFightingStyleSelection displays the fighting style selection UI
+func (h *ClassFeaturesHandler) ShowFightingStyleSelection(req *InteractionRequest) error {
+	// Get the character
+	char, err := h.characterService.GetByID(req.CharacterID)
+	if err != nil {
+		return fmt.Errorf("failed to get character: %w", err)
+	}
+
+	// Fighting style options
+	styleOptions := []discordgo.SelectMenuOption{
+		{Label: "Archery", Value: "archery", Description: "+2 to attack rolls with ranged weapons"},
+		{Label: "Defense", Value: "defense", Description: "+1 to AC while wearing armor"},
+		{Label: "Dueling", Value: "dueling", Description: "+2 damage with one-handed weapons"},
+		{Label: "Great Weapon Fighting", Value: "great_weapon", Description: "Reroll 1s and 2s on damage with two-handed weapons"},
+		{Label: "Protection", Value: "protection", Description: "Use shield to impose disadvantage on attacks"},
+		{Label: "Two-Weapon Fighting", Value: "two_weapon", Description: "Add modifier to off-hand damage"},
+	}
+
+	// Create embed
+	embed := &discordgo.MessageEmbed{
+		Title:       "Choose Your Fighting Style",
+		Description: fmt.Sprintf("**%s**, as a Fighter you adopt a particular style of fighting as your specialty.\n\nChoose the fighting style that matches your combat approach.", char.Name),
+		Color:       0x722F37, // Dark red for fighter
+		Fields: []*discordgo.MessageEmbedField{
+			{
+				Name:   "Your Selection",
+				Value:  "Choose the fighting style that defines your combat technique.",
+				Inline: false,
+			},
+		},
+	}
+
+	// Add progress field
+	classKey := ""
+	if char.Class != nil {
+		classKey = char.Class.Key
+	}
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+		Name:   "Progress",
+		Value:  BuildProgressValue(classKey, "class_features"),
+		Inline: false,
+	})
+
+	// Create components
+	components := []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.SelectMenu{
+					CustomID:    fmt.Sprintf("character_create:class_features:%s:fighting_style", char.ID),
+					Placeholder: "Select your fighting style...",
+					Options:     styleOptions,
+				},
+			},
+		},
+	}
+
+	// Update the interaction response
+	return req.Session.InteractionRespond(req.Interaction.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Embeds:     []*discordgo.MessageEmbed{embed},
+			Components: components,
+			Flags:      discordgo.MessageFlagsEphemeral,
+		},
+	})
 }
