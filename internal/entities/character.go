@@ -128,6 +128,9 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 			attackBonus := abilityBonus + proficiencyBonus
 			damageBonus := abilityBonus // Base damage bonus from ability modifier
 
+			// Apply fighting style bonuses
+			attackBonus, damageBonus = c.applyFightingStyleBonuses(weap, attackBonus, damageBonus)
+
 			// Apply damage bonuses from active effects (e.g., rage)
 			// Use the weapon's actual range type
 			attackType := strings.ToLower(weap.WeaponRange)
@@ -176,11 +179,16 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 					}
 
 					offHandAttackBonus := offHandAbilityBonus + offHandProficiencyBonus
+					offHandDamageBonus := offHandAbilityBonus
+
+					// Apply fighting style bonuses to off-hand
+					offHandAttackBonus, offHandDamageBonus = c.applyFightingStyleBonusesWithHand(offWeap, offHandAttackBonus, offHandDamageBonus, SlotOffHand)
+
 					// Apply damage bonuses from active effects (e.g., rage) to off-hand
-					offHandDamageBonus, err := c.applyActiveEffectDamageBonus(offHandAbilityBonus, "melee")
+					offHandDamageBonus, err = c.applyActiveEffectDamageBonus(offHandDamageBonus, "melee")
 					if err != nil {
 						log.Printf("ERROR: Failed to apply active effect damage bonus to off-hand: %v", err)
-						offHandDamageBonus = offHandAbilityBonus // Fall back to base
+						// Continue with current bonus
 					}
 
 					attak2, err := attack.RollAttack(offHandAttackBonus, offHandDamageBonus, offWeap.Damage)
@@ -234,6 +242,9 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 
 			attackBonus := abilityBonus + proficiencyBonus
 			damageBonus := abilityBonus
+
+			// Apply fighting style bonuses
+			attackBonus, damageBonus = c.applyFightingStyleBonuses(weap, attackBonus, damageBonus)
 
 			// Apply damage bonuses from active effects (e.g., rage)
 			// Use the weapon's actual range type
@@ -513,6 +524,28 @@ func (c *Character) calculateAC() {
 			c.AC += armor.ArmorClass.Base
 			if armor.ArmorClass.DexBonus {
 				c.AC += c.Attributes[AttributeDexterity].Bonus
+			}
+		}
+	}
+
+	// Apply fighting style bonuses to AC
+	c.applyFightingStyleAC()
+}
+
+// applyFightingStyleAC applies AC bonuses from fighting styles
+func (c *Character) applyFightingStyleAC() {
+	// Check if the character has fighting style feature with defense
+	for _, feature := range c.Features {
+		if feature.Key == "fighting_style" && feature.Metadata != nil {
+			if style, ok := feature.Metadata["style"].(string); ok && style == "defense" {
+				// Defense fighting style gives +1 AC while wearing armor
+				// Check if character is wearing any armor
+				if c.EquippedSlots != nil && c.EquippedSlots[SlotBody] != nil {
+					if c.EquippedSlots[SlotBody].GetEquipmentType() == EquipmentTypeArmor {
+						c.AC += 1
+					}
+				}
+				break
 			}
 		}
 	}
@@ -1446,4 +1479,65 @@ func (c *Character) ApplyDamageResistance(damageType damage.Type, amount int) in
 	}
 
 	return amount
+}
+
+// applyFightingStyleBonuses applies bonuses from fighter fighting styles
+func (c *Character) applyFightingStyleBonuses(weapon *Weapon, attackBonus, damageBonus int) (finalAttackBonus, finalDamageBonus int) {
+	return c.applyFightingStyleBonusesWithHand(weapon, attackBonus, damageBonus, SlotMainHand)
+}
+
+// applyFightingStyleBonusesWithHand applies bonuses from fighter fighting styles for a specific hand
+func (c *Character) applyFightingStyleBonusesWithHand(weapon *Weapon, attackBonus, damageBonus int, hand Slot) (finalAttackBonus, finalDamageBonus int) {
+	// Check if the character has fighting style feature
+	var fightingStyle string
+	for _, feature := range c.Features {
+		if feature.Key == "fighting_style" && feature.Metadata != nil {
+			if style, ok := feature.Metadata["style"].(string); ok {
+				fightingStyle = style
+				break
+			}
+		}
+	}
+
+	if fightingStyle == "" {
+		return attackBonus, damageBonus
+	}
+
+	// Apply fighting style bonuses
+	switch fightingStyle {
+	case "archery":
+		// +2 to attack rolls with ranged weapons
+		if weapon.IsRanged() {
+			attackBonus += 2
+		}
+	case "defense":
+		// +1 to AC while wearing armor (handled elsewhere in AC calculation)
+		// No attack/damage bonus
+	case "dueling":
+		// +2 damage with one-handed weapons when no other weapon equipped
+		if weapon.IsMelee() && !weapon.IsTwoHanded() {
+			// Check if off-hand is empty (no dual wielding)
+			if c.EquippedSlots[SlotOffHand] == nil {
+				damageBonus += 2
+			}
+		}
+	case "great_weapon":
+		// Reroll 1s and 2s on damage with two-handed weapons
+		// This is handled in damage rolling, not as a flat bonus
+	case "protection":
+		// Reaction ability to impose disadvantage (handled elsewhere)
+		// No attack/damage bonus
+	case "two_weapon":
+		// Add ability modifier to off-hand damage
+		if hand == SlotOffHand && weapon.IsMelee() {
+			// Two-weapon fighting allows adding ability modifier to off-hand damage
+			// The base off-hand damage calculation doesn't include ability modifier
+			// So we need to add it here
+			if c.Attributes != nil && c.Attributes[AttributeStrength] != nil {
+				damageBonus = c.Attributes[AttributeStrength].Bonus
+			}
+		}
+	}
+
+	return attackBonus, damageBonus
 }

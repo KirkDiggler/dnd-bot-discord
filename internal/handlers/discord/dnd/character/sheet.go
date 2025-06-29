@@ -305,6 +305,28 @@ func buildFeatureSummary(char *entities.Character) []string {
 					terrainDisplay := caser.String(terrainType)
 					featName = fmt.Sprintf("%s (%s)", feat.Name, terrainDisplay)
 				}
+			} else if feat.Key == "fighting_style" && feat.Metadata != nil {
+				if style, ok := feat.Metadata["style"].(string); ok {
+					// Format fighting style for display
+					styleDisplay := ""
+					switch style {
+					case "archery":
+						styleDisplay = "Archery"
+					case "defense":
+						styleDisplay = "Defense"
+					case "dueling":
+						styleDisplay = "Dueling"
+					case "great_weapon":
+						styleDisplay = "Great Weapon Fighting"
+					case "protection":
+						styleDisplay = "Protection"
+					case "two_weapon":
+						styleDisplay = "Two-Weapon Fighting"
+					default:
+						styleDisplay = caser.String(style)
+					}
+					featName = fmt.Sprintf("%s (%s)", feat.Name, styleDisplay)
+				}
 			}
 			lines = append(lines, fmt.Sprintf("• %s", featName))
 		}
