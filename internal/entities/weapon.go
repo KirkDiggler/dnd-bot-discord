@@ -61,20 +61,20 @@ func (w *Weapon) IsMelee() bool {
 }
 
 func (w *Weapon) IsSimple() bool {
-	return w.hasProperty("simple")
+	return w.HasProperty("simple")
 
 }
 
 func (w *Weapon) IsTwoHanded() bool {
-	return w.hasProperty("two-handed")
+	return w.HasProperty("two-handed")
 }
 
 func (w *Weapon) IsHeavy() bool {
-	return w.hasProperty("heavy")
+	return w.HasProperty("heavy")
 }
 
 func (w *Weapon) IsFinesse() bool {
-	return w.hasProperty("finesse")
+	return w.HasProperty("finesse")
 }
 
 // IsMonkWeapon returns true if this weapon can be used with monk Martial Arts
@@ -94,7 +94,8 @@ func (w *Weapon) IsMonkWeapon() bool {
 	return false
 }
 
-func (w *Weapon) hasProperty(prop string) bool {
+// HasProperty checks if the weapon has a specific property
+func (w *Weapon) HasProperty(prop string) bool {
 	for _, p := range w.Properties {
 		if p.Key == prop {
 			return true

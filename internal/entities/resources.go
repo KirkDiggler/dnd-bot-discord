@@ -66,6 +66,9 @@ type CharacterResources struct {
 
 	// Combat state tracking
 	SneakAttackUsedThisTurn bool `json:"sneak_attack_used_this_turn"`
+
+	// Action economy for current turn
+	ActionEconomy ActionEconomy `json:"action_economy"`
 }
 
 // SpellSlotInfo tracks spell slots at a specific level
