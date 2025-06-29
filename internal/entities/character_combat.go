@@ -42,13 +42,37 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 			// Calculate ability bonus based on weapon type
 			var abilityBonus int
 			if c.Attributes != nil {
+				// Check if character has Martial Arts and weapon is a monk weapon
+				hasMartialArts := false
+				for _, feature := range c.Features {
+					if feature != nil && feature.Key == "martial-arts" {
+						hasMartialArts = true
+						break
+					}
+				}
+
 				switch weap.WeaponRange {
 				case "Ranged":
 					if c.Attributes[AttributeDexterity] != nil {
 						abilityBonus = c.Attributes[AttributeDexterity].Bonus
 					}
 				case "Melee":
-					if c.Attributes[AttributeStrength] != nil {
+					// Finesse weapons and monk weapons can use DEX instead of STR
+					if weap.IsFinesse() || (hasMartialArts && weap.IsMonkWeapon()) {
+						strBonus := 0
+						dexBonus := 0
+						if c.Attributes[AttributeStrength] != nil {
+							strBonus = c.Attributes[AttributeStrength].Bonus
+						}
+						if c.Attributes[AttributeDexterity] != nil {
+							dexBonus = c.Attributes[AttributeDexterity].Bonus
+						}
+						// Use the higher of STR or DEX
+						abilityBonus = strBonus
+						if dexBonus > strBonus {
+							abilityBonus = dexBonus
+						}
+					} else if c.Attributes[AttributeStrength] != nil {
 						abilityBonus = c.Attributes[AttributeStrength].Bonus
 					}
 				}
@@ -109,11 +133,39 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 						c.hasWeaponCategoryProficiency(offWeap.WeaponCategory)
 
 					var offHandAbilityBonus int
+					// Check if character has Martial Arts for off-hand weapon
+					hasMartialArts := false
+					for _, feature := range c.Features {
+						if feature != nil && feature.Key == "martial-arts" {
+							hasMartialArts = true
+							break
+						}
+					}
+
 					switch offWeap.WeaponRange {
 					case "Ranged":
-						offHandAbilityBonus = c.Attributes[AttributeDexterity].Bonus
+						if c.Attributes[AttributeDexterity] != nil {
+							offHandAbilityBonus = c.Attributes[AttributeDexterity].Bonus
+						}
 					case "Melee":
-						offHandAbilityBonus = c.Attributes[AttributeStrength].Bonus
+						// Monks can use DEX instead of STR for monk weapons
+						if hasMartialArts && offWeap.IsMonkWeapon() {
+							strBonus := 0
+							dexBonus := 0
+							if c.Attributes[AttributeStrength] != nil {
+								strBonus = c.Attributes[AttributeStrength].Bonus
+							}
+							if c.Attributes[AttributeDexterity] != nil {
+								dexBonus = c.Attributes[AttributeDexterity].Bonus
+							}
+							// Use the higher of STR or DEX
+							offHandAbilityBonus = strBonus
+							if dexBonus > strBonus {
+								offHandAbilityBonus = dexBonus
+							}
+						} else if c.Attributes[AttributeStrength] != nil {
+							offHandAbilityBonus = c.Attributes[AttributeStrength].Bonus
+						}
 					}
 
 					offHandProficiencyBonus := 0
@@ -165,13 +217,37 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 			// Calculate ability bonus based on weapon type
 			var abilityBonus int
 			if c.Attributes != nil {
+				// Check if character has Martial Arts and weapon is a monk weapon
+				hasMartialArts := false
+				for _, feature := range c.Features {
+					if feature != nil && feature.Key == "martial-arts" {
+						hasMartialArts = true
+						break
+					}
+				}
+
 				switch weap.WeaponRange {
 				case "Ranged":
 					if c.Attributes[AttributeDexterity] != nil {
 						abilityBonus = c.Attributes[AttributeDexterity].Bonus
 					}
 				case "Melee":
-					if c.Attributes[AttributeStrength] != nil {
+					// Finesse weapons and monk weapons can use DEX instead of STR
+					if weap.IsFinesse() || (hasMartialArts && weap.IsMonkWeapon()) {
+						strBonus := 0
+						dexBonus := 0
+						if c.Attributes[AttributeStrength] != nil {
+							strBonus = c.Attributes[AttributeStrength].Bonus
+						}
+						if c.Attributes[AttributeDexterity] != nil {
+							dexBonus = c.Attributes[AttributeDexterity].Bonus
+						}
+						// Use the higher of STR or DEX
+						abilityBonus = strBonus
+						if dexBonus > strBonus {
+							abilityBonus = dexBonus
+						}
+					} else if c.Attributes[AttributeStrength] != nil {
 						abilityBonus = c.Attributes[AttributeStrength].Bonus
 					}
 				}

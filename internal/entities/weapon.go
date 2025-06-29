@@ -64,6 +64,31 @@ func (w *Weapon) IsTwoHanded() bool {
 	return w.hasProperty("two-handed")
 }
 
+func (w *Weapon) IsHeavy() bool {
+	return w.hasProperty("heavy")
+}
+
+func (w *Weapon) IsFinesse() bool {
+	return w.hasProperty("finesse")
+}
+
+// IsMonkWeapon returns true if this weapon can be used with monk Martial Arts
+// Monk weapons are shortswords and any simple melee weapons that don't have
+// the two-handed or heavy property
+func (w *Weapon) IsMonkWeapon() bool {
+	// Shortswords are always monk weapons
+	if w.Base.Key == "shortsword" {
+		return true
+	}
+
+	// Simple melee weapons without two-handed or heavy properties
+	if w.WeaponCategory == "Simple" && w.IsMelee() && !w.IsTwoHanded() && !w.IsHeavy() {
+		return true
+	}
+
+	return false
+}
+
 func (w *Weapon) hasProperty(prop string) bool {
 	for _, p := range w.Properties {
 		if p.Key == prop {
