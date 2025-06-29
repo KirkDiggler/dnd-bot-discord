@@ -19,7 +19,7 @@ func TestWeapon_IsMonkWeapon(t *testing.T) {
 		{
 			name: "Shortsword is always a monk weapon",
 			weapon: &Weapon{
-				Base:           BasicEquipment{Key: "shortsword", Name: "Shortsword"},
+				Base:           BasicEquipment{Key: WeaponKeyShortsword, Name: "Shortsword"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
 				Properties:     []*ReferenceItem{},
@@ -118,7 +118,7 @@ func TestMonkMartialArts_WeaponAttacks(t *testing.T) {
 		{
 			name: "Monk with shortsword uses DEX",
 			weapon: &Weapon{
-				Base:           BasicEquipment{Key: "shortsword", Name: "Shortsword"},
+				Base:           BasicEquipment{Key: WeaponKeyShortsword, Name: "Shortsword"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 6, DamageType: damage.TypeSlashing},
@@ -152,7 +152,7 @@ func TestMonkMartialArts_WeaponAttacks(t *testing.T) {
 		{
 			name: "Non-monk with shortsword must use STR",
 			weapon: &Weapon{
-				Base:           BasicEquipment{Key: "shortsword", Name: "Shortsword"},
+				Base:           BasicEquipment{Key: WeaponKeyShortsword, Name: "Shortsword"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 6, DamageType: damage.TypeSlashing},
@@ -186,7 +186,7 @@ func TestMonkMartialArts_WeaponAttacks(t *testing.T) {
 		{
 			name: "Level 5 monk gets higher proficiency",
 			weapon: &Weapon{
-				Base:           BasicEquipment{Key: "shortsword", Name: "Shortsword"},
+				Base:           BasicEquipment{Key: WeaponKeyShortsword, Name: "Shortsword"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 6, DamageType: damage.TypeSlashing},
@@ -271,14 +271,14 @@ func TestMonkMartialArts_DualWielding(t *testing.T) {
 		},
 		EquippedSlots: map[Slot]Equipment{
 			SlotMainHand: &Weapon{
-				Base:           BasicEquipment{Key: "shortsword", Name: "Shortsword"},
+				Base:           BasicEquipment{Key: WeaponKeyShortsword, Name: "Shortsword"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 6, DamageType: damage.TypeSlashing},
 				Properties:     []*ReferenceItem{{Key: "light"}},
 			},
 			SlotOffHand: &Weapon{
-				Base:           BasicEquipment{Key: "shortsword", Name: "Shortsword"},
+				Base:           BasicEquipment{Key: WeaponKeyShortsword, Name: "Shortsword"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 6, DamageType: damage.TypeSlashing},

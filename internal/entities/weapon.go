@@ -5,6 +5,11 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 )
 
+const (
+	// WeaponKeyShortsword is the key for shortsword weapons
+	WeaponKeyShortsword = "shortsword"
+)
+
 type Weapon struct {
 	Base            BasicEquipment   `json:"base"`
 	Damage          *damage.Damage   `json:"damage"`
@@ -77,7 +82,7 @@ func (w *Weapon) IsFinesse() bool {
 // the two-handed or heavy property
 func (w *Weapon) IsMonkWeapon() bool {
 	// Shortswords are always monk weapons
-	if w.Base.Key == "shortsword" {
+	if w.Base.Key == WeaponKeyShortsword {
 		return true
 	}
 

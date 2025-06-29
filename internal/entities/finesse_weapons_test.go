@@ -182,3 +182,62 @@ func TestFinesseWeapon_UseDexForAttack(t *testing.T) {
 		})
 	}
 }
+
+func TestFinesseWeapon_DualWielding(t *testing.T) {
+	// Create a character with two finesse weapons
+	character := &Character{
+		Name:  "Dual Wielder",
+		Level: 1,
+		Attributes: map[Attribute]*AbilityScore{
+			AttributeStrength:  {Score: 12, Bonus: 1}, // +1
+			AttributeDexterity: {Score: 16, Bonus: 3}, // +3
+		},
+		Features: []*CharacterFeature{}, // No special features
+		EquippedSlots: map[Slot]Equipment{
+			SlotMainHand: &Weapon{
+				Base:           BasicEquipment{Key: "rapier", Name: "Rapier"},
+				WeaponCategory: "Martial",
+				WeaponRange:    "Melee",
+				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 8, DamageType: damage.TypePiercing},
+				Properties:     []*ReferenceItem{{Key: "finesse"}},
+			},
+			SlotOffHand: &Weapon{
+				Base:           BasicEquipment{Key: "dagger", Name: "Dagger"},
+				WeaponCategory: "Simple",
+				WeaponRange:    "Melee",
+				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 4, DamageType: damage.TypePiercing},
+				Properties:     []*ReferenceItem{{Key: "finesse"}, {Key: "light"}},
+			},
+		},
+		Proficiencies: map[ProficiencyType][]*Proficiency{
+			ProficiencyTypeWeapon: {
+				{Key: "rapier", Name: "Rapier"},
+				{Key: "dagger", Name: "Dagger"},
+				{Key: "simple-weapons", Name: "Simple Weapons"},
+				{Key: "martial-weapons", Name: "Martial Weapons"},
+			},
+		},
+	}
+
+	// Mock dice roller
+	mockRoller := mockdice.NewManualMockRoller()
+	mockRoller.SetRolls([]int{
+		12, // Main hand attack roll
+		5,  // Main hand damage roll (1d8)
+		15, // Off-hand attack roll
+		2,  // Off-hand damage roll (1d4)
+	})
+	character = character.WithDiceRoller(mockRoller)
+
+	results, err := character.Attack()
+	require.NoError(t, err)
+	require.Len(t, results, 2, "Should have two attack results for dual wielding")
+
+	// Main hand rapier: d20(12) + DEX(3) + prof(2) = 17
+	assert.Equal(t, 17, results[0].AttackRoll, "Main hand finesse weapon should use DEX")
+	assert.Equal(t, 8, results[0].DamageRoll, "Main hand damage should be 1d8(5) + DEX(3)")
+
+	// Off-hand dagger: d20(15) + DEX(3) + prof(2) = 20
+	assert.Equal(t, 20, results[1].AttackRoll, "Off-hand finesse weapon should use DEX")
+	assert.Equal(t, 5, results[1].DamageRoll, "Off-hand damage should be 1d4(2) + DEX(3)")
+}
