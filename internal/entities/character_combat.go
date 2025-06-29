@@ -10,6 +10,41 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 )
 
+// calculateWeaponAbilityBonus determines the ability bonus for a weapon attack
+// Takes into account finesse weapons and monk weapons that can use DEX
+func (c *Character) calculateWeaponAbilityBonus(weap *Weapon, hasMartialArts bool) int {
+	if c.Attributes == nil {
+		return 0
+	}
+
+	switch weap.WeaponRange {
+	case "Ranged":
+		if c.Attributes[AttributeDexterity] != nil {
+			return c.Attributes[AttributeDexterity].Bonus
+		}
+	case "Melee":
+		// Finesse weapons and monk weapons can use DEX instead of STR
+		if weap.IsFinesse() || (hasMartialArts && weap.IsMonkWeapon()) {
+			strBonus := 0
+			dexBonus := 0
+			if c.Attributes[AttributeStrength] != nil {
+				strBonus = c.Attributes[AttributeStrength].Bonus
+			}
+			if c.Attributes[AttributeDexterity] != nil {
+				dexBonus = c.Attributes[AttributeDexterity].Bonus
+			}
+			// Use the higher of STR or DEX
+			if dexBonus > strBonus {
+				return dexBonus
+			}
+			return strBonus
+		} else if c.Attributes[AttributeStrength] != nil {
+			return c.Attributes[AttributeStrength].Bonus
+		}
+	}
+	return 0
+}
+
 func (c *Character) Attack() ([]*attack.Result, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -39,20 +74,17 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 			isProficient := directProf || categoryProf
 			// Proficiency check completed
 
-			// Calculate ability bonus based on weapon type
-			var abilityBonus int
-			if c.Attributes != nil {
-				switch weap.WeaponRange {
-				case "Ranged":
-					if c.Attributes[AttributeDexterity] != nil {
-						abilityBonus = c.Attributes[AttributeDexterity].Bonus
-					}
-				case "Melee":
-					if c.Attributes[AttributeStrength] != nil {
-						abilityBonus = c.Attributes[AttributeStrength].Bonus
-					}
+			// Check if character has Martial Arts
+			hasMartialArts := false
+			for _, feature := range c.Features {
+				if feature != nil && feature.Key == "martial-arts" {
+					hasMartialArts = true
+					break
 				}
 			}
+
+			// Calculate ability bonus based on weapon type
+			abilityBonus := c.calculateWeaponAbilityBonus(weap, hasMartialArts)
 
 			// Calculate proficiency bonus if proficient
 			proficiencyBonus := 0
@@ -108,13 +140,8 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 					offHandProficient := c.hasWeaponProficiencyInternal(offWeap.GetKey()) ||
 						c.hasWeaponCategoryProficiency(offWeap.WeaponCategory)
 
-					var offHandAbilityBonus int
-					switch offWeap.WeaponRange {
-					case "Ranged":
-						offHandAbilityBonus = c.Attributes[AttributeDexterity].Bonus
-					case "Melee":
-						offHandAbilityBonus = c.Attributes[AttributeStrength].Bonus
-					}
+					// Calculate off-hand ability bonus
+					offHandAbilityBonus := c.calculateWeaponAbilityBonus(offWeap, hasMartialArts)
 
 					offHandProficiencyBonus := 0
 					if offHandProficient {
@@ -162,20 +189,17 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 			isProficient := directProf || categoryProf
 			// Proficiency check completed
 
-			// Calculate ability bonus based on weapon type
-			var abilityBonus int
-			if c.Attributes != nil {
-				switch weap.WeaponRange {
-				case "Ranged":
-					if c.Attributes[AttributeDexterity] != nil {
-						abilityBonus = c.Attributes[AttributeDexterity].Bonus
-					}
-				case "Melee":
-					if c.Attributes[AttributeStrength] != nil {
-						abilityBonus = c.Attributes[AttributeStrength].Bonus
-					}
+			// Check if character has Martial Arts
+			hasMartialArts := false
+			for _, feature := range c.Features {
+				if feature != nil && feature.Key == "martial-arts" {
+					hasMartialArts = true
+					break
 				}
 			}
+
+			// Calculate ability bonus based on weapon type
+			abilityBonus := c.calculateWeaponAbilityBonus(weap, hasMartialArts)
 
 			// Calculate proficiency bonus if proficient
 			proficiencyBonus := 0
