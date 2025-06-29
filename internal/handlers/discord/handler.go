@@ -4675,27 +4675,18 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				return
 			}
 
-			// Show the full character sheet instead of just a success message
-			// This addresses issue #166 - showing character sheet immediately after creation
-			embed := character.BuildCharacterSheetEmbed(finalChar)
-
-			// Build interactive components for the character sheet
-			components := character.BuildCharacterSheetComponents(finalChar.ID)
+			// For modal submissions, Discord seems to have issues with complex components
+			// So we'll show a simple success message with a button to view the full character sheet
+			embed, components := character.BuildCreationSuccessResponse(finalChar)
 			log.Printf("DEBUG: Character sheet components created: %d components", len(components))
-
-			// For modal submissions, we should send a new message, not update
-			// But we need to make sure components are properly included
-			responseData := &discordgo.InteractionResponseData{
-				Embeds:     []*discordgo.MessageEmbed{embed},
-				Components: components,
-				Flags:      discordgo.MessageFlagsEphemeral, // Show as ephemeral like normal character sheet
-			}
-
-			log.Printf("DEBUG: Sending response with %d embeds and %d components", len(responseData.Embeds), len(responseData.Components))
 
 			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: responseData,
+				Data: &discordgo.InteractionResponseData{
+					Embeds:     []*discordgo.MessageEmbed{embed},
+					Components: components,
+					Flags:      discordgo.MessageFlagsEphemeral,
+				},
 			})
 
 			if err != nil {

@@ -11,8 +11,8 @@ import (
 )
 
 func TestShowCharacterSheetAfterCreation(t *testing.T) {
-	// This test verifies that we can properly build a character sheet embed
-	// for a newly created character to address issue #166
+	// This test verifies the character creation success response
+	// and full character sheet display to address issue #166
 
 	t.Run("BuildCharacterSheetEmbed shows complete character info", func(t *testing.T) {
 		// Create a test character that represents a newly finalized character
@@ -148,5 +148,46 @@ func TestShowCharacterSheetAfterCreation(t *testing.T) {
 			}
 		}
 		assert.Equal(t, 3, buttonCount, "Should have 3 buttons: Manage Equipment, Edit Character, Refresh")
+	})
+
+	t.Run("BuildCreationSuccessResponse provides simple success with view button", func(t *testing.T) {
+		// Create a test character
+		finalChar := &entities.Character{
+			ID:     "test-char-789",
+			Name:   "Gimli",
+			Level:  1,
+			Status: entities.CharacterStatusActive,
+			Race: &entities.Race{
+				Key:  "dwarf",
+				Name: "Dwarf",
+			},
+			Class: &entities.Class{
+				Key:    "fighter",
+				Name:   "Fighter",
+				HitDie: 10,
+			},
+			CurrentHitPoints: 12,
+			MaxHitPoints:     12,
+			AC:               16,
+		}
+
+		// Build the success response
+		embed, components := character.BuildCreationSuccessResponse(finalChar)
+
+		// Verify embed
+		require.NotNil(t, embed)
+		assert.Contains(t, embed.Title, "Character Created Successfully")
+		assert.Contains(t, embed.Description, "Gimli")
+
+		// Verify we have the view button
+		require.Len(t, components, 1, "Should have one action row")
+		actionRow, ok := components[0].(discordgo.ActionsRow)
+		require.True(t, ok)
+		require.Len(t, actionRow.Components, 1, "Should have one button")
+
+		button, ok := actionRow.Components[0].(discordgo.Button)
+		require.True(t, ok)
+		assert.Equal(t, "View Character Sheet", button.Label)
+		assert.Equal(t, "character:sheet_show:test-char-789", button.CustomID)
 	})
 }
