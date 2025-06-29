@@ -233,16 +233,16 @@ func BuildCharacterSheetComponents(characterID string) []discordgo.MessageCompon
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.Button{
-					Label:    "View Inventory",
+					Label:    "Manage Equipment",
 					Style:    discordgo.PrimaryButton,
 					CustomID: fmt.Sprintf("character:inventory:%s", characterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "🎒"},
 				},
 				discordgo.Button{
-					Label:    "View Details",
+					Label:    "Edit Character",
 					Style:    discordgo.SecondaryButton,
-					CustomID: fmt.Sprintf("character:details:%s", characterID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "📋"},
+					CustomID: fmt.Sprintf("character:edit_menu:%s", characterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "✏️"},
 				},
 				discordgo.Button{
 					Label:    "Refresh",

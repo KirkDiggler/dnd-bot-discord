@@ -140,10 +140,13 @@ func TestShowCharacterSheetAfterCreation(t *testing.T) {
 		require.NotEmpty(t, actionRow.Components)
 
 		// Verify button custom IDs include the character ID
+		buttonCount := 0
 		for _, comp := range actionRow.Components {
 			if button, ok := comp.(discordgo.Button); ok {
 				assert.Contains(t, button.CustomID, characterID)
+				buttonCount++
 			}
 		}
+		assert.Equal(t, 3, buttonCount, "Should have 3 buttons: Manage Equipment, Edit Character, Refresh")
 	})
 }

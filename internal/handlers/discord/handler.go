@@ -4681,14 +4681,21 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 
 			// Build interactive components for the character sheet
 			components := character.BuildCharacterSheetComponents(finalChar.ID)
+			log.Printf("DEBUG: Character sheet components created: %d components", len(components))
+
+			// For modal submissions, we should send a new message, not update
+			// But we need to make sure components are properly included
+			responseData := &discordgo.InteractionResponseData{
+				Embeds:     []*discordgo.MessageEmbed{embed},
+				Components: components,
+				Flags:      discordgo.MessageFlagsEphemeral, // Show as ephemeral like normal character sheet
+			}
+
+			log.Printf("DEBUG: Sending response with %d embeds and %d components", len(responseData.Embeds), len(responseData.Components))
 
 			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Embeds:     []*discordgo.MessageEmbed{embed},
-					Components: components,
-					Flags:      discordgo.MessageFlagsEphemeral, // Show as ephemeral like normal character sheet
-				},
+				Data: responseData,
 			})
 
 			if err != nil {
