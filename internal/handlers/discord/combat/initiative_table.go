@@ -55,6 +55,10 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 
 		// HP with visual bar and color coding
 		percent := float64(c.CurrentHP) / float64(c.MaxHP)
+		hpBar := getCompactHPBar(c.CurrentHP, c.MaxHP)
+		hpText := fmt.Sprintf("%3d/%-3d", c.CurrentHP, c.MaxHP)
+
+		// Apply color based on health
 		if c.CurrentHP == 0 {
 			sb.WriteString("\u001b[90m") // Gray for dead
 		} else if percent > 0.5 {
@@ -65,9 +69,8 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 			sb.WriteString("\u001b[31m") // Red
 		}
 
-		hpBar := getCompactHPBar(c.CurrentHP, c.MaxHP)
-		sb.WriteString(hpBar)
-		sb.WriteString(fmt.Sprintf(" %3d/%-3d", c.CurrentHP, c.MaxHP))
+		// Write HP bar and text (total 17 chars: 8 bar + 1 space + 8 text)
+		sb.WriteString(fmt.Sprintf("%-17s", hpBar+" "+hpText))
 		sb.WriteString("\u001b[0m") // Reset color
 		sb.WriteString(" │")
 
