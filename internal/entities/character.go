@@ -168,10 +168,18 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 			log.Printf("Final attack bonus: +%d (ability: %d, proficiency: %d)", attackBonus, abilityBonus, proficiencyBonus)
 			log.Printf("Final damage bonus: +%d", damageBonus)
 
-			// Roll the attack
+			// Roll the attack with fighting style consideration
 			var attak1 *attack.Result
+			fightingStyle := c.getFightingStyle()
+			// Great Weapon Fighting only applies to two-handed melee weapons
+			useGreatWeaponFighting := fightingStyle == "great_weapon" && weap.IsTwoHanded() && weap.IsMelee()
+
 			if weap.IsTwoHanded() && weap.TwoHandedDamage != nil {
-				attak1, err = attack.RollAttack(c.getDiceRoller(), attackBonus, damageBonus, weap.TwoHandedDamage)
+				if useGreatWeaponFighting {
+					attak1, err = attack.RollAttackWithFightingStyle(c.getDiceRoller(), attackBonus, damageBonus, weap.TwoHandedDamage, "great_weapon")
+				} else {
+					attak1, err = attack.RollAttack(c.getDiceRoller(), attackBonus, damageBonus, weap.TwoHandedDamage)
+				}
 			} else {
 				attak1, err = attack.RollAttack(c.getDiceRoller(), attackBonus, damageBonus, weap.Damage)
 			}
@@ -291,7 +299,14 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 				dmg = weap.Damage
 			}
 
-			a, err := attack.RollAttack(c.getDiceRoller(), attackBonus, damageBonus, dmg)
+			// Apply Great Weapon Fighting for two-handed melee weapons
+			fightingStyle := c.getFightingStyle()
+			var a *attack.Result
+			if fightingStyle == "great_weapon" && weap.IsMelee() {
+				a, err = attack.RollAttackWithFightingStyle(c.getDiceRoller(), attackBonus, damageBonus, dmg, "great_weapon")
+			} else {
+				a, err = attack.RollAttack(c.getDiceRoller(), attackBonus, damageBonus, dmg)
+			}
 			if err != nil {
 				return nil, err
 			}
@@ -1510,27 +1525,23 @@ func (c *Character) applyFightingStyleBonuses(weapon *Weapon, attackBonus, damag
 	return c.applyFightingStyleBonusesWithHand(weapon, attackBonus, damageBonus, SlotMainHand)
 }
 
-// applyFightingStyleBonusesWithHand applies bonuses from fighter fighting styles for a specific hand
-func (c *Character) applyFightingStyleBonusesWithHand(weapon *Weapon, attackBonus, damageBonus int, hand Slot) (finalAttackBonus, finalDamageBonus int) {
-	// Check if the character has fighting style feature
-	var fightingStyle string
-	log.Printf("DEBUG: Checking for fighting style among %d features", len(c.Features))
+// getFightingStyle returns the character's fighting style if they have one
+func (c *Character) getFightingStyle() string {
 	for _, feature := range c.Features {
-		if feature.Key == "fighting_style" {
-			log.Printf("DEBUG: Found fighting_style feature, metadata=%v", feature.Metadata)
-			if feature.Metadata != nil {
-				if style, ok := feature.Metadata["style"].(string); ok {
-					fightingStyle = style
-					log.Printf("DEBUG: Found fighting style: %s", style)
-					break
-				} else {
-					log.Printf("DEBUG: Fighting style metadata exists but no 'style' key or wrong type")
-				}
-			} else {
-				log.Printf("DEBUG: Fighting style feature found but metadata is nil")
+		if feature.Key == "fighting_style" && feature.Metadata != nil {
+			if style, ok := feature.Metadata["style"].(string); ok {
+				return style
 			}
 		}
 	}
+	return ""
+}
+
+// applyFightingStyleBonusesWithHand applies bonuses from fighter fighting styles for a specific hand
+func (c *Character) applyFightingStyleBonusesWithHand(weapon *Weapon, attackBonus, damageBonus int, hand Slot) (finalAttackBonus, finalDamageBonus int) {
+	// Check if the character has fighting style feature
+	fightingStyle := c.getFightingStyle()
+	log.Printf("DEBUG: Checking for fighting style among %d features", len(c.Features))
 
 	if fightingStyle == "" {
 		log.Printf("DEBUG: No fighting style found")
