@@ -4675,61 +4675,19 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				return
 			}
 
-			// Show success with character details
-			description := fmt.Sprintf("**Name:** %s", finalChar.Name)
-			if finalChar.Race != nil {
-				description += fmt.Sprintf("\n**Race:** %s", finalChar.Race.Name)
-			}
-			if finalChar.Class != nil {
-				description += fmt.Sprintf("\n**Class:** %s", finalChar.Class.Name)
-			}
+			// Show the full character sheet instead of just a success message
+			// This addresses issue #166 - showing character sheet immediately after creation
+			embed := character.BuildCharacterSheetEmbed(finalChar)
 
-			embed := &discordgo.MessageEmbed{
-				Title:       "Character Created!",
-				Description: description,
-				Color:       0x00ff00,
-				Fields:      []*discordgo.MessageEmbedField{},
-			}
-
-			// Only add ability scores if we have them
-			if len(abilityScores) > 0 {
-				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-					Name: "💪 Base Abilities",
-					Value: fmt.Sprintf("STR: %d, DEX: %d, CON: %d\nINT: %d, WIS: %d, CHA: %d",
-						abilityScores["STR"], abilityScores["DEX"], abilityScores["CON"],
-						abilityScores["INT"], abilityScores["WIS"], abilityScores["CHA"],
-					),
-					Inline: true,
-				})
-			}
-
-			// Add other fields
-			embed.Fields = append(embed.Fields,
-				&discordgo.MessageEmbedField{
-					Name:   "❤️ Hit Points",
-					Value:  fmt.Sprintf("%d", finalChar.MaxHitPoints),
-					Inline: true,
-				},
-				&discordgo.MessageEmbedField{
-					Name:   "🛡️ Hit Die",
-					Value:  fmt.Sprintf("d%d", finalChar.HitDie),
-					Inline: true,
-				},
-				&discordgo.MessageEmbedField{
-					Name:   "✅ Character Complete",
-					Value:  "Your character has been created and saved successfully!",
-					Inline: false,
-				},
-			)
-
-			embed.Footer = &discordgo.MessageEmbedFooter{
-				Text: "Ready for adventure!",
-			}
+			// Build interactive components for the character sheet
+			components := character.BuildCharacterSheetComponents(finalChar.ID)
 
 			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Embeds: []*discordgo.MessageEmbed{embed},
+					Embeds:     []*discordgo.MessageEmbed{embed},
+					Components: components,
+					Flags:      discordgo.MessageFlagsEphemeral, // Show as ephemeral like normal character sheet
 				},
 			})
 
