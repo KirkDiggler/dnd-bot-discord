@@ -91,13 +91,6 @@ func (c *Character) ApplySneakAttack(ctx *CombatContext) int {
 	return result.Total
 }
 
-// StartNewTurn resets per-turn resources
-func (c *Character) StartNewTurn() {
-	if c.Resources != nil {
-		c.Resources.SneakAttackUsedThisTurn = false
-	}
-}
-
 // CombatContext provides context for combat calculations
 type CombatContext struct {
 	AttackResult *attack.Result

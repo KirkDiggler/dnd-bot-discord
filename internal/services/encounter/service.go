@@ -664,21 +664,24 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 	if encounter.Round > prevRound {
 		// Reset per-turn abilities for all player characters
 		for _, combatant := range encounter.Combatants {
-			if combatant.Type == entities.CombatantTypePlayer && combatant.CharacterID != "" {
-				// Get the character
-				char, err := s.characterService.GetByID(combatant.CharacterID)
-				if err != nil {
-					// Failed to get character for turn reset - continue anyway
-					continue
-				}
+			if combatant.Type != entities.CombatantTypePlayer || combatant.CharacterID == "" {
+				continue
+			}
 
-				// Reset per-turn abilities
-				char.StartNewTurn()
+			// Get the character
+			char, err := s.characterService.GetByID(combatant.CharacterID)
+			if err != nil {
+				// Failed to get character for turn reset - continue anyway
+				continue
+			}
 
-				// Save character to persist the reset
-				if err := s.characterService.UpdateEquipment(char); err != nil {
-					log.Printf("Failed to update character %s after turn reset: %v", char.ID, err)
-				}
+			// Reset per-turn abilities
+			log.Printf("[ACTION ECONOMY] New round started - resetting actions for %s", char.Name)
+			char.StartNewTurn()
+
+			// Save character to persist the reset
+			if err := s.characterService.UpdateEquipment(char); err != nil {
+				log.Printf("Failed to update character %s after turn reset: %v", char.ID, err)
 			}
 		}
 	}
@@ -771,6 +774,26 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 
 		// Use first attack result
 		attackResult := attackResults[0]
+
+		// Record the attack action for action economy
+		// Use the weapon key from the attack result if available
+		weaponKey := attackResult.WeaponKey
+		if weaponKey == "" {
+			// Fallback to equipped weapon if not in result (for backward compatibility)
+			if char.EquippedSlots[entities.SlotMainHand] != nil {
+				weaponKey = char.EquippedSlots[entities.SlotMainHand].GetKey()
+			} else if char.EquippedSlots[entities.SlotTwoHanded] != nil {
+				weaponKey = char.EquippedSlots[entities.SlotTwoHanded].GetKey()
+			}
+		}
+		char.RecordAction("attack", "weapon", weaponKey)
+
+		// Log action economy state for debugging
+		log.Printf("[ACTION ECONOMY] %s attacked with %s - Actions taken: %d, Bonus actions available: %d",
+			char.Name, weaponKey, len(char.GetActionsTaken()), len(char.GetAvailableBonusActions()))
+		for _, ba := range char.GetAvailableBonusActions() {
+			log.Printf("[ACTION ECONOMY] Available bonus action: %s (%s)", ba.Name, ba.Key)
+		}
 		result.AttackRoll = attackResult.AttackResult.Rolls[0]      // The d20 roll
 		result.TotalAttack = attackResult.AttackRoll                // Total including bonuses
 		result.AttackBonus = result.TotalAttack - result.AttackRoll // Calculate bonus from total minus d20
