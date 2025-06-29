@@ -151,6 +151,13 @@ make generate-mocks
 DISCORD_TOKEN=xxx REDIS_URL=redis://localhost:6379 ./bin/dnd-bot
 ```
 
+### PR Review Workflow
+1. **Check for inline feedback**: `gh pr view --web` or `gh pr checks`
+2. **Address all comments** before requesting re-review
+3. **Run pre-commit**: `make pre-commit` (never use --no-verify)
+4. **Update PR description** if scope changes
+5. **Use conventional commits**: feat:, fix:, refactor:, docs:, test:
+
 #### Pre-Commit Workflow
 **IMPORTANT**: Always run `make pre-commit` before committing code. This will:
 1. Format all Go code with `go fmt`
