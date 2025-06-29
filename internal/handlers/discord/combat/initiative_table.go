@@ -56,7 +56,7 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 		visualWidth := 16
 		if strings.Contains(icon, "️") {
 			// Icons with variation selectors need adjustment
-			visualWidth = 14
+			visualWidth = 15
 		}
 
 		sb.WriteString(fmt.Sprintf("%-*s", visualWidth, nameStr))
