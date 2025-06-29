@@ -32,27 +32,17 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 		}
 		sb.WriteString(" │")
 
-		// Name with icon (truncated if needed)
-		icon := ""
-		if c.Type == entities.CombatantTypePlayer {
-			icon = getClassIcon(c.Class)
-		} else {
-			icon = "🐉" // Monster icon
-		}
-
-		name := c.Name
-		maxNameLen := 13 // Reduced to fit better
-		if len(name) > maxNameLen {
-			name = name[:maxNameLen-3] + "..."
-		}
-
-		// Format: "icon name" padded to 16 chars total
-		nameStr := fmt.Sprintf("%s %s", icon, name)
-		sb.WriteString(fmt.Sprintf("%-16s", nameStr))
+		// Format and write the name column
+		nameStr, visualWidth := formatCombatantName(c)
+		sb.WriteString(fmt.Sprintf("%-*s", visualWidth, nameStr))
 		sb.WriteString(" │")
 
 		// HP with visual bar and color coding
 		percent := float64(c.CurrentHP) / float64(c.MaxHP)
+		hpBar := getCompactHPBar(c.CurrentHP, c.MaxHP)
+		hpText := fmt.Sprintf("%3d/%-3d", c.CurrentHP, c.MaxHP)
+
+		// Apply color based on health
 		if c.CurrentHP == 0 {
 			sb.WriteString("\u001b[90m") // Gray for dead
 		} else if percent > 0.5 {
@@ -63,21 +53,13 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 			sb.WriteString("\u001b[31m") // Red
 		}
 
-		hpBar := getCompactHPBar(c.CurrentHP, c.MaxHP)
-		sb.WriteString(hpBar)
-		sb.WriteString(fmt.Sprintf(" %3d/%-3d", c.CurrentHP, c.MaxHP))
+		// Write HP bar and text (total 17 chars: 8 bar + 1 space + 8 text)
+		sb.WriteString(fmt.Sprintf("%-17s", hpBar+" "+hpText))
 		sb.WriteString("\u001b[0m") // Reset color
 		sb.WriteString(" │")
 
 		// AC
 		sb.WriteString(fmt.Sprintf("%2d", c.AC))
-
-		// Status indicator
-		if c.CurrentHP == 0 {
-			sb.WriteString(" 💀")
-		} else if float64(c.CurrentHP)/float64(c.MaxHP) < 0.25 {
-			sb.WriteString(" ❗")
-		}
 
 		sb.WriteString("\n")
 	}
@@ -91,6 +73,39 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 			Inline: false,
 		},
 	}
+}
+
+// formatCombatantName formats a combatant's name with appropriate icon and calculates visual width
+func formatCombatantName(c *entities.Combatant) (nameStr string, visualWidth int) {
+	// Select appropriate icon
+	icon := ""
+	if c.CurrentHP == 0 {
+		icon = "💀" // Dead indicator replaces type icon
+	} else if c.Type == entities.CombatantTypePlayer {
+		icon = getClassIcon(c.Class)
+	} else {
+		icon = "🐉" // Monster icon
+	}
+
+	// Truncate name if needed
+	name := c.Name
+	maxNameLen := 13 // Reduced to fit better
+	if len(name) > maxNameLen {
+		name = name[:maxNameLen-3] + "..."
+	}
+
+	// Format name with icon
+	nameStr = fmt.Sprintf("%s %s", icon, name)
+
+	// Calculate visual width for proper alignment
+	// Some emojis have variation selectors (️) that make them wider
+	visualWidth = 16
+	if strings.Contains(icon, "️") {
+		// Icons with variation selectors need adjustment
+		visualWidth = 15
+	}
+
+	return nameStr, visualWidth
 }
 
 // BuildCompactInitiativeDisplay creates a compact single-line display for each combatant
