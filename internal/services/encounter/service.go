@@ -1466,13 +1466,14 @@ func (s *service) ExecuteAttackWithTarget(ctx context.Context, input *ExecuteAtt
 		return result, nil // Don't process turns if combat ended
 	}
 
-	// Auto-advance turn if it was a player attack
-	if attacker.Type == entities.CombatantTypePlayer {
+	// Don't auto-advance turn for player attacks - they may have bonus actions
+	// Only auto-advance for monster attacks
+	if attacker.Type == entities.CombatantTypeMonster {
 		err = s.NextTurn(ctx, input.EncounterID, input.UserID)
 		if err != nil {
-			log.Printf("Error auto-advancing turn: %v", err)
+			log.Printf("Error auto-advancing turn after monster attack: %v", err)
 		} else {
-			// Process any monster turns that follow
+			// Process any consecutive monster turns
 			monsterResults, monstErr := s.ProcessAllMonsterTurns(ctx, input.EncounterID)
 			if monstErr != nil {
 				log.Printf("Error processing monster turns: %v", monstErr)
@@ -1481,6 +1482,7 @@ func (s *service) ExecuteAttackWithTarget(ctx context.Context, input *ExecuteAtt
 			}
 		}
 	}
+	// For player attacks, let them manually end their turn after considering bonus actions
 
 	// Get updated encounter state
 	encounter, err = s.repository.Get(ctx, input.EncounterID)
