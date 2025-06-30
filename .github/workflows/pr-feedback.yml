@@ -42,12 +42,15 @@ jobs:
           } else if (total < 500) {
             label = 'size/M';
             message = '👍 Medium PR - Standard review time';
-          } else if (total < 1000) {
+          } else if (total < 1500) {
             label = 'size/L';
-            message = '⚠️ Large PR - Consider splitting if possible';
-          } else {
+            message = '📦 Large PR - Normal for feature development';
+          } else if (total < 3000) {
             label = 'size/XL';
-            message = '❌ Very large PR - Should be split into smaller PRs';
+            message = '📦 Very large PR - Expected during active development';
+          } else {
+            label = 'size/XXL';
+            message = '🚀 Huge PR - Major feature implementation';
           }
           
           // Add label
@@ -62,7 +65,9 @@ jobs:
             console.log('Could not add label:', e.message);
           }
           
-          // Add comment if PR is large
+          // Add comment if PR is large - disabled during active development
+          // Uncomment this when the project is more stable and we want smaller PRs
+          /*
           if (total > 500) {
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -71,6 +76,7 @@ jobs:
               body: `## PR Size Analysis\n\n${message}\n\n- Lines added: ${additions}\n- Lines removed: ${deletions}\n- Total changes: ${total}\n\nLarge PRs are harder to review and more likely to introduce bugs. Consider breaking this into smaller, focused PRs.`
             });
           }
+          */
 
   test-summary:
     name: Test Summary
