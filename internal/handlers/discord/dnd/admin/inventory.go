@@ -101,7 +101,7 @@ func (h *InventoryHandler) HandleGive(s *discordgo.Session, i *discordgo.Interac
 
 	// Determine equipment type
 	equipType := equipment.GetEquipmentType()
-	if equipType == entities.EquipmentTypeBasic {
+	if equipType == "BasicEquipment" {
 		// Try to determine type from key
 		if itemKey == "shield" {
 			equipType = entities.EquipmentTypeArmor
@@ -149,30 +149,15 @@ func (h *InventoryHandler) HandleGive(s *discordgo.Session, i *discordgo.Interac
 // HandleTake handles the admin take command
 func (h *InventoryHandler) HandleTake(s *discordgo.Session, i *discordgo.InteractionCreate, characterName, itemKey string, quantity int64) error {
 	// Defer the response to give us more time
-	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Flags: discordgo.MessageFlagsEphemeral,
-		},
-	})
-	if err != nil {
+	if err := h.deferResponse(s, i); err != nil {
 		return fmt.Errorf("failed to defer response: %w", err)
 	}
 
 	// Find the character by name for the user
-	characters, err := h.characterService.ListCharacters(context.Background(), i.Member.User.ID)
+	targetChar, err := h.findCharacterByName(i.Member.User.ID, characterName)
 	if err != nil {
-		return h.respondError(s, i, "Failed to list characters", err)
+		return h.respondError(s, i, "Failed to find character", err)
 	}
-
-	var targetChar *entities.Character
-	for _, char := range characters {
-		if char.Name == characterName {
-			targetChar = char
-			break
-		}
-	}
-
 	if targetChar == nil {
 		return h.respondError(s, i, fmt.Sprintf("Character '%s' not found", characterName), nil)
 	}
@@ -283,4 +268,30 @@ func (h *InventoryHandler) respondError(s *discordgo.Session, i *discordgo.Inter
 		log.Printf("Failed to edit interaction response: %v", editErr)
 	}
 	return nil
+}
+
+// deferResponse defers the interaction response
+func (h *InventoryHandler) deferResponse(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags: discordgo.MessageFlagsEphemeral,
+		},
+	})
+}
+
+// findCharacterByName finds a character by name for a given user
+func (h *InventoryHandler) findCharacterByName(userID, characterName string) (*entities.Character, error) {
+	characters, err := h.characterService.ListCharacters(context.Background(), userID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, char := range characters {
+		if char.Name == characterName {
+			return char, nil
+		}
+	}
+
+	return nil, nil
 }
