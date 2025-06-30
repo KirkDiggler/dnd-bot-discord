@@ -1,7 +1,6 @@
 package equipment
 
 import (
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 )
 
@@ -24,6 +23,6 @@ func (e *BasicEquipment) GetKey() string {
 	return e.Key
 }
 
-func (e *BasicEquipment) GetSlot() character.Slot {
-	return character.SlotNone
+func (e *BasicEquipment) GetSlot() shared.Slot {
+	return shared.SlotNone
 }

@@ -1,6 +1,8 @@
 package equipment
 
-import "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
+)
 
 type EquipmentType string
 
@@ -15,5 +17,5 @@ type Equipment interface {
 	GetEquipmentType() EquipmentType
 	GetName() string
 	GetKey() string
-	GetSlot() character.Slot
+	GetSlot() shared.Slot
 }

@@ -161,28 +161,28 @@ func buildEquipmentDisplay(char *character.Character) []string {
 	lines := []string{}
 
 	// Main hand
-	if weapon := char.EquippedSlots[character.SlotMainHand]; weapon != nil {
+	if weapon := char.EquippedSlots[shared.SlotMainHand]; weapon != nil {
 		lines = append(lines, fmt.Sprintf("**Main Hand:** %s", weapon.GetName()))
 	} else {
 		lines = append(lines, "**Main Hand:** Empty")
 	}
 
 	// Off hand
-	if item := char.EquippedSlots[character.SlotOffHand]; item != nil {
+	if item := char.EquippedSlots[shared.SlotOffHand]; item != nil {
 		lines = append(lines, fmt.Sprintf("**Off Hand:** %s", item.GetName()))
 	} else {
 		lines = append(lines, "**Off Hand:** Empty")
 	}
 
 	// Two-handed (only show if no main/off hand)
-	if char.EquippedSlots[character.SlotMainHand] == nil && char.EquippedSlots[character.SlotOffHand] == nil {
-		if weapon := char.EquippedSlots[character.SlotTwoHanded]; weapon != nil {
+	if char.EquippedSlots[shared.SlotMainHand] == nil && char.EquippedSlots[shared.SlotOffHand] == nil {
+		if weapon := char.EquippedSlots[shared.SlotTwoHanded]; weapon != nil {
 			lines = append(lines, fmt.Sprintf("**Two-Handed:** %s", weapon.GetName()))
 		}
 	}
 
 	// Armor
-	if armor := char.EquippedSlots[character.SlotBody]; armor != nil {
+	if armor := char.EquippedSlots[shared.SlotBody]; armor != nil {
 		lines = append(lines, fmt.Sprintf("**Armor:** %s", armor.GetName()))
 	} else {
 		lines = append(lines, "**Armor:** Empty")

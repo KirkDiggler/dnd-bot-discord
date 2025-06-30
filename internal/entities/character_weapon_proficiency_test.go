@@ -90,7 +90,7 @@ func TestCharacter_Attack_WithCategoryProficiency(t *testing.T) {
 				{Key: "martial-weapons", Name: "Martial Weapons"},
 			},
 		},
-		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		Resources:     &shared.CharacterResources{},
 	}
 
@@ -108,7 +108,7 @@ func TestCharacter_Attack_WithCategoryProficiency(t *testing.T) {
 			DamageType: damage.TypeSlashing,
 		},
 	}
-	ranger.EquippedSlots[character.SlotMainHand] = longsword
+	ranger.EquippedSlots[shared.SlotMainHand] = longsword
 
 	// Attack should include proficiency bonus
 	attacks, err := ranger.Attack()
@@ -141,7 +141,7 @@ func TestCharacter_Attack_WithoutCategoryProficiency(t *testing.T) {
 				{Key: "light-crossbow", Name: "Light Crossbow"},
 			},
 		},
-		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		Resources:     &shared.CharacterResources{},
 	}
 
@@ -159,7 +159,7 @@ func TestCharacter_Attack_WithoutCategoryProficiency(t *testing.T) {
 			DamageType: damage.TypeSlashing,
 		},
 	}
-	wizard.EquippedSlots[character.SlotMainHand] = longsword
+	wizard.EquippedSlots[shared.SlotMainHand] = longsword
 
 	// Attack should NOT include proficiency bonus
 	attacks, err := wizard.Attack()

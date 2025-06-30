@@ -3,7 +3,6 @@ package discord
 import (
 	"context"
 	"fmt"
-	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	combat2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
@@ -1906,15 +1905,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			equippedInfo := "**Currently Equipped:**\n"
 			hasEquipped := false
 
-			if weapon := char.EquippedSlots[character2.SlotMainHand]; weapon != nil {
+			if weapon := char.EquippedSlots[shared.SlotMainHand]; weapon != nil {
 				equippedInfo += fmt.Sprintf("Main Hand: %s\n", weapon.GetName())
 				hasEquipped = true
 			}
-			if item := char.EquippedSlots[character2.SlotOffHand]; item != nil {
+			if item := char.EquippedSlots[shared.SlotOffHand]; item != nil {
 				equippedInfo += fmt.Sprintf("Off Hand: %s\n", item.GetName())
 				hasEquipped = true
 			}
-			if armor := char.EquippedSlots[character2.SlotBody]; armor != nil {
+			if armor := char.EquippedSlots[shared.SlotBody]; armor != nil {
 				equippedInfo += fmt.Sprintf("Armor: %s\n", armor.GetName())
 				hasEquipped = true
 			}
@@ -2140,7 +2139,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 			// Check if item is equipped
 			isEquipped := false
-			var equippedSlot character2.Slot
+			var equippedSlot shared.Slot
 			for slot, equipped := range char.EquippedSlots {
 				if equipped != nil && equipped == selectedItem {
 					isEquipped = true
@@ -2403,16 +2402,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 			// Add updated equipment info
 			equippedInfo := "**Currently Equipped:**\n"
-			if weapon := char.EquippedSlots[character2.SlotMainHand]; weapon != nil {
+			if weapon := char.EquippedSlots[shared.SlotMainHand]; weapon != nil {
 				equippedInfo += fmt.Sprintf("Main Hand: %s\n", weapon.GetName())
 			}
-			if item := char.EquippedSlots[character2.SlotOffHand]; item != nil {
+			if item := char.EquippedSlots[shared.SlotOffHand]; item != nil {
 				equippedInfo += fmt.Sprintf("Off Hand: %s\n", item.GetName())
 			}
-			if weapon := char.EquippedSlots[character2.SlotTwoHanded]; weapon != nil {
+			if weapon := char.EquippedSlots[shared.SlotTwoHanded]; weapon != nil {
 				equippedInfo += fmt.Sprintf("Two-Handed: %s\n", weapon.GetName())
 			}
-			if armor := char.EquippedSlots[character2.SlotBody]; armor != nil {
+			if armor := char.EquippedSlots[shared.SlotBody]; armor != nil {
 				equippedInfo += fmt.Sprintf("Armor: %s\n", armor.GetName())
 			}
 
@@ -2473,7 +2472,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			}
 
 			// Find which slot has the item and unequip it
-			var foundSlot character2.Slot
+			var foundSlot shared.Slot
 			var foundItem equipment.Equipment
 			for slot, equipped := range char.EquippedSlots {
 				if equipped != nil && equipped.GetKey() == itemKey {

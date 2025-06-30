@@ -63,7 +63,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 				Attributes:    map[shared.Attribute]*character.AbilityScore{}, // Empty!
 				Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 				Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
-				EquippedSlots: make(map[character.Slot]equipment.Equipment),
+				EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 			},
 			wantErr: false,
 			validate: func(t *testing.T, char *character.Character) {
@@ -127,7 +127,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 				},
 				Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 				Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
-				EquippedSlots: make(map[character.Slot]equipment.Equipment),
+				EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 			},
 			wantErr: false,
 			validate: func(t *testing.T, char *character.Character) {

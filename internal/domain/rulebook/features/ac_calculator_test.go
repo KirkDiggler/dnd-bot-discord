@@ -23,7 +23,7 @@ func TestCalculateAC_LeatherArmorWithDex(t *testing.T) {
 				Bonus: 4,
 			},
 		},
-		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 	}
 
 	// Test 1: Leather armor WITH ArmorClass data
@@ -39,7 +39,7 @@ func TestCalculateAC_LeatherArmorWithDex(t *testing.T) {
 			MaxBonus: 0, // No max for light armor
 		},
 	}
-	char.EquippedSlots[character.SlotBody] = leatherWithData
+	char.EquippedSlots[shared.SlotBody] = leatherWithData
 
 	ac := features.CalculateAC(char)
 	t.Logf("With ArmorClass data - BaseAC: 11, DexMod: 4, Total AC: %d", ac)
@@ -54,7 +54,7 @@ func TestCalculateAC_LeatherArmorWithDex(t *testing.T) {
 		ArmorCategory: equipment.ArmorCategoryLight,
 		ArmorClass:    nil, // No AC data
 	}
-	char.EquippedSlots[character.SlotBody] = leatherWithoutData
+	char.EquippedSlots[shared.SlotBody] = leatherWithoutData
 
 	ac = features.CalculateAC(char)
 	assert.Equal(t, 15, ac, "AC with leather armor (fallback) and +4 DEX should be 15")
@@ -73,7 +73,7 @@ func TestCalculateAC_MediumArmorLimitsDex(t *testing.T) {
 				Bonus: 4,
 			},
 		},
-		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 	}
 
 	// Test hide armor (medium) WITHOUT ArmorClass data (fallback)
@@ -85,7 +85,7 @@ func TestCalculateAC_MediumArmorLimitsDex(t *testing.T) {
 		ArmorCategory: equipment.ArmorCategoryMedium,
 		ArmorClass:    nil,
 	}
-	char.EquippedSlots[character.SlotBody] = hideArmor
+	char.EquippedSlots[shared.SlotBody] = hideArmor
 
 	ac := features.CalculateAC(char)
 	assert.Equal(t, 14, ac, "AC with hide armor should be 14 (12 base + 2 max DEX)")
@@ -99,7 +99,7 @@ func TestCalculateAC_MediumArmorLimitsDex(t *testing.T) {
 		ArmorCategory: equipment.ArmorCategoryMedium,
 		ArmorClass:    nil,
 	}
-	char.EquippedSlots[character.SlotBody] = scaleMail
+	char.EquippedSlots[shared.SlotBody] = scaleMail
 
 	ac = features.CalculateAC(char)
 	assert.Equal(t, 16, ac, "AC with scale mail should be 16 (14 base + 2 max DEX)")
@@ -118,7 +118,7 @@ func TestCalculateAC_ChainMailIgnoresDex(t *testing.T) {
 				Bonus: 4,
 			},
 		},
-		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 	}
 
 	// Chain mail WITHOUT ArmorClass data (fallback)
@@ -130,7 +130,7 @@ func TestCalculateAC_ChainMailIgnoresDex(t *testing.T) {
 		ArmorCategory: equipment.ArmorCategoryHeavy,
 		ArmorClass:    nil,
 	}
-	char.EquippedSlots[character.SlotBody] = chainMail
+	char.EquippedSlots[shared.SlotBody] = chainMail
 
 	ac := features.CalculateAC(char)
 	assert.Equal(t, 16, ac, "AC with chain mail should be 16 (ignoring DEX)")

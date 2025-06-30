@@ -67,8 +67,8 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 	}
 
 	// Check main hand slot
-	if c.EquippedSlots[SlotMainHand] != nil {
-		if weap, ok := c.EquippedSlots[SlotMainHand].(*equipment.Weapon); ok {
+	if c.EquippedSlots[shared.SlotMainHand] != nil {
+		if weap, ok := c.EquippedSlots[shared.SlotMainHand].(*equipment.Weapon); ok {
 			attacks := make([]*attack.Result, 0)
 
 			// Check proficiency while we have the mutex
@@ -139,8 +139,8 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 			log.Printf("Weapon attack successful")
 			attacks = append(attacks, attak1)
 
-			if c.EquippedSlots[SlotOffHand] != nil {
-				if offWeap, offOk := c.EquippedSlots[SlotOffHand].(*equipment.Weapon); offOk {
+			if c.EquippedSlots[shared.SlotOffHand] != nil {
+				if offWeap, offOk := c.EquippedSlots[shared.SlotOffHand].(*equipment.Weapon); offOk {
 					// Same process for off-hand weapon
 					offHandProficient := c.hasWeaponProficiencyInternal(offWeap.GetKey()) ||
 						c.hasWeaponCategoryProficiency(offWeap.WeaponCategory)
@@ -157,7 +157,7 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 					offHandDamageBonus := offHandAbilityBonus
 
 					// Apply fighting style bonuses to off-hand
-					offHandAttackBonus, offHandDamageBonus = c.applyFightingStyleBonusesWithHand(offWeap, offHandAttackBonus, offHandDamageBonus, SlotOffHand)
+					offHandAttackBonus, offHandDamageBonus = c.applyFightingStyleBonusesWithHand(offWeap, offHandAttackBonus, offHandDamageBonus, shared.SlotOffHand)
 
 					// Apply damage bonuses from active effects (e.g., rage) to off-hand
 					offHandDamageBonus, err = c.applyActiveEffectDamageBonus(offHandDamageBonus, "melee")
@@ -179,16 +179,16 @@ func (c *Character) Attack() ([]*attack.Result, error) {
 			log.Printf("Returning %d attack results", len(attacks))
 			return attacks, nil
 		} else {
-			log.Printf("Main hand equipment is not a weapon: %T", c.EquippedSlots[SlotMainHand])
+			log.Printf("Main hand equipment is not a weapon: %T", c.EquippedSlots[shared.SlotMainHand])
 		}
 	} else {
 		log.Printf("No main hand equipment")
 	}
 
-	if c.EquippedSlots[SlotTwoHanded] != nil {
+	if c.EquippedSlots[shared.SlotTwoHanded] != nil {
 		log.Printf("Checking two-handed slot...")
-		log.Printf("Two-handed slot type: %T", c.EquippedSlots[SlotTwoHanded])
-		if weap, ok := c.EquippedSlots[SlotTwoHanded].(*equipment.Weapon); ok {
+		log.Printf("Two-handed slot type: %T", c.EquippedSlots[shared.SlotTwoHanded])
+		if weap, ok := c.EquippedSlots[shared.SlotTwoHanded].(*equipment.Weapon); ok {
 			log.Printf("Two-handed weapon found: %s", weap.GetName())
 			// Check proficiency while we have the mutex
 			directProf := c.hasWeaponProficiencyInternal(weap.GetKey())

@@ -6,6 +6,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -120,10 +121,10 @@ func TestEquipmentNilHandling(t *testing.T) {
 		OwnerID: "test-user",
 		RealmID: "test-realm",
 		Name:    "Test Character",
-		EquippedSlots: map[character.Slot]equipment.Equipment{
-			character.SlotMainHand: nil, // Nil equipment
-			character.SlotOffHand:  nil,
-			character.SlotTwoHanded: &equipment.Weapon{
+		EquippedSlots: map[shared.Slot]equipment.Equipment{
+			shared.SlotMainHand: nil, // Nil equipment
+			shared.SlotOffHand:  nil,
+			shared.SlotTwoHanded: &equipment.Weapon{
 				Base: equipment.BasicEquipment{
 					Key:  "longsword",
 					Name: "Longsword",
@@ -139,8 +140,8 @@ func TestEquipmentNilHandling(t *testing.T) {
 
 	// Verify that nil equipment slots are not included in the data
 	assert.Len(t, data.EquippedSlots, 1, "Only non-nil equipment should be included")
-	_, hasMainHand := data.EquippedSlots[character.SlotMainHand]
+	_, hasMainHand := data.EquippedSlots[shared.SlotMainHand]
 	assert.False(t, hasMainHand, "Nil MainHand slot should not be included")
-	_, hasTwoHanded := data.EquippedSlots[character.SlotTwoHanded]
+	_, hasTwoHanded := data.EquippedSlots[shared.SlotTwoHanded]
 	assert.True(t, hasTwoHanded, "Non-nil TwoHanded slot should be included")
 }

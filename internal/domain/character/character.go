@@ -13,16 +13,6 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
 )
 
-type Slot string
-
-const (
-	SlotMainHand  Slot = "main-hand"
-	SlotOffHand   Slot = "off-hand"
-	SlotTwoHanded Slot = "two-handed"
-	SlotBody      Slot = "body"
-	SlotNone      Slot = "none"
-)
-
 // AbilityRoll represents a single ability score roll with a unique ID
 type AbilityRoll struct {
 	ID    string `json:"id"`
@@ -55,7 +45,7 @@ type Character struct {
 	Experience       int
 	NextLevel        int
 
-	EquippedSlots map[Slot]equipment.Equipment
+	EquippedSlots map[shared.Slot]equipment.Equipment
 
 	Status shared.CharacterStatus `json:"status"`
 
@@ -116,19 +106,19 @@ func (c *Character) Equip(key string) bool {
 	}
 
 	if c.EquippedSlots == nil {
-		c.EquippedSlots = make(map[Slot]equipment.Equipment)
+		c.EquippedSlots = make(map[shared.Slot]equipment.Equipment)
 	}
 
-	c.EquippedSlots[SlotTwoHanded] = nil
+	c.EquippedSlots[shared.SlotTwoHanded] = nil
 
 	switch equipment.GetSlot() {
-	case SlotMainHand:
-		if c.EquippedSlots[SlotMainHand] != nil {
-			c.EquippedSlots[SlotOffHand] = c.EquippedSlots[SlotMainHand]
+	case shared.SlotMainHand:
+		if c.EquippedSlots[shared.SlotMainHand] != nil {
+			c.EquippedSlots[shared.SlotOffHand] = c.EquippedSlots[shared.SlotMainHand]
 		}
-	case SlotTwoHanded:
-		c.EquippedSlots[SlotMainHand] = nil
-		c.EquippedSlots[SlotOffHand] = nil
+	case shared.SlotTwoHanded:
+		c.EquippedSlots[shared.SlotMainHand] = nil
+		c.EquippedSlots[shared.SlotOffHand] = nil
 	}
 
 	c.EquippedSlots[equipment.GetSlot()] = equipment
@@ -142,7 +132,7 @@ func (c *Character) calculateAC() {
 	c.AC = 10
 
 	// First, check for body armor which sets the base AC
-	if bodyArmor := c.EquippedSlots[SlotBody]; bodyArmor != nil {
+	if bodyArmor := c.EquippedSlots[shared.SlotBody]; bodyArmor != nil {
 		if bodyArmor.GetEquipmentType() == equipment.EquipmentTypeArmor {
 			armor, ok := bodyArmor.(*equipment.Armor)
 			if !ok {
@@ -160,7 +150,7 @@ func (c *Character) calculateAC() {
 
 	// Then add bonuses from other armor pieces (like shields)
 	for slot, e := range c.EquippedSlots {
-		if e == nil || slot == SlotBody {
+		if e == nil || slot == shared.SlotBody {
 			continue
 		}
 
@@ -191,8 +181,8 @@ func (c *Character) applyFightingStyleAC() {
 			if style, ok := feature.Metadata["style"].(string); ok && style == "defense" {
 				// Defense fighting style gives +1 AC while wearing armor
 				// Check if character is wearing any armor
-				if c.EquippedSlots != nil && c.EquippedSlots[SlotBody] != nil {
-					if c.EquippedSlots[SlotBody].GetEquipmentType() == equipment.EquipmentTypeArmor {
+				if c.EquippedSlots != nil && c.EquippedSlots[shared.SlotBody] != nil {
+					if c.EquippedSlots[shared.SlotBody].GetEquipmentType() == equipment.EquipmentTypeArmor {
 						c.AC += 1
 					}
 				}
@@ -518,7 +508,7 @@ func (c *Character) resetClassFeatures() {
 	// Clear all downstream data
 	c.Proficiencies = make(map[rulebook.ProficiencyType][]*rulebook.Proficiency)
 	c.Inventory = make(map[equipment.EquipmentType][]equipment.Equipment)
-	c.EquippedSlots = make(map[Slot]equipment.Equipment)
+	c.EquippedSlots = make(map[shared.Slot]equipment.Equipment)
 }
 
 func (c *Character) resetBackground() {
@@ -638,7 +628,7 @@ func (c *Character) Clone() *Character {
 	// }
 
 	// Deep copy EquippedSlots map
-	clone.EquippedSlots = make(map[Slot]equipment.Equipment)
+	clone.EquippedSlots = make(map[shared.Slot]equipment.Equipment)
 	for k, v := range c.EquippedSlots {
 		clone.EquippedSlots[k] = v
 	}
@@ -739,7 +729,7 @@ func (c *Character) RollSkillCheck(skillKey string, attribute shared.Attribute) 
 
 // applyFightingStyleBonuses applies bonuses from fighter fighting styles
 func (c *Character) applyFightingStyleBonuses(weapon *equipment.Weapon, attackBonus, damageBonus int) (finalAttackBonus, finalDamageBonus int) {
-	return c.applyFightingStyleBonusesWithHand(weapon, attackBonus, damageBonus, SlotMainHand)
+	return c.applyFightingStyleBonusesWithHand(weapon, attackBonus, damageBonus, shared.SlotMainHand)
 }
 
 // getFightingStyle returns the character's fighting style if they have one
@@ -755,7 +745,7 @@ func (c *Character) getFightingStyle() string {
 }
 
 // applyFightingStyleBonusesWithHand applies bonuses from fighter fighting styles for a specific hand
-func (c *Character) applyFightingStyleBonusesWithHand(weapon *equipment.Weapon, attackBonus, damageBonus int, hand Slot) (finalAttackBonus, finalDamageBonus int) {
+func (c *Character) applyFightingStyleBonusesWithHand(weapon *equipment.Weapon, attackBonus, damageBonus int, hand shared.Slot) (finalAttackBonus, finalDamageBonus int) {
 	// Check if the character has fighting style feature
 	fightingStyle := c.getFightingStyle()
 	log.Printf("DEBUG: Checking for fighting style among %d features", len(c.Features))
@@ -781,7 +771,7 @@ func (c *Character) applyFightingStyleBonusesWithHand(weapon *equipment.Weapon, 
 		log.Printf("DEBUG: Checking dueling for weapon %s, IsMelee=%v, IsTwoHanded=%v", weapon.GetName(), weapon.IsMelee(), weapon.IsTwoHanded())
 		if weapon.IsMelee() && !weapon.IsTwoHanded() {
 			// Check if off-hand has a weapon (shields are allowed)
-			offHand := c.EquippedSlots[SlotOffHand]
+			offHand := c.EquippedSlots[shared.SlotOffHand]
 			log.Printf("DEBUG: Off-hand equipment: %v", offHand)
 
 			offHandHasWeapon := false
@@ -808,7 +798,7 @@ func (c *Character) applyFightingStyleBonusesWithHand(weapon *equipment.Weapon, 
 		// No attack/damage bonus
 	case "two_weapon":
 		// Add ability modifier to off-hand damage
-		if hand == SlotOffHand && weapon.IsMelee() {
+		if hand == shared.SlotOffHand && weapon.IsMelee() {
 			// Two-weapon fighting allows adding ability modifier to off-hand damage
 			// The base off-hand damage calculation doesn't include ability modifier
 			// So we need to add it here

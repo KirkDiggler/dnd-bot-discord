@@ -142,8 +142,8 @@ func TestCharacterEquipMethod(t *testing.T) {
 
 		success := char.Equip("longsword")
 		assert.True(t, success)
-		assert.NotNil(t, char.EquippedSlots[character.SlotMainHand])
-		assert.Equal(t, "longsword", char.EquippedSlots[character.SlotMainHand].GetKey())
+		assert.NotNil(t, char.EquippedSlots[shared.SlotMainHand])
+		assert.Equal(t, "longsword", char.EquippedSlots[shared.SlotMainHand].GetKey())
 	})
 
 	t.Run("Equip weapon not in inventory", func(t *testing.T) {
@@ -155,7 +155,7 @@ func TestCharacterEquipMethod(t *testing.T) {
 
 		success := char.Equip("nonexistent-weapon")
 		assert.False(t, success)
-		assert.Nil(t, char.EquippedSlots[character.SlotMainHand])
+		assert.Nil(t, char.EquippedSlots[shared.SlotMainHand])
 	})
 
 	t.Run("Dual wielding weapons", func(t *testing.T) {
@@ -175,13 +175,13 @@ func TestCharacterEquipMethod(t *testing.T) {
 		// Equip main hand first
 		success1 := char.Equip("shortsword1")
 		assert.True(t, success1)
-		assert.Equal(t, "shortsword1", char.EquippedSlots[character.SlotMainHand].GetKey())
+		assert.Equal(t, "shortsword1", char.EquippedSlots[shared.SlotMainHand].GetKey())
 
 		// Equip second weapon - should move first to off hand
 		success2 := char.Equip("shortsword2")
 		assert.True(t, success2)
-		assert.Equal(t, "shortsword2", char.EquippedSlots[character.SlotMainHand].GetKey())
-		assert.Equal(t, "shortsword1", char.EquippedSlots[character.SlotOffHand].GetKey())
+		assert.Equal(t, "shortsword2", char.EquippedSlots[shared.SlotMainHand].GetKey())
+		assert.Equal(t, "shortsword1", char.EquippedSlots[shared.SlotOffHand].GetKey())
 	})
 }
 

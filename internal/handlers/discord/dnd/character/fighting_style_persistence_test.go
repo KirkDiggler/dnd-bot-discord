@@ -114,9 +114,9 @@ func TestFightingStylePersistence(t *testing.T) {
 			ArmorCategory: "shield",
 		}
 
-		savedCharacter.EquippedSlots = map[character.Slot]equipment.Equipment{
-			character.SlotMainHand: longsword,
-			character.SlotOffHand:  shield,
+		savedCharacter.EquippedSlots = map[shared.Slot]equipment.Equipment{
+			shared.SlotMainHand: longsword,
+			shared.SlotOffHand:  shield,
 		}
 
 		// Just verify the feature was set correctly - bonus testing is in other tests

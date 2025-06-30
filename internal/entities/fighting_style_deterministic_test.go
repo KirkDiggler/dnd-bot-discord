@@ -34,7 +34,7 @@ func TestFightingStyleArchery_Deterministic(t *testing.T) {
 				},
 			},
 		},
-		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		diceRoller:    mockRoller,
 	}
 
@@ -52,7 +52,7 @@ func TestFightingStyleArchery_Deterministic(t *testing.T) {
 			DamageType: damage.TypePiercing,
 		},
 	}
-	char.EquippedSlots[character.SlotMainHand] = longbow
+	char.EquippedSlots[shared.SlotMainHand] = longbow
 
 	// Add martial weapon proficiency
 	char.Proficiencies = map[rulebook.ProficiencyType][]*rulebook.Proficiency{
@@ -99,7 +99,7 @@ func TestFightingStyleDueling_Deterministic(t *testing.T) {
 				},
 			},
 		},
-		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		diceRoller:    mockRoller,
 	}
 
@@ -120,7 +120,7 @@ func TestFightingStyleDueling_Deterministic(t *testing.T) {
 			{Key: "versatile"},
 		},
 	}
-	char.EquippedSlots[character.SlotMainHand] = longsword
+	char.EquippedSlots[shared.SlotMainHand] = longsword
 
 	// Add martial weapon proficiency
 	char.Proficiencies = map[rulebook.ProficiencyType][]*rulebook.Proficiency{
@@ -158,7 +158,7 @@ func TestFightingStyleDueling_Deterministic(t *testing.T) {
 			},
 			ArmorCategory: "shield",
 		}
-		char.EquippedSlots[character.SlotOffHand] = shield
+		char.EquippedSlots[shared.SlotOffHand] = shield
 
 		mockRoller.SetRolls([]int{
 			12, // Attack roll
@@ -191,7 +191,7 @@ func TestFightingStyleDueling_Deterministic(t *testing.T) {
 				{Key: "light"},
 			},
 		}
-		char.EquippedSlots[character.SlotOffHand] = dagger
+		char.EquippedSlots[shared.SlotOffHand] = dagger
 
 		mockRoller.SetRolls([]int{
 			14, // Main hand attack roll
@@ -232,7 +232,7 @@ func TestFightingStyleTwoWeaponFighting_Deterministic(t *testing.T) {
 				},
 			},
 		},
-		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		diceRoller:    mockRoller,
 	}
 
@@ -253,8 +253,8 @@ func TestFightingStyleTwoWeaponFighting_Deterministic(t *testing.T) {
 			{Key: "light"},
 		},
 	}
-	char.EquippedSlots[character.SlotMainHand] = shortsword
-	char.EquippedSlots[character.SlotOffHand] = shortsword
+	char.EquippedSlots[shared.SlotMainHand] = shortsword
+	char.EquippedSlots[shared.SlotOffHand] = shortsword
 
 	// Add martial weapon proficiency
 	char.Proficiencies = map[rulebook.ProficiencyType][]*rulebook.Proficiency{
@@ -300,7 +300,7 @@ func TestFightingStyleDefense_Deterministic(t *testing.T) {
 				},
 			},
 		},
-		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 	}
 
 	// Calculate AC without armor
@@ -319,7 +319,7 @@ func TestFightingStyleDefense_Deterministic(t *testing.T) {
 		},
 		ArmorCategory: "heavy",
 	}
-	char.EquippedSlots[character.SlotBody] = chainMail
+	char.EquippedSlots[shared.SlotBody] = chainMail
 
 	// Calculate AC with armor (gets defense bonus)
 	char.calculateAC()
@@ -348,7 +348,7 @@ func TestFightingStyleGreatWeapon_Deterministic(t *testing.T) {
 				},
 			},
 		},
-		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		diceRoller:    mockRoller,
 	}
 
@@ -369,7 +369,7 @@ func TestFightingStyleGreatWeapon_Deterministic(t *testing.T) {
 			{Key: "two-handed"},
 		},
 	}
-	char.EquippedSlots[character.SlotTwoHanded] = greatsword
+	char.EquippedSlots[shared.SlotTwoHanded] = greatsword
 
 	// Add martial weapon proficiency
 	char.Proficiencies = map[rulebook.ProficiencyType][]*rulebook.Proficiency{
@@ -470,7 +470,7 @@ func TestFightingStyleCriticalHit_Deterministic(t *testing.T) {
 				},
 			},
 		},
-		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		diceRoller:    mockRoller,
 	}
 
@@ -487,7 +487,7 @@ func TestFightingStyleCriticalHit_Deterministic(t *testing.T) {
 			DamageType: damage.TypeSlashing,
 		},
 	}
-	char.EquippedSlots[character.SlotMainHand] = longsword
+	char.EquippedSlots[shared.SlotMainHand] = longsword
 	char.Proficiencies = map[rulebook.ProficiencyType][]*rulebook.Proficiency{
 		rulebook.ProficiencyTypeWeapon: {{Key: "martial-weapons"}},
 	}

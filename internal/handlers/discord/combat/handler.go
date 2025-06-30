@@ -1889,7 +1889,7 @@ func (h *Handler) executeOffHandAttack(enc *combat.Encounter, attacker, target *
 	// Get off-hand weapon
 	var offHandWeapon *equipment.Weapon
 	if char != nil && char.EquippedSlots != nil {
-		if weapon, ok := char.EquippedSlots[character2.SlotOffHand].(*equipment.Weapon); ok {
+		if weapon, ok := char.EquippedSlots[shared.SlotOffHand].(*equipment.Weapon); ok {
 			offHandWeapon = weapon
 			result.WeaponName = offHandWeapon.GetName()
 		}

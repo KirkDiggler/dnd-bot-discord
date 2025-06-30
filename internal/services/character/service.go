@@ -513,7 +513,7 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 		Attributes:    make(map[shared.Attribute]*character.AbilityScore),
 		Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
-		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 	}
 
 	// Save to repository

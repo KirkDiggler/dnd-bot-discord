@@ -75,7 +75,7 @@ func TestDiscordCharacterCreationFlow(t *testing.T) {
 		Attributes:       map[shared.Attribute]*character2.AbilityScore{}, // Empty!
 		Proficiencies:    make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		Inventory:        make(map[equipment.EquipmentType][]equipment.Equipment),
-		EquippedSlots:    make(map[character2.Slot]equipment.Equipment),
+		EquippedSlots:    make(map[shared.Slot]equipment.Equipment),
 		MaxHitPoints:     9,
 		CurrentHitPoints: 9,
 		AC:               13,

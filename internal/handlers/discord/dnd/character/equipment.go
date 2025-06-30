@@ -2,8 +2,8 @@ package character
 
 import (
 	"fmt"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"strings"
 
@@ -227,7 +227,7 @@ func (h *EquipmentHandler) HandleUnequip(s *discordgo.Session, i *discordgo.Inte
 	}
 
 	// Convert slot name to Slot type
-	slot := character.Slot(slotName)
+	slot := shared.Slot(slotName)
 
 	// Check if anything is equipped in that slot
 	if char.EquippedSlots == nil || char.EquippedSlots[slot] == nil {

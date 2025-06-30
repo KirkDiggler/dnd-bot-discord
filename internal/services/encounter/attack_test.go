@@ -93,8 +93,8 @@ func TestPerformAttack_PlayerVsMonster(t *testing.T) {
 		Attributes: map[shared.Attribute]*character2.AbilityScore{
 			shared.AttributeStrength: {Score: 16}, // +3 modifier
 		},
-		EquippedSlots: map[character2.Slot]equipment.Equipment{
-			character2.SlotMainHand: &equipment.Weapon{
+		EquippedSlots: map[shared.Slot]equipment.Equipment{
+			shared.SlotMainHand: &equipment.Weapon{
 				Base: equipment.BasicEquipment{
 					Key:  "longsword",
 					Name: "Longsword",

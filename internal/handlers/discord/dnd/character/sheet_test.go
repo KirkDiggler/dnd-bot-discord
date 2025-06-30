@@ -35,14 +35,14 @@ func TestBuildCharacterSheetEmbed(t *testing.T) {
 			shared.AttributeWisdom:       {Score: 13, Bonus: 1},
 			shared.AttributeCharisma:     {Score: 10, Bonus: 0},
 		},
-		EquippedSlots: map[character.Slot]equipment.Equipment{
-			character.SlotMainHand: &equipment.Weapon{
+		EquippedSlots: map[shared.Slot]equipment.Equipment{
+			shared.SlotMainHand: &equipment.Weapon{
 				Base: equipment.BasicEquipment{
 					Key:  "longsword",
 					Name: "Longsword",
 				},
 			},
-			character.SlotBody: &equipment.Armor{
+			shared.SlotBody: &equipment.Armor{
 				Base: equipment.BasicEquipment{
 					Key:  "chain_mail",
 					Name: "Chain Mail",

@@ -119,12 +119,12 @@ func (w *Weapon) GetKey() string {
 	return w.Base.Key
 }
 
-func (w *Weapon) GetSlot() character.Slot {
+func (w *Weapon) GetSlot() shared.Slot {
 	for _, p := range w.Properties {
 		if p.Key == "two-handed" {
-			return character.SlotTwoHanded
+			return shared.SlotTwoHanded
 		}
 	}
 
-	return character.SlotMainHand
+	return shared.SlotMainHand
 }

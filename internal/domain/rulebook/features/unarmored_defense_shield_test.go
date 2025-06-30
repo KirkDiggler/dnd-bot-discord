@@ -20,7 +20,7 @@ func TestUnarmoredDefenseWithShield(t *testing.T) {
 				shared.AttributeDexterity:    {Score: 14, Bonus: 2},
 				shared.AttributeConstitution: {Score: 18, Bonus: 4},
 			},
-			EquippedSlots: make(map[character.Slot]equipment.Equipment),
+			EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		}
 
 		// Base unarmored defense
@@ -28,7 +28,7 @@ func TestUnarmoredDefenseWithShield(t *testing.T) {
 		assert.Equal(t, 16, ac, "Base unarmored defense: 10 + 2 (DEX) + 4 (CON) = 16")
 
 		// Add shield
-		char.EquippedSlots[character.SlotOffHand] = &equipment.Armor{
+		char.EquippedSlots[shared.SlotOffHand] = &equipment.Armor{
 			Base: equipment.BasicEquipment{
 				Key:  "shield",
 				Name: "Shield",
@@ -52,7 +52,7 @@ func TestUnarmoredDefenseWithShield(t *testing.T) {
 				shared.AttributeDexterity: {Score: 18, Bonus: 4},
 				shared.AttributeWisdom:    {Score: 16, Bonus: 3},
 			},
-			EquippedSlots: make(map[character.Slot]equipment.Equipment),
+			EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		}
 
 		// Base unarmored defense
@@ -60,7 +60,7 @@ func TestUnarmoredDefenseWithShield(t *testing.T) {
 		assert.Equal(t, 17, ac, "Base unarmored defense: 10 + 4 (DEX) + 3 (WIS) = 17")
 
 		// Add shield
-		char.EquippedSlots[character.SlotOffHand] = &equipment.Armor{
+		char.EquippedSlots[shared.SlotOffHand] = &equipment.Armor{
 			Base: equipment.BasicEquipment{
 				Key:  "shield",
 				Name: "Shield",
@@ -83,11 +83,11 @@ func TestUnarmoredDefenseWithShield(t *testing.T) {
 			Attributes: map[shared.Attribute]*character.AbilityScore{
 				shared.AttributeDexterity: {Score: 14, Bonus: 2},
 			},
-			EquippedSlots: make(map[character.Slot]equipment.Equipment),
+			EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		}
 
 		// Equip chain mail
-		char.EquippedSlots[character.SlotBody] = &equipment.Armor{
+		char.EquippedSlots[shared.SlotBody] = &equipment.Armor{
 			Base: equipment.BasicEquipment{
 				Key:  "chain-mail",
 				Name: "Chain Mail",
@@ -103,7 +103,7 @@ func TestUnarmoredDefenseWithShield(t *testing.T) {
 		assert.Equal(t, 16, ac, "Chain mail AC: 16 (no DEX)")
 
 		// Add shield
-		char.EquippedSlots[character.SlotOffHand] = &equipment.Armor{
+		char.EquippedSlots[shared.SlotOffHand] = &equipment.Armor{
 			Base: equipment.BasicEquipment{
 				Key:  "shield",
 				Name: "Shield",

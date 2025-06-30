@@ -237,7 +237,7 @@ func (c *Character) checkTwoWeaponBonusActionInternal() bool {
 	}
 
 	// Must have a light weapon in off-hand
-	if offHand, ok := c.EquippedSlots[SlotOffHand].(*equipment.Weapon); ok {
+	if offHand, ok := c.EquippedSlots[shared.SlotOffHand].(*equipment.Weapon); ok {
 		return offHand.HasProperty("light") && offHand.IsMelee()
 	}
 

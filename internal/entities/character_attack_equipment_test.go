@@ -62,8 +62,8 @@ func TestCharacterAttackWithBasicEquipment(t *testing.T) {
 				Attributes: map[shared.Attribute]*character.AbilityScore{
 					shared.AttributeStrength: {Score: 16, Bonus: 3},
 				},
-				EquippedSlots: map[character.Slot]equipment.Equipment{
-					character.SlotMainHand: tt.equipped,
+				EquippedSlots: map[shared.Slot]equipment.Equipment{
+					shared.SlotMainHand: tt.equipped,
 				},
 			}
 
@@ -92,8 +92,8 @@ func TestCharacterAttackFallbackBehavior(t *testing.T) {
 		Attributes: map[shared.Attribute]*character.AbilityScore{
 			shared.AttributeStrength: {Score: 16, Bonus: 3},
 		},
-		EquippedSlots: map[character.Slot]equipment.Equipment{
-			character.SlotMainHand: &equipment.BasicEquipment{
+		EquippedSlots: map[shared.Slot]equipment.Equipment{
+			shared.SlotMainHand: &equipment.BasicEquipment{
 				Key:  "torch",
 				Name: "Torch",
 			},

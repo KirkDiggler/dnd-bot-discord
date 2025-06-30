@@ -29,7 +29,7 @@ func TestCalculateAC_DefenseFightingStyle(t *testing.T) {
 					},
 				},
 			},
-			EquippedSlots: make(map[character.Slot]equipment.Equipment),
+			EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		}
 
 		// Test 1: No armor = no defense bonus
@@ -37,7 +37,7 @@ func TestCalculateAC_DefenseFightingStyle(t *testing.T) {
 		assert.Equal(t, 12, ac, "Base AC without armor: 10 + 2 (DEX) = 12")
 
 		// Test 2: With leather armor
-		char.EquippedSlots[character.SlotBody] = &equipment.Armor{
+		char.EquippedSlots[shared.SlotBody] = &equipment.Armor{
 			Base: equipment.BasicEquipment{
 				Key:  "leather-armor",
 				Name: "Leather Armor",
@@ -54,7 +54,7 @@ func TestCalculateAC_DefenseFightingStyle(t *testing.T) {
 		assert.Equal(t, 13, ac, "TODO: Defense fighting style not implemented")
 
 		// Test 3: With chain mail
-		char.EquippedSlots[character.SlotBody] = &equipment.Armor{
+		char.EquippedSlots[shared.SlotBody] = &equipment.Armor{
 			Base: equipment.BasicEquipment{
 				Key:  "chain-mail",
 				Name: "Chain Mail",
@@ -71,7 +71,7 @@ func TestCalculateAC_DefenseFightingStyle(t *testing.T) {
 		assert.Equal(t, 16, ac, "TODO: Defense fighting style not implemented")
 
 		// Test 4: With shield too
-		char.EquippedSlots[character.SlotOffHand] = &equipment.Armor{
+		char.EquippedSlots[shared.SlotOffHand] = &equipment.Armor{
 			Base: equipment.BasicEquipment{
 				Key:  "shield",
 				Name: "Shield",
@@ -122,14 +122,14 @@ func TestCalculateAC_MonkBarbarianUnarmoredDefense(t *testing.T) {
 				shared.AttributeDexterity: {Score: 16, Bonus: 3},
 				shared.AttributeWisdom:    {Score: 15, Bonus: 2},
 			},
-			EquippedSlots: make(map[character.Slot]equipment.Equipment),
+			EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		}
 
 		ac := CalculateAC(char)
 		assert.Equal(t, 15, ac, "Monk unarmored defense correctly implemented")
 
 		// With armor, should use armor AC instead
-		char.EquippedSlots[character.SlotBody] = &equipment.Armor{
+		char.EquippedSlots[shared.SlotBody] = &equipment.Armor{
 			Base: equipment.BasicEquipment{Key: "leather-armor"},
 			ArmorClass: &equipment.ArmorClass{
 				Base:     11,
@@ -141,8 +141,8 @@ func TestCalculateAC_MonkBarbarianUnarmoredDefense(t *testing.T) {
 		assert.Equal(t, 14, ac, "Uses armor AC when worn")
 
 		// Remove armor and test with shield
-		delete(char.EquippedSlots, character.SlotBody)
-		char.EquippedSlots[character.SlotOffHand] = &equipment.Armor{
+		delete(char.EquippedSlots, shared.SlotBody)
+		char.EquippedSlots[shared.SlotOffHand] = &equipment.Armor{
 			Base: equipment.BasicEquipment{Key: "shield"},
 		}
 		ac = CalculateAC(char)
@@ -158,14 +158,14 @@ func TestCalculateAC_MonkBarbarianUnarmoredDefense(t *testing.T) {
 				shared.AttributeDexterity:    {Score: 14, Bonus: 2},
 				shared.AttributeConstitution: {Score: 16, Bonus: 3},
 			},
-			EquippedSlots: make(map[character.Slot]equipment.Equipment),
+			EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		}
 
 		ac := CalculateAC(char)
 		assert.Equal(t, 15, ac, "Barbarian unarmored defense correctly implemented")
 
 		// With shield (barbarian can use shield with unarmored defense)
-		char.EquippedSlots[character.SlotOffHand] = &equipment.Armor{
+		char.EquippedSlots[shared.SlotOffHand] = &equipment.Armor{
 			Base: equipment.BasicEquipment{Key: "shield"},
 		}
 		ac = CalculateAC(char)

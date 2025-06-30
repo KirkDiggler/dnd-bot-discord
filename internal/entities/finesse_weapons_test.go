@@ -154,8 +154,8 @@ func TestFinesseWeapon_UseDexForAttack(t *testing.T) {
 						Bonus: (tt.dexScore - 10) / 2,
 					},
 				},
-				EquippedSlots: map[character.Slot]equipment.Equipment{
-					character.SlotMainHand: tt.weapon,
+				EquippedSlots: map[shared.Slot]equipment.Equipment{
+					shared.SlotMainHand: tt.weapon,
 				},
 				// Give proficiency with all weapons for testing
 				Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
@@ -197,15 +197,15 @@ func TestFinesseWeapon_DualWielding(t *testing.T) {
 			shared.AttributeDexterity: {Score: 16, Bonus: 3}, // +3
 		},
 		Features: []*rulebook.CharacterFeature{}, // No special features
-		EquippedSlots: map[character.Slot]equipment.Equipment{
-			character.SlotMainHand: &equipment.Weapon{
+		EquippedSlots: map[shared.Slot]equipment.Equipment{
+			shared.SlotMainHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: "rapier", Name: "Rapier"},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 8, DamageType: damage.TypePiercing},
 				Properties:     []*shared.ReferenceItem{{Key: "finesse"}},
 			},
-			character.SlotOffHand: &equipment.Weapon{
+			shared.SlotOffHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: "dagger", Name: "Dagger"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",

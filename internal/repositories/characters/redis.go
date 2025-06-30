@@ -46,7 +46,7 @@ type CharacterData struct {
 	Status             shared.CharacterStatus                               `json:"status"`
 	Features           []*rulebook.CharacterFeature                         `json:"features"`
 	Inventory          map[equipment.EquipmentType][]EquipmentData          `json:"inventory"`
-	EquippedSlots      map[character.Slot]EquipmentData                     `json:"equipped_slots"`
+	EquippedSlots      map[shared.Slot]EquipmentData                        `json:"equipped_slots"`
 	Resources          *shared.CharacterResources                           `json:"resources"`
 	CreatedAt          time.Time                                            `json:"created_at"`
 	UpdatedAt          time.Time                                            `json:"updated_at"`
@@ -465,7 +465,7 @@ func (r *redisRepo) toCharacterData(char *character.Character) (*CharacterData, 
 	}
 
 	// Convert equipped slots
-	equippedSlots := make(map[character.Slot]EquipmentData)
+	equippedSlots := make(map[shared.Slot]EquipmentData)
 	for slot, item := range char.EquippedSlots {
 		// Skip nil items (empty slots)
 		if item == nil {
@@ -522,7 +522,7 @@ func (r *redisRepo) fromCharacterData(data *CharacterData) (*character.Character
 	}
 
 	// Convert equipped slots back
-	equippedSlots := make(map[character.Slot]equipment.Equipment)
+	equippedSlots := make(map[shared.Slot]equipment.Equipment)
 	for slot, item := range data.EquippedSlots {
 		eq, err := DataToEquipmentWithMigration(item)
 		if err != nil {

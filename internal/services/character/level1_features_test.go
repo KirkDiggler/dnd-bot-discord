@@ -255,8 +255,8 @@ func TestLevel1Features(t *testing.T) {
 				Name:   "Fighter",
 				HitDie: 10,
 			},
-			EquippedSlots: map[character2.Slot]equipment.Equipment{
-				character2.SlotBody: &equipment.Armor{
+			EquippedSlots: map[shared.Slot]equipment.Equipment{
+				shared.SlotBody: &equipment.Armor{
 					Base: equipment.BasicEquipment{
 						Key:  "chain-mail",
 						Name: "Chain Mail",

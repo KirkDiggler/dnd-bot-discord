@@ -20,7 +20,7 @@ func TestCharacter_EquipShield(t *testing.T) {
 			shared.AttributeDexterity: {Score: 14, Bonus: 2},
 		},
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
-		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 	}
 
 	// Add a shield to inventory
@@ -46,8 +46,8 @@ func TestCharacter_EquipShield(t *testing.T) {
 	require.True(t, success, "Should successfully equip shield")
 
 	// Verify shield is in off-hand slot
-	assert.NotNil(t, char.EquippedSlots[character.SlotOffHand], "Shield should be in off-hand slot")
-	assert.Equal(t, "shield", char.EquippedSlots[character.SlotOffHand].GetKey(), "Shield key should match")
+	assert.NotNil(t, char.EquippedSlots[shared.SlotOffHand], "Shield should be in off-hand slot")
+	assert.Equal(t, "shield", char.EquippedSlots[shared.SlotOffHand].GetKey(), "Shield key should match")
 
 	// Verify AC increased by shield bonus (10 base + 2 shield)
 	assert.Equal(t, 12, char.AC, "AC should be 10 base + 2 shield")
@@ -63,7 +63,7 @@ func TestCharacter_ShieldAndWeapon(t *testing.T) {
 			shared.AttributeStrength:  {Score: 16, Bonus: 3},
 		},
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
-		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 	}
 
 	// Add a weapon and shield to inventory
@@ -99,16 +99,16 @@ func TestCharacter_ShieldAndWeapon(t *testing.T) {
 	// Equip sword first
 	success := char.Equip("longsword")
 	require.True(t, success, "Should successfully equip longsword")
-	assert.NotNil(t, char.EquippedSlots[character.SlotMainHand], "Sword should be in main hand")
+	assert.NotNil(t, char.EquippedSlots[shared.SlotMainHand], "Sword should be in main hand")
 
 	// Then equip shield
 	success = char.Equip("shield")
 	require.True(t, success, "Should successfully equip shield")
-	assert.NotNil(t, char.EquippedSlots[character.SlotOffHand], "Shield should be in off-hand")
+	assert.NotNil(t, char.EquippedSlots[shared.SlotOffHand], "Shield should be in off-hand")
 
 	// Both should be equipped
-	assert.Equal(t, "longsword", char.EquippedSlots[character.SlotMainHand].GetKey())
-	assert.Equal(t, "shield", char.EquippedSlots[character.SlotOffHand].GetKey())
+	assert.Equal(t, "longsword", char.EquippedSlots[shared.SlotMainHand].GetKey())
+	assert.Equal(t, "shield", char.EquippedSlots[shared.SlotOffHand].GetKey())
 
 	// AC should include shield bonus (10 base + 2 shield)
 	assert.Equal(t, 12, char.AC, "AC should be 10 base + 2 shield")
@@ -120,7 +120,7 @@ func TestCharacter_ShieldPreventsOffhandWeapon(t *testing.T) {
 		ID:            "test-char",
 		Name:          "Conflicted Warrior",
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
-		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		Attributes: map[shared.Attribute]*character.AbilityScore{
 			shared.AttributeDexterity: {Score: 14, Bonus: 2},
 		},
@@ -155,17 +155,17 @@ func TestCharacter_ShieldPreventsOffhandWeapon(t *testing.T) {
 
 	// Equip main hand weapon
 	char.Equip("shortsword")
-	assert.NotNil(t, char.EquippedSlots[character.SlotMainHand])
+	assert.NotNil(t, char.EquippedSlots[shared.SlotMainHand])
 
 	// Equip shield
 	char.Equip("shield")
-	assert.NotNil(t, char.EquippedSlots[character.SlotOffHand])
-	assert.Equal(t, "shield", char.EquippedSlots[character.SlotOffHand].GetKey())
+	assert.NotNil(t, char.EquippedSlots[shared.SlotOffHand])
+	assert.Equal(t, "shield", char.EquippedSlots[shared.SlotOffHand].GetKey())
 
 	// Try to equip dagger in off-hand (shield should be replaced)
 	char.Equip("dagger")
 	// Since dagger is a main hand weapon, it should move sword to off-hand,
 	// replacing the shield
-	assert.Equal(t, "dagger", char.EquippedSlots[character.SlotMainHand].GetKey())
-	assert.Equal(t, "shortsword", char.EquippedSlots[character.SlotOffHand].GetKey())
+	assert.Equal(t, "dagger", char.EquippedSlots[shared.SlotMainHand].GetKey())
+	assert.Equal(t, "shortsword", char.EquippedSlots[shared.SlotOffHand].GetKey())
 }

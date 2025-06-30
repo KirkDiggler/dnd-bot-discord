@@ -59,7 +59,7 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 		Attributes:    make(map[shared.Attribute]*character.AbilityScore),
 		Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
-		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 	}
 
 	// Mock: GetOrCreateDraftCharacter
@@ -126,7 +126,7 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 		Attributes:    make(map[shared.Attribute]*character.AbilityScore),
 		Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
-		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 	}
 
 	// Mock: Multiple UpdateDraftCharacter calls during creation process
@@ -155,7 +155,7 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 		Attributes:         make(map[shared.Attribute]*character.AbilityScore), // EMPTY!
 		Proficiencies:      make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		Inventory:          make(map[equipment.EquipmentType][]equipment.Equipment),
-		EquippedSlots:      make(map[character.Slot]equipment.Equipment),
+		EquippedSlots:      make(map[shared.Slot]equipment.Equipment),
 	}
 
 	// This should save the broken character (reproducing the bug)

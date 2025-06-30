@@ -288,8 +288,8 @@ func (s *suiteEquip) TestEquipTwoItemsWithShield() {
 	s.char.Equip("sword")
 
 	s.Equal(12, s.char.AC)
-	s.Equal(sword, s.char.EquippedSlots[SlotMainHand])
-	s.Equal(shield, s.char.EquippedSlots[SlotOffHand])
+	s.Equal(sword, s.char.EquippedSlots[shared.SlotMainHand])
+	s.Equal(shield, s.char.EquippedSlots[shared.SlotOffHand])
 }
 
 func (s *suiteEquip) TestTwoHandedOverwritesSlots() {
@@ -302,15 +302,15 @@ func (s *suiteEquip) TestTwoHandedOverwritesSlots() {
 	s.char.Equip("sword")
 
 	s.Equal(12, s.char.AC)
-	s.Equal(sword, s.char.EquippedSlots[SlotMainHand])
-	s.Equal(shield, s.char.EquippedSlots[SlotOffHand])
+	s.Equal(sword, s.char.EquippedSlots[shared.SlotMainHand])
+	s.Equal(shield, s.char.EquippedSlots[shared.SlotOffHand])
 
 	s.char.Equip("greatsword")
 
 	s.Equal(10, s.char.AC)
-	s.Equal(greatsword, s.char.EquippedSlots[SlotTwoHanded])
-	s.Nil(s.char.EquippedSlots[SlotOffHand])
-	s.Nil(s.char.EquippedSlots[SlotMainHand])
+	s.Equal(greatsword, s.char.EquippedSlots[shared.SlotTwoHanded])
+	s.Nil(s.char.EquippedSlots[shared.SlotOffHand])
+	s.Nil(s.char.EquippedSlots[shared.SlotMainHand])
 }
 
 func TestSuiteEquip(t *testing.T) {
@@ -326,8 +326,8 @@ func TestCharacter_Attack_WithRageBonus(t *testing.T) {
 		Attributes: map[shared.Attribute]*AbilityScore{
 			shared.AttributeStrength: {Score: 16, Bonus: 3}, // +3 STR modifier
 		},
-		EquippedSlots: map[Slot]equipment.Equipment{
-			SlotMainHand: &equipment.Weapon{
+		EquippedSlots: map[shared.Slot]equipment.Equipment{
+			shared.SlotMainHand: &equipment.Weapon{
 				Base: equipment.BasicEquipment{
 					Key:  "greataxe",
 					Name: "Greataxe",
@@ -423,8 +423,8 @@ func TestCharacter_Attack_WithoutRage(t *testing.T) {
 		Attributes: map[shared.Attribute]*AbilityScore{
 			shared.AttributeStrength: {Score: 16, Bonus: 3}, // +3 STR modifier
 		},
-		EquippedSlots: map[Slot]equipment.Equipment{
-			SlotMainHand: &equipment.Weapon{
+		EquippedSlots: map[shared.Slot]equipment.Equipment{
+			shared.SlotMainHand: &equipment.Weapon{
 				Base: equipment.BasicEquipment{
 					Key:  "greataxe",
 					Name: "Greataxe",

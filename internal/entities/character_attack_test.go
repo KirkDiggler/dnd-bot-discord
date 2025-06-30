@@ -40,7 +40,7 @@ func TestCharacter_Attack_ImprovisedMelee(t *testing.T) {
 			char: &character.Character{
 				Name:          "Empty Handed",
 				Level:         1,
-				EquippedSlots: make(map[character.Slot]equipment.Equipment),
+				EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 				Attributes: map[shared.Attribute]*character.AbilityScore{
 					shared.AttributeStrength: {Score: 10, Bonus: 0},
 				},
@@ -77,8 +77,8 @@ func TestCharacter_Attack_WithWeapon(t *testing.T) {
 			shared.AttributeStrength:  {Score: 16, Bonus: 3},
 			shared.AttributeDexterity: {Score: 12, Bonus: 1},
 		},
-		EquippedSlots: map[character.Slot]equipment.Equipment{
-			character.SlotMainHand: &equipment.Weapon{
+		EquippedSlots: map[shared.Slot]equipment.Equipment{
+			shared.SlotMainHand: &equipment.Weapon{
 				Base: equipment.BasicEquipment{
 					Key:  "shortsword",
 					Name: "Shortsword",

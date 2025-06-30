@@ -1,6 +1,8 @@
 package equipment
 
-import "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
+)
 
 type ArmorCategory string
 
@@ -19,10 +21,10 @@ type ArmorClass struct {
 }
 
 type Armor struct {
-	Base          BasicEquipment `json:"base"`
-	ArmorCategory ArmorCategory  `json:"armor_category"`
-	ArmorClass    *ArmorClass    `json:"armor_class"`
-	StrMin        int            `json:"str_minimum"`
+	Base                BasicEquipment `json:"base"`
+	ArmorCategory       ArmorCategory  `json:"armor_category"`
+	ArmorClass          *ArmorClass    `json:"armor_class"`
+	StrMin              int            `json:"str_minimum"`
 	StealthDisadvantage bool           `json:"stealth_disadvantage"`
 }
 
@@ -38,10 +40,10 @@ func (e *Armor) GetKey() string {
 	return e.Base.Key
 }
 
-func (e *Armor) GetSlot() character.Slot {
+func (e *Armor) GetSlot() shared.Slot {
 	if e.ArmorCategory == ArmorCategoryShield {
-		return character.SlotOffHand
+		return shared.SlotOffHand
 	}
 
-	return character.SlotBody
+	return shared.SlotBody
 }

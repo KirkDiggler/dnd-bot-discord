@@ -31,7 +31,7 @@ func TestDefenseFightingStyleACCalculation(t *testing.T) {
 					},
 				},
 			},
-			EquippedSlots: make(map[character.Slot]equipment.Equipment),
+			EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		}
 
 		// Test 1: No armor = no defense bonus
@@ -50,7 +50,7 @@ func TestDefenseFightingStyleACCalculation(t *testing.T) {
 			},
 			ArmorCategory: "light",
 		}
-		char.EquippedSlots[character.SlotBody] = leather
+		char.EquippedSlots[shared.SlotBody] = leather
 		char.calculateAC()
 		// Expected: 11 (leather) + 2 (DEX) + 1 (defense) = 14
 		// calculateAC DOES apply defense fighting style via applyFightingStyleAC
@@ -68,7 +68,7 @@ func TestDefenseFightingStyleACCalculation(t *testing.T) {
 			},
 			ArmorCategory: "heavy",
 		}
-		char.EquippedSlots[character.SlotBody] = plate
+		char.EquippedSlots[shared.SlotBody] = plate
 		char.calculateAC()
 		// Expected: 18 (plate) + 1 (defense) = 19
 		// calculateAC DOES apply defense fighting style
@@ -83,7 +83,7 @@ func TestDefenseFightingStyleACCalculation(t *testing.T) {
 			ac := 10
 
 			// First, check for body armor which sets the base AC
-			if bodyArmor := c.EquippedSlots[character.SlotBody]; bodyArmor != nil {
+			if bodyArmor := c.EquippedSlots[shared.SlotBody]; bodyArmor != nil {
 				if armor, ok := bodyArmor.(*equipment.Armor); ok && armor.ArmorClass != nil {
 					ac = armor.ArmorClass.Base
 					if armor.ArmorClass.DexBonus {
@@ -94,7 +94,7 @@ func TestDefenseFightingStyleACCalculation(t *testing.T) {
 
 			// Then add bonuses from other armor pieces (like shields)
 			for slot, e := range c.EquippedSlots {
-				if e == nil || slot == character.SlotBody {
+				if e == nil || slot == shared.SlotBody {
 					continue
 				}
 				if armor, ok := e.(*equipment.Armor); ok && armor.ArmorClass != nil {
@@ -107,7 +107,7 @@ func TestDefenseFightingStyleACCalculation(t *testing.T) {
 				if feature.Key == "fighting_style" && feature.Metadata != nil {
 					if style, ok := feature.Metadata["style"].(string); ok && style == "defense" {
 						// Defense: +1 AC while wearing armor
-						if c.EquippedSlots[character.SlotBody] != nil {
+						if c.EquippedSlots[shared.SlotBody] != nil {
 							ac += 1
 						}
 					}
@@ -136,11 +136,11 @@ func TestDefenseFightingStyleACCalculation(t *testing.T) {
 					},
 				},
 			},
-			EquippedSlots: make(map[character.Slot]equipment.Equipment),
+			EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		}
 
 		// With chain mail
-		char.EquippedSlots[character.SlotBody] = &equipment.Armor{
+		char.EquippedSlots[shared.SlotBody] = &equipment.Armor{
 			ArmorClass: &equipment.ArmorClass{
 				Base:     16,
 				DexBonus: false,
@@ -151,7 +151,7 @@ func TestDefenseFightingStyleACCalculation(t *testing.T) {
 		assert.Equal(t, 17, ac, "Chain mail (16) + defense (1) = 17")
 
 		// With shield too
-		char.EquippedSlots[character.SlotOffHand] = &equipment.Armor{
+		char.EquippedSlots[shared.SlotOffHand] = &equipment.Armor{
 			ArmorClass: &equipment.ArmorClass{
 				Base: 2,
 			},
@@ -181,7 +181,7 @@ func TestMonkUnarmoredDefenseAC(t *testing.T) {
 					Description: "AC equals 10 + DEX modifier + WIS modifier",
 				},
 			},
-			EquippedSlots: make(map[character.Slot]equipment.Equipment),
+			EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		}
 
 		char.calculateAC()
@@ -190,7 +190,7 @@ func TestMonkUnarmoredDefenseAC(t *testing.T) {
 		assert.Equal(t, 10, char.AC, "Monk unarmored defense not implemented")
 
 		// If wearing armor, should use armor AC instead
-		char.EquippedSlots[character.SlotBody] = &equipment.Armor{
+		char.EquippedSlots[shared.SlotBody] = &equipment.Armor{
 			ArmorClass: &equipment.ArmorClass{
 				Base:     12,
 				DexBonus: true,
@@ -221,7 +221,7 @@ func TestBarbarianUnarmoredDefenseAC(t *testing.T) {
 					Description: "AC equals 10 + DEX modifier + CON modifier",
 				},
 			},
-			EquippedSlots: make(map[character.Slot]equipment.Equipment),
+			EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		}
 
 		char.calculateAC()
@@ -230,7 +230,7 @@ func TestBarbarianUnarmoredDefenseAC(t *testing.T) {
 		assert.Equal(t, 10, char.AC, "Barbarian unarmored defense not implemented")
 
 		// With shield (barbarian can use shield with unarmored defense)
-		char.EquippedSlots[character.SlotOffHand] = &equipment.Armor{
+		char.EquippedSlots[shared.SlotOffHand] = &equipment.Armor{
 			ArmorClass: &equipment.ArmorClass{
 				Base: 2,
 			},

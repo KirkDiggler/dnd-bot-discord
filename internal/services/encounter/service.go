@@ -10,7 +10,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat/attack"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"sort"
 	"strings"
@@ -792,10 +792,10 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		weaponKey := attackResult.WeaponKey
 		if weaponKey == "" {
 			// Fallback to equipped weapon if not in result (for backward compatibility)
-			if char.EquippedSlots[character.SlotMainHand] != nil {
-				weaponKey = char.EquippedSlots[character.SlotMainHand].GetKey()
-			} else if char.EquippedSlots[character.SlotTwoHanded] != nil {
-				weaponKey = char.EquippedSlots[character.SlotTwoHanded].GetKey()
+			if char.EquippedSlots[shared.SlotMainHand] != nil {
+				weaponKey = char.EquippedSlots[shared.SlotMainHand].GetKey()
+			} else if char.EquippedSlots[shared.SlotTwoHanded] != nil {
+				weaponKey = char.EquippedSlots[shared.SlotTwoHanded].GetKey()
 			}
 		}
 		char.RecordAction("attack", "weapon", weaponKey)
@@ -827,10 +827,10 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		}
 
 		// Get weapon name
-		if char.EquippedSlots[character.SlotMainHand] != nil {
-			result.WeaponName = char.EquippedSlots[character.SlotMainHand].GetName()
-		} else if char.EquippedSlots[character.SlotTwoHanded] != nil {
-			result.WeaponName = char.EquippedSlots[character.SlotTwoHanded].GetName()
+		if char.EquippedSlots[shared.SlotMainHand] != nil {
+			result.WeaponName = char.EquippedSlots[shared.SlotMainHand].GetName()
+		} else if char.EquippedSlots[shared.SlotTwoHanded] != nil {
+			result.WeaponName = char.EquippedSlots[shared.SlotTwoHanded].GetName()
 		} else {
 			result.WeaponName = "Unarmed Strike"
 		}
@@ -862,12 +862,12 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			if char.Class != nil && char.Class.Key == "rogue" {
 				// Get the weapon used
 				var weapon *equipment.Weapon
-				if char.EquippedSlots[character.SlotMainHand] != nil {
-					if w, ok := char.EquippedSlots[character.SlotMainHand].(*equipment.Weapon); ok {
+				if char.EquippedSlots[shared.SlotMainHand] != nil {
+					if w, ok := char.EquippedSlots[shared.SlotMainHand].(*equipment.Weapon); ok {
 						weapon = w
 					}
-				} else if char.EquippedSlots[character.SlotTwoHanded] != nil {
-					if w, ok := char.EquippedSlots[character.SlotTwoHanded].(*equipment.Weapon); ok {
+				} else if char.EquippedSlots[shared.SlotTwoHanded] != nil {
+					if w, ok := char.EquippedSlots[shared.SlotTwoHanded].(*equipment.Weapon); ok {
 						weapon = w
 					}
 				}

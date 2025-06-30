@@ -128,8 +128,8 @@ func TestCharacter_MartialArtsBonusAction(t *testing.T) {
 			{Key: "martial-arts", Name: "Martial Arts"},
 		},
 		Resources: &CharacterResources{},
-		EquippedSlots: map[character.Slot]equipment.Equipment{
-			character.SlotMainHand: &equipment.Weapon{
+		EquippedSlots: map[Slot]equipment.Equipment{
+			SlotMainHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: equipment.WeaponKeyShortsword},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
@@ -166,8 +166,8 @@ func TestCharacter_TwoWeaponFightingBonusAction(t *testing.T) {
 		Name:      "Dual Wielder",
 		Level:     1,
 		Resources: &CharacterResources{},
-		EquippedSlots: map[character.Slot]equipment.Equipment{
-			character.SlotMainHand: &equipment.Weapon{
+		EquippedSlots: map[Slot]equipment.Equipment{
+			SlotMainHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: "shortsword"},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
@@ -176,7 +176,7 @@ func TestCharacter_TwoWeaponFightingBonusAction(t *testing.T) {
 					{Key: "finesse"},
 				},
 			},
-			character.SlotOffHand: &equipment.Weapon{
+			SlotOffHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: "dagger"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
@@ -210,8 +210,8 @@ func TestCharacter_NoTwoWeaponWithoutLight(t *testing.T) {
 		Name:      "Fighter",
 		Level:     1,
 		Resources: &CharacterResources{},
-		EquippedSlots: map[character.Slot]equipment.Equipment{
-			character.SlotMainHand: &equipment.Weapon{
+		EquippedSlots: map[Slot]equipment.Equipment{
+			SlotMainHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: "longsword"},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
@@ -219,7 +219,7 @@ func TestCharacter_NoTwoWeaponWithoutLight(t *testing.T) {
 					{Key: "versatile"},
 				},
 			},
-			character.SlotOffHand: &equipment.Weapon{
+			SlotOffHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: "shortsword"},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
@@ -285,8 +285,8 @@ func TestCharacter_NonMonkNoMartialArts(t *testing.T) {
 			{Key: "second_wind", Name: "Second Wind"},
 		},
 		Resources: &CharacterResources{},
-		EquippedSlots: map[character.Slot]equipment.Equipment{
-			character.SlotMainHand: &equipment.Weapon{
+		EquippedSlots: map[Slot]equipment.Equipment{
+			SlotMainHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: equipment.WeaponKeyShortsword},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
