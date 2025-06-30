@@ -12,18 +12,20 @@ import (
 
 // Manager handles modifiers for a character
 type Manager struct {
-	characterID string
-	modifiers   []Modifier
-	eventBus    *events.Bus
-	mu          sync.RWMutex
+	characterID   string
+	modifiers     []Modifier
+	eventBus      *events.Bus
+	subscriptions map[string][]events.EventType // modifier ID -> subscribed event types
+	mu            sync.RWMutex
 }
 
 // NewManager creates a new modifier manager
 func NewManager(characterID string, eventBus *events.Bus) *Manager {
 	return &Manager{
-		characterID: characterID,
-		modifiers:   make([]Modifier, 0),
-		eventBus:    eventBus,
+		characterID:   characterID,
+		modifiers:     make([]Modifier, 0),
+		eventBus:      eventBus,
+		subscriptions: make(map[string][]events.EventType),
 	}
 }
 
@@ -57,6 +59,15 @@ func (m *Manager) AddModifier(mod Modifier) {
 func (m *Manager) RemoveModifier(modifierID string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	// Unsubscribe from events first
+	if eventTypes, ok := m.subscriptions[modifierID]; ok {
+		listenerID := fmt.Sprintf("modifier_%s", modifierID)
+		for _, eventType := range eventTypes {
+			m.eventBus.Unsubscribe(eventType, listenerID)
+		}
+		delete(m.subscriptions, modifierID)
+	}
 
 	for i, mod := range m.modifiers {
 		if mod.ID() != modifierID {
@@ -99,9 +110,22 @@ func (m *Manager) GetActiveModifiers(character *entities.Character) []Modifier {
 	if len(expired) > 0 {
 		m.mu.RUnlock()
 		m.mu.Lock()
+		// Remove expired modifiers directly to avoid nested locking
 		for _, id := range expired {
-			m.RemoveModifier(id)
+			for i, mod := range m.modifiers {
+				if mod.ID() == id {
+					// Remove by swapping with last and truncating
+					m.modifiers[i] = m.modifiers[len(m.modifiers)-1]
+					m.modifiers = m.modifiers[:len(m.modifiers)-1]
+					log.Printf("ModifierManager: Removed expired modifier %s", id)
+					break
+				}
+			}
 		}
+		// Re-sort after removal
+		sort.Slice(m.modifiers, func(i, j int) bool {
+			return m.modifiers[i].Priority() < m.modifiers[j].Priority()
+		})
 		m.mu.Unlock()
 		m.mu.RLock()
 	}
@@ -150,8 +174,17 @@ func (m *Manager) CreateListener(mod Modifier, character *entities.Character) ev
 
 // SubscribeAll subscribes all active modifiers to relevant events
 func (m *Manager) SubscribeAll(character *entities.Character) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Unsubscribe all existing subscriptions first
+	for modID, eventTypes := range m.subscriptions {
+		listenerID := fmt.Sprintf("modifier_%s", modID)
+		for _, eventType := range eventTypes {
+			m.eventBus.Unsubscribe(eventType, listenerID)
+		}
+	}
+	m.subscriptions = make(map[string][]events.EventType)
 
 	// For now, subscribe all modifiers to all event types
 	// In the future, modifiers could declare which events they care about
@@ -178,9 +211,15 @@ func (m *Manager) SubscribeAll(character *entities.Character) {
 	for _, mod := range m.modifiers {
 		if mod.IsActive(character) {
 			listener := m.CreateListener(mod, character)
+			subscribedTypes := make([]events.EventType, 0)
+
 			for _, eventType := range eventTypes {
 				m.eventBus.Subscribe(eventType, listener)
+				subscribedTypes = append(subscribedTypes, eventType)
 			}
+
+			// Track subscriptions for this modifier
+			m.subscriptions[mod.ID()] = subscribedTypes
 		}
 	}
 }
