@@ -71,8 +71,8 @@ type Character struct {
 	EffectManager *effects.Manager `json:"-"`
 
 	// Event system integration (set by service layer)
-	EventBus        interface{} `json:"-"` // Will be *events.Bus but using interface to avoid circular import
-	ModifierManager interface{} `json:"-"` // Will be *modifiers.Manager but using interface to avoid circular import
+	EventBus        any `json:"-"` // Will be *events.Bus but using any to avoid circular import
+	ModifierManager any `json:"-"` // Will be *modifiers.Manager but using any to avoid circular import
 
 	// diceRoller is the injected dice roller (defaults to random)
 	diceRoller dice.Roller `json:"-"`
