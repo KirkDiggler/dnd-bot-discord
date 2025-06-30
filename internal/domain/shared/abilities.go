@@ -1,4 +1,4 @@
-package character
+package shared
 
 // AbilityType represents the action cost of using an ability
 type AbilityType string

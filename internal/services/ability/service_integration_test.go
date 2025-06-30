@@ -65,27 +65,27 @@ func (s *AbilityServiceIntegrationSuite) TestRageAbilityFullCycle() {
 		Name:             "Grunk",
 		Class:            &rulebook.Class{Key: "barbarian", Name: "Barbarian"},
 		Level:            1,
-		Status:           character2.CharacterStatusActive,
+		Status:           shared.CharacterStatusActive,
 		CurrentHitPoints: 12,
 		MaxHitPoints:     12,
-		Attributes: map[character2.Attribute]*character2.AbilityScore{
-			character2.AttributeStrength:     {Score: 16},
-			character2.AttributeDexterity:    {Score: 14},
-			character2.AttributeConstitution: {Score: 15},
-			character2.AttributeIntelligence: {Score: 8},
-			character2.AttributeWisdom:       {Score: 12},
-			character2.AttributeCharisma:     {Score: 10},
+		Attributes: map[shared.Attribute]*character2.AbilityScore{
+			shared.AttributeStrength:     {Score: 16},
+			shared.AttributeDexterity:    {Score: 14},
+			shared.AttributeConstitution: {Score: 15},
+			shared.AttributeIntelligence: {Score: 8},
+			shared.AttributeWisdom:       {Score: 12},
+			shared.AttributeCharisma:     {Score: 10},
 		},
 		Resources: &shared.CharacterResources{
-			Abilities: map[string]*character2.ActiveAbility{
+			Abilities: map[string]*shared.ActiveAbility{
 				"rage": {
 					Name:          "Rage",
 					Key:           "rage",
 					Description:   "Enter a battle fury",
-					ActionType:    character2.AbilityTypeBonusAction,
+					ActionType:    shared.AbilityTypeBonusAction,
 					UsesMax:       2,
 					UsesRemaining: 2,
-					RestType:      character2.RestTypeLong,
+					RestType:      shared.RestTypeLong,
 					IsActive:      false,
 					Duration:      0,
 				},
@@ -160,27 +160,27 @@ func (s *AbilityServiceIntegrationSuite) TestSecondWindHealing() {
 		Name:             "Aldric",
 		Class:            &rulebook.Class{Key: "fighter", Name: "Fighter"},
 		Level:            3,
-		Status:           character2.CharacterStatusActive,
+		Status:           shared.CharacterStatusActive,
 		CurrentHitPoints: 15, // Damaged
 		MaxHitPoints:     28,
-		Attributes: map[character2.Attribute]*character2.AbilityScore{
-			character2.AttributeStrength:     {Score: 16},
-			character2.AttributeDexterity:    {Score: 13},
-			character2.AttributeConstitution: {Score: 14},
-			character2.AttributeIntelligence: {Score: 10},
-			character2.AttributeWisdom:       {Score: 12},
-			character2.AttributeCharisma:     {Score: 8},
+		Attributes: map[shared.Attribute]*character2.AbilityScore{
+			shared.AttributeStrength:     {Score: 16},
+			shared.AttributeDexterity:    {Score: 13},
+			shared.AttributeConstitution: {Score: 14},
+			shared.AttributeIntelligence: {Score: 10},
+			shared.AttributeWisdom:       {Score: 12},
+			shared.AttributeCharisma:     {Score: 8},
 		},
 		Resources: &shared.CharacterResources{
-			Abilities: map[string]*character2.ActiveAbility{
+			Abilities: map[string]*shared.ActiveAbility{
 				"second_wind": {
 					Name:          "Second Wind",
 					Key:           "second_wind",
 					Description:   "Regain hit points",
-					ActionType:    character2.AbilityTypeBonusAction,
+					ActionType:    shared.AbilityTypeBonusAction,
 					UsesMax:       1,
 					UsesRemaining: 1,
-					RestType:      character2.RestTypeShort,
+					RestType:      shared.RestTypeShort,
 				},
 			},
 		},
@@ -221,26 +221,26 @@ func (s *AbilityServiceIntegrationSuite) TestMultipleRageUses() {
 		Name:             "RageTest",
 		Class:            &rulebook.Class{Key: "barbarian", Name: "Barbarian"},
 		Level:            1,
-		Status:           character2.CharacterStatusActive,
+		Status:           shared.CharacterStatusActive,
 		CurrentHitPoints: 12,
 		MaxHitPoints:     12,
-		Attributes: map[character2.Attribute]*character2.AbilityScore{
-			character2.AttributeStrength:     {Score: 16},
-			character2.AttributeDexterity:    {Score: 14},
-			character2.AttributeConstitution: {Score: 15},
-			character2.AttributeIntelligence: {Score: 8},
-			character2.AttributeWisdom:       {Score: 12},
-			character2.AttributeCharisma:     {Score: 10},
+		Attributes: map[shared.Attribute]*character2.AbilityScore{
+			shared.AttributeStrength:     {Score: 16},
+			shared.AttributeDexterity:    {Score: 14},
+			shared.AttributeConstitution: {Score: 15},
+			shared.AttributeIntelligence: {Score: 8},
+			shared.AttributeWisdom:       {Score: 12},
+			shared.AttributeCharisma:     {Score: 10},
 		},
 		Resources: &shared.CharacterResources{
-			Abilities: map[string]*character2.ActiveAbility{
+			Abilities: map[string]*shared.ActiveAbility{
 				"rage": {
 					Name:          "Rage",
 					Key:           "rage",
-					ActionType:    character2.AbilityTypeBonusAction,
+					ActionType:    shared.AbilityTypeBonusAction,
 					UsesMax:       2,
 					UsesRemaining: 2,
-					RestType:      character2.RestTypeLong,
+					RestType:      shared.RestTypeLong,
 				},
 			},
 		},
@@ -302,18 +302,18 @@ func (s *AbilityServiceIntegrationSuite) TestConcurrentAbilityUse() {
 		Name:             "Concurrent",
 		Class:            &rulebook.Class{Key: "barbarian", Name: "Barbarian"},
 		Level:            1,
-		Status:           character2.CharacterStatusActive,
+		Status:           shared.CharacterStatusActive,
 		CurrentHitPoints: 12,
 		MaxHitPoints:     12,
 		Resources: &shared.CharacterResources{
-			Abilities: map[string]*character2.ActiveAbility{
+			Abilities: map[string]*shared.ActiveAbility{
 				"rage": {
 					Name:          "Rage",
 					Key:           "rage",
-					ActionType:    character2.AbilityTypeBonusAction,
+					ActionType:    shared.AbilityTypeBonusAction,
 					UsesMax:       2,
 					UsesRemaining: 2,
-					RestType:      character2.RestTypeLong,
+					RestType:      shared.RestTypeLong,
 				},
 			},
 		},

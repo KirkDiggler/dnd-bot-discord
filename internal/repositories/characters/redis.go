@@ -33,7 +33,7 @@ type CharacterData struct {
 	Race               *rulebook.Race                                       `json:"race"`
 	Class              *rulebook.Class                                      `json:"class"`
 	Background         *rulebook.Background                                 `json:"background"`
-	Attributes         map[character.Attribute]*character.AbilityScore      `json:"attributes"`
+	Attributes         map[shared.Attribute]*character.AbilityScore         `json:"attributes"`
 	AbilityRolls       []character.AbilityRoll                              `json:"ability_rolls"`
 	AbilityAssignments map[string]string                                    `json:"ability_assignments"`
 	Proficiencies      map[rulebook.ProficiencyType][]*rulebook.Proficiency `json:"proficiencies"`
@@ -43,7 +43,7 @@ type CharacterData struct {
 	CurrentHitPoints   int                                                  `json:"current_hit_points"`
 	Level              int                                                  `json:"level"`
 	Experience         int                                                  `json:"experience"`
-	Status             character.CharacterStatus                            `json:"status"`
+	Status             shared.CharacterStatus                               `json:"status"`
 	Features           []*rulebook.CharacterFeature                         `json:"features"`
 	Inventory          map[equipment.EquipmentType][]EquipmentData          `json:"inventory"`
 	EquippedSlots      map[character.Slot]EquipmentData                     `json:"equipped_slots"`

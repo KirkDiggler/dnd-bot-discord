@@ -4,6 +4,7 @@ import (
 	"context"
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
@@ -35,7 +36,7 @@ func TestProficiencyUpdateHandling(t *testing.T) {
 			ID:      "test-char-1",
 			OwnerID: "test-user",
 			RealmID: "test-realm",
-			Status:  character2.CharacterStatusDraft,
+			Status:  shared.CharacterStatusDraft,
 			Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
 				// Base proficiencies from class
 				rulebook.ProficiencyTypeArmor: {

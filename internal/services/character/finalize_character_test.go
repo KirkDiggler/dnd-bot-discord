@@ -2,7 +2,7 @@ package character_test
 
 import (
 	"context"
-	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"

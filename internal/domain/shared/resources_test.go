@@ -250,14 +250,14 @@ func TestCharacterResources_Rest(t *testing.T) {
 				1: {Max: 2, Remaining: 0, Source: "spellcasting"}, // Regular spell slots
 				2: {Max: 1, Remaining: 0, Source: "pact_magic"},   // Warlock slots
 			},
-			Abilities: map[string]*character.ActiveAbility{
+			Abilities: map[string]*shared.ActiveAbility{
 				"second-wind": {
-					RestType:      character.RestTypeShort,
+					RestType:      shared.RestTypeShort,
 					UsesMax:       1,
 					UsesRemaining: 0,
 				},
 				"rage": {
-					RestType:      character.RestTypeLong,
+					RestType:      shared.RestTypeLong,
 					UsesMax:       2,
 					UsesRemaining: 0,
 				},
@@ -300,9 +300,9 @@ func TestCharacterResources_Rest(t *testing.T) {
 				1: {Max: 2, Remaining: 0, Source: "spellcasting"},
 				2: {Max: 1, Remaining: 0, Source: "pact_magic"},
 			},
-			Abilities: map[string]*character.ActiveAbility{
+			Abilities: map[string]*shared.ActiveAbility{
 				"rage": {
-					RestType:      character.RestTypeLong,
+					RestType:      shared.RestTypeLong,
 					UsesMax:       2,
 					UsesRemaining: 0,
 					IsActive:      true,
@@ -452,10 +452,10 @@ func TestCharacter_InitializeResources(t *testing.T) {
 		rage, exists := char.Resources.Abilities["rage"]
 		require.True(t, exists)
 		assert.Equal(t, "rage", rage.Key)
-		assert.Equal(t, character.AbilityTypeBonusAction, rage.ActionType)
+		assert.Equal(t, shared.AbilityTypeBonusAction, rage.ActionType)
 		assert.Equal(t, 2, rage.UsesMax)
 		assert.Equal(t, 2, rage.UsesRemaining)
-		assert.Equal(t, character.RestTypeLong, rage.RestType)
+		assert.Equal(t, shared.RestTypeLong, rage.RestType)
 		assert.Equal(t, 10, rage.Duration)
 	})
 
@@ -475,10 +475,10 @@ func TestCharacter_InitializeResources(t *testing.T) {
 		secondWind, exists := char.Resources.Abilities["second-wind"]
 		require.True(t, exists)
 		assert.Equal(t, "second-wind", secondWind.Key)
-		assert.Equal(t, character.AbilityTypeBonusAction, secondWind.ActionType)
+		assert.Equal(t, shared.AbilityTypeBonusAction, secondWind.ActionType)
 		assert.Equal(t, 1, secondWind.UsesMax)
 		assert.Equal(t, 1, secondWind.UsesRemaining)
-		assert.Equal(t, character.RestTypeShort, secondWind.RestType)
+		assert.Equal(t, shared.RestTypeShort, secondWind.RestType)
 		assert.Equal(t, 0, secondWind.Duration) // Instant effect
 	})
 
@@ -488,8 +488,8 @@ func TestCharacter_InitializeResources(t *testing.T) {
 			MaxHitPoints:     8,
 			CurrentHitPoints: 8,
 			Class:            testutils.CreateTestClass("bard", "Bard", 8),
-			Attributes: map[character.Attribute]*character.AbilityScore{
-				character.AttributeCharisma: {Score: 16, Bonus: 3},
+			Attributes: map[shared.Attribute]*character.AbilityScore{
+				shared.AttributeCharisma: {Score: 16, Bonus: 3},
 			},
 		}
 
@@ -501,10 +501,10 @@ func TestCharacter_InitializeResources(t *testing.T) {
 		bardicInspiration, exists := char.Resources.Abilities["bardic-inspiration"]
 		require.True(t, exists)
 		assert.Equal(t, "bardic-inspiration", bardicInspiration.Key)
-		assert.Equal(t, character.AbilityTypeBonusAction, bardicInspiration.ActionType)
+		assert.Equal(t, shared.AbilityTypeBonusAction, bardicInspiration.ActionType)
 		assert.Equal(t, 3, bardicInspiration.UsesMax) // Charisma modifier
 		assert.Equal(t, 3, bardicInspiration.UsesRemaining)
-		assert.Equal(t, character.RestTypeLong, bardicInspiration.RestType)
+		assert.Equal(t, shared.RestTypeLong, bardicInspiration.RestType)
 		assert.Equal(t, 10, bardicInspiration.Duration) // 10 minutes
 	})
 
@@ -514,8 +514,8 @@ func TestCharacter_InitializeResources(t *testing.T) {
 			MaxHitPoints:     10,
 			CurrentHitPoints: 10,
 			Class:            testutils.CreateTestClass("paladin", "Paladin", 10),
-			Attributes: map[character.Attribute]*character.AbilityScore{
-				character.AttributeCharisma: {Score: 14, Bonus: 2},
+			Attributes: map[shared.Attribute]*character.AbilityScore{
+				shared.AttributeCharisma: {Score: 14, Bonus: 2},
 			},
 		}
 
@@ -527,20 +527,20 @@ func TestCharacter_InitializeResources(t *testing.T) {
 		layOnHands, exists := char.Resources.Abilities["lay-on-hands"]
 		require.True(t, exists)
 		assert.Equal(t, "lay-on-hands", layOnHands.Key)
-		assert.Equal(t, character.AbilityTypeAction, layOnHands.ActionType)
+		assert.Equal(t, shared.AbilityTypeAction, layOnHands.ActionType)
 		assert.Equal(t, 5, layOnHands.UsesMax) // 5 HP per level
 		assert.Equal(t, 5, layOnHands.UsesRemaining)
-		assert.Equal(t, character.RestTypeLong, layOnHands.RestType)
+		assert.Equal(t, shared.RestTypeLong, layOnHands.RestType)
 		assert.Equal(t, 0, layOnHands.Duration) // Instant
 
 		// Check divine sense
 		divineSense, exists := char.Resources.Abilities["divine-sense"]
 		require.True(t, exists)
 		assert.Equal(t, "divine-sense", divineSense.Key)
-		assert.Equal(t, character.AbilityTypeAction, divineSense.ActionType)
+		assert.Equal(t, shared.AbilityTypeAction, divineSense.ActionType)
 		assert.Equal(t, 3, divineSense.UsesMax) // 1 + Charisma modifier
 		assert.Equal(t, 3, divineSense.UsesRemaining)
-		assert.Equal(t, character.RestTypeLong, divineSense.RestType)
+		assert.Equal(t, shared.RestTypeLong, divineSense.RestType)
 		assert.Equal(t, 0, divineSense.Duration) // Until end of next turn
 	})
 

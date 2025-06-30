@@ -17,7 +17,7 @@ func CreateTestRace(key, name string) *rulebook.Race {
 		Speed: 30,
 		AbilityBonuses: []*character.AbilityBonus{
 			{
-				Attribute: character.AttributeStrength,
+				Attribute: shared.AttributeStrength,
 				Bonus:     2,
 			},
 		},
@@ -61,16 +61,16 @@ func CreateTestCharacter(id, ownerID, realmID, name string) *character.Character
 		Race:    CreateTestRace("human", "Human"),
 		Class:   CreateTestClass("fighter", "Fighter", 10),
 		Level:   1,
-		Status:  character.CharacterStatusActive,
+		Status:  shared.CharacterStatusActive,
 		HitDie:  10,
 		Speed:   30,
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeStrength:     {Score: 16, Bonus: 3},
-			character.AttributeDexterity:    {Score: 14, Bonus: 2},
-			character.AttributeConstitution: {Score: 15, Bonus: 2},
-			character.AttributeIntelligence: {Score: 10, Bonus: 0},
-			character.AttributeWisdom:       {Score: 13, Bonus: 1},
-			character.AttributeCharisma:     {Score: 12, Bonus: 1},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength:     {Score: 16, Bonus: 3},
+			shared.AttributeDexterity:    {Score: 14, Bonus: 2},
+			shared.AttributeConstitution: {Score: 15, Bonus: 2},
+			shared.AttributeIntelligence: {Score: 10, Bonus: 0},
+			shared.AttributeWisdom:       {Score: 13, Bonus: 1},
+			shared.AttributeCharisma:     {Score: 12, Bonus: 1},
 		},
 		MaxHitPoints:     12,
 		CurrentHitPoints: 12,

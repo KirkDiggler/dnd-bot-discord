@@ -4,6 +4,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"testing"
 
@@ -27,14 +28,14 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 				Name:    "TestMonk",
 				OwnerID: "user-123",
 				RealmID: "realm-123",
-				Status:  character.CharacterStatusDraft,
+				Status:  shared.CharacterStatusDraft,
 				Level:   1,
 				Race: &rulebook.Race{
 					Key:  "elf",
 					Name: "Elf",
 					AbilityBonuses: []*character.AbilityBonus{
-						{Attribute: character.AttributeDexterity, Bonus: 2},
-						{Attribute: character.AttributeIntelligence, Bonus: 1},
+						{Attribute: shared.AttributeDexterity, Bonus: 2},
+						{Attribute: shared.AttributeIntelligence, Bonus: 1},
 					},
 				},
 				Class: &rulebook.Class{
@@ -59,7 +60,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 					"WIS": "roll_5", // Wisdom is roll 5 and has a score of 11
 					"CHA": "roll_6", // Charisma is roll 6 and has a score of 10
 				},
-				Attributes:    map[character.Attribute]*character.AbilityScore{}, // Empty!
+				Attributes:    map[shared.Attribute]*character.AbilityScore{}, // Empty!
 				Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 				Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
 				EquippedSlots: make(map[character.Slot]equipment.Equipment),
@@ -71,20 +72,20 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 				assert.Len(t, char.Attributes, 6, "Should have all 6 ability scores")
 
 				// Verify specific scores with racial bonuses
-				assert.Equal(t, 13, char.Attributes[character.AttributeStrength].Score)
-				assert.Equal(t, 16, char.Attributes[character.AttributeDexterity].Score) // 14 + 2 racial
-				assert.Equal(t, 12, char.Attributes[character.AttributeConstitution].Score)
-				assert.Equal(t, 16, char.Attributes[character.AttributeIntelligence].Score) // 15 + 1 racial
-				assert.Equal(t, 11, char.Attributes[character.AttributeWisdom].Score)
-				assert.Equal(t, 10, char.Attributes[character.AttributeCharisma].Score)
+				assert.Equal(t, 13, char.Attributes[shared.AttributeStrength].Score)
+				assert.Equal(t, 16, char.Attributes[shared.AttributeDexterity].Score) // 14 + 2 racial
+				assert.Equal(t, 12, char.Attributes[shared.AttributeConstitution].Score)
+				assert.Equal(t, 16, char.Attributes[shared.AttributeIntelligence].Score) // 15 + 1 racial
+				assert.Equal(t, 11, char.Attributes[shared.AttributeWisdom].Score)
+				assert.Equal(t, 10, char.Attributes[shared.AttributeCharisma].Score)
 
 				// Verify modifiers
-				assert.Equal(t, 1, char.Attributes[character.AttributeStrength].Bonus)     // (13-10)/2 = 1
-				assert.Equal(t, 3, char.Attributes[character.AttributeDexterity].Bonus)    // (16-10)/2 = 3
-				assert.Equal(t, 1, char.Attributes[character.AttributeConstitution].Bonus) // (12-10)/2 = 1
-				assert.Equal(t, 3, char.Attributes[character.AttributeIntelligence].Bonus) // (16-10)/2 = 3
-				assert.Equal(t, 0, char.Attributes[character.AttributeWisdom].Bonus)       // (11-10)/2 = 0
-				assert.Equal(t, 0, char.Attributes[character.AttributeCharisma].Bonus)     // (10-10)/2 = 0
+				assert.Equal(t, 1, char.Attributes[shared.AttributeStrength].Bonus)     // (13-10)/2 = 1
+				assert.Equal(t, 3, char.Attributes[shared.AttributeDexterity].Bonus)    // (16-10)/2 = 3
+				assert.Equal(t, 1, char.Attributes[shared.AttributeConstitution].Bonus) // (12-10)/2 = 1
+				assert.Equal(t, 3, char.Attributes[shared.AttributeIntelligence].Bonus) // (16-10)/2 = 3
+				assert.Equal(t, 0, char.Attributes[shared.AttributeWisdom].Bonus)       // (11-10)/2 = 0
+				assert.Equal(t, 0, char.Attributes[shared.AttributeCharisma].Bonus)     // (10-10)/2 = 0
 
 				// Verify HP calculation
 				assert.Equal(t, 9, char.MaxHitPoints) // 8 (monk hit die) + 1 (CON modifier)
@@ -94,7 +95,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 				assert.Equal(t, 13, char.AC) // 10 + 3 (DEX modifier) + 0 (WIS modifier)
 
 				// Verify status changed
-				assert.Equal(t, character.CharacterStatusActive, char.Status)
+				assert.Equal(t, shared.CharacterStatusActive, char.Status)
 			},
 		},
 		{
@@ -104,7 +105,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 				Name:    "ExistingChar",
 				OwnerID: "user-123",
 				RealmID: "realm-123",
-				Status:  character.CharacterStatusDraft,
+				Status:  shared.CharacterStatusDraft,
 				Level:   1,
 				Race: &rulebook.Race{
 					Key:  "human",
@@ -116,13 +117,13 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 					HitDie: 10,
 				},
 				// Already has attributes
-				Attributes: map[character.Attribute]*character.AbilityScore{
-					character.AttributeStrength:     {Score: 16, Bonus: 3},
-					character.AttributeDexterity:    {Score: 14, Bonus: 2},
-					character.AttributeConstitution: {Score: 15, Bonus: 2},
-					character.AttributeIntelligence: {Score: 10, Bonus: 0},
-					character.AttributeWisdom:       {Score: 12, Bonus: 1},
-					character.AttributeCharisma:     {Score: 8, Bonus: -1},
+				Attributes: map[shared.Attribute]*character.AbilityScore{
+					shared.AttributeStrength:     {Score: 16, Bonus: 3},
+					shared.AttributeDexterity:    {Score: 14, Bonus: 2},
+					shared.AttributeConstitution: {Score: 15, Bonus: 2},
+					shared.AttributeIntelligence: {Score: 10, Bonus: 0},
+					shared.AttributeWisdom:       {Score: 12, Bonus: 1},
+					shared.AttributeCharisma:     {Score: 8, Bonus: -1},
 				},
 				Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 				Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
@@ -132,7 +133,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 			validate: func(t *testing.T, char *character.Character) {
 				// Verify attributes unchanged
 				assert.Len(t, char.Attributes, 6)
-				assert.Equal(t, 16, char.Attributes[character.AttributeStrength].Score)
+				assert.Equal(t, 16, char.Attributes[shared.AttributeStrength].Score)
 
 				// Verify HP calculated
 				assert.Equal(t, 12, char.MaxHitPoints) // 10 (fighter hit die) + 2 (CON modifier)
@@ -145,7 +146,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 			name: "fails_for_non_draft_character",
 			character: &character.Character{
 				ID:     "test-char-3",
-				Status: character.CharacterStatusActive,
+				Status: shared.CharacterStatusActive,
 			},
 			wantErr: true,
 		},
@@ -154,7 +155,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Use the actual FinalizeDraftCharacter logic
-			if tt.character.Status != character.CharacterStatusDraft {
+			if tt.character.Status != shared.CharacterStatusDraft {
 				// This would normally be checked by the service
 				if tt.wantErr {
 					return // Expected error case
@@ -170,7 +171,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 				}
 
 				// Initialize attributes map
-				tt.character.Attributes = make(map[character.Attribute]*character.AbilityScore)
+				tt.character.Attributes = make(map[shared.Attribute]*character.AbilityScore)
 
 				// Convert assignments to attributes
 				for abilityStr, rollID := range tt.character.AbilityAssignments {
@@ -181,20 +182,20 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 					rollValue := rollValues[rollID]
 
 					// Parse ability string to Attribute type
-					var attr character.Attribute
+					var attr shared.Attribute
 					switch abilityStr {
 					case "STR":
-						attr = character.AttributeStrength
+						attr = shared.AttributeStrength
 					case "DEX":
-						attr = character.AttributeDexterity
+						attr = shared.AttributeDexterity
 					case "CON":
-						attr = character.AttributeConstitution
+						attr = shared.AttributeConstitution
 					case "INT":
-						attr = character.AttributeIntelligence
+						attr = shared.AttributeIntelligence
 					case "WIS":
-						attr = character.AttributeWisdom
+						attr = shared.AttributeWisdom
 					case "CHA":
-						attr = character.AttributeCharisma
+						attr = shared.AttributeCharisma
 					default:
 						continue
 					}
@@ -226,7 +227,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 			if tt.character.MaxHitPoints == 0 && tt.character.Class != nil {
 				conMod := 0
 				if tt.character.Attributes != nil {
-					if con, ok := tt.character.Attributes[character.AttributeConstitution]; ok && con != nil {
+					if con, ok := tt.character.Attributes[shared.AttributeConstitution]; ok && con != nil {
 						conMod = con.Bonus
 					}
 				}
@@ -240,7 +241,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 				dexMod := 0
 
 				if tt.character.Attributes != nil {
-					if dex, ok := tt.character.Attributes[character.AttributeDexterity]; ok && dex != nil {
+					if dex, ok := tt.character.Attributes[shared.AttributeDexterity]; ok && dex != nil {
 						dexMod = dex.Bonus
 					}
 				}
@@ -249,7 +250,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T) {
 			}
 
 			// Update status
-			tt.character.Status = character.CharacterStatusActive
+			tt.character.Status = shared.CharacterStatusActive
 
 			// Run validation
 			if tt.validate != nil {

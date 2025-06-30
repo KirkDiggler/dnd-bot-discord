@@ -4,6 +4,7 @@ import (
 	"context"
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
@@ -36,7 +37,7 @@ func TestFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 			OwnerID: "user123",
 			RealmID: "realm123",
 			Name:    "Draft Character",
-			Status:  character2.CharacterStatusDraft,
+			Status:  shared.CharacterStatusDraft,
 			Level:   1,
 			Race: &rulebook.Race{
 				Key:   "human",
@@ -69,13 +70,13 @@ func TestFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 					Source:      "Fighter",
 				},
 			},
-			Attributes: map[character2.Attribute]*character2.AbilityScore{
-				character2.AttributeStrength:     {Score: 16, Bonus: 3},
-				character2.AttributeDexterity:    {Score: 14, Bonus: 2},
-				character2.AttributeConstitution: {Score: 15, Bonus: 2},
-				character2.AttributeIntelligence: {Score: 13, Bonus: 1},
-				character2.AttributeWisdom:       {Score: 12, Bonus: 1},
-				character2.AttributeCharisma:     {Score: 10, Bonus: 0},
+			Attributes: map[shared.Attribute]*character2.AbilityScore{
+				shared.AttributeStrength:     {Score: 16, Bonus: 3},
+				shared.AttributeDexterity:    {Score: 14, Bonus: 2},
+				shared.AttributeConstitution: {Score: 15, Bonus: 2},
+				shared.AttributeIntelligence: {Score: 13, Bonus: 1},
+				shared.AttributeWisdom:       {Score: 12, Bonus: 1},
+				shared.AttributeCharisma:     {Score: 10, Bonus: 0},
 			},
 		}
 
@@ -104,7 +105,7 @@ func TestFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 		require.NotNil(t, finalizedChar)
 
 		// Verify the fix - metadata should be preserved!
-		assert.Equal(t, character2.CharacterStatusActive, finalizedChar.Status, "Character should be active")
+		assert.Equal(t, shared.CharacterStatusActive, finalizedChar.Status, "Character should be active")
 
 		fightingStyleAfter := findFeatureByKey(finalizedChar.Features, "fighting_style")
 		require.NotNil(t, fightingStyleAfter, "Fighting style feature should exist")

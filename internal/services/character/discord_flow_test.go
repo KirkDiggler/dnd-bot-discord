@@ -5,6 +5,7 @@ import (
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
@@ -40,13 +41,13 @@ func TestDiscordCharacterCreationFlow(t *testing.T) {
 		OwnerID: userID,
 		RealmID: realmID,
 		Name:    "NotGonnaWorkHere",
-		Status:  character2.CharacterStatusActive, // Already finalized
+		Status:  shared.CharacterStatusActive, // Already finalized
 		Level:   1,
 		Race: &rulebook.Race{
 			Key:  "elf",
 			Name: "Elf",
 			AbilityBonuses: []*character2.AbilityBonus{
-				{Attribute: character2.AttributeDexterity, Bonus: 2},
+				{Attribute: shared.AttributeDexterity, Bonus: 2},
 			},
 		},
 		Class: &rulebook.Class{
@@ -71,7 +72,7 @@ func TestDiscordCharacterCreationFlow(t *testing.T) {
 			"WIS": "roll_5",
 			"CHA": "roll_6",
 		},
-		Attributes:       map[character2.Attribute]*character2.AbilityScore{}, // Empty!
+		Attributes:       map[shared.Attribute]*character2.AbilityScore{}, // Empty!
 		Proficiencies:    make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		Inventory:        make(map[equipment.EquipmentType][]equipment.Equipment),
 		EquippedSlots:    make(map[character2.Slot]equipment.Equipment),

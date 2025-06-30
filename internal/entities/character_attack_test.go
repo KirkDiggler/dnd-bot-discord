@@ -5,6 +5,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,8 +22,8 @@ func TestCharacter_Attack_ImprovisedMelee(t *testing.T) {
 			char: &character.Character{
 				Name:  "Test Fighter",
 				Level: 1,
-				Attributes: map[character.Attribute]*character.AbilityScore{
-					character.AttributeStrength: {Score: 14, Bonus: 2},
+				Attributes: map[shared.Attribute]*character.AbilityScore{
+					shared.AttributeStrength: {Score: 14, Bonus: 2},
 				},
 			},
 		},
@@ -40,8 +41,8 @@ func TestCharacter_Attack_ImprovisedMelee(t *testing.T) {
 				Name:          "Empty Handed",
 				Level:         1,
 				EquippedSlots: make(map[character.Slot]equipment.Equipment),
-				Attributes: map[character.Attribute]*character.AbilityScore{
-					character.AttributeStrength: {Score: 10, Bonus: 0},
+				Attributes: map[shared.Attribute]*character.AbilityScore{
+					shared.AttributeStrength: {Score: 10, Bonus: 0},
 				},
 			},
 		},
@@ -72,9 +73,9 @@ func TestCharacter_Attack_WithWeapon(t *testing.T) {
 	char := &character.Character{
 		Name:  "Armed Fighter",
 		Level: 3,
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeStrength:  {Score: 16, Bonus: 3},
-			character.AttributeDexterity: {Score: 12, Bonus: 1},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength:  {Score: 16, Bonus: 3},
+			shared.AttributeDexterity: {Score: 12, Bonus: 1},
 		},
 		EquippedSlots: map[character.Slot]equipment.Equipment{
 			character.SlotMainHand: &equipment.Weapon{

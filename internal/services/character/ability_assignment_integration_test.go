@@ -4,6 +4,7 @@ import (
 	"context"
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
@@ -42,22 +43,22 @@ func TestAbilityAssignmentFlow_Integration(t *testing.T) {
 		// Validate the character being created
 		assert.Equal(t, userID, char.OwnerID)
 		assert.Equal(t, realmID, char.RealmID)
-		assert.Equal(t, character2.CharacterStatusDraft, char.Status)
+		assert.Equal(t, shared.CharacterStatusDraft, char.Status)
 		return nil
 	})
 
 	char, err := svc.GetOrCreateDraftCharacter(ctx, userID, realmID)
 	require.NoError(t, err)
 	require.NotNil(t, char)
-	assert.Equal(t, character2.CharacterStatusDraft, char.Status)
+	assert.Equal(t, shared.CharacterStatusDraft, char.Status)
 
 	// Step 2: Update with race
 	mockClient.EXPECT().GetRace("elf").Return(&rulebook.Race{
 		Key:  "elf",
 		Name: "Elf",
 		AbilityBonuses: []*character2.AbilityBonus{
-			{Attribute: character2.AttributeDexterity, Bonus: 2},
-			{Attribute: character2.AttributeIntelligence, Bonus: 1},
+			{Attribute: shared.AttributeDexterity, Bonus: 2},
+			{Attribute: shared.AttributeIntelligence, Bonus: 1},
 		},
 		Speed: 30,
 	}, nil)
@@ -135,7 +136,7 @@ func TestAbilityAssignmentFlow_Integration(t *testing.T) {
 	require.NotNil(t, finalChar)
 
 	// THIS IS THE BUG: Character should have attributes but doesn't
-	assert.Equal(t, character2.CharacterStatusActive, finalChar.Status)
+	assert.Equal(t, shared.CharacterStatusActive, finalChar.Status)
 	assert.NotEmpty(t, finalChar.Attributes, "Character should have attributes after finalization")
 	assert.Len(t, finalChar.Attributes, 6, "Character should have all 6 ability scores")
 
@@ -143,9 +144,9 @@ func TestAbilityAssignmentFlow_Integration(t *testing.T) {
 	assert.True(t, finalChar.IsComplete(), "Character should be complete after finalization")
 
 	// Verify specific ability scores with racial bonuses
-	assert.Equal(t, 16, finalChar.Attributes[character2.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
-	assert.Equal(t, 16, finalChar.Attributes[character2.AttributeIntelligence].Score, "INT should be 15 + 1 racial")
-	assert.Equal(t, 13, finalChar.Attributes[character2.AttributeStrength].Score, "STR should be 13")
+	assert.Equal(t, 16, finalChar.Attributes[shared.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
+	assert.Equal(t, 16, finalChar.Attributes[shared.AttributeIntelligence].Score, "INT should be 15 + 1 racial")
+	assert.Equal(t, 13, finalChar.Attributes[shared.AttributeStrength].Score, "STR should be 13")
 }
 
 func TestUpdateDraftCharacter_AbilityAssignmentConversion(t *testing.T) {
@@ -168,15 +169,15 @@ func TestUpdateDraftCharacter_AbilityAssignmentConversion(t *testing.T) {
 		ID:      "test-char",
 		OwnerID: "test-user",
 		RealmID: "test-realm",
-		Status:  character2.CharacterStatusDraft,
+		Status:  shared.CharacterStatusDraft,
 		Race: &rulebook.Race{
 			Key:  "elf",
 			Name: "Elf",
 			AbilityBonuses: []*character2.AbilityBonus{
-				{Attribute: character2.AttributeDexterity, Bonus: 2},
+				{Attribute: shared.AttributeDexterity, Bonus: 2},
 			},
 		},
-		Attributes: make(map[character2.Attribute]*character2.AbilityScore),
+		Attributes: make(map[shared.Attribute]*character2.AbilityScore),
 	}
 
 	// Mock the initial create
@@ -207,12 +208,12 @@ func TestUpdateDraftCharacter_AbilityAssignmentConversion(t *testing.T) {
 	// Verify the conversion happened immediately
 	require.NotNil(t, updated, "Updated character should not be nil")
 	assert.NotEmpty(t, updated.Attributes, "Attributes should be populated after assignment")
-	assert.NotNil(t, updated.Attributes[character2.AttributeDexterity], "DEX attribute should exist")
-	assert.Equal(t, 16, updated.Attributes[character2.AttributeDexterity].Score, "DEX should include racial bonus")
-	assert.Equal(t, 3, updated.Attributes[character2.AttributeDexterity].Bonus, "DEX modifier should be (16-10)/2 = 3")
+	assert.NotNil(t, updated.Attributes[shared.AttributeDexterity], "DEX attribute should exist")
+	assert.Equal(t, 16, updated.Attributes[shared.AttributeDexterity].Score, "DEX should include racial bonus")
+	assert.Equal(t, 3, updated.Attributes[shared.AttributeDexterity].Bonus, "DEX modifier should be (16-10)/2 = 3")
 
 	// Also verify the captured character from the Update call
 	if capturedChar != nil {
-		assert.Equal(t, 16, capturedChar.Attributes[character2.AttributeDexterity].Score, "Captured char DEX should include racial bonus")
+		assert.Equal(t, 16, capturedChar.Attributes[shared.AttributeDexterity].Score, "Captured char DEX should include racial bonus")
 	}
 }

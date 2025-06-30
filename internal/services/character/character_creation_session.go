@@ -6,6 +6,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"strings"
 	"sync"
@@ -42,10 +43,10 @@ func (s *service) StartCharacterCreation(ctx context.Context, userID, guildID st
 		OwnerID: userID,
 		RealmID: guildID,
 		Name:    "Draft Character",
-		Status:  character.CharacterStatusDraft,
+		Status:  shared.CharacterStatusDraft,
 		Level:   1,
 		// Initialize empty maps
-		Attributes:    make(map[character.Attribute]*character.AbilityScore),
+		Attributes:    make(map[shared.Attribute]*character.AbilityScore),
 		Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
 		EquippedSlots: make(map[character.Slot]equipment.Equipment),

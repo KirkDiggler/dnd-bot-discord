@@ -80,23 +80,23 @@ func apiAbilityBonusToAbilityBonus(input *apiEntities.AbilityBonus) *character.A
 	}
 }
 
-func referenceItemKeyToAttribute(input string) character.Attribute {
+func referenceItemKeyToAttribute(input string) shared.Attribute {
 	switch input {
 	case "str":
-		return character.AttributeStrength
+		return shared.AttributeStrength
 	case "dex":
-		return character.AttributeDexterity
+		return shared.AttributeDexterity
 	case "con":
-		return character.AttributeConstitution
+		return shared.AttributeConstitution
 	case "int":
-		return character.AttributeIntelligence
+		return shared.AttributeIntelligence
 	case "wis":
-		return character.AttributeWisdom
+		return shared.AttributeWisdom
 	case "cha":
-		return character.AttributeCharisma
+		return shared.AttributeCharisma
 	default:
 		log.Fatalf("Unknown attribute %s", input)
-		return character.AttributeNone
+		return shared.AttributeNone
 	}
 }
 

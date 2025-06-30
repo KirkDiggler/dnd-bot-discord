@@ -5,6 +5,7 @@ import (
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
@@ -43,7 +44,7 @@ func TestAbilityAssignmentPersistence_SimulateDiscordFlow(t *testing.T) {
 
 	draft, err := svc.GetOrCreateDraftCharacter(ctx, userID, realmID)
 	require.NoError(t, err)
-	assert.Equal(t, character2.CharacterStatusDraft, draft.Status)
+	assert.Equal(t, shared.CharacterStatusDraft, draft.Status)
 
 	// Step 2: UpdateDraftCharacter with ability assignments
 	// This simulates the assign_abilities handler
@@ -52,13 +53,13 @@ func TestAbilityAssignmentPersistence_SimulateDiscordFlow(t *testing.T) {
 		OwnerID: userID,
 		RealmID: realmID,
 		Name:    "Draft Character",
-		Status:  character2.CharacterStatusDraft,
+		Status:  shared.CharacterStatusDraft,
 		Level:   1,
 		Race: &rulebook.Race{
 			Key:  "elf",
 			Name: "Elf",
 			AbilityBonuses: []*character2.AbilityBonus{
-				{Attribute: character2.AttributeDexterity, Bonus: 2},
+				{Attribute: shared.AttributeDexterity, Bonus: 2},
 			},
 		},
 		Class: &rulebook.Class{
@@ -73,7 +74,7 @@ func TestAbilityAssignmentPersistence_SimulateDiscordFlow(t *testing.T) {
 			"DEX": "roll_1",
 		},
 		// Key point: UpdateDraftCharacter should populate Attributes
-		Attributes:    make(map[character2.Attribute]*character2.AbilityScore),
+		Attributes:    make(map[shared.Attribute]*character2.AbilityScore),
 		Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
 		EquippedSlots: make(map[character2.Slot]equipment.Equipment),

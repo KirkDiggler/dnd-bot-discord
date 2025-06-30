@@ -3,6 +3,7 @@ package dungeon_test
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -133,8 +134,8 @@ func TestCharacterSelectionEdgeCases(t *testing.T) {
 	t.Run("Multiple active characters requires manual selection", func(t *testing.T) {
 		// User has multiple characters - can't auto-select
 		characters := []*character.Character{
-			{ID: "char-1", Name: "Aragorn", Status: character.CharacterStatusActive},
-			{ID: "char-2", Name: "Gandalf", Status: character.CharacterStatusActive},
+			{ID: "char-1", Name: "Aragorn", Status: shared.CharacterStatusActive},
+			{ID: "char-2", Name: "Gandalf", Status: shared.CharacterStatusActive},
 		}
 
 		// Should not auto-select when multiple active
@@ -142,7 +143,7 @@ func TestCharacterSelectionEdgeCases(t *testing.T) {
 
 		var activeCount int
 		for _, char := range characters {
-			if char.Status == character.CharacterStatusActive {
+			if char.Status == shared.CharacterStatusActive {
 				activeCount++
 			}
 		}
@@ -151,14 +152,14 @@ func TestCharacterSelectionEdgeCases(t *testing.T) {
 
 	t.Run("Single active character can auto-select", func(t *testing.T) {
 		characters := []*character.Character{
-			{ID: "char-1", Name: "Legolas", Status: character.CharacterStatusActive},
-			{ID: "char-2", Name: "Gimli", Status: character.CharacterStatusArchived},
-			{ID: "char-3", Name: "Boromir", Status: character.CharacterStatusDraft},
+			{ID: "char-1", Name: "Legolas", Status: shared.CharacterStatusActive},
+			{ID: "char-2", Name: "Gimli", Status: shared.CharacterStatusArchived},
+			{ID: "char-3", Name: "Boromir", Status: shared.CharacterStatusDraft},
 		}
 
 		var activeChars []*character.Character
 		for _, char := range characters {
-			if char.Status == character.CharacterStatusActive {
+			if char.Status == shared.CharacterStatusActive {
 				activeChars = append(activeChars, char)
 			}
 		}
@@ -169,13 +170,13 @@ func TestCharacterSelectionEdgeCases(t *testing.T) {
 
 	t.Run("No active characters prevents joining", func(t *testing.T) {
 		characters := []*character.Character{
-			{ID: "char-1", Name: "Draft Hero", Status: character.CharacterStatusDraft},
-			{ID: "char-2", Name: "Old Hero", Status: character.CharacterStatusArchived},
+			{ID: "char-1", Name: "Draft Hero", Status: shared.CharacterStatusDraft},
+			{ID: "char-2", Name: "Old Hero", Status: shared.CharacterStatusArchived},
 		}
 
 		var activeChars []*character.Character
 		for _, char := range characters {
-			if char.Status == character.CharacterStatusActive {
+			if char.Status == shared.CharacterStatusActive {
 				activeChars = append(activeChars, char)
 			}
 		}

@@ -5,6 +5,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
@@ -53,9 +54,9 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 		OwnerID:       user.ID,
 		RealmID:       "test_guild",
 		Name:          "Draft Character",
-		Status:        character.CharacterStatusDraft,
+		Status:        shared.CharacterStatusDraft,
 		Level:         1,
-		Attributes:    make(map[character.Attribute]*character.AbilityScore),
+		Attributes:    make(map[shared.Attribute]*character.AbilityScore),
 		Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
 		EquippedSlots: make(map[character.Slot]equipment.Equipment),
@@ -73,7 +74,7 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 		Key:  "elf",
 		Name: "Elf",
 		AbilityBonuses: []*character.AbilityBonus{
-			{Attribute: character.AttributeDexterity, Bonus: 2},
+			{Attribute: shared.AttributeDexterity, Bonus: 2},
 		},
 	}, nil).AnyTimes()
 
@@ -90,13 +91,13 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 		OwnerID: user.ID,
 		RealmID: "test_guild",
 		Name:    "Draft Character",
-		Status:  character.CharacterStatusDraft,
+		Status:  shared.CharacterStatusDraft,
 		Level:   1,
 		Race: &rulebook.Race{
 			Key:  "elf",
 			Name: "Elf",
 			AbilityBonuses: []*character.AbilityBonus{
-				{Attribute: character.AttributeDexterity, Bonus: 2},
+				{Attribute: shared.AttributeDexterity, Bonus: 2},
 			},
 		},
 		Class: &rulebook.Class{
@@ -122,7 +123,7 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 			"CHA": "roll_6",
 		},
 		// But Attributes should be empty at this point (conversion happens in UpdateDraftCharacter)
-		Attributes:    make(map[character.Attribute]*character.AbilityScore),
+		Attributes:    make(map[shared.Attribute]*character.AbilityScore),
 		Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
 		EquippedSlots: make(map[character.Slot]equipment.Equipment),
@@ -143,15 +144,15 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 		ID:      "draft_123",
 		OwnerID: user.ID,
 		RealmID: "test_guild",
-		Name:    "TestMonk",                      // Name added
-		Status:  character.CharacterStatusActive, // Status changed
+		Name:    "TestMonk",                   // Name added
+		Status:  shared.CharacterStatusActive, // Status changed
 		Level:   1,
 		Race:    charWithAbilities.Race,
 		Class:   charWithAbilities.Class,
 		// THE BUG: In real world, this ends up empty despite having AbilityAssignments
 		AbilityRolls:       charWithAbilities.AbilityRolls,
 		AbilityAssignments: charWithAbilities.AbilityAssignments,
-		Attributes:         make(map[character.Attribute]*character.AbilityScore), // EMPTY!
+		Attributes:         make(map[shared.Attribute]*character.AbilityScore), // EMPTY!
 		Proficiencies:      make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		Inventory:          make(map[equipment.EquipmentType][]equipment.Equipment),
 		EquippedSlots:      make(map[character.Slot]equipment.Equipment),
@@ -160,7 +161,7 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 	// This should save the broken character (reproducing the bug)
 	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, char *character.Character) error {
 		// Verify this is the broken state we see in production
-		assert.Equal(t, character.CharacterStatusActive, char.Status, "Character should be finalized")
+		assert.Equal(t, shared.CharacterStatusActive, char.Status, "Character should be finalized")
 		assert.Empty(t, char.Attributes, "BUG: Character has empty attributes")
 		assert.NotEmpty(t, char.AbilityAssignments, "Character should still have ability assignments")
 		assert.False(t, char.IsComplete(), "Character should be incomplete due to missing attributes")

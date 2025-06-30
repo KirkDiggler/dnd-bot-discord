@@ -6,6 +6,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
@@ -71,7 +72,7 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 	// Find first active character
 	var playerChar *character.Character
 	for _, char := range chars {
-		if char.Status == character.CharacterStatusActive {
+		if char.Status == shared.CharacterStatusActive {
 			playerChar = char
 			break
 		}

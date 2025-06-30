@@ -4,6 +4,7 @@ import (
 	"context"
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"net/http"
 	"testing"
 	"time"
@@ -102,9 +103,9 @@ func TestRangerCharacterCreation_Integration(t *testing.T) {
 		"Should have exactly 3 skill proficiencies")
 
 	// Verify ability scores with racial bonuses
-	assert.Equal(t, 15, finalized.Attributes[character2.AttributeStrength].Score, "STR should be 14 + 1 (human)")
-	assert.Equal(t, 17, finalized.Attributes[character2.AttributeDexterity].Score, "DEX should be 16 + 1 (human)")
-	assert.Equal(t, 16, finalized.Attributes[character2.AttributeWisdom].Score, "WIS should be 15 + 1 (human)")
+	assert.Equal(t, 15, finalized.Attributes[shared.AttributeStrength].Score, "STR should be 14 + 1 (human)")
+	assert.Equal(t, 17, finalized.Attributes[shared.AttributeDexterity].Score, "DEX should be 16 + 1 (human)")
+	assert.Equal(t, 16, finalized.Attributes[shared.AttributeWisdom].Score, "WIS should be 15 + 1 (human)")
 
 	// Verify HP calculation (10 + CON modifier)
 	expectedHP := 10 + 2 // d10 hit die + 2 CON modifier (14 CON with +1 human = 15 = +2 modifier)

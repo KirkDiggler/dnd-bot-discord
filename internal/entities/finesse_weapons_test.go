@@ -144,12 +144,12 @@ func TestFinesseWeapon_UseDexForAttack(t *testing.T) {
 			char := &character.Character{
 				Level:    1,
 				Features: tt.features,
-				Attributes: map[character.Attribute]*character.AbilityScore{
-					character.AttributeStrength: {
+				Attributes: map[shared.Attribute]*character.AbilityScore{
+					shared.AttributeStrength: {
 						Score: tt.strScore,
 						Bonus: (tt.strScore - 10) / 2,
 					},
-					character.AttributeDexterity: {
+					shared.AttributeDexterity: {
 						Score: tt.dexScore,
 						Bonus: (tt.dexScore - 10) / 2,
 					},
@@ -192,9 +192,9 @@ func TestFinesseWeapon_DualWielding(t *testing.T) {
 	character := &character.Character{
 		Name:  "Dual Wielder",
 		Level: 1,
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeStrength:  {Score: 12, Bonus: 1}, // +1
-			character.AttributeDexterity: {Score: 16, Bonus: 3}, // +3
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength:  {Score: 12, Bonus: 1}, // +1
+			shared.AttributeDexterity: {Score: 16, Bonus: 3}, // +3
 		},
 		Features: []*rulebook.CharacterFeature{}, // No special features
 		EquippedSlots: map[character.Slot]equipment.Equipment{

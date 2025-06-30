@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"os"
 
@@ -63,10 +63,10 @@ func main() {
 		dexMod := 0
 		wisMod := 0
 
-		if dex, ok := char.Attributes[character.AttributeDexterity]; ok && dex != nil {
+		if dex, ok := char.Attributes[shared.AttributeDexterity]; ok && dex != nil {
 			dexMod = dex.Bonus
 		}
-		if wis, ok := char.Attributes[character.AttributeWisdom]; ok && wis != nil {
+		if wis, ok := char.Attributes[shared.AttributeWisdom]; ok && wis != nil {
 			wisMod = wis.Bonus
 		}
 

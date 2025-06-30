@@ -1,7 +1,7 @@
-package character_test
+package shared_test
 
 import (
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,12 +10,12 @@ import (
 func TestActiveAbility_CanUse(t *testing.T) {
 	tests := []struct {
 		name     string
-		ability  *character.ActiveAbility
+		ability  *shared.ActiveAbility
 		expected bool
 	}{
 		{
 			name: "ability with uses remaining",
-			ability: &character.ActiveAbility{
+			ability: &shared.ActiveAbility{
 				UsesMax:       3,
 				UsesRemaining: 2,
 			},
@@ -23,7 +23,7 @@ func TestActiveAbility_CanUse(t *testing.T) {
 		},
 		{
 			name: "ability with no uses remaining",
-			ability: &character.ActiveAbility{
+			ability: &shared.ActiveAbility{
 				UsesMax:       3,
 				UsesRemaining: 0,
 			},
@@ -31,7 +31,7 @@ func TestActiveAbility_CanUse(t *testing.T) {
 		},
 		{
 			name: "unlimited use ability",
-			ability: &character.ActiveAbility{
+			ability: &shared.ActiveAbility{
 				UsesMax:       -1,
 				UsesRemaining: 0,
 			},
@@ -48,7 +48,7 @@ func TestActiveAbility_CanUse(t *testing.T) {
 
 func TestActiveAbility_Use(t *testing.T) {
 	t.Run("use limited ability", func(t *testing.T) {
-		ability := &character.ActiveAbility{
+		ability := &shared.ActiveAbility{
 			UsesMax:       3,
 			UsesRemaining: 2,
 			Duration:      10,
@@ -61,7 +61,7 @@ func TestActiveAbility_Use(t *testing.T) {
 	})
 
 	t.Run("use unlimited ability", func(t *testing.T) {
-		ability := &character.ActiveAbility{
+		ability := &shared.ActiveAbility{
 			UsesMax:       -1,
 			UsesRemaining: 0,
 		}
@@ -72,7 +72,7 @@ func TestActiveAbility_Use(t *testing.T) {
 	})
 
 	t.Run("cannot use depleted ability", func(t *testing.T) {
-		ability := &character.ActiveAbility{
+		ability := &shared.ActiveAbility{
 			UsesMax:       1,
 			UsesRemaining: 0,
 		}
@@ -84,7 +84,7 @@ func TestActiveAbility_Use(t *testing.T) {
 
 func TestActiveAbility_TickDuration(t *testing.T) {
 	t.Run("tick active ability", func(t *testing.T) {
-		ability := &character.ActiveAbility{
+		ability := &shared.ActiveAbility{
 			Duration: 3,
 			IsActive: true,
 		}
@@ -103,7 +103,7 @@ func TestActiveAbility_TickDuration(t *testing.T) {
 	})
 
 	t.Run("tick ability with no duration", func(t *testing.T) {
-		ability := &character.ActiveAbility{
+		ability := &shared.ActiveAbility{
 			Duration: 0,
 			IsActive: true,
 		}
@@ -116,23 +116,23 @@ func TestActiveAbility_TickDuration(t *testing.T) {
 
 func TestActiveAbility_RestoreUses(t *testing.T) {
 	t.Run("long rest restores all abilities", func(t *testing.T) {
-		abilities := []*character.ActiveAbility{
+		abilities := []*shared.ActiveAbility{
 			{
-				RestType:      character.RestTypeLong,
+				RestType:      shared.RestTypeLong,
 				UsesMax:       3,
 				UsesRemaining: 0,
 				IsActive:      true,
 				Duration:      5,
 			},
 			{
-				RestType:      character.RestTypeShort,
+				RestType:      shared.RestTypeShort,
 				UsesMax:       2,
 				UsesRemaining: 0,
 			},
 		}
 
 		for _, ability := range abilities {
-			ability.RestoreUses(character.RestTypeLong)
+			ability.RestoreUses(shared.RestTypeLong)
 			assert.Equal(t, ability.UsesMax, ability.UsesRemaining)
 			assert.False(t, ability.IsActive)
 			assert.Equal(t, 0, ability.Duration)
@@ -140,33 +140,33 @@ func TestActiveAbility_RestoreUses(t *testing.T) {
 	})
 
 	t.Run("short rest only restores short rest abilities", func(t *testing.T) {
-		longRestAbility := &character.ActiveAbility{
-			RestType:      character.RestTypeLong,
+		longRestAbility := &shared.ActiveAbility{
+			RestType:      shared.RestTypeLong,
 			UsesMax:       3,
 			UsesRemaining: 0,
 		}
 
-		shortRestAbility := &character.ActiveAbility{
-			RestType:      character.RestTypeShort,
+		shortRestAbility := &shared.ActiveAbility{
+			RestType:      shared.RestTypeShort,
 			UsesMax:       2,
 			UsesRemaining: 0,
 		}
 
-		longRestAbility.RestoreUses(character.RestTypeShort)
-		shortRestAbility.RestoreUses(character.RestTypeShort)
+		longRestAbility.RestoreUses(shared.RestTypeShort)
+		shortRestAbility.RestoreUses(shared.RestTypeShort)
 
 		assert.Equal(t, 0, longRestAbility.UsesRemaining)  // Should not restore
 		assert.Equal(t, 2, shortRestAbility.UsesRemaining) // Should restore
 	})
 
 	t.Run("never restore abilities are not restored", func(t *testing.T) {
-		ability := &character.ActiveAbility{
-			RestType:      character.RestTypeNone,
+		ability := &shared.ActiveAbility{
+			RestType:      shared.RestTypeNone,
 			UsesMax:       1,
 			UsesRemaining: 0,
 		}
 
-		ability.RestoreUses(character.RestTypeLong)
+		ability.RestoreUses(shared.RestTypeLong)
 		assert.Equal(t, 0, ability.UsesRemaining)
 	})
 }

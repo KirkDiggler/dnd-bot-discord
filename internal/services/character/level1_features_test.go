@@ -5,6 +5,7 @@ import (
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
@@ -39,7 +40,7 @@ func TestLevel1Features(t *testing.T) {
 			OwnerID:          userID,
 			RealmID:          realmID,
 			Name:             "Grog",
-			Status:           character2.CharacterStatusDraft,
+			Status:           shared.CharacterStatusDraft,
 			Level:            1,
 			HitDie:           12,
 			MaxHitPoints:     15, // 12 + 3 CON
@@ -112,7 +113,7 @@ func TestLevel1Features(t *testing.T) {
 		result, err := svc.FinalizeDraftCharacter(ctx, characterID)
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, character2.CharacterStatusActive, result.Status)
+		assert.Equal(t, shared.CharacterStatusActive, result.Status)
 	})
 
 	t.Run("Monk Unarmored Defense", func(t *testing.T) {
@@ -126,7 +127,7 @@ func TestLevel1Features(t *testing.T) {
 			OwnerID:          userID,
 			RealmID:          realmID,
 			Name:             "Kwai Chang",
-			Status:           character2.CharacterStatusDraft,
+			Status:           shared.CharacterStatusDraft,
 			Level:            1,
 			HitDie:           8,
 			MaxHitPoints:     10, // 8 + 2 CON
@@ -210,7 +211,7 @@ func TestLevel1Features(t *testing.T) {
 		result, err := svc.FinalizeDraftCharacter(ctx, characterID)
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, character2.CharacterStatusActive, result.Status)
+		assert.Equal(t, shared.CharacterStatusActive, result.Status)
 	})
 
 	t.Run("Fighter with Armor", func(t *testing.T) {
@@ -224,7 +225,7 @@ func TestLevel1Features(t *testing.T) {
 			OwnerID:          userID,
 			RealmID:          realmID,
 			Name:             "Ser Arthur",
-			Status:           character2.CharacterStatusDraft,
+			Status:           shared.CharacterStatusDraft,
 			Level:            1,
 			HitDie:           10,
 			MaxHitPoints:     12, // 10 + 2 CON
@@ -305,7 +306,7 @@ func TestLevel1Features(t *testing.T) {
 		result, err := svc.FinalizeDraftCharacter(ctx, characterID)
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, character2.CharacterStatusActive, result.Status)
+		assert.Equal(t, shared.CharacterStatusActive, result.Status)
 	})
 
 	t.Run("UpdateDraftCharacter applies features when class changes", func(t *testing.T) {
@@ -319,15 +320,15 @@ func TestLevel1Features(t *testing.T) {
 			OwnerID: userID,
 			RealmID: realmID,
 			Name:    "Changeling",
-			Status:  character2.CharacterStatusDraft,
+			Status:  shared.CharacterStatusDraft,
 			Level:   1,
-			Attributes: map[character2.Attribute]*character2.AbilityScore{
-				character2.AttributeStrength:     {Score: 10, Bonus: 0},
-				character2.AttributeDexterity:    {Score: 14, Bonus: 2},
-				character2.AttributeConstitution: {Score: 16, Bonus: 3},
-				character2.AttributeIntelligence: {Score: 12, Bonus: 1},
-				character2.AttributeWisdom:       {Score: 13, Bonus: 1},
-				character2.AttributeCharisma:     {Score: 8, Bonus: -1},
+			Attributes: map[shared.Attribute]*character2.AbilityScore{
+				shared.AttributeStrength:     {Score: 10, Bonus: 0},
+				shared.AttributeDexterity:    {Score: 14, Bonus: 2},
+				shared.AttributeConstitution: {Score: 16, Bonus: 3},
+				shared.AttributeIntelligence: {Score: 12, Bonus: 1},
+				shared.AttributeWisdom:       {Score: 13, Bonus: 1},
+				shared.AttributeCharisma:     {Score: 8, Bonus: -1},
 			},
 			Race: &rulebook.Race{
 				Key:  "human",

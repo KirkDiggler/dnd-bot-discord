@@ -3,6 +3,7 @@ package character
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"testing"
 
@@ -17,14 +18,14 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments_Simple(t *testing.T) 
 	char := &character.Character{
 		ID:     "test-char-1",
 		Name:   "Test Character",
-		Status: character.CharacterStatusDraft,
+		Status: shared.CharacterStatusDraft,
 		Level:  1,
 		Race: &rulebook.Race{
 			Key:  "elf",
 			Name: "Elf",
 			AbilityBonuses: []*character.AbilityBonus{
-				{Attribute: character.AttributeDexterity, Bonus: 2},
-				{Attribute: character.AttributeIntelligence, Bonus: 1},
+				{Attribute: shared.AttributeDexterity, Bonus: 2},
+				{Attribute: shared.AttributeIntelligence, Bonus: 1},
 			},
 		},
 		Class: &rulebook.Class{
@@ -48,7 +49,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments_Simple(t *testing.T) 
 			"WIS": "roll_5", // Wisdom is roll 5 and has a score of 11
 			"CHA": "roll_6", // Charisma is roll 6 and has a score of 10
 		},
-		Attributes: make(map[character.Attribute]*character.AbilityScore), // Empty attributes
+		Attributes: make(map[shared.Attribute]*character.AbilityScore), // Empty attributes
 	}
 
 	// Test the conversion logic from FinalizeDraftCharacter
@@ -61,7 +62,7 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments_Simple(t *testing.T) 
 		}
 
 		// Initialize attributes map
-		char.Attributes = make(map[character.Attribute]*character.AbilityScore)
+		char.Attributes = make(map[shared.Attribute]*character.AbilityScore)
 
 		// Convert assignments to attributes
 		for abilityStr, rollID := range char.AbilityAssignments {
@@ -71,20 +72,20 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments_Simple(t *testing.T) 
 			}
 			rollValue := rollValues[rollID]
 			// Parse ability string to Attribute type
-			var attr character.Attribute
+			var attr shared.Attribute
 			switch abilityStr {
 			case "STR":
-				attr = character.AttributeStrength
+				attr = shared.AttributeStrength
 			case "DEX":
-				attr = character.AttributeDexterity
+				attr = shared.AttributeDexterity
 			case "CON":
-				attr = character.AttributeConstitution
+				attr = shared.AttributeConstitution
 			case "INT":
-				attr = character.AttributeIntelligence
+				attr = shared.AttributeIntelligence
 			case "WIS":
-				attr = character.AttributeWisdom
+				attr = shared.AttributeWisdom
 			case "CHA":
-				attr = character.AttributeCharisma
+				attr = shared.AttributeCharisma
 			default:
 				continue
 			}
@@ -117,17 +118,17 @@ func TestFinalizeDraftCharacter_ConvertsAbilityAssignments_Simple(t *testing.T) 
 	assert.Len(t, char.Attributes, 6)
 
 	// Check STR (13, no racial bonus)
-	assert.NotNil(t, char.Attributes[character.AttributeStrength])
-	assert.Equal(t, 13, char.Attributes[character.AttributeStrength].Score)
-	assert.Equal(t, 1, char.Attributes[character.AttributeStrength].Bonus) // (13-10)/2 = 1
+	assert.NotNil(t, char.Attributes[shared.AttributeStrength])
+	assert.Equal(t, 13, char.Attributes[shared.AttributeStrength].Score)
+	assert.Equal(t, 1, char.Attributes[shared.AttributeStrength].Bonus) // (13-10)/2 = 1
 
 	// Check DEX (14 + 2 racial = 16)
-	assert.NotNil(t, char.Attributes[character.AttributeDexterity])
-	assert.Equal(t, 16, char.Attributes[character.AttributeDexterity].Score)
-	assert.Equal(t, 3, char.Attributes[character.AttributeDexterity].Bonus) // (16-10)/2 = 3
+	assert.NotNil(t, char.Attributes[shared.AttributeDexterity])
+	assert.Equal(t, 16, char.Attributes[shared.AttributeDexterity].Score)
+	assert.Equal(t, 3, char.Attributes[shared.AttributeDexterity].Bonus) // (16-10)/2 = 3
 
 	// Check INT (15 + 1 racial = 16)
-	assert.NotNil(t, char.Attributes[character.AttributeIntelligence])
-	assert.Equal(t, 16, char.Attributes[character.AttributeIntelligence].Score)
-	assert.Equal(t, 3, char.Attributes[character.AttributeIntelligence].Bonus) // (16-10)/2 = 3
+	assert.NotNil(t, char.Attributes[shared.AttributeIntelligence])
+	assert.Equal(t, 16, char.Attributes[shared.AttributeIntelligence].Score)
+	assert.Equal(t, 3, char.Attributes[shared.AttributeIntelligence].Bonus) // (16-10)/2 = 3
 }

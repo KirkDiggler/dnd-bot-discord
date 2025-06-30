@@ -16,8 +16,8 @@ func TestCharacter_EquipShield(t *testing.T) {
 	char := &character.Character{
 		ID:   "test-char",
 		Name: "Shield Bearer",
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeDexterity: {Score: 14, Bonus: 2},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeDexterity: {Score: 14, Bonus: 2},
 		},
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
 		EquippedSlots: make(map[character.Slot]equipment.Equipment),
@@ -58,9 +58,9 @@ func TestCharacter_ShieldAndWeapon(t *testing.T) {
 	char := &character.Character{
 		ID:   "test-char",
 		Name: "Sword and Board",
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeDexterity: {Score: 14, Bonus: 2},
-			character.AttributeStrength:  {Score: 16, Bonus: 3},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeDexterity: {Score: 14, Bonus: 2},
+			shared.AttributeStrength:  {Score: 16, Bonus: 3},
 		},
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
 		EquippedSlots: make(map[character.Slot]equipment.Equipment),
@@ -121,8 +121,8 @@ func TestCharacter_ShieldPreventsOffhandWeapon(t *testing.T) {
 		Name:          "Conflicted Warrior",
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
 		EquippedSlots: make(map[character.Slot]equipment.Equipment),
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeDexterity: {Score: 14, Bonus: 2},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeDexterity: {Score: 14, Bonus: 2},
 		},
 	}
 

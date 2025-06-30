@@ -2,7 +2,7 @@ package character
 
 import (
 	"fmt"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
@@ -287,13 +287,13 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 	return err
 }
 
-func getColorForStatus(status character.CharacterStatus) int {
+func getColorForStatus(status shared.CharacterStatus) int {
 	switch status {
-	case character.CharacterStatusActive:
+	case shared.CharacterStatusActive:
 		return 0x2ecc71 // Green
-	case character.CharacterStatusDraft:
+	case shared.CharacterStatusDraft:
 		return 0xf39c12 // Orange
-	case character.CharacterStatusArchived:
+	case shared.CharacterStatusArchived:
 		return 0x95a5a6 // Gray
 	default:
 		return 0x3498db // Blue

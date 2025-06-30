@@ -3,6 +3,7 @@ package entities
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
@@ -20,13 +21,13 @@ func TestCharacter_RangerInitialization(t *testing.T) {
 			Key:  "ranger",
 			Name: "Ranger",
 		},
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeStrength:     {Score: 14, Bonus: 2},
-			character.AttributeDexterity:    {Score: 16, Bonus: 3},
-			character.AttributeConstitution: {Score: 13, Bonus: 1},
-			character.AttributeIntelligence: {Score: 10, Bonus: 0},
-			character.AttributeWisdom:       {Score: 15, Bonus: 2},
-			character.AttributeCharisma:     {Score: 8, Bonus: -1},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength:     {Score: 14, Bonus: 2},
+			shared.AttributeDexterity:    {Score: 16, Bonus: 3},
+			shared.AttributeConstitution: {Score: 13, Bonus: 1},
+			shared.AttributeIntelligence: {Score: 10, Bonus: 0},
+			shared.AttributeWisdom:       {Score: 15, Bonus: 2},
+			shared.AttributeCharisma:     {Score: 8, Bonus: -1},
 		},
 		MaxHitPoints:     11, // d10 + 1 CON
 		CurrentHitPoints: 11,

@@ -1,7 +1,6 @@
 package shared
 
 import (
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 )
 
@@ -63,17 +62,17 @@ func (hp *HPResource) AddTemporaryHP(amount int) {
 
 // CharacterResources tracks all expendable resources
 type CharacterResources struct {
-	HP            HPResource                          `json:"hp"`
-	SpellSlots    map[int]SpellSlotInfo               `json:"spell_slots"` // level -> slot info
-	Abilities     map[string]*character.ActiveAbility `json:"abilities"`   // key -> ability
-	ActiveEffects []*ActiveEffect                     `json:"active_effects"`
-	HitDice       HitDiceResource                     `json:"hit_dice"`
+	HP            HPResource                `json:"hp"`
+	SpellSlots    map[int]SpellSlotInfo     `json:"spell_slots"` // level -> slot info
+	Abilities     map[string]*ActiveAbility `json:"abilities"`   // key -> ability
+	ActiveEffects []*ActiveEffect           `json:"active_effects"`
+	HitDice       HitDiceResource           `json:"hit_dice"`
 
 	// Combat state tracking
 	SneakAttackUsedThisTurn bool `json:"sneak_attack_used_this_turn"`
 
 	// Action economy for current turn
-	ActionEconomy character.ActionEconomy `json:"action_economy"`
+	ActionEconomy ActionEconomy `json:"action_economy"`
 }
 
 // SpellSlotInfo tracks spell slots at a specific level
@@ -107,7 +106,7 @@ func (r *CharacterResources) Initialize(class *rulebook.Class, level int) {
 
 	// Initialize abilities map
 	if r.Abilities == nil {
-		r.Abilities = make(map[string]*character.ActiveAbility)
+		r.Abilities = make(map[string]*ActiveAbility)
 	}
 
 	// Initialize spell slots if caster
@@ -162,7 +161,7 @@ func (r *CharacterResources) UseSpellSlot(level int) bool {
 func (r *CharacterResources) ShortRest() {
 	// Restore abilities that come back on short rest
 	for _, ability := range r.Abilities {
-		ability.RestoreUses(character.RestTypeShort)
+		ability.RestoreUses(RestTypeShort)
 	}
 
 	// Only warlock (pact magic) spell slots restore on short rest
@@ -185,7 +184,7 @@ func (r *CharacterResources) LongRest() {
 
 	// Restore all abilities
 	for _, ability := range r.Abilities {
-		ability.RestoreUses(character.RestTypeLong)
+		ability.RestoreUses(RestTypeLong)
 	}
 
 	// Restore all spell slots

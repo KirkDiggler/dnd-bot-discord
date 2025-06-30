@@ -5,6 +5,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,9 +16,9 @@ func TestWeaponAttackCalculations(t *testing.T) {
 	// Create a test character
 	char := &character.Character{
 		Level: 1,
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeStrength:  {Score: 16, Bonus: 3}, // +3 modifier
-			character.AttributeDexterity: {Score: 14, Bonus: 2}, // +2 modifier
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength:  {Score: 16, Bonus: 3}, // +3 modifier
+			shared.AttributeDexterity: {Score: 14, Bonus: 2}, // +2 modifier
 		},
 		Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
 			rulebook.ProficiencyTypeWeapon: {

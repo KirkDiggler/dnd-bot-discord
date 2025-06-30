@@ -5,6 +5,7 @@ import (
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
@@ -39,14 +40,14 @@ func TestAbilityAssignmentBug_CharacterShowsZeroAttributes(t *testing.T) {
 		Name:    "NotGonnaWorkHere",
 		OwnerID: "user_123",
 		RealmID: "test_realm",
-		Status:  character2.CharacterStatusDraft,
+		Status:  shared.CharacterStatusDraft,
 		Level:   1,
 		Race: &rulebook.Race{
 			Key:  "elf",
 			Name: "Elf",
 			AbilityBonuses: []*character2.AbilityBonus{
-				{Attribute: character2.AttributeDexterity, Bonus: 2},
-				{Attribute: character2.AttributeIntelligence, Bonus: 1},
+				{Attribute: shared.AttributeDexterity, Bonus: 2},
+				{Attribute: shared.AttributeIntelligence, Bonus: 1},
 			},
 		},
 		Class: &rulebook.Class{
@@ -71,7 +72,7 @@ func TestAbilityAssignmentBug_CharacterShowsZeroAttributes(t *testing.T) {
 			"WIS": "roll_5", // Wisdom is roll 5 and has a score of 11
 			"CHA": "roll_6", // Charisma is roll 6 and has a score of 10
 		},
-		Attributes:    map[character2.Attribute]*character2.AbilityScore{}, // Empty!
+		Attributes:    map[shared.Attribute]*character2.AbilityScore{}, // Empty!
 		Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
 		EquippedSlots: make(map[character2.Slot]equipment.Equipment),
@@ -107,8 +108,8 @@ func TestAbilityAssignmentBug_CharacterShowsZeroAttributes(t *testing.T) {
 
 	// Verify specific conversions with racial bonuses
 	if len(finalChar.Attributes) > 0 {
-		assert.Equal(t, 16, finalChar.Attributes[character2.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
-		assert.Equal(t, 16, finalChar.Attributes[character2.AttributeIntelligence].Score, "INT should be 15 + 1 racial")
+		assert.Equal(t, 16, finalChar.Attributes[shared.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
+		assert.Equal(t, 16, finalChar.Attributes[shared.AttributeIntelligence].Score, "INT should be 15 + 1 racial")
 	}
 
 	// Verify the character shows as complete

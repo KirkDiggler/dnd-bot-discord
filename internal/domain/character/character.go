@@ -23,14 +23,6 @@ const (
 	SlotNone      Slot = "none"
 )
 
-type CharacterStatus string
-
-const (
-	CharacterStatusDraft    CharacterStatus = "draft"
-	CharacterStatusActive   CharacterStatus = "active"
-	CharacterStatusArchived CharacterStatus = "archived"
-)
-
 // AbilityRoll represents a single ability score roll with a unique ID
 type AbilityRoll struct {
 	ID    string `json:"id"`
@@ -46,7 +38,7 @@ type Character struct {
 	Race               *rulebook.Race
 	Class              *rulebook.Class
 	Background         *rulebook.Background
-	Attributes         map[Attribute]*AbilityScore
+	Attributes         map[shared.Attribute]*AbilityScore
 	Rolls              []*dice.RollResult
 	AbilityRolls       []AbilityRoll     // New field for ability score rolls with IDs
 	AbilityAssignments map[string]string // Maps ability name (STR, DEX, etc.) to roll ID
@@ -65,7 +57,7 @@ type Character struct {
 
 	EquippedSlots map[Slot]equipment.Equipment
 
-	Status CharacterStatus `json:"status"`
+	Status shared.CharacterStatus `json:"status"`
 
 	// Resources tracks HP, abilities, spell slots, etc
 	Resources *shared.CharacterResources `json:"resources"`
@@ -160,7 +152,7 @@ func (c *Character) calculateAC() {
 				c.AC = armor.ArmorClass.Base
 				if armor.ArmorClass.DexBonus {
 					// TODO: load max and bonus and limit id applicable
-					c.AC += c.Attributes[AttributeDexterity].Bonus
+					c.AC += c.Attributes[shared.AttributeDexterity].Bonus
 				}
 			}
 		}
@@ -182,7 +174,7 @@ func (c *Character) calculateAC() {
 			}
 			c.AC += armor.ArmorClass.Base
 			if armor.ArmorClass.DexBonus {
-				c.AC += c.Attributes[AttributeDexterity].Bonus
+				c.AC += c.Attributes[shared.AttributeDexterity].Bonus
 			}
 		}
 	}
@@ -215,7 +207,7 @@ func (c *Character) SetHitpoints() {
 		return
 	}
 
-	if c.Attributes[AttributeConstitution] == nil {
+	if c.Attributes[shared.AttributeConstitution] == nil {
 		return
 	}
 
@@ -223,7 +215,7 @@ func (c *Character) SetHitpoints() {
 		return
 	}
 
-	c.MaxHitPoints = c.HitDie + c.Attributes[AttributeConstitution].Bonus
+	c.MaxHitPoints = c.HitDie + c.Attributes[shared.AttributeConstitution].Bonus
 	c.CurrentHitPoints = c.MaxHitPoints
 }
 
@@ -232,7 +224,7 @@ func (c *Character) getCharismaModifier() int {
 	if c.Attributes == nil {
 		return 0
 	}
-	if cha, exists := c.Attributes[AttributeCharisma]; exists && cha != nil {
+	if cha, exists := c.Attributes[shared.AttributeCharisma]; exists && cha != nil {
 		return cha.Bonus
 	}
 	return 0
@@ -246,68 +238,68 @@ func (c *Character) initializeClassAbilities() {
 
 	// Initialize abilities map if needed
 	if c.Resources.Abilities == nil {
-		c.Resources.Abilities = make(map[string]*ActiveAbility)
+		c.Resources.Abilities = make(map[string]*shared.ActiveAbility)
 	}
 
 	// Add class-specific abilities based on class key
 	switch c.Class.Key {
 	case "barbarian":
-		c.Resources.Abilities["rage"] = &ActiveAbility{
+		c.Resources.Abilities["rage"] = &shared.ActiveAbility{
 			Key:           "rage",
 			Name:          "Rage",
 			Description:   "Enter a battle fury gaining damage bonus and resistance",
 			FeatureKey:    "barbarian-rage",
-			ActionType:    AbilityTypeBonusAction,
+			ActionType:    shared.AbilityTypeBonusAction,
 			UsesMax:       2, // 2 uses at level 1
 			UsesRemaining: 2,
-			RestType:      RestTypeLong,
+			RestType:      shared.RestTypeLong,
 			Duration:      10, // 10 rounds (1 minute)
 		}
 	case "fighter":
-		c.Resources.Abilities["second-wind"] = &ActiveAbility{
+		c.Resources.Abilities["second-wind"] = &shared.ActiveAbility{
 			Key:           "second-wind",
 			Name:          "Second Wind",
 			Description:   "Regain hit points equal to 1d10 + fighter level",
 			FeatureKey:    "fighter-second-wind",
-			ActionType:    AbilityTypeBonusAction,
+			ActionType:    shared.AbilityTypeBonusAction,
 			UsesMax:       1,
 			UsesRemaining: 1,
-			RestType:      RestTypeShort,
+			RestType:      shared.RestTypeShort,
 			Duration:      0, // Instant effect
 		}
 	case "bard":
-		c.Resources.Abilities["bardic-inspiration"] = &ActiveAbility{
+		c.Resources.Abilities["bardic-inspiration"] = &shared.ActiveAbility{
 			Key:           "bardic-inspiration",
 			Name:          "Bardic Inspiration",
 			Description:   "Grant an ally a d6 to add to one ability check, attack roll, or saving throw",
 			FeatureKey:    "bard-bardic-inspiration",
-			ActionType:    AbilityTypeBonusAction,
+			ActionType:    shared.AbilityTypeBonusAction,
 			UsesMax:       c.getCharismaModifier(), // Uses equal to Charisma modifier
 			UsesRemaining: c.getCharismaModifier(),
-			RestType:      RestTypeLong,
+			RestType:      shared.RestTypeLong,
 			Duration:      10, // 10 minutes (100 rounds), but usually consumed on use
 		}
 	case "paladin":
-		c.Resources.Abilities["lay-on-hands"] = &ActiveAbility{
+		c.Resources.Abilities["lay-on-hands"] = &shared.ActiveAbility{
 			Key:           "lay-on-hands",
 			Name:          "Lay on Hands",
 			Description:   "Heal wounds with a pool of hit points equal to 5 × paladin level",
 			FeatureKey:    "paladin-lay-on-hands",
-			ActionType:    AbilityTypeAction,
+			ActionType:    shared.AbilityTypeAction,
 			UsesMax:       5 * c.Level, // 5 HP per level
 			UsesRemaining: 5 * c.Level,
-			RestType:      RestTypeLong,
+			RestType:      shared.RestTypeLong,
 			Duration:      0, // Instant effect
 		}
-		c.Resources.Abilities["divine-sense"] = &ActiveAbility{
+		c.Resources.Abilities["divine-sense"] = &shared.ActiveAbility{
 			Key:           "divine-sense",
 			Name:          "Divine Sense",
 			Description:   "Detect celestials, fiends, and undead within 60 feet",
 			FeatureKey:    "paladin-divine-sense",
-			ActionType:    AbilityTypeAction,
+			ActionType:    shared.AbilityTypeAction,
 			UsesMax:       1 + c.getCharismaModifier(), // 1 + Charisma modifier
 			UsesRemaining: 1 + c.getCharismaModifier(),
-			RestType:      RestTypeLong,
+			RestType:      shared.RestTypeLong,
 			Duration:      0, // Until end of next turn
 		}
 	case "monk":
@@ -340,9 +332,9 @@ func (c *Character) initializeClassAbilities() {
 	}
 }
 
-func (c *Character) AddAttribute(attr Attribute, score int) {
+func (c *Character) AddAttribute(attr shared.Attribute, score int) {
 	if c.Attributes == nil {
-		c.Attributes = make(map[Attribute]*AbilityScore)
+		c.Attributes = make(map[shared.Attribute]*AbilityScore)
 	}
 
 	// Calculate the modifier based on the score
@@ -357,7 +349,7 @@ func (c *Character) AddAttribute(attr Attribute, score int) {
 }
 func (c *Character) AddAbilityBonus(ab *AbilityBonus) {
 	if c.Attributes == nil {
-		c.Attributes = make(map[Attribute]*AbilityScore)
+		c.Attributes = make(map[shared.Attribute]*AbilityScore)
 	}
 
 	if _, ok := c.Attributes[ab.Attribute]; !ok {
@@ -381,9 +373,9 @@ func (c *Character) AddInventory(e equipment.Equipment) {
 	c.mu.Unlock()
 }
 
-func (c *Character) AddAbilityScoreBonus(attr Attribute, bonus int) {
+func (c *Character) AddAbilityScoreBonus(attr shared.Attribute, bonus int) {
 	if c.Attributes == nil {
-		c.Attributes = make(map[Attribute]*AbilityScore)
+		c.Attributes = make(map[shared.Attribute]*AbilityScore)
 	}
 
 	c.Attributes[attr] = c.Attributes[attr].AddBonus(bonus)
@@ -462,7 +454,7 @@ func (c *Character) String() string {
 	}
 
 	msg.WriteString("\n**Attributes**:\n")
-	for _, attr := range Attributes {
+	for _, attr := range shared.Attributes {
 		if c.Attributes[attr] == nil {
 			continue
 		}
@@ -537,7 +529,7 @@ func (c *Character) resetBackground() {
 }
 
 func (c *Character) resetAbilityScores() {
-	c.Attributes = make(map[Attribute]*AbilityScore)
+	c.Attributes = make(map[shared.Attribute]*AbilityScore)
 }
 
 // Clone creates a deep copy of the character without copying the mutex
@@ -589,7 +581,7 @@ func (c *Character) Clone() *Character {
 	}
 
 	// Deep copy Attributes map
-	clone.Attributes = make(map[Attribute]*AbilityScore)
+	clone.Attributes = make(map[shared.Attribute]*AbilityScore)
 	for k, v := range c.Attributes {
 		if v != nil {
 			scoreCopy := *v
@@ -673,7 +665,7 @@ func (c *Character) Clone() *Character {
 
 		// Deep copy abilities
 		if c.Resources.Abilities != nil {
-			clone.Resources.Abilities = make(map[string]*ActiveAbility)
+			clone.Resources.Abilities = make(map[string]*shared.ActiveAbility)
 			for key, ability := range c.Resources.Abilities {
 				if ability != nil {
 					abilityCopy := *ability
@@ -703,7 +695,7 @@ func (c *Character) Clone() *Character {
 }
 
 // GetSkillBonus calculates the total skill bonus
-func (c *Character) GetSkillBonus(skillKey string, attribute Attribute) int {
+func (c *Character) GetSkillBonus(skillKey string, attribute shared.Attribute) int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -733,7 +725,7 @@ func (c *Character) GetSkillBonus(skillKey string, attribute Attribute) int {
 }
 
 // RollSkillCheck rolls a skill check
-func (c *Character) RollSkillCheck(skillKey string, attribute Attribute) (*dice.RollResult, int, error) {
+func (c *Character) RollSkillCheck(skillKey string, attribute shared.Attribute) (*dice.RollResult, int, error) {
 	bonus := c.GetSkillBonus(skillKey, attribute)
 
 	// Roll 1d20
@@ -820,8 +812,8 @@ func (c *Character) applyFightingStyleBonusesWithHand(weapon *equipment.Weapon, 
 			// Two-weapon fighting allows adding ability modifier to off-hand damage
 			// The base off-hand damage calculation doesn't include ability modifier
 			// So we need to add it here
-			if c.Attributes != nil && c.Attributes[AttributeStrength] != nil {
-				damageBonus = c.Attributes[AttributeStrength].Bonus
+			if c.Attributes != nil && c.Attributes[shared.AttributeStrength] != nil {
+				damageBonus = c.Attributes[shared.AttributeStrength].Bonus
 			}
 		}
 	}

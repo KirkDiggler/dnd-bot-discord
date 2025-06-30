@@ -168,16 +168,16 @@ func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 			character: &character2.Character{
 				ID:     "test-fighter",
 				Name:   "Test Fighter",
-				Status: character2.CharacterStatusDraft,
+				Status: shared.CharacterStatusDraft,
 				Level:  1,
 				Class:  fighterClass,
-				Attributes: map[character2.Attribute]*character2.AbilityScore{
-					character2.AttributeStrength:     {Score: 16, Bonus: 3},
-					character2.AttributeDexterity:    {Score: 12, Bonus: 1},
-					character2.AttributeConstitution: {Score: 14, Bonus: 2},
-					character2.AttributeIntelligence: {Score: 10, Bonus: 0},
-					character2.AttributeWisdom:       {Score: 12, Bonus: 1},
-					character2.AttributeCharisma:     {Score: 8, Bonus: -1},
+				Attributes: map[shared.Attribute]*character2.AbilityScore{
+					shared.AttributeStrength:     {Score: 16, Bonus: 3},
+					shared.AttributeDexterity:    {Score: 12, Bonus: 1},
+					shared.AttributeConstitution: {Score: 14, Bonus: 2},
+					shared.AttributeIntelligence: {Score: 10, Bonus: 0},
+					shared.AttributeWisdom:       {Score: 12, Bonus: 1},
+					shared.AttributeCharisma:     {Score: 8, Bonus: -1},
 				},
 			},
 			class: fighterClass,
@@ -191,16 +191,16 @@ func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 			character: &character2.Character{
 				ID:     "test-ranger",
 				Name:   "Test Ranger",
-				Status: character2.CharacterStatusDraft,
+				Status: shared.CharacterStatusDraft,
 				Level:  1,
 				Class:  rangerClass,
-				Attributes: map[character2.Attribute]*character2.AbilityScore{
-					character2.AttributeStrength:     {Score: 14, Bonus: 2},
-					character2.AttributeDexterity:    {Score: 16, Bonus: 3},
-					character2.AttributeConstitution: {Score: 13, Bonus: 1},
-					character2.AttributeIntelligence: {Score: 10, Bonus: 0},
-					character2.AttributeWisdom:       {Score: 14, Bonus: 2},
-					character2.AttributeCharisma:     {Score: 10, Bonus: 0},
+				Attributes: map[shared.Attribute]*character2.AbilityScore{
+					shared.AttributeStrength:     {Score: 14, Bonus: 2},
+					shared.AttributeDexterity:    {Score: 16, Bonus: 3},
+					shared.AttributeConstitution: {Score: 13, Bonus: 1},
+					shared.AttributeIntelligence: {Score: 10, Bonus: 0},
+					shared.AttributeWisdom:       {Score: 14, Bonus: 2},
+					shared.AttributeCharisma:     {Score: 10, Bonus: 0},
 				},
 			},
 			class: rangerClass,
@@ -215,7 +215,7 @@ func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 			character: &character2.Character{
 				ID:     "test-with-equipment",
 				Name:   "Test With Equipment",
-				Status: character2.CharacterStatusDraft,
+				Status: shared.CharacterStatusDraft,
 				Level:  1,
 				Class:  fighterClass,
 				Inventory: map[equipment.EquipmentType][]equipment.Equipment{
@@ -235,13 +235,13 @@ func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 						},
 					},
 				},
-				Attributes: map[character2.Attribute]*character2.AbilityScore{
-					character2.AttributeStrength:     {Score: 16, Bonus: 3},
-					character2.AttributeDexterity:    {Score: 12, Bonus: 1},
-					character2.AttributeConstitution: {Score: 14, Bonus: 2},
-					character2.AttributeIntelligence: {Score: 10, Bonus: 0},
-					character2.AttributeWisdom:       {Score: 12, Bonus: 1},
-					character2.AttributeCharisma:     {Score: 8, Bonus: -1},
+				Attributes: map[shared.Attribute]*character2.AbilityScore{
+					shared.AttributeStrength:     {Score: 16, Bonus: 3},
+					shared.AttributeDexterity:    {Score: 12, Bonus: 1},
+					shared.AttributeConstitution: {Score: 14, Bonus: 2},
+					shared.AttributeIntelligence: {Score: 10, Bonus: 0},
+					shared.AttributeWisdom:       {Score: 12, Bonus: 1},
+					shared.AttributeCharisma:     {Score: 8, Bonus: -1},
 				},
 			},
 			class: fighterClass,
@@ -284,7 +284,7 @@ func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 			require.NotNil(t, finalizedChar)
 
 			// Verify status changed to active
-			require.Equal(t, character2.CharacterStatusActive, finalizedChar.Status)
+			require.Equal(t, shared.CharacterStatusActive, finalizedChar.Status)
 
 			// Count all equipment by key
 			actualEquipmentCounts := make(map[string]int)
@@ -350,16 +350,16 @@ func TestFinalizeDraftCharacter_HandlesEquipmentErrors(t *testing.T) {
 	testChar := &character2.Character{
 		ID:     "test-char",
 		Name:   "Test Character",
-		Status: character2.CharacterStatusDraft,
+		Status: shared.CharacterStatusDraft,
 		Level:  1,
 		Class:  testClass,
-		Attributes: map[character2.Attribute]*character2.AbilityScore{
-			character2.AttributeStrength:     {Score: 10, Bonus: 0},
-			character2.AttributeDexterity:    {Score: 10, Bonus: 0},
-			character2.AttributeConstitution: {Score: 10, Bonus: 0},
-			character2.AttributeIntelligence: {Score: 10, Bonus: 0},
-			character2.AttributeWisdom:       {Score: 10, Bonus: 0},
-			character2.AttributeCharisma:     {Score: 10, Bonus: 0},
+		Attributes: map[shared.Attribute]*character2.AbilityScore{
+			shared.AttributeStrength:     {Score: 10, Bonus: 0},
+			shared.AttributeDexterity:    {Score: 10, Bonus: 0},
+			shared.AttributeConstitution: {Score: 10, Bonus: 0},
+			shared.AttributeIntelligence: {Score: 10, Bonus: 0},
+			shared.AttributeWisdom:       {Score: 10, Bonus: 0},
+			shared.AttributeCharisma:     {Score: 10, Bonus: 0},
 		},
 	}
 
@@ -387,7 +387,7 @@ func TestFinalizeDraftCharacter_HandlesEquipmentErrors(t *testing.T) {
 	require.NotNil(t, finalizedChar)
 
 	// Verify status changed to active
-	require.Equal(t, character2.CharacterStatusActive, finalizedChar.Status)
+	require.Equal(t, shared.CharacterStatusActive, finalizedChar.Status)
 
 	// Verify only valid equipment was added
 	totalEquipment := 0

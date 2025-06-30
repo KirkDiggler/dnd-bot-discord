@@ -28,9 +28,9 @@ func (w *Weapon) Attack(char *character.Character) (*attack.Result, error) {
 
 	switch w.WeaponRange {
 	case "Ranged":
-		abilityBonus = char.Attributes[character.AttributeDexterity].Bonus
+		abilityBonus = char.Attributes[shared.AttributeDexterity].Bonus
 	case "Melee":
-		abilityBonus = char.Attributes[character.AttributeStrength].Bonus
+		abilityBonus = char.Attributes[shared.AttributeStrength].Bonus
 	}
 
 	// Check for weapon proficiency

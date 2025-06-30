@@ -3,6 +3,7 @@ package character
 import (
 	"fmt"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
@@ -70,14 +71,14 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 
 	for _, char := range characters {
 		switch char.Status {
-		case character.CharacterStatusActive:
+		case shared.CharacterStatusActive:
 			activeChars = append(activeChars, char)
-		case character.CharacterStatusDraft:
+		case shared.CharacterStatusDraft:
 			// Only show drafts that have meaningful progress (name or race/class selected)
 			if char.Name != "" || char.Race != nil || char.Class != nil {
 				draftChars = append(draftChars, char)
 			}
-		case character.CharacterStatusArchived:
+		case shared.CharacterStatusArchived:
 			archivedChars = append(archivedChars, char)
 		}
 	}

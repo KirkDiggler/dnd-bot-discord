@@ -3,6 +3,7 @@ package character
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"strings"
 	"testing"
 
@@ -144,13 +145,13 @@ func TestCharacterSheetWithActiveEffects(t *testing.T) {
 			Key:  "human",
 			Name: "Human",
 		},
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeStrength:     {Score: 16, Bonus: 3},
-			character.AttributeDexterity:    {Score: 14, Bonus: 2},
-			character.AttributeConstitution: {Score: 15, Bonus: 2},
-			character.AttributeIntelligence: {Score: 10, Bonus: 0},
-			character.AttributeWisdom:       {Score: 12, Bonus: 1},
-			character.AttributeCharisma:     {Score: 8, Bonus: -1},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength:     {Score: 16, Bonus: 3},
+			shared.AttributeDexterity:    {Score: 14, Bonus: 2},
+			shared.AttributeConstitution: {Score: 15, Bonus: 2},
+			shared.AttributeIntelligence: {Score: 10, Bonus: 0},
+			shared.AttributeWisdom:       {Score: 12, Bonus: 1},
+			shared.AttributeCharisma:     {Score: 8, Bonus: -1},
 		},
 		MaxHitPoints:     13, // d12 + 2 CON
 		CurrentHitPoints: 13,

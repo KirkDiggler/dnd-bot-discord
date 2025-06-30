@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"strings"
 
@@ -78,7 +79,7 @@ func BuildCharacterSheetEmbed(char *character.Character) *discordgo.MessageEmbed
 
 	// Calculate initiative bonus
 	initiativeBonus := 0
-	if dex, exists := char.Attributes[character.AttributeDexterity]; exists {
+	if dex, exists := char.Attributes[shared.AttributeDexterity]; exists {
 		initiativeBonus = dex.Bonus
 	}
 	hpAcLine += fmt.Sprintf(" | **Initiative:** %+d", initiativeBonus)
@@ -86,14 +87,14 @@ func BuildCharacterSheetEmbed(char *character.Character) *discordgo.MessageEmbed
 	// Build ability scores
 	abilityLines := []string{
 		"**Physical:**",
-		buildAbilityLine("STR", char.Attributes[character.AttributeStrength]),
-		buildAbilityLine("DEX", char.Attributes[character.AttributeDexterity]),
-		buildAbilityLine("CON", char.Attributes[character.AttributeConstitution]),
+		buildAbilityLine("STR", char.Attributes[shared.AttributeStrength]),
+		buildAbilityLine("DEX", char.Attributes[shared.AttributeDexterity]),
+		buildAbilityLine("CON", char.Attributes[shared.AttributeConstitution]),
 		"",
 		"**Mental:**",
-		buildAbilityLine("INT", char.Attributes[character.AttributeIntelligence]),
-		buildAbilityLine("WIS", char.Attributes[character.AttributeWisdom]),
-		buildAbilityLine("CHA", char.Attributes[character.AttributeCharisma]),
+		buildAbilityLine("INT", char.Attributes[shared.AttributeIntelligence]),
+		buildAbilityLine("WIS", char.Attributes[shared.AttributeWisdom]),
+		buildAbilityLine("CHA", char.Attributes[shared.AttributeCharisma]),
 	}
 
 	// Build equipment display

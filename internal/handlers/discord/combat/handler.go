@@ -6,6 +6,7 @@ import (
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"strings"
 
@@ -829,7 +830,7 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 
 	// Get character data to check available bonus actions and action economy
 	var actionEconomyInfo string
-	var availableBonusActions []character2.BonusActionOption
+	var availableBonusActions []shared.BonusActionOption
 	var char *character2.Character
 	if playerCombatant.CharacterID != "" && h.characterService != nil {
 		// Get the character
@@ -1643,7 +1644,7 @@ func (h *Handler) buildActionController(enc *combat.Encounter, encounterID, user
 
 	// Get character data to check available bonus actions and action economy
 	var actionEconomyInfo string
-	var availableBonusActions []character2.BonusActionOption
+	var availableBonusActions []shared.BonusActionOption
 	var char *character2.Character
 	if playerCombatant.CharacterID != "" && h.characterService != nil {
 		// Get the character
@@ -1789,11 +1790,11 @@ func (h *Handler) executeUnarmedStrike(enc *combat.Encounter, attacker, target *
 	if char != nil && char.Attributes != nil {
 		strBonus := 0
 		dexBonus := 0
-		if char.Attributes[character2.AttributeStrength] != nil {
-			strBonus = char.Attributes[character2.AttributeStrength].Bonus
+		if char.Attributes[shared.AttributeStrength] != nil {
+			strBonus = char.Attributes[shared.AttributeStrength].Bonus
 		}
-		if char.Attributes[character2.AttributeDexterity] != nil {
-			dexBonus = char.Attributes[character2.AttributeDexterity].Bonus
+		if char.Attributes[shared.AttributeDexterity] != nil {
+			dexBonus = char.Attributes[shared.AttributeDexterity].Bonus
 		}
 
 		// Monks with martial arts can use DEX instead of STR
@@ -1902,10 +1903,10 @@ func (h *Handler) executeOffHandAttack(enc *combat.Encounter, attacker, target *
 	abilityBonus := 0
 	damageAbilityBonus := 0
 	if char != nil && char.Attributes != nil {
-		if char.Attributes[character2.AttributeDexterity] != nil && offHandWeapon.IsFinesse() {
-			abilityBonus = char.Attributes[character2.AttributeDexterity].Bonus
-		} else if char.Attributes[character2.AttributeStrength] != nil {
-			abilityBonus = char.Attributes[character2.AttributeStrength].Bonus
+		if char.Attributes[shared.AttributeDexterity] != nil && offHandWeapon.IsFinesse() {
+			abilityBonus = char.Attributes[shared.AttributeDexterity].Bonus
+		} else if char.Attributes[shared.AttributeStrength] != nil {
+			abilityBonus = char.Attributes[shared.AttributeStrength].Bonus
 		}
 
 		// Check for Two-Weapon Fighting style

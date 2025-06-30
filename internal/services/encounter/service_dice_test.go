@@ -5,6 +5,7 @@ import (
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	session2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"strings"
 	"testing"
 	"time"
@@ -43,13 +44,13 @@ func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 		ID:               "char-1",
 		Name:             "Player",
 		OwnerID:          "player-1",
-		Status:           character2.CharacterStatusActive,
+		Status:           shared.CharacterStatusActive,
 		Level:            1,
 		CurrentHitPoints: 10,
 		MaxHitPoints:     10,
 		AC:               15,
-		Attributes: map[character2.Attribute]*character2.AbilityScore{
-			character2.AttributeDexterity: {Score: 16, Bonus: 3}, // +3 DEX bonus for initiative
+		Attributes: map[shared.Attribute]*character2.AbilityScore{
+			shared.AttributeDexterity: {Score: 16, Bonus: 3}, // +3 DEX bonus for initiative
 		},
 	}
 	err := charRepo.Create(ctx, testChar)
@@ -215,7 +216,7 @@ func TestEncounterService_CombatScenario_WithMockDice(t *testing.T) {
 		ID:               "char-1",
 		Name:             "Fighter",
 		OwnerID:          "player-1",
-		Status:           character2.CharacterStatusActive,
+		Status:           shared.CharacterStatusActive,
 		Level:            1,
 		CurrentHitPoints: 10,
 		MaxHitPoints:     10,

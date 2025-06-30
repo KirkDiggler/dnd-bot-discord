@@ -2,6 +2,7 @@ package character
 
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 )
 
 // StartNewTurn resets action economy and other per-turn resources
@@ -44,12 +45,12 @@ func (c *Character) RecordAction(actionType, subtype, weaponKey string) {
 }
 
 // GetAvailableBonusActions returns the currently available bonus actions
-func (c *Character) GetAvailableBonusActions() []BonusActionOption {
+func (c *Character) GetAvailableBonusActions() []shared.BonusActionOption {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if c.Resources == nil {
-		return []BonusActionOption{}
+		return []shared.BonusActionOption{}
 	}
 
 	return c.Resources.ActionEconomy.AvailableBonusActions
@@ -99,7 +100,7 @@ func (c *Character) updateAvailableBonusActionsInternal() {
 	}
 
 	// Clear existing
-	c.Resources.ActionEconomy.AvailableBonusActions = []BonusActionOption{}
+	c.Resources.ActionEconomy.AvailableBonusActions = []shared.BonusActionOption{}
 
 	// Don't add any if bonus action already used
 	if c.Resources.ActionEconomy.BonusActionUsed {
@@ -110,7 +111,7 @@ func (c *Character) updateAvailableBonusActionsInternal() {
 	if c.checkMartialArtsBonusActionInternal() {
 		c.Resources.ActionEconomy.AvailableBonusActions = append(
 			c.Resources.ActionEconomy.AvailableBonusActions,
-			BonusActionOption{
+			shared.BonusActionOption{
 				Key:         "martial_arts_strike",
 				Name:        "Martial Arts Bonus Strike",
 				Description: "Make one unarmed strike as a bonus action",
@@ -124,7 +125,7 @@ func (c *Character) updateAvailableBonusActionsInternal() {
 	if c.checkTwoWeaponBonusActionInternal() {
 		c.Resources.ActionEconomy.AvailableBonusActions = append(
 			c.Resources.ActionEconomy.AvailableBonusActions,
-			BonusActionOption{
+			shared.BonusActionOption{
 				Key:         "two_weapon_attack",
 				Name:        "Off-Hand Attack",
 				Description: "Attack with your off-hand weapon",
@@ -256,12 +257,12 @@ func (c *Character) HasActionAvailable() bool {
 }
 
 // GetActionsTaken returns a summary of actions taken this turn
-func (c *Character) GetActionsTaken() []ActionRecord {
+func (c *Character) GetActionsTaken() []shared.ActionRecord {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if c.Resources == nil {
-		return []ActionRecord{}
+		return []shared.ActionRecord{}
 	}
 
 	return c.Resources.ActionEconomy.ActionsThisTurn

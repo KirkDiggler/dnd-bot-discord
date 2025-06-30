@@ -2,6 +2,7 @@ package character
 
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -39,13 +40,13 @@ func TestCharacterSavingThrows(t *testing.T) {
 	// Create a test character
 	char := &Character{
 		Level: 5, // +3 proficiency bonus
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeStrength:     {Score: 16, Bonus: 3},
-			AttributeDexterity:    {Score: 14, Bonus: 2},
-			AttributeConstitution: {Score: 13, Bonus: 1},
-			AttributeIntelligence: {Score: 10, Bonus: 0},
-			AttributeWisdom:       {Score: 12, Bonus: 1},
-			AttributeCharisma:     {Score: 8, Bonus: -1},
+		Attributes: map[shared.Attribute]*AbilityScore{
+			shared.AttributeStrength:     {Score: 16, Bonus: 3},
+			shared.AttributeDexterity:    {Score: 14, Bonus: 2},
+			shared.AttributeConstitution: {Score: 13, Bonus: 1},
+			shared.AttributeIntelligence: {Score: 10, Bonus: 0},
+			shared.AttributeWisdom:       {Score: 12, Bonus: 1},
+			shared.AttributeCharisma:     {Score: 8, Bonus: -1},
 		},
 		Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
 			rulebook.ProficiencyTypeSavingThrow: {
@@ -56,26 +57,26 @@ func TestCharacterSavingThrows(t *testing.T) {
 	}
 
 	t.Run("HasSavingThrowProficiency", func(t *testing.T) {
-		assert.True(t, char.HasSavingThrowProficiency(AttributeStrength))
-		assert.True(t, char.HasSavingThrowProficiency(AttributeConstitution))
-		assert.False(t, char.HasSavingThrowProficiency(AttributeDexterity))
-		assert.False(t, char.HasSavingThrowProficiency(AttributeWisdom))
+		assert.True(t, char.HasSavingThrowProficiency(shared.AttributeStrength))
+		assert.True(t, char.HasSavingThrowProficiency(shared.AttributeConstitution))
+		assert.False(t, char.HasSavingThrowProficiency(shared.AttributeDexterity))
+		assert.False(t, char.HasSavingThrowProficiency(shared.AttributeWisdom))
 	})
 
 	t.Run("GetSavingThrowBonus", func(t *testing.T) {
 		// With proficiency: ability mod + prof bonus
-		assert.Equal(t, 6, char.GetSavingThrowBonus(AttributeStrength))     // 3 + 3
-		assert.Equal(t, 4, char.GetSavingThrowBonus(AttributeConstitution)) // 1 + 3
+		assert.Equal(t, 6, char.GetSavingThrowBonus(shared.AttributeStrength))     // 3 + 3
+		assert.Equal(t, 4, char.GetSavingThrowBonus(shared.AttributeConstitution)) // 1 + 3
 
 		// Without proficiency: just ability mod
-		assert.Equal(t, 2, char.GetSavingThrowBonus(AttributeDexterity)) // 2 + 0
-		assert.Equal(t, 1, char.GetSavingThrowBonus(AttributeWisdom))    // 1 + 0
-		assert.Equal(t, -1, char.GetSavingThrowBonus(AttributeCharisma)) // -1 + 0
+		assert.Equal(t, 2, char.GetSavingThrowBonus(shared.AttributeDexterity)) // 2 + 0
+		assert.Equal(t, 1, char.GetSavingThrowBonus(shared.AttributeWisdom))    // 1 + 0
+		assert.Equal(t, -1, char.GetSavingThrowBonus(shared.AttributeCharisma)) // -1 + 0
 	})
 
 	t.Run("RollSavingThrow", func(t *testing.T) {
 		// Test that saving throw rolls work
-		roll, total, err := char.RollSavingThrow(AttributeStrength)
+		roll, total, err := char.RollSavingThrow(shared.AttributeStrength)
 		require.NoError(t, err)
 		require.NotNil(t, roll)
 
@@ -91,10 +92,10 @@ func TestCharacterSkillChecks(t *testing.T) {
 	// Create a test character
 	char := &Character{
 		Level: 5, // +3 proficiency bonus
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeStrength:  {Score: 16, Bonus: 3},
-			AttributeDexterity: {Score: 14, Bonus: 2},
-			AttributeWisdom:    {Score: 12, Bonus: 1},
+		Attributes: map[shared.Attribute]*AbilityScore{
+			shared.AttributeStrength:  {Score: 16, Bonus: 3},
+			shared.AttributeDexterity: {Score: 14, Bonus: 2},
+			shared.AttributeWisdom:    {Score: 12, Bonus: 1},
 		},
 		Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
 			rulebook.ProficiencyTypeSkill: {
@@ -115,18 +116,18 @@ func TestCharacterSkillChecks(t *testing.T) {
 
 	t.Run("GetSkillBonus", func(t *testing.T) {
 		// With proficiency
-		assert.Equal(t, 6, char.GetSkillBonus("skill-athletics", AttributeStrength))   // 3 + 3
-		assert.Equal(t, 5, char.GetSkillBonus("skill-acrobatics", AttributeDexterity)) // 2 + 3
-		assert.Equal(t, 4, char.GetSkillBonus("skill-perception", AttributeWisdom))    // 1 + 3
+		assert.Equal(t, 6, char.GetSkillBonus("skill-athletics", shared.AttributeStrength))   // 3 + 3
+		assert.Equal(t, 5, char.GetSkillBonus("skill-acrobatics", shared.AttributeDexterity)) // 2 + 3
+		assert.Equal(t, 4, char.GetSkillBonus("skill-perception", shared.AttributeWisdom))    // 1 + 3
 
 		// Without proficiency
-		assert.Equal(t, 2, char.GetSkillBonus("skill-stealth", AttributeDexterity))     // 2 + 0
-		assert.Equal(t, 3, char.GetSkillBonus("skill-intimidation", AttributeStrength)) // 3 + 0
+		assert.Equal(t, 2, char.GetSkillBonus("skill-stealth", shared.AttributeDexterity))     // 2 + 0
+		assert.Equal(t, 3, char.GetSkillBonus("skill-intimidation", shared.AttributeStrength)) // 3 + 0
 	})
 
 	t.Run("RollSkillCheck", func(t *testing.T) {
 		// Test that skill check rolls work
-		roll, total, err := char.RollSkillCheck("skill-athletics", AttributeStrength)
+		roll, total, err := char.RollSkillCheck("skill-athletics", shared.AttributeStrength)
 		require.NoError(t, err)
 		require.NotNil(t, roll)
 
@@ -143,10 +144,10 @@ func TestCharacterNilSafety(t *testing.T) {
 	char := &Character{Level: 1}
 
 	t.Run("NilProficiencies", func(t *testing.T) {
-		assert.False(t, char.HasSavingThrowProficiency(AttributeStrength))
+		assert.False(t, char.HasSavingThrowProficiency(shared.AttributeStrength))
 		assert.False(t, char.HasSkillProficiency("skill-athletics"))
-		assert.Equal(t, 0, char.GetSavingThrowBonus(AttributeStrength))
-		assert.Equal(t, 0, char.GetSkillBonus("skill-athletics", AttributeStrength))
+		assert.Equal(t, 0, char.GetSavingThrowBonus(shared.AttributeStrength))
+		assert.Equal(t, 0, char.GetSkillBonus("skill-athletics", shared.AttributeStrength))
 	})
 
 	t.Run("NilAttributes", func(t *testing.T) {
@@ -156,6 +157,6 @@ func TestCharacterNilSafety(t *testing.T) {
 			},
 		}
 		// Should get proficiency bonus but no ability modifier
-		assert.Equal(t, 2, char.GetSavingThrowBonus(AttributeStrength)) // 0 + 2
+		assert.Equal(t, 2, char.GetSavingThrowBonus(shared.AttributeStrength)) // 0 + 2
 	})
 }

@@ -3,6 +3,7 @@ package character_test
 import (
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
@@ -22,7 +23,7 @@ func TestShowCharacterSheetAfterCreation(t *testing.T) {
 			Name:    "Thorin Ironforge",
 			OwnerID: "user123",
 			Level:   1,
-			Status:  character2.CharacterStatusActive,
+			Status:  shared.CharacterStatusActive,
 			Race: &rulebook.Race{
 				Key:   "dwarf",
 				Name:  "Dwarf",
@@ -37,13 +38,13 @@ func TestShowCharacterSheetAfterCreation(t *testing.T) {
 			MaxHitPoints:     12,
 			AC:               16,
 			HitDie:           10,
-			Attributes: map[character2.Attribute]*character2.AbilityScore{
-				character2.AttributeStrength:     {Score: 16, Bonus: 3},
-				character2.AttributeDexterity:    {Score: 14, Bonus: 2},
-				character2.AttributeConstitution: {Score: 15, Bonus: 2},
-				character2.AttributeIntelligence: {Score: 13, Bonus: 1},
-				character2.AttributeWisdom:       {Score: 12, Bonus: 1},
-				character2.AttributeCharisma:     {Score: 10, Bonus: 0},
+			Attributes: map[shared.Attribute]*character2.AbilityScore{
+				shared.AttributeStrength:     {Score: 16, Bonus: 3},
+				shared.AttributeDexterity:    {Score: 14, Bonus: 2},
+				shared.AttributeConstitution: {Score: 15, Bonus: 2},
+				shared.AttributeIntelligence: {Score: 13, Bonus: 1},
+				shared.AttributeWisdom:       {Score: 12, Bonus: 1},
+				shared.AttributeCharisma:     {Score: 10, Bonus: 0},
 			},
 			Features: []*rulebook.CharacterFeature{
 				{
@@ -157,7 +158,7 @@ func TestShowCharacterSheetAfterCreation(t *testing.T) {
 			ID:     "test-char-789",
 			Name:   "Gimli",
 			Level:  1,
-			Status: character2.CharacterStatusActive,
+			Status: shared.CharacterStatusActive,
 			Race: &rulebook.Race{
 				Key:  "dwarf",
 				Name: "Dwarf",

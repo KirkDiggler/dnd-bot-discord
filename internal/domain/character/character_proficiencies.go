@@ -3,6 +3,7 @@ package character
 import (
 	"fmt"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
@@ -51,7 +52,7 @@ func (c *Character) GetProficiencyBonus() int {
 }
 
 // HasSavingThrowProficiency checks if the character is proficient in a saving throw
-func (c *Character) HasSavingThrowProficiency(attribute Attribute) bool {
+func (c *Character) HasSavingThrowProficiency(attribute shared.Attribute) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -72,7 +73,7 @@ func (c *Character) HasSavingThrowProficiency(attribute Attribute) bool {
 }
 
 // GetSavingThrowBonus calculates the total saving throw bonus for an attribute
-func (c *Character) GetSavingThrowBonus(attribute Attribute) int {
+func (c *Character) GetSavingThrowBonus(attribute shared.Attribute) int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -103,7 +104,7 @@ func (c *Character) GetSavingThrowBonus(attribute Attribute) int {
 }
 
 // RollSavingThrow rolls a saving throw for the given attribute
-func (c *Character) RollSavingThrow(attribute Attribute) (*dice.RollResult, int, error) {
+func (c *Character) RollSavingThrow(attribute shared.Attribute) (*dice.RollResult, int, error) {
 	bonus := c.GetSavingThrowBonus(attribute)
 
 	// Roll 1d20

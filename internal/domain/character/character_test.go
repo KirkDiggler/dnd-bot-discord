@@ -12,7 +12,7 @@ import (
 
 func TestCharacter_AddAbilityBonus(t *testing.T) {
 	type fields struct {
-		AbilityScores map[Attribute]*AbilityScore
+		AbilityScores map[shared.Attribute]*AbilityScore
 	}
 	type args struct {
 		abilityBonus  *AbilityBonus
@@ -27,18 +27,18 @@ func TestCharacter_AddAbilityBonus(t *testing.T) {
 		{
 			name: "TestCharacter_AddAbilityBonus",
 			fields: fields{
-				AbilityScores: map[Attribute]*AbilityScore{
-					AttributeStrength:     {Score: 10, Bonus: 0},
-					AttributeDexterity:    {Score: 10},
-					AttributeConstitution: {Score: 10},
-					AttributeIntelligence: {Score: 10},
-					AttributeWisdom:       {Score: 10},
-					AttributeCharisma:     {Score: 10},
+				AbilityScores: map[shared.Attribute]*AbilityScore{
+					shared.AttributeStrength:     {Score: 10, Bonus: 0},
+					shared.AttributeDexterity:    {Score: 10},
+					shared.AttributeConstitution: {Score: 10},
+					shared.AttributeIntelligence: {Score: 10},
+					shared.AttributeWisdom:       {Score: 10},
+					shared.AttributeCharisma:     {Score: 10},
 				},
 			},
 			args: args{
 				abilityBonus: &AbilityBonus{
-					Attribute: AttributeStrength,
+					Attribute: shared.AttributeStrength,
 					Bonus:     2,
 				},
 				expectedScore: 12,
@@ -48,18 +48,18 @@ func TestCharacter_AddAbilityBonus(t *testing.T) {
 		{
 			name: "TestCharacter_AddToExistingAbilityBonus",
 			fields: fields{
-				AbilityScores: map[Attribute]*AbilityScore{
-					AttributeStrength:     {Score: 12, Bonus: 1},
-					AttributeDexterity:    {Score: 10},
-					AttributeConstitution: {Score: 10},
-					AttributeIntelligence: {Score: 10},
-					AttributeWisdom:       {Score: 10},
-					AttributeCharisma:     {Score: 10},
+				AbilityScores: map[shared.Attribute]*AbilityScore{
+					shared.AttributeStrength:     {Score: 12, Bonus: 1},
+					shared.AttributeDexterity:    {Score: 10},
+					shared.AttributeConstitution: {Score: 10},
+					shared.AttributeIntelligence: {Score: 10},
+					shared.AttributeWisdom:       {Score: 10},
+					shared.AttributeCharisma:     {Score: 10},
 				},
 			},
 			args: args{
 				abilityBonus: &AbilityBonus{
-					Attribute: AttributeStrength,
+					Attribute: shared.AttributeStrength,
 					Bonus:     2,
 				},
 				expectedScore: 14,
@@ -69,17 +69,17 @@ func TestCharacter_AddAbilityBonus(t *testing.T) {
 		{
 			name: "TestCharacter_AddToNewAttributeAbilityBonus",
 			fields: fields{
-				AbilityScores: map[Attribute]*AbilityScore{
-					AttributeDexterity:    {Score: 10},
-					AttributeConstitution: {Score: 10},
-					AttributeIntelligence: {Score: 10},
-					AttributeWisdom:       {Score: 10},
-					AttributeCharisma:     {Score: 10},
+				AbilityScores: map[shared.Attribute]*AbilityScore{
+					shared.AttributeDexterity:    {Score: 10},
+					shared.AttributeConstitution: {Score: 10},
+					shared.AttributeIntelligence: {Score: 10},
+					shared.AttributeWisdom:       {Score: 10},
+					shared.AttributeCharisma:     {Score: 10},
 				},
 			},
 			args: args{
 				abilityBonus: &AbilityBonus{
-					Attribute: AttributeStrength,
+					Attribute: shared.AttributeStrength,
 					Bonus:     2,
 				},
 				expectedScore: 2,
@@ -107,10 +107,10 @@ func TestCharacter_AddAbilityBonus(t *testing.T) {
 
 func TestCharacter_AddAttribute(t *testing.T) {
 	type fields struct {
-		AbilityScores map[Attribute]*AbilityScore
+		AbilityScores map[shared.Attribute]*AbilityScore
 	}
 	type args struct {
-		attribute    Attribute
+		attribute    shared.Attribute
 		abilityScore *AbilityScore
 	}
 	tests := []struct {
@@ -121,17 +121,17 @@ func TestCharacter_AddAttribute(t *testing.T) {
 		{
 			name: "TestCharacter_AddAttribute",
 			fields: fields{
-				AbilityScores: map[Attribute]*AbilityScore{
-					AttributeStrength:     {Score: 0, Bonus: 2},
-					AttributeDexterity:    {Score: 10},
-					AttributeConstitution: {Score: 10},
-					AttributeIntelligence: {Score: 10},
-					AttributeWisdom:       {Score: 10},
-					AttributeCharisma:     {Score: 10},
+				AbilityScores: map[shared.Attribute]*AbilityScore{
+					shared.AttributeStrength:     {Score: 0, Bonus: 2},
+					shared.AttributeDexterity:    {Score: 10},
+					shared.AttributeConstitution: {Score: 10},
+					shared.AttributeIntelligence: {Score: 10},
+					shared.AttributeWisdom:       {Score: 10},
+					shared.AttributeCharisma:     {Score: 10},
 				},
 			},
 			args: args{
-				attribute: AttributeStrength,
+				attribute: shared.AttributeStrength,
 				abilityScore: &AbilityScore{
 					Score: 10,
 					Bonus: 0, // (10-10)/2 = 0
@@ -141,17 +141,17 @@ func TestCharacter_AddAttribute(t *testing.T) {
 		{
 			name: "TestCharacter_AddAttribute",
 			fields: fields{
-				AbilityScores: map[Attribute]*AbilityScore{
-					AttributeStrength:     {Score: 0, Bonus: 0},
-					AttributeDexterity:    {Score: 10},
-					AttributeConstitution: {Score: 10},
-					AttributeIntelligence: {Score: 10},
-					AttributeWisdom:       {Score: 10},
-					AttributeCharisma:     {Score: 10},
+				AbilityScores: map[shared.Attribute]*AbilityScore{
+					shared.AttributeStrength:     {Score: 0, Bonus: 0},
+					shared.AttributeDexterity:    {Score: 10},
+					shared.AttributeConstitution: {Score: 10},
+					shared.AttributeIntelligence: {Score: 10},
+					shared.AttributeWisdom:       {Score: 10},
+					shared.AttributeCharisma:     {Score: 10},
 				},
 			},
 			args: args{
-				attribute: AttributeStrength,
+				attribute: shared.AttributeStrength,
 				abilityScore: &AbilityScore{
 					Score: 12,
 					Bonus: 1,
@@ -161,16 +161,16 @@ func TestCharacter_AddAttribute(t *testing.T) {
 		{
 			name: "TestCharacter_AddAttribute",
 			fields: fields{
-				AbilityScores: map[Attribute]*AbilityScore{
-					AttributeStrength:     {Score: 10},
-					AttributeDexterity:    {Score: 10},
-					AttributeConstitution: {Score: 10},
-					AttributeIntelligence: {Score: 10},
-					AttributeWisdom:       {Score: 10},
+				AbilityScores: map[shared.Attribute]*AbilityScore{
+					shared.AttributeStrength:     {Score: 10},
+					shared.AttributeDexterity:    {Score: 10},
+					shared.AttributeConstitution: {Score: 10},
+					shared.AttributeIntelligence: {Score: 10},
+					shared.AttributeWisdom:       {Score: 10},
 				},
 			},
 			args: args{
-				attribute: AttributeCharisma,
+				attribute: shared.AttributeCharisma,
 				abilityScore: &AbilityScore{
 					Score: 10,
 					Bonus: 0,
@@ -249,7 +249,7 @@ func (s *suiteEquip) SetupTest() {
 			},
 		},
 	}
-	for _, v := range Attributes {
+	for _, v := range shared.Attributes {
 		s.char.AddAttribute(v, 10)
 	}
 }
@@ -268,7 +268,7 @@ func (s *suiteEquip) TestEquipArmor() {
 }
 
 func (s *suiteEquip) TestEquipArmorWithDexBonus() {
-	s.char.AddAttribute(AttributeDexterity, 14)
+	s.char.AddAttribute(shared.AttributeDexterity, 14)
 	s.char.Equip("leather-armor")
 
 	s.Equal(14, s.char.AC)
@@ -323,8 +323,8 @@ func TestCharacter_Attack_WithRageBonus(t *testing.T) {
 		Name:  "Ragnar",
 		Level: 1,
 		Class: &rulebook.Class{Key: "barbarian", Name: "Barbarian"},
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeStrength: {Score: 16, Bonus: 3}, // +3 STR modifier
+		Attributes: map[shared.Attribute]*AbilityScore{
+			shared.AttributeStrength: {Score: 16, Bonus: 3}, // +3 STR modifier
 		},
 		EquippedSlots: map[Slot]equipment.Equipment{
 			SlotMainHand: &equipment.Weapon{
@@ -420,8 +420,8 @@ func TestCharacter_Attack_WithoutRage(t *testing.T) {
 		Name:  "Ragnar",
 		Level: 1,
 		Class: &rulebook.Class{Key: "barbarian", Name: "Barbarian"},
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeStrength: {Score: 16, Bonus: 3}, // +3 STR modifier
+		Attributes: map[shared.Attribute]*AbilityScore{
+			shared.AttributeStrength: {Score: 16, Bonus: 3}, // +3 STR modifier
 		},
 		EquippedSlots: map[Slot]equipment.Equipment{
 			SlotMainHand: &equipment.Weapon{

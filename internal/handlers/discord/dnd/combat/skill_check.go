@@ -3,6 +3,7 @@ package combat
 import (
 	"fmt"
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"strings"
 
@@ -13,25 +14,25 @@ import (
 )
 
 // Common skill mappings to attributes
-var SkillToAttribute = map[string]character2.Attribute{
-	"skill-acrobatics":      character2.AttributeDexterity,
-	"skill-animal-handling": character2.AttributeWisdom,
-	"skill-arcana":          character2.AttributeIntelligence,
-	"skill-athletics":       character2.AttributeStrength,
-	"skill-deception":       character2.AttributeCharisma,
-	"skill-history":         character2.AttributeIntelligence,
-	"skill-insight":         character2.AttributeWisdom,
-	"skill-intimidation":    character2.AttributeCharisma,
-	"skill-investigation":   character2.AttributeIntelligence,
-	"skill-medicine":        character2.AttributeWisdom,
-	"skill-nature":          character2.AttributeIntelligence,
-	"skill-perception":      character2.AttributeWisdom,
-	"skill-performance":     character2.AttributeCharisma,
-	"skill-persuasion":      character2.AttributeCharisma,
-	"skill-religion":        character2.AttributeIntelligence,
-	"skill-sleight-of-hand": character2.AttributeDexterity,
-	"skill-stealth":         character2.AttributeDexterity,
-	"skill-survival":        character2.AttributeWisdom,
+var SkillToAttribute = map[string]shared.Attribute{
+	"skill-acrobatics":      shared.AttributeDexterity,
+	"skill-animal-handling": shared.AttributeWisdom,
+	"skill-arcana":          shared.AttributeIntelligence,
+	"skill-athletics":       shared.AttributeStrength,
+	"skill-deception":       shared.AttributeCharisma,
+	"skill-history":         shared.AttributeIntelligence,
+	"skill-insight":         shared.AttributeWisdom,
+	"skill-intimidation":    shared.AttributeCharisma,
+	"skill-investigation":   shared.AttributeIntelligence,
+	"skill-medicine":        shared.AttributeWisdom,
+	"skill-nature":          shared.AttributeIntelligence,
+	"skill-perception":      shared.AttributeWisdom,
+	"skill-performance":     shared.AttributeCharisma,
+	"skill-persuasion":      shared.AttributeCharisma,
+	"skill-religion":        shared.AttributeIntelligence,
+	"skill-sleight-of-hand": shared.AttributeDexterity,
+	"skill-stealth":         shared.AttributeDexterity,
+	"skill-survival":        shared.AttributeWisdom,
 }
 
 // SkillCheckHandler handles skill check interactions

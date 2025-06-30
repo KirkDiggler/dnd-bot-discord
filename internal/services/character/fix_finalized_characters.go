@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/features"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 )
 
@@ -32,7 +33,7 @@ func (s *service) FixCharacterAttributes(ctx context.Context, characterID string
 	}
 
 	// Initialize attributes map
-	char.Attributes = make(map[character.Attribute]*character.AbilityScore)
+	char.Attributes = make(map[shared.Attribute]*character.AbilityScore)
 
 	// Convert assignments to attributes
 	for abilityStr, rollID := range char.AbilityAssignments {
@@ -42,20 +43,20 @@ func (s *service) FixCharacterAttributes(ctx context.Context, characterID string
 		}
 		rollValue := rollValues[rollID]
 		// Parse ability string to Attribute type
-		var attr character.Attribute
+		var attr shared.Attribute
 		switch abilityStr {
 		case "STR":
-			attr = character.AttributeStrength
+			attr = shared.AttributeStrength
 		case "DEX":
-			attr = character.AttributeDexterity
+			attr = shared.AttributeDexterity
 		case "CON":
-			attr = character.AttributeConstitution
+			attr = shared.AttributeConstitution
 		case "INT":
-			attr = character.AttributeIntelligence
+			attr = shared.AttributeIntelligence
 		case "WIS":
-			attr = character.AttributeWisdom
+			attr = shared.AttributeWisdom
 		case "CHA":
-			attr = character.AttributeCharisma
+			attr = shared.AttributeCharisma
 		default:
 			log.Printf("Unknown ability string: %s", abilityStr)
 			continue
@@ -90,7 +91,7 @@ func (s *service) FixCharacterAttributes(ctx context.Context, characterID string
 	// Recalculate HP if needed
 	if char.MaxHitPoints == 0 && char.Class != nil {
 		conMod := 0
-		if con, ok := char.Attributes[character.AttributeConstitution]; ok && con != nil {
+		if con, ok := char.Attributes[shared.AttributeConstitution]; ok && con != nil {
 			conMod = con.Bonus
 		}
 		char.MaxHitPoints = char.Class.HitDie + conMod

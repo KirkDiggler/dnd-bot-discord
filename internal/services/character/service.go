@@ -9,6 +9,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	features2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/features"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"sort"
 	"strings"
@@ -64,7 +65,7 @@ type Service interface {
 	GetEquipmentByCategory(ctx context.Context, category string) ([]equipment.Equipment, error)
 
 	// UpdateStatus updates a character's status
-	UpdateStatus(characterID string, status character.CharacterStatus) error
+	UpdateStatus(characterID string, status shared.CharacterStatus) error
 
 	// UpdateEquipment saves equipment changes for a character
 	UpdateEquipment(character *character.Character) error
@@ -237,7 +238,7 @@ func (s *service) CreateCharacter(ctx context.Context, input *CreateCharacterInp
 		Name:    input.Name,
 		Race:    race,
 		Class:   class,
-		Status:  character.CharacterStatusDraft,
+		Status:  shared.CharacterStatusDraft,
 		HitDie:  class.HitDie,
 		Speed:   race.Speed,
 		Level:   1,
@@ -476,7 +477,7 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 	// Find all draft characters
 	var drafts []*character.Character
 	for _, char := range chars {
-		if char.Status == character.CharacterStatusDraft {
+		if char.Status == shared.CharacterStatusDraft {
 			drafts = append(drafts, char)
 		}
 	}
@@ -506,10 +507,10 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 		OwnerID: userID,
 		RealmID: realmID,
 		Name:    "Draft Character",
-		Status:  character.CharacterStatusDraft,
+		Status:  shared.CharacterStatusDraft,
 		Level:   1,
 		// Initialize empty maps
-		Attributes:    make(map[character.Attribute]*character.AbilityScore),
+		Attributes:    make(map[shared.Attribute]*character.AbilityScore),
 		Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
 		EquippedSlots: make(map[character.Slot]equipment.Equipment),
@@ -544,7 +545,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 	// Log character state BEFORE updates
 
 	// Verify it's a draft
-	if char.Status != character.CharacterStatusDraft {
+	if char.Status != shared.CharacterStatusDraft {
 		return nil, dnderr.InvalidArgument("can only update draft characters").
 			WithMeta("character_id", characterID).
 			WithMeta("status", string(char.Status))
@@ -650,7 +651,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 			}
 
 			// Clear existing scores
-			char.Attributes = make(map[character.Attribute]*character.AbilityScore)
+			char.Attributes = make(map[shared.Attribute]*character.AbilityScore)
 
 			// Set new scores based on assignments
 			for ability, rollID := range char.AbilityAssignments {
@@ -678,7 +679,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 	// Legacy: Update ability scores if provided directly
 	if len(updates.AbilityScores) > 0 && updates.AbilityAssignments == nil {
 		// Clear existing scores
-		char.Attributes = make(map[character.Attribute]*character.AbilityScore)
+		char.Attributes = make(map[shared.Attribute]*character.AbilityScore)
 
 		// Set new scores
 		for ability, score := range updates.AbilityScores {
@@ -784,7 +785,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 	}
 
 	// Verify it's a draft
-	if char.Status != character.CharacterStatusDraft {
+	if char.Status != shared.CharacterStatusDraft {
 		return nil, dnderr.InvalidArgument("can only finalize draft characters").
 			WithMeta("character_id", characterID).
 			WithMeta("status", string(char.Status))
@@ -800,27 +801,27 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 		}
 
 		// Initialize attributes map
-		char.Attributes = make(map[character.Attribute]*character.AbilityScore)
+		char.Attributes = make(map[shared.Attribute]*character.AbilityScore)
 
 		// Convert assignments to attributes
 		for abilityStr, rollID := range char.AbilityAssignments {
 			rollValue, rollValueOk := rollValues[rollID]
 			if rollValueOk {
 				// Parse ability string to Attribute type
-				var attr character.Attribute
+				var attr shared.Attribute
 				switch abilityStr {
 				case "STR":
-					attr = character.AttributeStrength
+					attr = shared.AttributeStrength
 				case "DEX":
-					attr = character.AttributeDexterity
+					attr = shared.AttributeDexterity
 				case "CON":
-					attr = character.AttributeConstitution
+					attr = shared.AttributeConstitution
 				case "INT":
-					attr = character.AttributeIntelligence
+					attr = shared.AttributeIntelligence
 				case "WIS":
-					attr = character.AttributeWisdom
+					attr = shared.AttributeWisdom
 				case "CHA":
-					attr = character.AttributeCharisma
+					attr = shared.AttributeCharisma
 				default:
 					continue
 				}
@@ -856,7 +857,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 		// Base HP = HitDie + Constitution modifier
 		conMod := 0
 		if char.Attributes != nil {
-			if con, ok := char.Attributes[character.AttributeConstitution]; ok && con != nil {
+			if con, ok := char.Attributes[shared.AttributeConstitution]; ok && con != nil {
 				conMod = con.Bonus
 			}
 		}
@@ -968,7 +969,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 	char.InitializeResources()
 
 	// Update status to active
-	char.Status = character.CharacterStatusActive
+	char.Status = shared.CharacterStatusActive
 
 	// Save changes
 	if err := s.repository.Update(ctx, char); err != nil {
@@ -1002,7 +1003,7 @@ func generateID() string {
 }
 
 // UpdateStatus updates a character's status
-func (s *service) UpdateStatus(characterID string, status character.CharacterStatus) error {
+func (s *service) UpdateStatus(characterID string, status shared.CharacterStatus) error {
 	if strings.TrimSpace(characterID) == "" {
 		return dnderr.InvalidArgument("character ID is required")
 	}
@@ -1110,22 +1111,22 @@ func (s *service) GetByID(characterID string) (*character.Character, error) {
 }
 
 // stringToAttribute converts a string to an Attribute
-func stringToAttribute(s string) character.Attribute {
+func stringToAttribute(s string) shared.Attribute {
 	switch strings.ToUpper(s) {
 	case "STR":
-		return character.AttributeStrength
+		return shared.AttributeStrength
 	case "DEX":
-		return character.AttributeDexterity
+		return shared.AttributeDexterity
 	case "CON":
-		return character.AttributeConstitution
+		return shared.AttributeConstitution
 	case "INT":
-		return character.AttributeIntelligence
+		return shared.AttributeIntelligence
 	case "WIS":
-		return character.AttributeWisdom
+		return shared.AttributeWisdom
 	case "CHA":
-		return character.AttributeCharisma
+		return shared.AttributeCharisma
 	default:
-		return character.AttributeNone
+		return shared.AttributeNone
 	}
 }
 

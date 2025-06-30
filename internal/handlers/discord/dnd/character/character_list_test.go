@@ -3,6 +3,7 @@ package character_test
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/testutils"
@@ -23,14 +24,14 @@ func TestCharacterListFiltering(t *testing.T) {
 			characters: []*character.Character{
 				{
 					ID:     "draft1",
-					Status: character.CharacterStatusDraft,
+					Status: shared.CharacterStatusDraft,
 					Name:   "",  // No name
 					Race:   nil, // No race
 					Class:  nil, // No class
 				},
 				{
 					ID:     "draft2",
-					Status: character.CharacterStatusDraft,
+					Status: shared.CharacterStatusDraft,
 					Name:   "Bob",
 				},
 			},
@@ -44,7 +45,7 @@ func TestCharacterListFiltering(t *testing.T) {
 			characters: []*character.Character{
 				{
 					ID:     "draft3",
-					Status: character.CharacterStatusDraft,
+					Status: shared.CharacterStatusDraft,
 					Name:   "",
 					Race:   testutils.CreateTestRace("human", "Human"),
 				},
@@ -59,7 +60,7 @@ func TestCharacterListFiltering(t *testing.T) {
 			characters: []*character.Character{
 				{
 					ID:     "draft4",
-					Status: character.CharacterStatusDraft,
+					Status: shared.CharacterStatusDraft,
 					Name:   "",
 					Class:  testutils.CreateTestClass("fighter", "Fighter", 10),
 				},
@@ -74,17 +75,17 @@ func TestCharacterListFiltering(t *testing.T) {
 			characters: []*character.Character{
 				{
 					ID:     "active1",
-					Status: character.CharacterStatusActive,
+					Status: shared.CharacterStatusActive,
 					Name:   "Gandalf",
 				},
 				{
 					ID:     "draft5",
-					Status: character.CharacterStatusDraft,
+					Status: shared.CharacterStatusDraft,
 					Name:   "Frodo",
 				},
 				{
 					ID:     "archived1",
-					Status: character.CharacterStatusArchived,
+					Status: shared.CharacterStatusArchived,
 					Name:   "Boromir",
 				},
 			},
@@ -104,14 +105,14 @@ func TestCharacterListFiltering(t *testing.T) {
 
 			for _, char := range tt.characters {
 				switch char.Status {
-				case character.CharacterStatusActive:
+				case shared.CharacterStatusActive:
 					activeChars = append(activeChars, char)
-				case character.CharacterStatusDraft:
+				case shared.CharacterStatusDraft:
 					// Only show drafts that have meaningful progress
 					if char.Name != "" || char.Race != nil || char.Class != nil {
 						draftChars = append(draftChars, char)
 					}
-				case character.CharacterStatusArchived:
+				case shared.CharacterStatusArchived:
 					archivedChars = append(archivedChars, char)
 				}
 			}
@@ -134,7 +135,7 @@ func TestDraftCharacterDisplay(t *testing.T) {
 			name: "draft with name",
 			character: &character.Character{
 				Name:   "Aragorn",
-				Status: character.CharacterStatusDraft,
+				Status: shared.CharacterStatusDraft,
 			},
 			expectedStatus:   "Aragorn",
 			expectedProgress: "✓ Name",
@@ -145,7 +146,7 @@ func TestDraftCharacterDisplay(t *testing.T) {
 				Name:   "",
 				Race:   &rulebook.Race{Name: "Human"},
 				Class:  &rulebook.Class{Name: "Ranger"},
-				Status: character.CharacterStatusDraft,
+				Status: shared.CharacterStatusDraft,
 			},
 			expectedStatus:   "Human Ranger (unnamed)",
 			expectedProgress: "✓ Race ✓ Class ",
@@ -155,7 +156,7 @@ func TestDraftCharacterDisplay(t *testing.T) {
 			character: &character.Character{
 				Name:   "",
 				Race:   &rulebook.Race{Name: "Elf"},
-				Status: character.CharacterStatusDraft,
+				Status: shared.CharacterStatusDraft,
 			},
 			expectedStatus:   "Elf (selecting class)",
 			expectedProgress: "✓ Race ",
@@ -166,10 +167,10 @@ func TestDraftCharacterDisplay(t *testing.T) {
 				Name:  "Legolas",
 				Race:  &rulebook.Race{Name: "Elf"},
 				Class: &rulebook.Class{Name: "Ranger"},
-				Attributes: map[character.Attribute]*character.AbilityScore{
-					character.AttributeStrength: {Score: 14},
+				Attributes: map[shared.Attribute]*character.AbilityScore{
+					shared.AttributeStrength: {Score: 14},
 				},
-				Status: character.CharacterStatusDraft,
+				Status: shared.CharacterStatusDraft,
 			},
 			expectedStatus:   "Legolas",
 			expectedProgress: "✓ Race ✓ Class ✓ Abilities ✓ Name",

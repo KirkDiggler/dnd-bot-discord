@@ -2,7 +2,7 @@ package character_test
 
 import (
 	"context"
-	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"net/http"
 	"strings"
 	"testing"
@@ -53,7 +53,7 @@ func TestRogueCharacterCreationFlow(t *testing.T) {
 		draft, err := service.GetOrCreateDraftCharacter(ctx, userID, realmID)
 		require.NoError(t, err)
 		require.NotNil(t, draft)
-		assert.Equal(t, character2.CharacterStatusDraft, draft.Status)
+		assert.Equal(t, shared.CharacterStatusDraft, draft.Status)
 
 		// Step 2: Select Human race
 		humanRace, err := service.GetRace(ctx, "human")
@@ -169,12 +169,12 @@ func TestRogueCharacterCreationFlow(t *testing.T) {
 		assert.Contains(t, profKeys, "skill-persuasion")
 
 		// Verify ability scores
-		assert.Equal(t, 10, finalChar.Attributes[character2.AttributeStrength].Score)
-		assert.Equal(t, 15, finalChar.Attributes[character2.AttributeDexterity].Score)
-		assert.Equal(t, 13, finalChar.Attributes[character2.AttributeConstitution].Score)
-		assert.Equal(t, 12, finalChar.Attributes[character2.AttributeIntelligence].Score)
-		assert.Equal(t, 14, finalChar.Attributes[character2.AttributeWisdom].Score)
-		assert.Equal(t, 8, finalChar.Attributes[character2.AttributeCharisma].Score)
+		assert.Equal(t, 10, finalChar.Attributes[shared.AttributeStrength].Score)
+		assert.Equal(t, 15, finalChar.Attributes[shared.AttributeDexterity].Score)
+		assert.Equal(t, 13, finalChar.Attributes[shared.AttributeConstitution].Score)
+		assert.Equal(t, 12, finalChar.Attributes[shared.AttributeIntelligence].Score)
+		assert.Equal(t, 14, finalChar.Attributes[shared.AttributeWisdom].Score)
+		assert.Equal(t, 8, finalChar.Attributes[shared.AttributeCharisma].Score)
 	})
 }
 

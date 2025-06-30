@@ -85,13 +85,13 @@ func TestPerformAttack_PlayerVsMonster(t *testing.T) {
 		ID:               "char-1",
 		Name:             "Fighter",
 		OwnerID:          "player-1",
-		Status:           character2.CharacterStatusActive,
+		Status:           shared.CharacterStatusActive,
 		Level:            1,
 		CurrentHitPoints: 10,
 		MaxHitPoints:     10,
 		AC:               16,
-		Attributes: map[character2.Attribute]*character2.AbilityScore{
-			character2.AttributeStrength: {Score: 16}, // +3 modifier
+		Attributes: map[shared.Attribute]*character2.AbilityScore{
+			shared.AttributeStrength: {Score: 16}, // +3 modifier
 		},
 		EquippedSlots: map[character2.Slot]equipment.Equipment{
 			character2.SlotMainHand: &equipment.Weapon{
@@ -230,7 +230,7 @@ func TestPerformAttack_MonsterVsPlayer(t *testing.T) {
 		ID:               "char-1",
 		Name:             "Fighter",
 		OwnerID:          "player-1",
-		Status:           character2.CharacterStatusActive,
+		Status:           shared.CharacterStatusActive,
 		Level:            1,
 		CurrentHitPoints: 10,
 		MaxHitPoints:     10,

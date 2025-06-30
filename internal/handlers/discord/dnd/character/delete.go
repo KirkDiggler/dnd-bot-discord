@@ -3,6 +3,7 @@ package character
 import (
 	"fmt"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
@@ -388,13 +389,13 @@ func (h *DeleteHandler) HandleSelectMenu(req *DeleteRequest) error {
 	return h.showDeleteConfirmation(req, characterID)
 }
 
-func (h *DeleteHandler) getStatusEmoji(status character.CharacterStatus) string {
+func (h *DeleteHandler) getStatusEmoji(status shared.CharacterStatus) string {
 	switch status {
-	case character.CharacterStatusActive:
+	case shared.CharacterStatusActive:
 		return "✅"
-	case character.CharacterStatusDraft:
+	case shared.CharacterStatusDraft:
 		return "📝"
-	case character.CharacterStatusArchived:
+	case shared.CharacterStatusArchived:
 		return "🗄️"
 	default:
 		return "❓"

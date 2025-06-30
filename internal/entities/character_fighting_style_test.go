@@ -18,9 +18,9 @@ func TestFightingStyleArchery(t *testing.T) {
 		Name:  "Archer",
 		Level: 1,
 		Class: &rulebook.Class{Key: "fighter"},
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeDexterity: {Score: 16, Bonus: 3},
-			character.AttributeStrength:  {Score: 10, Bonus: 0},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeDexterity: {Score: 16, Bonus: 3},
+			shared.AttributeStrength:  {Score: 10, Bonus: 0},
 		},
 		Features: []*rulebook.CharacterFeature{
 			{
@@ -75,9 +75,9 @@ func TestFightingStyleDueling(t *testing.T) {
 		Name:  "Duelist",
 		Level: 1,
 		Class: &rulebook.Class{Key: "fighter"},
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeStrength:  {Score: 16, Bonus: 3},
-			character.AttributeDexterity: {Score: 10, Bonus: 0},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength:  {Score: 16, Bonus: 3},
+			shared.AttributeDexterity: {Score: 10, Bonus: 0},
 		},
 		Features: []*rulebook.CharacterFeature{
 			{
@@ -179,9 +179,9 @@ func TestFightingStyleTwoWeaponFighting(t *testing.T) {
 		Name:  "Dual Wielder",
 		Level: 1,
 		Class: &rulebook.Class{Key: "fighter"},
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeStrength:  {Score: 16, Bonus: 3},
-			character.AttributeDexterity: {Score: 14, Bonus: 2},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength:  {Score: 16, Bonus: 3},
+			shared.AttributeDexterity: {Score: 14, Bonus: 2},
 		},
 		Features: []*rulebook.CharacterFeature{
 			{
@@ -240,9 +240,9 @@ func TestFightingStyleDefense(t *testing.T) {
 		Name:  "Defender",
 		Level: 1,
 		Class: &rulebook.Class{Key: "fighter"},
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeDexterity:    {Score: 14, Bonus: 2},
-			character.AttributeConstitution: {Score: 14, Bonus: 2},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeDexterity:    {Score: 14, Bonus: 2},
+			shared.AttributeConstitution: {Score: 14, Bonus: 2},
 		},
 		Features: []*rulebook.CharacterFeature{
 			{
@@ -285,9 +285,9 @@ func TestFightingStyleGreatWeapon(t *testing.T) {
 		Name:  "Great Weapon Fighter",
 		Level: 1,
 		Class: &rulebook.Class{Key: "fighter"},
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeStrength:  {Score: 18, Bonus: 4},
-			character.AttributeDexterity: {Score: 10, Bonus: 0},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength:  {Score: 18, Bonus: 4},
+			shared.AttributeDexterity: {Score: 10, Bonus: 0},
 		},
 		Features: []*rulebook.CharacterFeature{
 			{

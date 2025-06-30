@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
@@ -154,7 +155,7 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 }
 
 // handleRage handles the Barbarian's Rage ability
-func (s *service) handleRage(character *character.Character, ability *character.ActiveAbility, result *UseAbilityResult) *UseAbilityResult {
+func (s *service) handleRage(character *character.Character, ability *shared.ActiveAbility, result *UseAbilityResult) *UseAbilityResult {
 	// Create rage effect using the new status effect system
 	rageEffect := effects.BuildRageEffect(character.Level)
 
@@ -219,7 +220,7 @@ func (s *service) handleSecondWind(character *character.Character, result *UseAb
 }
 
 // handleBardicInspiration handles the Bard's Bardic Inspiration ability
-func (s *service) handleBardicInspiration(character *character.Character, targetID string, ability *character.ActiveAbility, result *UseAbilityResult) *UseAbilityResult {
+func (s *service) handleBardicInspiration(character *character.Character, targetID string, ability *shared.ActiveAbility, result *UseAbilityResult) *UseAbilityResult {
 	if targetID == "" {
 		result.Success = false
 		result.Message = "Bardic Inspiration requires a target"

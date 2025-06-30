@@ -3,6 +3,7 @@ package character
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,7 +20,7 @@ func TestFightingStyleMetadataLostDuringFinalization(t *testing.T) {
 		draftChar := &character.Character{
 			ID:     "char_test_draft",
 			Name:   "Draft Character",
-			Status: character.CharacterStatusDraft,
+			Status: shared.CharacterStatusDraft,
 			Race:   &rulebook.Race{Key: "human", Name: "Human"},
 			Class:  &rulebook.Class{Key: "fighter", Name: "Fighter"},
 			Level:  1,
@@ -89,7 +90,7 @@ func TestFightingStyleMetadataPreservedAfterFix(t *testing.T) {
 		draftChar := &character.Character{
 			ID:     "char_test_draft_fixed",
 			Name:   "Draft Character",
-			Status: character.CharacterStatusDraft,
+			Status: shared.CharacterStatusDraft,
 			Race:   &rulebook.Race{Key: "human", Name: "Human"},
 			Class:  &rulebook.Class{Key: "fighter", Name: "Fighter"},
 			Level:  1,
@@ -151,7 +152,7 @@ func simulateBuggyFinalization(draftChar *character.Character) *character.Charac
 	finalizedChar := &character.Character{
 		ID:     draftChar.ID,
 		Name:   "Stanthony Hopkins", // Name updated during finalization
-		Status: character.CharacterStatusActive,
+		Status: shared.CharacterStatusActive,
 		Race:   draftChar.Race,
 		Class:  draftChar.Class,
 		Level:  draftChar.Level,
@@ -192,7 +193,7 @@ func simulateFixedFinalization(draftChar *character.Character) *character.Charac
 	finalizedChar := &character.Character{
 		ID:     draftChar.ID,
 		Name:   "Stanthony Hopkins", // Name updated during finalization
-		Status: character.CharacterStatusActive,
+		Status: shared.CharacterStatusActive,
 		Race:   draftChar.Race,
 		Class:  draftChar.Class,
 		Level:  draftChar.Level,

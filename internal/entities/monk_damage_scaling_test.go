@@ -3,6 +3,7 @@ package entities
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdice "github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
@@ -101,12 +102,12 @@ func TestMonkMartialArts_DamageScaling(t *testing.T) {
 			char := &character.Character{
 				Level:    tt.level,
 				Features: features,
-				Attributes: map[character.Attribute]*character.AbilityScore{
-					character.AttributeStrength: {
+				Attributes: map[shared.Attribute]*character.AbilityScore{
+					shared.AttributeStrength: {
 						Score: 14, // +2 bonus
 						Bonus: 2,
 					},
-					character.AttributeDexterity: {
+					shared.AttributeDexterity: {
 						Score: 16, // +3 bonus
 						Bonus: 3,
 					},
@@ -196,12 +197,12 @@ func TestMonkMartialArts_DamageScalingWithCombat(t *testing.T) {
 				Features: []*rulebook.CharacterFeature{
 					{Key: "martial-arts", Name: "Martial Arts"},
 				},
-				Attributes: map[character.Attribute]*character.AbilityScore{
-					character.AttributeStrength: {
+				Attributes: map[shared.Attribute]*character.AbilityScore{
+					shared.AttributeStrength: {
 						Score: tt.strScore,
 						Bonus: (tt.strScore - 10) / 2,
 					},
-					character.AttributeDexterity: {
+					shared.AttributeDexterity: {
 						Score: tt.dexScore,
 						Bonus: (tt.dexScore - 10) / 2,
 					},

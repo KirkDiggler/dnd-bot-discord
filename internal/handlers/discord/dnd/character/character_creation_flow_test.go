@@ -5,6 +5,7 @@ import (
 	"fmt"
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
@@ -63,8 +64,8 @@ func TestCharacterCreation_AbilityAssignmentFlow(t *testing.T) {
 		Key:  "half-orc",
 		Name: "Half-Orc",
 		AbilityBonuses: []*character2.AbilityBonus{
-			{Attribute: character2.AttributeStrength, Bonus: 2},
-			{Attribute: character2.AttributeConstitution, Bonus: 1},
+			{Attribute: shared.AttributeStrength, Bonus: 2},
+			{Attribute: shared.AttributeConstitution, Bonus: 1},
 		},
 		Speed: 30,
 	}, nil).AnyTimes()
@@ -191,20 +192,20 @@ func TestCharacterCreation_AbilityAssignmentFlow(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify final attributes (half-orc gets +2 STR, +1 CON)
-	assert.Equal(t, 20, finalChar.Attributes[character2.AttributeStrength].Score)     // 18 + 2
-	assert.Equal(t, 17, finalChar.Attributes[character2.AttributeConstitution].Score) // 16 + 1
-	assert.Equal(t, 14, finalChar.Attributes[character2.AttributeDexterity].Score)
-	assert.Equal(t, 12, finalChar.Attributes[character2.AttributeWisdom].Score)
-	assert.Equal(t, 11, finalChar.Attributes[character2.AttributeIntelligence].Score)
-	assert.Equal(t, 9, finalChar.Attributes[character2.AttributeCharisma].Score)
+	assert.Equal(t, 20, finalChar.Attributes[shared.AttributeStrength].Score)     // 18 + 2
+	assert.Equal(t, 17, finalChar.Attributes[shared.AttributeConstitution].Score) // 16 + 1
+	assert.Equal(t, 14, finalChar.Attributes[shared.AttributeDexterity].Score)
+	assert.Equal(t, 12, finalChar.Attributes[shared.AttributeWisdom].Score)
+	assert.Equal(t, 11, finalChar.Attributes[shared.AttributeIntelligence].Score)
+	assert.Equal(t, 9, finalChar.Attributes[shared.AttributeCharisma].Score)
 
 	// Verify modifiers
-	assert.Equal(t, 5, finalChar.Attributes[character2.AttributeStrength].Bonus)
-	assert.Equal(t, 3, finalChar.Attributes[character2.AttributeConstitution].Bonus)
+	assert.Equal(t, 5, finalChar.Attributes[shared.AttributeStrength].Bonus)
+	assert.Equal(t, 3, finalChar.Attributes[shared.AttributeConstitution].Bonus)
 
 	// Verify character is complete
 	assert.True(t, finalChar.IsComplete())
-	assert.Equal(t, character2.CharacterStatusActive, finalChar.Status)
+	assert.Equal(t, shared.CharacterStatusActive, finalChar.Status)
 }
 
 // TODO: This test needs to be refactored to properly mock Discord interactions

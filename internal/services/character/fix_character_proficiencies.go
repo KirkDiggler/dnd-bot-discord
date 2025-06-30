@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 )
 
@@ -17,7 +18,7 @@ func (s *service) FixCharacterProficiencies(ctx context.Context, characterID str
 	}
 
 	// Only fix active characters with a class
-	if char.Status != character.CharacterStatusActive || char.Class == nil {
+	if char.Status != shared.CharacterStatusActive || char.Class == nil {
 		return char, nil
 	}
 

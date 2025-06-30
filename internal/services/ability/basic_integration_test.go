@@ -31,18 +31,18 @@ func TestBasicRedisIntegration(t *testing.T) {
 		Name:             "TestChar",
 		Class:            &rulebook.Class{Key: "fighter", Name: "Fighter"},
 		Level:            1,
-		Status:           character.CharacterStatusActive,
+		Status:           shared.CharacterStatusActive,
 		CurrentHitPoints: 10,
 		MaxHitPoints:     10,
 		Resources: &shared.CharacterResources{
-			Abilities: map[string]*character.ActiveAbility{
+			Abilities: map[string]*shared.ActiveAbility{
 				"test_ability": {
 					Name:          "Test Ability",
 					Key:           "test_ability",
-					ActionType:    character.AbilityTypeAction,
+					ActionType:    shared.AbilityTypeAction,
 					UsesMax:       3,
 					UsesRemaining: 3,
-					RestType:      character.RestTypeLong,
+					RestType:      shared.RestTypeLong,
 				},
 			},
 		},

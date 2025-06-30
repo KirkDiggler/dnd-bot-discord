@@ -1,8 +1,8 @@
 package combat
 
 import (
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 )
 
 type Monster struct {
@@ -32,6 +32,6 @@ type MonsterAction struct {
 	Damage      []*damage.Damage `json:"damage"`
 
 	// For abilities that require saving throws
-	SaveDC        int                 `json:"save_dc,omitempty"`        // DC for the saving throw
-	SaveAttribute character.Attribute `json:"save_attribute,omitempty"` // Which attribute to save against (STR, DEX, etc.)
+	SaveDC        int              `json:"save_dc,omitempty"`        // DC for the saving throw
+	SaveAttribute shared.Attribute `json:"save_attribute,omitempty"` // Which attribute to save against (STR, DEX, etc.)
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockencrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters/mock"
@@ -253,8 +254,8 @@ func TestAddPlayer(t *testing.T) {
 			CurrentHitPoints: 45,
 			MaxHitPoints:     45,
 			AC:               16,
-			Attributes: map[character.Attribute]*character.AbilityScore{
-				character.AttributeDexterity: {Score: 18, Bonus: 4},
+			Attributes: map[shared.Attribute]*character.AbilityScore{
+				shared.AttributeDexterity: {Score: 18, Bonus: 4},
 			},
 		}
 
@@ -328,8 +329,8 @@ func TestAddPlayer(t *testing.T) {
 			CurrentHitPoints: 50,
 			MaxHitPoints:     50,
 			AC:               17,
-			Attributes: map[character.Attribute]*character.AbilityScore{
-				character.AttributeDexterity: {Score: 14, Bonus: 2},
+			Attributes: map[shared.Attribute]*character.AbilityScore{
+				shared.AttributeDexterity: {Score: 14, Bonus: 2},
 			},
 		}
 
@@ -400,8 +401,8 @@ func TestAddPlayer(t *testing.T) {
 			CurrentHitPoints: 25,
 			MaxHitPoints:     25,
 			AC:               14,
-			Attributes: map[character.Attribute]*character.AbilityScore{
-				character.AttributeDexterity: {Score: 16, Bonus: 3},
+			Attributes: map[shared.Attribute]*character.AbilityScore{
+				shared.AttributeDexterity: {Score: 16, Bonus: 3},
 			},
 		}
 

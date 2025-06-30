@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"sort"
 	"strings"
 
@@ -159,20 +160,20 @@ func (h *AssignAbilitiesHandler) Handle(req *AssignAbilitiesRequest) error {
 // getRacialBonus gets the racial bonus for a specific ability
 func (h *AssignAbilitiesHandler) getRacialBonus(race *rulebook.Race, ability string) int {
 	// Convert ability string to Attribute type
-	var attr character.Attribute
+	var attr shared.Attribute
 	switch ability {
 	case "STR":
-		attr = character.AttributeStrength
+		attr = shared.AttributeStrength
 	case "DEX":
-		attr = character.AttributeDexterity
+		attr = shared.AttributeDexterity
 	case "CON":
-		attr = character.AttributeConstitution
+		attr = shared.AttributeConstitution
 	case "INT":
-		attr = character.AttributeIntelligence
+		attr = shared.AttributeIntelligence
 	case "WIS":
-		attr = character.AttributeWisdom
+		attr = shared.AttributeWisdom
 	case "CHA":
-		attr = character.AttributeCharisma
+		attr = shared.AttributeCharisma
 	}
 
 	for _, bonus := range race.AbilityBonuses {

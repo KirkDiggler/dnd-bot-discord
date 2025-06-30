@@ -3,6 +3,7 @@ package ability
 import (
 	"context"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdice "github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
@@ -279,22 +280,22 @@ func createTestCharacter(classKey string, level int, attributes map[string]int) 
 
 	// Set attributes if provided
 	if attributes != nil {
-		char.Attributes = make(map[character.Attribute]*character.AbilityScore)
+		char.Attributes = make(map[shared.Attribute]*character.AbilityScore)
 		for attr, score := range attributes {
-			var attribute character.Attribute
+			var attribute shared.Attribute
 			switch attr {
 			case "STR":
-				attribute = character.AttributeStrength
+				attribute = shared.AttributeStrength
 			case "DEX":
-				attribute = character.AttributeDexterity
+				attribute = shared.AttributeDexterity
 			case "CON":
-				attribute = character.AttributeConstitution
+				attribute = shared.AttributeConstitution
 			case "INT":
-				attribute = character.AttributeIntelligence
+				attribute = shared.AttributeIntelligence
 			case "WIS":
-				attribute = character.AttributeWisdom
+				attribute = shared.AttributeWisdom
 			case "CHA":
-				attribute = character.AttributeCharisma
+				attribute = shared.AttributeCharisma
 			}
 			char.AddAttribute(attribute, score)
 		}

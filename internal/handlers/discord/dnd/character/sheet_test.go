@@ -4,6 +4,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/bwmarrin/discordgo"
@@ -26,13 +27,13 @@ func TestBuildCharacterSheetEmbed(t *testing.T) {
 		Race: &rulebook.Race{
 			Name: "Human",
 		},
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeStrength:     {Score: 16, Bonus: 3},
-			character.AttributeDexterity:    {Score: 14, Bonus: 2},
-			character.AttributeConstitution: {Score: 14, Bonus: 2},
-			character.AttributeIntelligence: {Score: 12, Bonus: 1},
-			character.AttributeWisdom:       {Score: 13, Bonus: 1},
-			character.AttributeCharisma:     {Score: 10, Bonus: 0},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength:     {Score: 16, Bonus: 3},
+			shared.AttributeDexterity:    {Score: 14, Bonus: 2},
+			shared.AttributeConstitution: {Score: 14, Bonus: 2},
+			shared.AttributeIntelligence: {Score: 12, Bonus: 1},
+			shared.AttributeWisdom:       {Score: 13, Bonus: 1},
+			shared.AttributeCharisma:     {Score: 10, Bonus: 0},
 		},
 		EquippedSlots: map[character.Slot]equipment.Equipment{
 			character.SlotMainHand: &equipment.Weapon{

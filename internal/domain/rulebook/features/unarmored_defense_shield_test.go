@@ -4,6 +4,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,9 +16,9 @@ func TestUnarmoredDefenseWithShield(t *testing.T) {
 		char := &character.Character{
 			Level: 5,
 			Class: &rulebook.Class{Key: "barbarian"},
-			Attributes: map[character.Attribute]*character.AbilityScore{
-				character.AttributeDexterity:    {Score: 14, Bonus: 2},
-				character.AttributeConstitution: {Score: 18, Bonus: 4},
+			Attributes: map[shared.Attribute]*character.AbilityScore{
+				shared.AttributeDexterity:    {Score: 14, Bonus: 2},
+				shared.AttributeConstitution: {Score: 18, Bonus: 4},
 			},
 			EquippedSlots: make(map[character.Slot]equipment.Equipment),
 		}
@@ -47,9 +48,9 @@ func TestUnarmoredDefenseWithShield(t *testing.T) {
 		char := &character.Character{
 			Level: 5,
 			Class: &rulebook.Class{Key: "monk"},
-			Attributes: map[character.Attribute]*character.AbilityScore{
-				character.AttributeDexterity: {Score: 18, Bonus: 4},
-				character.AttributeWisdom:    {Score: 16, Bonus: 3},
+			Attributes: map[shared.Attribute]*character.AbilityScore{
+				shared.AttributeDexterity: {Score: 18, Bonus: 4},
+				shared.AttributeWisdom:    {Score: 16, Bonus: 3},
 			},
 			EquippedSlots: make(map[character.Slot]equipment.Equipment),
 		}
@@ -79,8 +80,8 @@ func TestUnarmoredDefenseWithShield(t *testing.T) {
 		char := &character.Character{
 			Level: 5,
 			Class: &rulebook.Class{Key: "fighter"},
-			Attributes: map[character.Attribute]*character.AbilityScore{
-				character.AttributeDexterity: {Score: 14, Bonus: 2},
+			Attributes: map[shared.Attribute]*character.AbilityScore{
+				shared.AttributeDexterity: {Score: 14, Bonus: 2},
 			},
 			EquippedSlots: make(map[character.Slot]equipment.Equipment),
 		}

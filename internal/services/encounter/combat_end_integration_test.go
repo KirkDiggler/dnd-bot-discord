@@ -6,6 +6,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	session2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"strings"
 	"testing"
 	"time"
@@ -68,12 +69,12 @@ func TestCombatEndIntegration_MonstersDefeatPlayer(t *testing.T) {
 		Name:             "Doomed Hero",
 		Level:            1,
 		OwnerID:          "player-user",
-		Status:           character2.CharacterStatusActive,
+		Status:           shared.CharacterStatusActive,
 		CurrentHitPoints: 1, // Very low HP
 		MaxHitPoints:     10,
 		AC:               10, // Low AC
-		Attributes: map[character2.Attribute]*character2.AbilityScore{
-			character2.AttributeStrength: {Score: 10},
+		Attributes: map[shared.Attribute]*character2.AbilityScore{
+			shared.AttributeStrength: {Score: 10},
 		},
 	}
 	err = charRepo.Create(ctx, char)
@@ -216,12 +217,12 @@ func TestCombatEndIntegration_PlayerDefeatsLastMonster(t *testing.T) {
 			Name:             "Mighty Hero",
 			Level:            5,
 			OwnerID:          "player-user",
-			Status:           character2.CharacterStatusActive,
+			Status:           shared.CharacterStatusActive,
 			CurrentHitPoints: 50,
 			MaxHitPoints:     50,
 			AC:               18,
-			Attributes: map[character2.Attribute]*character2.AbilityScore{
-				character2.AttributeStrength: {Score: 18}, // +4
+			Attributes: map[shared.Attribute]*character2.AbilityScore{
+				shared.AttributeStrength: {Score: 18}, // +4
 			},
 		}
 		err = charRepo.Create(ctx, char)

@@ -6,6 +6,7 @@ package character_test
 import (
 	"context"
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"net/http"
 	"os"
@@ -76,7 +77,7 @@ func TestCharacterCreationFlow_FullIntegration(t *testing.T) {
 		// Step 1: Initial GetOrCreateDraftCharacter (simulating race selection)
 		char1, err := svc.GetOrCreateDraftCharacter(ctx, userID, realmID)
 		require.NoError(t, err)
-		assert.Equal(t, character2.CharacterStatusDraft, char1.Status)
+		assert.Equal(t, shared.CharacterStatusDraft, char1.Status)
 		assert.NotEmpty(t, char1.ID)
 
 		originalID := char1.ID
@@ -180,13 +181,13 @@ func TestCharacterCreationFlow_FullIntegration(t *testing.T) {
 		char5, err := svc.GetOrCreateDraftCharacter(ctx, userID, realmID)
 		require.NoError(t, err)
 		assert.Equal(t, originalID, char5.ID, "Should STILL return same draft character after second equipment")
-		assert.Equal(t, character2.CharacterStatusDraft, char5.Status, "Should still be draft status")
+		assert.Equal(t, shared.CharacterStatusDraft, char5.Status, "Should still be draft status")
 
 		// Step 9: Finalize with name
 		finalChar, err := svc.FinalizeCharacterWithName(ctx, originalID, "Test Monk", "elf", "monk")
 		require.NoError(t, err)
 		assert.Equal(t, originalID, finalChar.ID)
-		assert.Equal(t, character2.CharacterStatusActive, finalChar.Status)
+		assert.Equal(t, shared.CharacterStatusActive, finalChar.Status)
 		assert.Equal(t, "Test Monk", finalChar.Name)
 		assert.Equal(t, 6, len(finalChar.Attributes), "Should have attributes after finalization")
 		assert.True(t, finalChar.IsComplete(), "Character should be complete")

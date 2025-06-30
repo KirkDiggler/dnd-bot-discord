@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"strings"
 
@@ -54,7 +55,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 	var activeChars []*character.Character
 	for _, char := range chars {
 		log.Printf("JoinParty - Character: ID=%s, Name=%s, Status=%s", char.ID, char.Name, char.Status)
-		if char.Status == character.CharacterStatusActive {
+		if char.Status == shared.CharacterStatusActive {
 			activeChars = append(activeChars, char)
 		}
 	}

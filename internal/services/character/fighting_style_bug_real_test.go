@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
@@ -28,7 +29,7 @@ func TestActualFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 		draftChar := &character.Character{
 			ID:     "char_real_test",
 			Name:   "Draft Character",
-			Status: character.CharacterStatusDraft,
+			Status: shared.CharacterStatusDraft,
 			Race:   &rulebook.Race{Key: "human", Name: "Human"},
 			Class:  &rulebook.Class{Key: "fighter", Name: "Fighter", HitDie: 10},
 			Level:  1,
@@ -82,7 +83,7 @@ func TestActualFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 		require.NotNil(t, finalizedChar)
 
 		// Check that the character status was updated
-		assert.Equal(t, character.CharacterStatusActive, finalizedChar.Status)
+		assert.Equal(t, shared.CharacterStatusActive, finalizedChar.Status)
 
 		// Most importantly: check if fighting style metadata is preserved
 		fightingStyleFeature := findFeatureByKey(finalizedChar.Features, "fighting_style")

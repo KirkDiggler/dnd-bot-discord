@@ -4,6 +4,7 @@ import (
 	"context"
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
@@ -34,7 +35,7 @@ func TestProficiencyDuplicationBugIntegration(t *testing.T) {
 			ID:      "test-rogue",
 			OwnerID: "test-user",
 			RealmID: "test-realm",
-			Status:  character2.CharacterStatusDraft,
+			Status:  shared.CharacterStatusDraft,
 			Race: &rulebook.Race{
 				Key:  "human",
 				Name: "Human",

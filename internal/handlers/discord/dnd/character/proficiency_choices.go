@@ -3,7 +3,7 @@ package character
 import (
 	"context"
 	"fmt"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"strings"
 
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
@@ -87,14 +87,14 @@ func (h *ProficiencyChoicesHandler) Handle(req *ProficiencyChoicesRequest) error
 		scoreLines := []string{}
 		abilities := []struct {
 			name string
-			attr character.Attribute
+			attr shared.Attribute
 		}{
-			{"STR", character.AttributeStrength},
-			{"DEX", character.AttributeDexterity},
-			{"CON", character.AttributeConstitution},
-			{"INT", character.AttributeIntelligence},
-			{"WIS", character.AttributeWisdom},
-			{"CHA", character.AttributeCharisma},
+			{"STR", shared.AttributeStrength},
+			{"DEX", shared.AttributeDexterity},
+			{"CON", shared.AttributeConstitution},
+			{"INT", shared.AttributeIntelligence},
+			{"WIS", shared.AttributeWisdom},
+			{"CHA", shared.AttributeCharisma},
 		}
 
 		for _, ability := range abilities {

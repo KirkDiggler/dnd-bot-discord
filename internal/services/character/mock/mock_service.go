@@ -9,6 +9,7 @@ import (
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	reflect "reflect"
 
 	character "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
@@ -381,7 +382,7 @@ func (mr *MockServiceMockRecorder) UpdateEquipment(character interface{}) *gomoc
 }
 
 // UpdateStatus mocks base method.
-func (m *MockService) UpdateStatus(characterID string, status character2.CharacterStatus) error {
+func (m *MockService) UpdateStatus(characterID string, status shared.CharacterStatus) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateStatus", characterID, status)
 	ret0, _ := ret[0].(error)

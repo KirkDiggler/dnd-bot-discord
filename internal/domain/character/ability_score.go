@@ -1,19 +1,8 @@
 package character
 
-import "fmt"
-
-type Attribute string
-
-var Attributes = []Attribute{AttributeStrength, AttributeDexterity, AttributeConstitution, AttributeIntelligence, AttributeWisdom, AttributeCharisma}
-
-const (
-	AttributeNone         Attribute = ""
-	AttributeStrength     Attribute = "Str"
-	AttributeDexterity    Attribute = "Dex"
-	AttributeConstitution Attribute = "Con"
-	AttributeIntelligence Attribute = "Int"
-	AttributeWisdom       Attribute = "Wis"
-	AttributeCharisma     Attribute = "Cha"
+import (
+	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 )
 
 type AbilityScore struct {
@@ -22,7 +11,7 @@ type AbilityScore struct {
 }
 
 type AbilityBonus struct {
-	Attribute Attribute
+	Attribute shared.Attribute
 	Bonus     int
 }
 
@@ -40,6 +29,6 @@ func (a *AbilityScore) String() string {
 	return fmt.Sprintf("%d (%+d)", a.Score, a.Bonus)
 }
 
-func (a Attribute) Short() string {
+func (a shared.Attribute) Short() string {
 	return string(a)
 }

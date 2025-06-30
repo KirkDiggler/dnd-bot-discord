@@ -3,8 +3,8 @@ package combat
 import (
 	"context"
 	"fmt"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"strconv"
 	"strings"
 
@@ -323,15 +323,15 @@ func (h *Handler) handleUseAbility(s *discordgo.Session, i *discordgo.Interactio
 
 // Helper functions
 
-func formatActionType(actionType character.AbilityType) string {
+func formatActionType(actionType shared.AbilityType) string {
 	switch actionType {
-	case character.AbilityTypeAction:
+	case shared.AbilityTypeAction:
 		return "Action"
-	case character.AbilityTypeBonusAction:
+	case shared.AbilityTypeBonusAction:
 		return "Bonus Action"
-	case character.AbilityTypeReaction:
+	case shared.AbilityTypeReaction:
 		return "Reaction"
-	case character.AbilityTypeFree:
+	case shared.AbilityTypeFree:
 		return "Free Action"
 	default:
 		return string(actionType)
@@ -406,7 +406,7 @@ func (h *Handler) showLayOnHandsAmountSelection(s *discordgo.Session, i *discord
 	}
 
 	// Find lay on hands ability to check remaining pool
-	var layOnHands *character.ActiveAbility
+	var layOnHands *shared.ActiveAbility
 	for _, avail := range char {
 		if avail.Ability.Key == "lay-on-hands" {
 			layOnHands = avail.Ability

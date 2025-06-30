@@ -4,6 +4,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/features"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,8 +17,8 @@ func TestCalculateAC_LeatherArmorWithDex(t *testing.T) {
 		OwnerID: "test-owner",
 		Name:    "Test Ranger",
 		Level:   1,
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeDexterity: {
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeDexterity: {
 				Score: 18, // +4 bonus
 				Bonus: 4,
 			},
@@ -66,8 +67,8 @@ func TestCalculateAC_MediumArmorLimitsDex(t *testing.T) {
 		OwnerID: "test-owner",
 		Name:    "Test Fighter",
 		Level:   1,
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeDexterity: {
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeDexterity: {
 				Score: 18, // +4 bonus
 				Bonus: 4,
 			},
@@ -111,8 +112,8 @@ func TestCalculateAC_ChainMailIgnoresDex(t *testing.T) {
 		OwnerID: "test-owner",
 		Name:    "Test Fighter",
 		Level:   1,
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeDexterity: {
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeDexterity: {
 				Score: 18, // +4 bonus
 				Bonus: 4,
 			},

@@ -6,6 +6,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat/attack"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"strings"
 
@@ -21,27 +22,27 @@ func (c *Character) calculateWeaponAbilityBonus(weap *equipment.Weapon, hasMarti
 
 	switch weap.WeaponRange {
 	case "Ranged":
-		if c.Attributes[AttributeDexterity] != nil {
-			return c.Attributes[AttributeDexterity].Bonus
+		if c.Attributes[shared.AttributeDexterity] != nil {
+			return c.Attributes[shared.AttributeDexterity].Bonus
 		}
 	case "Melee":
 		// Finesse weapons and monk weapons can use DEX instead of STR
 		if weap.IsFinesse() || (hasMartialArts && weap.IsMonkWeapon()) {
 			strBonus := 0
 			dexBonus := 0
-			if c.Attributes[AttributeStrength] != nil {
-				strBonus = c.Attributes[AttributeStrength].Bonus
+			if c.Attributes[shared.AttributeStrength] != nil {
+				strBonus = c.Attributes[shared.AttributeStrength].Bonus
 			}
-			if c.Attributes[AttributeDexterity] != nil {
-				dexBonus = c.Attributes[AttributeDexterity].Bonus
+			if c.Attributes[shared.AttributeDexterity] != nil {
+				dexBonus = c.Attributes[shared.AttributeDexterity].Bonus
 			}
 			// Use the higher of STR or DEX
 			if dexBonus > strBonus {
 				return dexBonus
 			}
 			return strBonus
-		} else if c.Attributes[AttributeStrength] != nil {
-			return c.Attributes[AttributeStrength].Bonus
+		} else if c.Attributes[shared.AttributeStrength] != nil {
+			return c.Attributes[shared.AttributeStrength].Bonus
 		}
 	}
 	return 0
@@ -371,19 +372,19 @@ func (c *Character) improvisedMelee() (*attack.Result, error) {
 		// Use the higher of STR or DEX for monks
 		strBonus := 0
 		dexBonus := 0
-		if c.Attributes[AttributeStrength] != nil {
-			strBonus = c.Attributes[AttributeStrength].Bonus
+		if c.Attributes[shared.AttributeStrength] != nil {
+			strBonus = c.Attributes[shared.AttributeStrength].Bonus
 		}
-		if c.Attributes[AttributeDexterity] != nil {
-			dexBonus = c.Attributes[AttributeDexterity].Bonus
+		if c.Attributes[shared.AttributeDexterity] != nil {
+			dexBonus = c.Attributes[shared.AttributeDexterity].Bonus
 		}
 		bonus = strBonus
 		if dexBonus > strBonus {
 			bonus = dexBonus
 		}
-	} else if c.Attributes != nil && c.Attributes[AttributeStrength] != nil {
+	} else if c.Attributes != nil && c.Attributes[shared.AttributeStrength] != nil {
 		// Non-monks use STR
-		bonus = c.Attributes[AttributeStrength].Bonus
+		bonus = c.Attributes[shared.AttributeStrength].Bonus
 	}
 
 	// Apply damage bonuses from active effects (e.g., rage) to improvised attacks

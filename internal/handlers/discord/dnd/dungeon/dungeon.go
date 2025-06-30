@@ -3,8 +3,8 @@ package dungeon
 import (
 	"context"
 	"fmt"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	session2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"math/rand"
 
@@ -121,7 +121,7 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 		// Find first active character
 		var activeCount int
 		for _, char := range chars {
-			if char.Status == character.CharacterStatusActive {
+			if char.Status == shared.CharacterStatusActive {
 				activeCount++
 				if characterName == "" { // Auto-select first active
 					// Select this character for the session

@@ -7,6 +7,7 @@ import (
 	"context"
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"os"
 	"testing"
@@ -69,7 +70,7 @@ func TestCharacterAbilityAssignment_RedisIntegration(t *testing.T) {
 		Key:  "elf",
 		Name: "Elf",
 		AbilityBonuses: []*character2.AbilityBonus{
-			{Attribute: character2.AttributeDexterity, Bonus: 2},
+			{Attribute: shared.AttributeDexterity, Bonus: 2},
 		},
 		Speed: 30,
 	}, nil).AnyTimes()
@@ -172,7 +173,7 @@ func TestCharacterAbilityAssignment_RedisIntegration(t *testing.T) {
 		assert.True(t, loaded.IsComplete(), "Loaded character should be complete")
 
 		// Verify specific values
-		assert.Equal(t, 16, loaded.Attributes[character2.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
+		assert.Equal(t, 16, loaded.Attributes[shared.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
 
 		// Clean up
 		err = repo.Delete(ctx, final.ID)

@@ -212,12 +212,12 @@ func TestMonkMartialArts_WeaponAttacks(t *testing.T) {
 			char := &character.Character{
 				Level:    tt.level,
 				Features: tt.features,
-				Attributes: map[character.Attribute]*character.AbilityScore{
-					character.AttributeStrength: {
+				Attributes: map[shared.Attribute]*character.AbilityScore{
+					shared.AttributeStrength: {
 						Score: tt.strScore,
 						Bonus: (tt.strScore - 10) / 2,
 					},
-					character.AttributeDexterity: {
+					shared.AttributeDexterity: {
 						Score: tt.dexScore,
 						Bonus: (tt.dexScore - 10) / 2,
 					},
@@ -263,12 +263,12 @@ func TestMonkMartialArts_DualWielding(t *testing.T) {
 		Features: []*rulebook.CharacterFeature{
 			{Key: "martial-arts", Name: "Martial Arts"},
 		},
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeStrength: {
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength: {
 				Score: 10, // +0 bonus
 				Bonus: 0,
 			},
-			character.AttributeDexterity: {
+			shared.AttributeDexterity: {
 				Score: 16, // +3 bonus
 				Bonus: 3,
 			},

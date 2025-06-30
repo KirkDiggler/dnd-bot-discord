@@ -5,6 +5,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
@@ -22,8 +23,8 @@ func TestCharacter_RageDamageBonus(t *testing.T) {
 			Key:  "barbarian",
 			Name: "Barbarian",
 		},
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeStrength: {Score: 16, Bonus: 3},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength: {Score: 16, Bonus: 3},
 		},
 	}
 

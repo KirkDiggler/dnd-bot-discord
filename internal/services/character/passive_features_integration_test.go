@@ -4,6 +4,7 @@ import (
 	"context"
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
@@ -37,7 +38,7 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 			OwnerID:          userID,
 			RealmID:          realmID,
 			Name:             "Legolas",
-			Status:           character2.CharacterStatusDraft,
+			Status:           shared.CharacterStatusDraft,
 			Level:            1,
 			HitDie:           6,
 			MaxHitPoints:     8,
@@ -107,7 +108,7 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 		result, err := svc.FinalizeDraftCharacter(ctx, characterID)
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, character2.CharacterStatusActive, result.Status)
+		assert.Equal(t, shared.CharacterStatusActive, result.Status)
 	})
 
 	t.Run("Multiple racial features apply correctly", func(t *testing.T) {
@@ -120,15 +121,15 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 			OwnerID: userID,
 			RealmID: realmID,
 			Name:    "Gimli",
-			Status:  character2.CharacterStatusDraft,
+			Status:  shared.CharacterStatusDraft,
 			Level:   1,
-			Attributes: map[character2.Attribute]*character2.AbilityScore{
-				character2.AttributeStrength:     {Score: 16, Bonus: 3},
-				character2.AttributeDexterity:    {Score: 12, Bonus: 1},
-				character2.AttributeConstitution: {Score: 16, Bonus: 3},
-				character2.AttributeIntelligence: {Score: 10, Bonus: 0},
-				character2.AttributeWisdom:       {Score: 14, Bonus: 2},
-				character2.AttributeCharisma:     {Score: 8, Bonus: -1},
+			Attributes: map[shared.Attribute]*character2.AbilityScore{
+				shared.AttributeStrength:     {Score: 16, Bonus: 3},
+				shared.AttributeDexterity:    {Score: 12, Bonus: 1},
+				shared.AttributeConstitution: {Score: 16, Bonus: 3},
+				shared.AttributeIntelligence: {Score: 10, Bonus: 0},
+				shared.AttributeWisdom:       {Score: 14, Bonus: 2},
+				shared.AttributeCharisma:     {Score: 8, Bonus: -1},
 			},
 			Race: &rulebook.Race{
 				Key:  "dwarf",
@@ -176,7 +177,7 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 		result, err := svc.FinalizeDraftCharacter(ctx, characterID)
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, character2.CharacterStatusActive, result.Status)
+		assert.Equal(t, shared.CharacterStatusActive, result.Status)
 	})
 
 	t.Run("UpdateDraftCharacter applies passive effects when race changes", func(t *testing.T) {
@@ -189,15 +190,15 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 			OwnerID: userID,
 			RealmID: realmID,
 			Name:    "Changeling",
-			Status:  character2.CharacterStatusDraft,
+			Status:  shared.CharacterStatusDraft,
 			Level:   1,
-			Attributes: map[character2.Attribute]*character2.AbilityScore{
-				character2.AttributeStrength:     {Score: 10, Bonus: 0},
-				character2.AttributeDexterity:    {Score: 16, Bonus: 3},
-				character2.AttributeConstitution: {Score: 14, Bonus: 2},
-				character2.AttributeIntelligence: {Score: 12, Bonus: 1},
-				character2.AttributeWisdom:       {Score: 13, Bonus: 1},
-				character2.AttributeCharisma:     {Score: 8, Bonus: -1},
+			Attributes: map[shared.Attribute]*character2.AbilityScore{
+				shared.AttributeStrength:     {Score: 10, Bonus: 0},
+				shared.AttributeDexterity:    {Score: 16, Bonus: 3},
+				shared.AttributeConstitution: {Score: 14, Bonus: 2},
+				shared.AttributeIntelligence: {Score: 12, Bonus: 1},
+				shared.AttributeWisdom:       {Score: 13, Bonus: 1},
+				shared.AttributeCharisma:     {Score: 8, Bonus: -1},
 			},
 			Race: &rulebook.Race{
 				Key:  "human",

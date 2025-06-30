@@ -5,6 +5,7 @@ import (
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
@@ -42,9 +43,9 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 			OwnerID:       userID,
 			RealmID:       realmID,
 			Name:          "Draft Character",
-			Status:        character2.CharacterStatusDraft,
+			Status:        shared.CharacterStatusDraft,
 			Level:         1,
-			Attributes:    make(map[character2.Attribute]*character2.AbilityScore),
+			Attributes:    make(map[shared.Attribute]*character2.AbilityScore),
 			Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 			Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
 			EquippedSlots: make(map[character2.Slot]equipment.Equipment),
@@ -59,7 +60,7 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 			DoAndReturn(func(ctx context.Context, char *character2.Character) error {
 				assert.Equal(t, userID, char.OwnerID)
 				assert.Equal(t, realmID, char.RealmID)
-				assert.Equal(t, character2.CharacterStatusDraft, char.Status)
+				assert.Equal(t, shared.CharacterStatusDraft, char.Status)
 				// Copy fields without mutex
 				draftChar.ID = char.ID
 				draftChar.OwnerID = char.OwnerID
@@ -226,9 +227,9 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 				if char.Name == charName {
 					// Name update
 					assert.Equal(t, charName, char.Name)
-				} else if char.Status == character2.CharacterStatusActive {
+				} else if char.Status == shared.CharacterStatusActive {
 					// Finalize update
-					assert.Equal(t, character2.CharacterStatusActive, char.Status)
+					assert.Equal(t, shared.CharacterStatusActive, char.Status)
 				}
 				// Copy fields without mutex
 				draftChar.ID = char.ID
@@ -248,7 +249,7 @@ func TestCharacterCreationFlow_Integration(t *testing.T) {
 		finalChar, err := svc.FinalizeDraftCharacter(ctx, draft.ID)
 		require.NoError(t, err)
 		assert.NotNil(t, finalChar)
-		assert.Equal(t, character2.CharacterStatusActive, finalChar.Status)
+		assert.Equal(t, shared.CharacterStatusActive, finalChar.Status)
 		assert.Equal(t, charName, finalChar.Name)
 		assert.NotNil(t, finalChar.Race)
 		assert.NotNil(t, finalChar.Class)
@@ -293,7 +294,7 @@ func TestCharacterValidation_Integration(t *testing.T) {
 			name: "missing attributes",
 			character: func() *character2.Character {
 				char := testutils.CreateTestCharacter("char4", "user1", "realm1", "Test Character")
-				char.Attributes = make(map[character2.Attribute]*character2.AbilityScore)
+				char.Attributes = make(map[shared.Attribute]*character2.AbilityScore)
 				return char
 			}(),
 			wantValid: false,

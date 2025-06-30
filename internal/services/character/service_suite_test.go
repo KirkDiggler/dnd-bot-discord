@@ -264,7 +264,7 @@ func (s *CharacterServiceTestSuite) TestCreateCharacter_Success() {
 		Name:  "Dwarf",
 		Speed: 25,
 		AbilityBonuses: []*character2.AbilityBonus{
-			{Attribute: character2.AttributeConstitution, Bonus: 2},
+			{Attribute: shared.AttributeConstitution, Bonus: 2},
 		},
 	}
 

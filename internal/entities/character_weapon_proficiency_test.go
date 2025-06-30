@@ -80,9 +80,9 @@ func TestCharacter_Attack_WithCategoryProficiency(t *testing.T) {
 		Name:  "Test Ranger",
 		Class: &rulebook.Class{Key: "ranger"},
 		Level: 1,
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeStrength:  {Score: 14, Bonus: 2},
-			character.AttributeDexterity: {Score: 16, Bonus: 3},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength:  {Score: 14, Bonus: 2},
+			shared.AttributeDexterity: {Score: 16, Bonus: 3},
 		},
 		Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
 			rulebook.ProficiencyTypeWeapon: {
@@ -127,10 +127,10 @@ func TestCharacter_Attack_WithoutCategoryProficiency(t *testing.T) {
 		Name:  "Test Wizard",
 		Class: &rulebook.Class{Key: "wizard"},
 		Level: 1,
-		Attributes: map[character.Attribute]*character.AbilityScore{
-			character.AttributeStrength:     {Score: 8, Bonus: -1},
-			character.AttributeDexterity:    {Score: 14, Bonus: 2},
-			character.AttributeIntelligence: {Score: 16, Bonus: 3},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength:     {Score: 8, Bonus: -1},
+			shared.AttributeDexterity:    {Score: 14, Bonus: 2},
+			shared.AttributeIntelligence: {Score: 16, Bonus: 3},
 		},
 		Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
 			rulebook.ProficiencyTypeWeapon: {

@@ -5,6 +5,7 @@ import (
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
@@ -36,13 +37,13 @@ func TestFixCharacterAttributes(t *testing.T) {
 		Name:    "BrokenMonk",
 		OwnerID: "user_123",
 		RealmID: "realm_123",
-		Status:  character2.CharacterStatusActive,
+		Status:  shared.CharacterStatusActive,
 		Level:   1,
 		Race: &rulebook.Race{
 			Key:  "elf",
 			Name: "Elf",
 			AbilityBonuses: []*character2.AbilityBonus{
-				{Attribute: character2.AttributeDexterity, Bonus: 2},
+				{Attribute: shared.AttributeDexterity, Bonus: 2},
 			},
 		},
 		Class: &rulebook.Class{
@@ -66,7 +67,7 @@ func TestFixCharacterAttributes(t *testing.T) {
 			"WIS": "roll_5",
 			"CHA": "roll_6",
 		},
-		Attributes:    map[character2.Attribute]*character2.AbilityScore{}, // Empty!
+		Attributes:    map[shared.Attribute]*character2.AbilityScore{}, // Empty!
 		Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
 		EquippedSlots: make(map[character2.Slot]equipment.Equipment),
@@ -82,8 +83,8 @@ func TestFixCharacterAttributes(t *testing.T) {
 		assert.Len(t, char.Attributes, 6, "Should have all 6 ability scores")
 
 		// Verify specific scores with racial bonuses
-		assert.Equal(t, 16, char.Attributes[character2.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
-		assert.Equal(t, 15, char.Attributes[character2.AttributeIntelligence].Score, "INT should be 15")
+		assert.Equal(t, 16, char.Attributes[shared.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
+		assert.Equal(t, 15, char.Attributes[shared.AttributeIntelligence].Score, "INT should be 15")
 
 		// Verify HP was calculated
 		assert.Equal(t, 9, char.MaxHitPoints, "HP should be 8 (hit die) + 1 (CON mod)")
@@ -131,9 +132,9 @@ func TestFixCharacterAttributes_AlreadyHasAttributes(t *testing.T) {
 	goodChar := &character2.Character{
 		ID:     characterID,
 		Name:   "GoodChar",
-		Status: character2.CharacterStatusActive,
-		Attributes: map[character2.Attribute]*character2.AbilityScore{
-			character2.AttributeStrength: {Score: 15, Bonus: 2},
+		Status: shared.CharacterStatusActive,
+		Attributes: map[shared.Attribute]*character2.AbilityScore{
+			shared.AttributeStrength: {Score: 15, Bonus: 2},
 		},
 	}
 

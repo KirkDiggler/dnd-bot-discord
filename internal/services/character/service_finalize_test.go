@@ -4,6 +4,7 @@ import (
 	"context"
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
@@ -35,14 +36,14 @@ func TestService_FinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T)
 		Name:    "Test Character",
 		OwnerID: "user_123",
 		RealmID: "realm_123",
-		Status:  character2.CharacterStatusDraft,
+		Status:  shared.CharacterStatusDraft,
 		Level:   1,
 		Race: &rulebook.Race{
 			Key:  "elf",
 			Name: "Elf",
 			AbilityBonuses: []*character2.AbilityBonus{
-				{Attribute: character2.AttributeDexterity, Bonus: 2},
-				{Attribute: character2.AttributeIntelligence, Bonus: 1},
+				{Attribute: shared.AttributeDexterity, Bonus: 2},
+				{Attribute: shared.AttributeIntelligence, Bonus: 1},
 			},
 		},
 		Class: &rulebook.Class{
@@ -66,7 +67,7 @@ func TestService_FinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T)
 			"WIS": "roll_5", // Wis uses roll 5 with 11
 			"CHA": "roll_6", // Cha uses roll 6 with 10
 		},
-		Attributes: make(map[character2.Attribute]*character2.AbilityScore), // Empty attributes
+		Attributes: make(map[shared.Attribute]*character2.AbilityScore), // Empty attributes
 	}
 
 	// Mock repository calls
@@ -75,22 +76,22 @@ func TestService_FinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T)
 	// Expect update with converted attributes
 	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *character2.Character) error {
 		// Verify attributes were converted correctly
-		assert.Equal(t, character2.CharacterStatusActive, char.Status)
+		assert.Equal(t, shared.CharacterStatusActive, char.Status)
 
 		// Check STR (13, no racial bonus)
-		assert.NotNil(t, char.Attributes[character2.AttributeStrength])
-		assert.Equal(t, 13, char.Attributes[character2.AttributeStrength].Score)
-		assert.Equal(t, 1, char.Attributes[character2.AttributeStrength].Bonus) // (13-10)/2 = 1
+		assert.NotNil(t, char.Attributes[shared.AttributeStrength])
+		assert.Equal(t, 13, char.Attributes[shared.AttributeStrength].Score)
+		assert.Equal(t, 1, char.Attributes[shared.AttributeStrength].Bonus) // (13-10)/2 = 1
 
 		// Check DEX (14 + 2 racial = 16)
-		assert.NotNil(t, char.Attributes[character2.AttributeDexterity])
-		assert.Equal(t, 16, char.Attributes[character2.AttributeDexterity].Score)
-		assert.Equal(t, 3, char.Attributes[character2.AttributeDexterity].Bonus) // (16-10)/2 = 3
+		assert.NotNil(t, char.Attributes[shared.AttributeDexterity])
+		assert.Equal(t, 16, char.Attributes[shared.AttributeDexterity].Score)
+		assert.Equal(t, 3, char.Attributes[shared.AttributeDexterity].Bonus) // (16-10)/2 = 3
 
 		// Check INT (15 + 1 racial = 16)
-		assert.NotNil(t, char.Attributes[character2.AttributeIntelligence])
-		assert.Equal(t, 16, char.Attributes[character2.AttributeIntelligence].Score)
-		assert.Equal(t, 3, char.Attributes[character2.AttributeIntelligence].Bonus) // (16-10)/2 = 3
+		assert.NotNil(t, char.Attributes[shared.AttributeIntelligence])
+		assert.Equal(t, 16, char.Attributes[shared.AttributeIntelligence].Score)
+		assert.Equal(t, 3, char.Attributes[shared.AttributeIntelligence].Bonus) // (16-10)/2 = 3
 
 		// Check HP calculation (6 base + 1 con modifier)
 		assert.Equal(t, 7, char.MaxHitPoints)
@@ -108,7 +109,7 @@ func TestService_FinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T)
 	// Assert
 	require.NoError(t, err)
 	assert.NotNil(t, result)
-	assert.Equal(t, character2.CharacterStatusActive, result.Status)
+	assert.Equal(t, shared.CharacterStatusActive, result.Status)
 }
 
 func TestService_FinalizeDraftCharacter_PreservesExistingAttributes(t *testing.T) {
@@ -132,20 +133,20 @@ func TestService_FinalizeDraftCharacter_PreservesExistingAttributes(t *testing.T
 		Name:    "Test Character",
 		OwnerID: "user_123",
 		RealmID: "realm_123",
-		Status:  character2.CharacterStatusDraft,
+		Status:  shared.CharacterStatusDraft,
 		Level:   1,
 		Class: &rulebook.Class{
 			Key:    "fighter",
 			Name:   "Fighter",
 			HitDie: 10,
 		},
-		Attributes: map[character2.Attribute]*character2.AbilityScore{
-			character2.AttributeStrength:     {Score: 16, Bonus: 3},
-			character2.AttributeDexterity:    {Score: 14, Bonus: 2},
-			character2.AttributeConstitution: {Score: 15, Bonus: 2},
-			character2.AttributeIntelligence: {Score: 10, Bonus: 0},
-			character2.AttributeWisdom:       {Score: 12, Bonus: 1},
-			character2.AttributeCharisma:     {Score: 8, Bonus: -1},
+		Attributes: map[shared.Attribute]*character2.AbilityScore{
+			shared.AttributeStrength:     {Score: 16, Bonus: 3},
+			shared.AttributeDexterity:    {Score: 14, Bonus: 2},
+			shared.AttributeConstitution: {Score: 15, Bonus: 2},
+			shared.AttributeIntelligence: {Score: 10, Bonus: 0},
+			shared.AttributeWisdom:       {Score: 12, Bonus: 1},
+			shared.AttributeCharisma:     {Score: 8, Bonus: -1},
 		},
 		MaxHitPoints:     12, // Already calculated
 		CurrentHitPoints: 12,
@@ -160,9 +161,9 @@ func TestService_FinalizeDraftCharacter_PreservesExistingAttributes(t *testing.T
 	// Expect update without conversion
 	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *character2.Character) error {
 		// Verify attributes were NOT changed
-		assert.Equal(t, character2.CharacterStatusActive, char.Status)
-		assert.Equal(t, 16, char.Attributes[character2.AttributeStrength].Score)
-		assert.Equal(t, 3, char.Attributes[character2.AttributeStrength].Bonus)
+		assert.Equal(t, shared.CharacterStatusActive, char.Status)
+		assert.Equal(t, 16, char.Attributes[shared.AttributeStrength].Score)
+		assert.Equal(t, 3, char.Attributes[shared.AttributeStrength].Bonus)
 
 		// HP and AC should remain the same
 		assert.Equal(t, 12, char.MaxHitPoints)
@@ -177,5 +178,5 @@ func TestService_FinalizeDraftCharacter_PreservesExistingAttributes(t *testing.T
 	// Assert
 	require.NoError(t, err)
 	assert.NotNil(t, result)
-	assert.Equal(t, character2.CharacterStatusActive, result.Status)
+	assert.Equal(t, shared.CharacterStatusActive, result.Status)
 }

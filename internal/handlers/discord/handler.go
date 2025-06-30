@@ -7,6 +7,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	combat2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"slices"
 	"strconv"
@@ -1421,7 +1422,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 			case "archive":
 				// Archive the character
-				err := h.ServiceProvider.CharacterService.UpdateStatus(characterID, character2.CharacterStatusArchived)
+				err := h.ServiceProvider.CharacterService.UpdateStatus(characterID, shared.CharacterStatusArchived)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to archive character: %v", err)
 					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -1449,7 +1450,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 			case "restore":
 				// Restore archived character to active
-				err := h.ServiceProvider.CharacterService.UpdateStatus(characterID, character2.CharacterStatusActive)
+				err := h.ServiceProvider.CharacterService.UpdateStatus(characterID, shared.CharacterStatusActive)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to restore character: %v", err)
 					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -1577,7 +1578,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 
 				// Verify it's a draft
-				if char.Status != character2.CharacterStatusDraft {
+				if char.Status != shared.CharacterStatusDraft {
 					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
@@ -3956,7 +3957,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 		// Handle saving throw rolls
 		if len(parts) >= 4 {
 			characterID := parts[1]
-			attribute := character2.Attribute(parts[2])
+			attribute := shared.Attribute(parts[2])
 			dc, err := strconv.Atoi(parts[3])
 			if err == nil {
 				if err := h.savingThrowHandler.HandleSavingThrowRoll(s, i, characterID, attribute, dc); err != nil {
@@ -4071,17 +4072,17 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				for attr, score := range char.Attributes {
 					var key string
 					switch attr {
-					case character2.AttributeStrength:
+					case shared.AttributeStrength:
 						key = "STR"
-					case character2.AttributeDexterity:
+					case shared.AttributeDexterity:
 						key = "DEX"
-					case character2.AttributeConstitution:
+					case shared.AttributeConstitution:
 						key = "CON"
-					case character2.AttributeIntelligence:
+					case shared.AttributeIntelligence:
 						key = "INT"
-					case character2.AttributeWisdom:
+					case shared.AttributeWisdom:
 						key = "WIS"
-					case character2.AttributeCharisma:
+					case shared.AttributeCharisma:
 						key = "CHA"
 					}
 					if key != "" && score != nil {
