@@ -792,13 +792,31 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 		isMyTurn = current.ID == playerCombatant.ID
 	}
 
+	// Check if combat has ended
+	combatEnded := enc.Status == entities.EncounterStatusCompleted
+	playersWon := false
+
+	// Check if players won by seeing if any players are still active
+	if combatEnded {
+		for _, c := range enc.Combatants {
+			if c.Type == entities.CombatantTypePlayer && c.IsActive {
+				playersWon = true
+				break
+			}
+		}
+	}
+
 	// Use the standard combat status embed for consistency
 	embed := BuildCombatStatusEmbedForPlayer(enc, nil, playerCombatant.Name)
 
 	// Update title and description for personalized view
 	embed.Title = fmt.Sprintf("🎯 %s's Action Controller", playerCombatant.Name)
 	embed.Description = "Choose your action:"
-	if !isMyTurn && enc.Status == entities.EncounterStatusActive {
+
+	// Add combat end message if applicable
+	if combatEnded {
+		appendCombatEndMessage(embed, combatEnded, playersWon)
+	} else if !isMyTurn && enc.Status == entities.EncounterStatusActive {
 		if current := enc.GetCurrentCombatant(); current != nil {
 			embed.Description = fmt.Sprintf("Waiting for %s's turn...", current.Name)
 		}
@@ -850,42 +868,52 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 	}
 	embed.Fields = append([]*discordgo.MessageEmbedField{statusField}, embed.Fields...)
 
-	// Build action buttons - disable if action already used
-	attackDisabled := enc.Status != entities.EncounterStatusActive
-	if char != nil && char.Resources != nil && char.Resources.ActionEconomy.ActionUsed {
-		attackDisabled = true
-	}
+	var components []discordgo.MessageComponent
 
-	components := []discordgo.MessageComponent{
-		discordgo.ActionsRow{
-			Components: []discordgo.MessageComponent{
-				discordgo.Button{
-					Label:    "Attack",
-					Style:    discordgo.DangerButton,
-					CustomID: fmt.Sprintf("combat:attack:%s", encounterID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
-					Disabled: attackDisabled,
-				},
-				discordgo.Button{
-					Label:    "Abilities",
-					Style:    discordgo.PrimaryButton,
-					CustomID: fmt.Sprintf("combat:abilities:%s", encounterID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "✨"},
-					Disabled: enc.Status != entities.EncounterStatusActive,
-				},
-				discordgo.Button{
-					Label:    "End Turn",
-					Style:    discordgo.SecondaryButton,
-					CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "⏭️"},
-					Disabled: enc.Status != entities.EncounterStatusActive,
+	if combatEnded {
+		// Show end of combat buttons
+		components = BuildCombatComponents(encounterID, &encounter.ExecuteAttackResult{
+			CombatEnded: combatEnded,
+			PlayersWon:  playersWon,
+		})
+	} else {
+		// Build action buttons - disable if action already used
+		attackDisabled := enc.Status != entities.EncounterStatusActive
+		if char != nil && char.Resources != nil && char.Resources.ActionEconomy.ActionUsed {
+			attackDisabled = true
+		}
+
+		components = []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.Button{
+						Label:    "Attack",
+						Style:    discordgo.DangerButton,
+						CustomID: fmt.Sprintf("combat:attack:%s", encounterID),
+						Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
+						Disabled: attackDisabled,
+					},
+					discordgo.Button{
+						Label:    "Abilities",
+						Style:    discordgo.PrimaryButton,
+						CustomID: fmt.Sprintf("combat:abilities:%s", encounterID),
+						Emoji:    &discordgo.ComponentEmoji{Name: "✨"},
+						Disabled: enc.Status != entities.EncounterStatusActive,
+					},
+					discordgo.Button{
+						Label:    "End Turn",
+						Style:    discordgo.SecondaryButton,
+						CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
+						Emoji:    &discordgo.ComponentEmoji{Name: "⏭️"},
+						Disabled: enc.Status != entities.EncounterStatusActive,
+					},
 				},
 			},
-		},
+		}
 	}
 
-	// Add bonus action buttons if available
-	if len(availableBonusActions) > 0 {
+	// Add bonus action buttons if available and combat is still active
+	if len(availableBonusActions) > 0 && !combatEnded {
 		bonusActionButtons := []discordgo.MessageComponent{}
 		for i, ba := range availableBonusActions {
 			if i >= 5 { // Discord has a 5-button limit per row
@@ -1578,13 +1606,31 @@ func (h *Handler) buildActionController(enc *entities.Encounter, encounterID, us
 		isMyTurn = current.ID == playerCombatant.ID
 	}
 
+	// Check if combat has ended
+	combatEnded := enc.Status == entities.EncounterStatusCompleted
+	playersWon := false
+
+	// Check if players won by seeing if any players are still active
+	if combatEnded {
+		for _, c := range enc.Combatants {
+			if c.Type == entities.CombatantTypePlayer && c.IsActive {
+				playersWon = true
+				break
+			}
+		}
+	}
+
 	// Use the standard combat status embed for consistency
 	embed := BuildCombatStatusEmbedForPlayer(enc, nil, playerCombatant.Name)
 
 	// Update title and description for personalized view
 	embed.Title = fmt.Sprintf("🎯 %s's Action Controller", playerCombatant.Name)
 	embed.Description = "Choose your action:"
-	if !isMyTurn && enc.Status == entities.EncounterStatusActive {
+
+	// Add combat end message if applicable
+	if combatEnded {
+		appendCombatEndMessage(embed, combatEnded, playersWon)
+	} else if !isMyTurn && enc.Status == entities.EncounterStatusActive {
 		if current := enc.GetCurrentCombatant(); current != nil {
 			embed.Description = fmt.Sprintf("Waiting for %s's turn...", current.Name)
 		}
@@ -1636,42 +1682,52 @@ func (h *Handler) buildActionController(enc *entities.Encounter, encounterID, us
 	}
 	embed.Fields = append([]*discordgo.MessageEmbedField{statusField}, embed.Fields...)
 
-	// Build action buttons - disable if action already used
-	attackDisabled := enc.Status != entities.EncounterStatusActive || !isMyTurn
-	if char != nil && char.Resources != nil && char.Resources.ActionEconomy.ActionUsed {
-		attackDisabled = true
-	}
+	var components []discordgo.MessageComponent
 
-	components := []discordgo.MessageComponent{
-		discordgo.ActionsRow{
-			Components: []discordgo.MessageComponent{
-				discordgo.Button{
-					Label:    "Attack",
-					Style:    discordgo.DangerButton,
-					CustomID: fmt.Sprintf("combat:attack:%s", encounterID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
-					Disabled: attackDisabled,
-				},
-				discordgo.Button{
-					Label:    "Abilities",
-					Style:    discordgo.PrimaryButton,
-					CustomID: fmt.Sprintf("combat:abilities:%s", encounterID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "✨"},
-					Disabled: enc.Status != entities.EncounterStatusActive || !isMyTurn,
-				},
-				discordgo.Button{
-					Label:    "End Turn",
-					Style:    discordgo.SecondaryButton,
-					CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "⏭️"},
-					Disabled: enc.Status != entities.EncounterStatusActive || !isMyTurn,
+	if combatEnded {
+		// Show end of combat buttons
+		components = BuildCombatComponents(encounterID, &encounter.ExecuteAttackResult{
+			CombatEnded: combatEnded,
+			PlayersWon:  playersWon,
+		})
+	} else {
+		// Build action buttons - disable if action already used
+		attackDisabled := enc.Status != entities.EncounterStatusActive || !isMyTurn
+		if char != nil && char.Resources != nil && char.Resources.ActionEconomy.ActionUsed {
+			attackDisabled = true
+		}
+
+		components = []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.Button{
+						Label:    "Attack",
+						Style:    discordgo.DangerButton,
+						CustomID: fmt.Sprintf("combat:attack:%s", encounterID),
+						Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
+						Disabled: attackDisabled,
+					},
+					discordgo.Button{
+						Label:    "Abilities",
+						Style:    discordgo.PrimaryButton,
+						CustomID: fmt.Sprintf("combat:abilities:%s", encounterID),
+						Emoji:    &discordgo.ComponentEmoji{Name: "✨"},
+						Disabled: enc.Status != entities.EncounterStatusActive || !isMyTurn,
+					},
+					discordgo.Button{
+						Label:    "End Turn",
+						Style:    discordgo.SecondaryButton,
+						CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
+						Emoji:    &discordgo.ComponentEmoji{Name: "⏭️"},
+						Disabled: enc.Status != entities.EncounterStatusActive || !isMyTurn,
+					},
 				},
 			},
-		},
+		}
 	}
 
-	// Add bonus action buttons if available
-	if len(availableBonusActions) > 0 && isMyTurn {
+	// Add bonus action buttons if available and combat is still active
+	if len(availableBonusActions) > 0 && isMyTurn && !combatEnded {
 		bonusActionButtons := []discordgo.MessageComponent{}
 		for i, ba := range availableBonusActions {
 			if i >= 5 { // Discord has a 5-button limit per row
