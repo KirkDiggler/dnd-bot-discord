@@ -1102,6 +1102,34 @@ func (h *Handler) handleBonusAction(s *discordgo.Session, i *discordgo.Interacti
 	// Save character to persist the bonus action usage
 	if err := h.characterService.UpdateEquipment(char); err != nil {
 		log.Printf("Failed to save character after bonus action: %v", err)
+		// Notify the user but don't fail the entire operation
+		embed := &discordgo.MessageEmbed{
+			Title:       "⚠️ Warning",
+			Description: "Bonus action was used but failed to save. It may not persist if the bot restarts.",
+			Color:       0xFFFF00, // Yellow
+			Footer: &discordgo.MessageEmbedFooter{
+				Text: "Please report this issue if it persists",
+			},
+		}
+
+		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseUpdateMessage,
+			Data: &discordgo.InteractionResponseData{
+				Embeds: []*discordgo.MessageEmbed{embed},
+				Components: []discordgo.MessageComponent{
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label:    "Back to Actions",
+								Style:    discordgo.PrimaryButton,
+								CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
+							},
+						},
+					},
+				},
+			},
+		})
 	}
 
 	// Update the action controller
