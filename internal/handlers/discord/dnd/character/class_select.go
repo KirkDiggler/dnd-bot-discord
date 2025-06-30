@@ -3,10 +3,10 @@ package character
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/features"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/features"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
 )
@@ -152,7 +152,7 @@ func (h *ClassSelectHandler) Handle(req *ClassSelectRequest) error {
 }
 
 // buildSummaryEmbed creates an embed showing race and class summary
-func (h *ClassSelectHandler) buildSummaryEmbed(race *entities.Race, class *entities.Class) *discordgo.MessageEmbed {
+func (h *ClassSelectHandler) buildSummaryEmbed(race *rulebook.Race, class *rulebook.Class) *discordgo.MessageEmbed {
 	embed := &discordgo.MessageEmbed{
 		Title:       "Create New Character",
 		Description: fmt.Sprintf("**Race:** %s\n**Class:** %s\n\nExcellent choices! Let's review your selections.", race.Name, class.Name),

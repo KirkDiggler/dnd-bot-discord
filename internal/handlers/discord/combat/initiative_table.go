@@ -2,14 +2,14 @@ package combat
 
 import (
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/bwmarrin/discordgo"
 )
 
 // BuildInitiativeFields creates Discord embed fields for initiative order
-func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedField {
+func BuildInitiativeFields(enc *combat.Encounter) []*discordgo.MessageEmbedField {
 	// Build a single table-style display
 	var sb strings.Builder
 
@@ -76,12 +76,12 @@ func BuildInitiativeFields(enc *entities.Encounter) []*discordgo.MessageEmbedFie
 }
 
 // formatCombatantName formats a combatant's name with appropriate icon and calculates visual width
-func formatCombatantName(c *entities.Combatant) (nameStr string, visualWidth int) {
+func formatCombatantName(c *combat.Combatant) (nameStr string, visualWidth int) {
 	// Select appropriate icon
 	icon := ""
 	if c.CurrentHP == 0 {
 		icon = "💀" // Dead indicator replaces type icon
-	} else if c.Type == entities.CombatantTypePlayer {
+	} else if c.Type == combat.CombatantTypePlayer {
 		icon = getClassIcon(c.Class)
 	} else {
 		icon = "🐉" // Monster icon
@@ -109,7 +109,7 @@ func formatCombatantName(c *entities.Combatant) (nameStr string, visualWidth int
 }
 
 // BuildCompactInitiativeDisplay creates a compact single-line display for each combatant
-func BuildCompactInitiativeDisplay(enc *entities.Encounter) string {
+func BuildCompactInitiativeDisplay(enc *combat.Encounter) string {
 	var sb strings.Builder
 
 	sb.WriteString("```css\n")
@@ -134,7 +134,7 @@ func BuildCompactInitiativeDisplay(enc *entities.Encounter) string {
 
 		// Name with type indicator
 		typeIcon := "👤"
-		if c.Type == entities.CombatantTypeMonster {
+		if c.Type == combat.CombatantTypeMonster {
 			typeIcon = "👹"
 		}
 
@@ -203,9 +203,9 @@ func getCompactHPBar(current, maxHP int) string {
 
 // BuildDetailedCombatant creates a detailed view of a single combatant
 // This could be shown when someone clicks a button or uses a command
-func BuildDetailedCombatant(c *entities.Combatant) *discordgo.MessageEmbed {
+func BuildDetailedCombatant(c *combat.Combatant) *discordgo.MessageEmbed {
 	color := 0x3498db // Blue default
-	if c.Type == entities.CombatantTypeMonster {
+	if c.Type == combat.CombatantTypeMonster {
 		color = 0xe74c3c // Red for monsters
 	}
 

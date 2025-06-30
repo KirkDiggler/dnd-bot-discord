@@ -3,12 +3,14 @@ package character
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"log"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 )
 
@@ -16,7 +18,7 @@ import (
 var sessionMutex sync.RWMutex
 
 // StartCharacterCreation starts a new character creation session
-func (s *service) StartCharacterCreation(ctx context.Context, userID, guildID string) (*entities.CharacterCreationSession, error) {
+func (s *service) StartCharacterCreation(ctx context.Context, userID, guildID string) (*character.CharacterCreationSession, error) {
 	if strings.TrimSpace(userID) == "" {
 		return nil, dnderr.InvalidArgument("user ID is required")
 	}
@@ -35,18 +37,18 @@ func (s *service) StartCharacterCreation(ctx context.Context, userID, guildID st
 	sessionMutex.Unlock()
 
 	// Create a new draft character
-	character := &entities.Character{
+	character := &character.Character{
 		ID:      generateID(),
 		OwnerID: userID,
 		RealmID: guildID,
 		Name:    "Draft Character",
-		Status:  entities.CharacterStatusDraft,
+		Status:  character.CharacterStatusDraft,
 		Level:   1,
 		// Initialize empty maps
-		Attributes:    make(map[entities.Attribute]*entities.AbilityScore),
-		Proficiencies: make(map[entities.ProficiencyType][]*entities.Proficiency),
-		Inventory:     make(map[entities.EquipmentType][]entities.Equipment),
-		EquippedSlots: make(map[entities.Slot]entities.Equipment),
+		Attributes:    make(map[character.Attribute]*character.AbilityScore),
+		Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
+		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
+		EquippedSlots: make(map[character.Slot]equipment.Equipment),
 	}
 
 	// Save to repository
@@ -57,12 +59,12 @@ func (s *service) StartCharacterCreation(ctx context.Context, userID, guildID st
 	}
 
 	// Create session
-	session := &entities.CharacterCreationSession{
+	session := &character.CharacterCreationSession{
 		ID:          fmt.Sprintf("session_%d", time.Now().UnixNano()),
 		UserID:      userID,
 		GuildID:     guildID,
 		CharacterID: character.ID,
-		CurrentStep: entities.StepRaceSelection,
+		CurrentStep: character.StepRaceSelection,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 		ExpiresAt:   time.Now().Add(1 * time.Hour), // 1 hour expiration
@@ -78,7 +80,7 @@ func (s *service) StartCharacterCreation(ctx context.Context, userID, guildID st
 }
 
 // GetCharacterCreationSession retrieves an active session
-func (s *service) GetCharacterCreationSession(ctx context.Context, sessionID string) (*entities.CharacterCreationSession, error) {
+func (s *service) GetCharacterCreationSession(ctx context.Context, sessionID string) (*character.CharacterCreationSession, error) {
 	if strings.TrimSpace(sessionID) == "" {
 		return nil, dnderr.InvalidArgument("session ID is required")
 	}
@@ -136,7 +138,7 @@ func (s *service) UpdateCharacterCreationSession(ctx context.Context, sessionID,
 }
 
 // GetCharacterFromSession gets the character associated with a session
-func (s *service) GetCharacterFromSession(ctx context.Context, sessionID string) (*entities.Character, error) {
+func (s *service) GetCharacterFromSession(ctx context.Context, sessionID string) (*character.Character, error) {
 	// Get the session
 	session, err := s.GetCharacterCreationSession(ctx, sessionID)
 	if err != nil {

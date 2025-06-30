@@ -2,12 +2,12 @@ package character_test
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -100,7 +100,7 @@ func TestRangerDraftFinalization_MissingProficiencies(t *testing.T) {
 
 	// Test: Verify class proficiencies were added
 	t.Run("Has weapon proficiencies", func(t *testing.T) {
-		weaponProfs, exists := finalized.Proficiencies[entities.ProficiencyTypeWeapon]
+		weaponProfs, exists := finalized.Proficiencies[rulebook.ProficiencyTypeWeapon]
 		assert.True(t, exists, "Should have weapon proficiencies")
 		assert.NotEmpty(t, weaponProfs, "Should have at least one weapon proficiency")
 
@@ -120,19 +120,19 @@ func TestRangerDraftFinalization_MissingProficiencies(t *testing.T) {
 	})
 
 	t.Run("Has armor proficiencies", func(t *testing.T) {
-		armorProfs, exists := finalized.Proficiencies[entities.ProficiencyTypeArmor]
+		armorProfs, exists := finalized.Proficiencies[rulebook.ProficiencyTypeArmor]
 		assert.True(t, exists, "Should have armor proficiencies")
 		assert.GreaterOrEqual(t, len(armorProfs), 3, "Should have light, medium armor and shields")
 	})
 
 	t.Run("Has saving throw proficiencies", func(t *testing.T) {
-		saveProfs, exists := finalized.Proficiencies[entities.ProficiencyTypeSavingThrow]
+		saveProfs, exists := finalized.Proficiencies[rulebook.ProficiencyTypeSavingThrow]
 		assert.True(t, exists, "Should have saving throw proficiencies")
 		assert.GreaterOrEqual(t, len(saveProfs), 2, "Rangers have STR and DEX saves")
 	})
 
 	t.Run("Still has selected skill proficiencies", func(t *testing.T) {
-		skillProfs, exists := finalized.Proficiencies[entities.ProficiencyTypeSkill]
+		skillProfs, exists := finalized.Proficiencies[rulebook.ProficiencyTypeSkill]
 		assert.True(t, exists, "Should have skill proficiencies")
 		assert.Equal(t, 3, len(skillProfs), "Should have the 3 selected skills")
 	})

@@ -2,12 +2,13 @@ package character_test
 
 import (
 	"context"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -79,31 +80,31 @@ func TestRangerCharacterCreation_Integration(t *testing.T) {
 	assert.True(t, hasFeature("natural_explorer"), "Should have Natural Explorer feature")
 
 	// Verify proficiencies
-	profTypes := make(map[entities.ProficiencyType]int)
+	profTypes := make(map[rulebook.ProficiencyType]int)
 	for pType, profs := range finalized.Proficiencies {
 		profTypes[pType] = len(profs)
 	}
 
 	// Check armor proficiencies
-	assert.GreaterOrEqual(t, profTypes[entities.ProficiencyTypeArmor], 3,
+	assert.GreaterOrEqual(t, profTypes[rulebook.ProficiencyTypeArmor], 3,
 		"Should have at least light armor, medium armor, and shields")
 
 	// Check weapon proficiencies
-	assert.GreaterOrEqual(t, profTypes[entities.ProficiencyTypeWeapon], 2,
+	assert.GreaterOrEqual(t, profTypes[rulebook.ProficiencyTypeWeapon], 2,
 		"Should have simple and martial weapon proficiencies")
 
 	// Check saving throw proficiencies
-	assert.GreaterOrEqual(t, profTypes[entities.ProficiencyTypeSavingThrow], 2,
+	assert.GreaterOrEqual(t, profTypes[rulebook.ProficiencyTypeSavingThrow], 2,
 		"Should have STR and DEX saving throw proficiencies")
 
 	// Check skill proficiencies (3 chosen)
-	assert.Equal(t, 3, profTypes[entities.ProficiencyTypeSkill],
+	assert.Equal(t, 3, profTypes[rulebook.ProficiencyTypeSkill],
 		"Should have exactly 3 skill proficiencies")
 
 	// Verify ability scores with racial bonuses
-	assert.Equal(t, 15, finalized.Attributes[entities.AttributeStrength].Score, "STR should be 14 + 1 (human)")
-	assert.Equal(t, 17, finalized.Attributes[entities.AttributeDexterity].Score, "DEX should be 16 + 1 (human)")
-	assert.Equal(t, 16, finalized.Attributes[entities.AttributeWisdom].Score, "WIS should be 15 + 1 (human)")
+	assert.Equal(t, 15, finalized.Attributes[character2.AttributeStrength].Score, "STR should be 14 + 1 (human)")
+	assert.Equal(t, 17, finalized.Attributes[character2.AttributeDexterity].Score, "DEX should be 16 + 1 (human)")
+	assert.Equal(t, 16, finalized.Attributes[character2.AttributeWisdom].Score, "WIS should be 15 + 1 (human)")
 
 	// Verify HP calculation (10 + CON modifier)
 	expectedHP := 10 + 2 // d10 hit die + 2 CON modifier (14 CON with +1 human = 15 = +2 modifier)
@@ -115,10 +116,10 @@ func TestRangerCharacterCreation_Integration(t *testing.T) {
 
 // Test Ranger weapon proficiency application
 func TestRangerWeaponProficiency(t *testing.T) {
-	ranger := &entities.Character{
-		Class: &entities.Class{Key: "ranger"},
-		Proficiencies: map[entities.ProficiencyType][]*entities.Proficiency{
-			entities.ProficiencyTypeWeapon: {
+	ranger := &character2.Character{
+		Class: &rulebook.Class{Key: "ranger"},
+		Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+			rulebook.ProficiencyTypeWeapon: {
 				{Key: "simple-weapons", Name: "Simple Weapons"},
 				{Key: "martial-weapons", Name: "Martial Weapons"},
 			},
@@ -126,7 +127,7 @@ func TestRangerWeaponProficiency(t *testing.T) {
 	}
 
 	// Test that ranger has both simple and martial weapon proficiencies
-	weaponProfs := ranger.Proficiencies[entities.ProficiencyTypeWeapon]
+	weaponProfs := ranger.Proficiencies[rulebook.ProficiencyTypeWeapon]
 	assert.Len(t, weaponProfs, 2, "Ranger should have 2 weapon proficiency categories")
 
 	// Check for specific proficiencies

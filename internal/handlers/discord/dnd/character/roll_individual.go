@@ -3,12 +3,12 @@ package character
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"math/rand"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
 )
@@ -76,11 +76,11 @@ func (h *RollIndividualHandler) Handle(req *RollIndividualRequest) error {
 	// Get existing rolls or initialize empty
 	existingRolls := draftChar.AbilityRolls
 	if existingRolls == nil {
-		existingRolls = []entities.AbilityRoll{}
+		existingRolls = []character.AbilityRoll{}
 	}
 
 	// If this is a new roll (not viewing existing), roll the dice
-	var currentRoll entities.AbilityRoll
+	var currentRoll character.AbilityRoll
 	var dice []int
 	if req.RollIndex == len(existingRolls) {
 		// Roll 4d6
@@ -100,7 +100,7 @@ func (h *RollIndividualHandler) Handle(req *RollIndividualRequest) error {
 			total += sortedDice[j]
 		}
 
-		currentRoll = entities.AbilityRoll{
+		currentRoll = character.AbilityRoll{
 			ID:    fmt.Sprintf("roll_%d_%d", time.Now().UnixNano(), req.RollIndex),
 			Value: total,
 		}

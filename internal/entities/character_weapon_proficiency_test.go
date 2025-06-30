@@ -1,22 +1,26 @@
 package entities
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCharacter_WeaponCategoryProficiency(t *testing.T) {
 	tests := []struct {
 		name           string
-		proficiencies  []*Proficiency
+		proficiencies  []*rulebook.Proficiency
 		weaponCategory string
 		expected       bool
 	}{
 		{
 			name: "Has simple weapon proficiency",
-			proficiencies: []*Proficiency{
+			proficiencies: []*rulebook.Proficiency{
 				{Key: "simple-weapons", Name: "Simple Weapons"},
 			},
 			weaponCategory: "simple",
@@ -24,7 +28,7 @@ func TestCharacter_WeaponCategoryProficiency(t *testing.T) {
 		},
 		{
 			name: "Has martial weapon proficiency",
-			proficiencies: []*Proficiency{
+			proficiencies: []*rulebook.Proficiency{
 				{Key: "martial-weapons", Name: "Martial Weapons"},
 			},
 			weaponCategory: "martial",
@@ -32,7 +36,7 @@ func TestCharacter_WeaponCategoryProficiency(t *testing.T) {
 		},
 		{
 			name: "No martial proficiency when only simple",
-			proficiencies: []*Proficiency{
+			proficiencies: []*rulebook.Proficiency{
 				{Key: "simple-weapons", Name: "Simple Weapons"},
 			},
 			weaponCategory: "martial",
@@ -40,13 +44,13 @@ func TestCharacter_WeaponCategoryProficiency(t *testing.T) {
 		},
 		{
 			name:           "No proficiencies",
-			proficiencies:  []*Proficiency{},
+			proficiencies:  []*rulebook.Proficiency{},
 			weaponCategory: "simple",
 			expected:       false,
 		},
 		{
 			name: "Unknown weapon category",
-			proficiencies: []*Proficiency{
+			proficiencies: []*rulebook.Proficiency{
 				{Key: "simple-weapons", Name: "Simple Weapons"},
 				{Key: "martial-weapons", Name: "Martial Weapons"},
 			},
@@ -57,9 +61,9 @@ func TestCharacter_WeaponCategoryProficiency(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			char := &Character{
-				Proficiencies: map[ProficiencyType][]*Proficiency{
-					ProficiencyTypeWeapon: tt.proficiencies,
+			char := &character.Character{
+				Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+					rulebook.ProficiencyTypeWeapon: tt.proficiencies,
 				},
 			}
 
@@ -71,28 +75,28 @@ func TestCharacter_WeaponCategoryProficiency(t *testing.T) {
 
 func TestCharacter_Attack_WithCategoryProficiency(t *testing.T) {
 	// Create a ranger with simple and martial weapon proficiencies
-	ranger := &Character{
+	ranger := &character.Character{
 		ID:    "test-ranger",
 		Name:  "Test Ranger",
-		Class: &Class{Key: "ranger"},
+		Class: &rulebook.Class{Key: "ranger"},
 		Level: 1,
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeStrength:  {Score: 14, Bonus: 2},
-			AttributeDexterity: {Score: 16, Bonus: 3},
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeStrength:  {Score: 14, Bonus: 2},
+			character.AttributeDexterity: {Score: 16, Bonus: 3},
 		},
-		Proficiencies: map[ProficiencyType][]*Proficiency{
-			ProficiencyTypeWeapon: {
+		Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+			rulebook.ProficiencyTypeWeapon: {
 				{Key: "simple-weapons", Name: "Simple Weapons"},
 				{Key: "martial-weapons", Name: "Martial Weapons"},
 			},
 		},
-		EquippedSlots: make(map[Slot]Equipment),
-		Resources:     &CharacterResources{},
+		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		Resources:     &shared.CharacterResources{},
 	}
 
 	// Equip a martial weapon (longsword)
-	longsword := &Weapon{
-		Base: BasicEquipment{
+	longsword := &equipment.Weapon{
+		Base: equipment.BasicEquipment{
 			Key:  "longsword",
 			Name: "Longsword",
 		},
@@ -104,7 +108,7 @@ func TestCharacter_Attack_WithCategoryProficiency(t *testing.T) {
 			DamageType: damage.TypeSlashing,
 		},
 	}
-	ranger.EquippedSlots[SlotMainHand] = longsword
+	ranger.EquippedSlots[character.SlotMainHand] = longsword
 
 	// Attack should include proficiency bonus
 	attacks, err := ranger.Attack()
@@ -118,18 +122,18 @@ func TestCharacter_Attack_WithCategoryProficiency(t *testing.T) {
 
 func TestCharacter_Attack_WithoutCategoryProficiency(t *testing.T) {
 	// Create a wizard with only simple weapon proficiency
-	wizard := &Character{
+	wizard := &character.Character{
 		ID:    "test-wizard",
 		Name:  "Test Wizard",
-		Class: &Class{Key: "wizard"},
+		Class: &rulebook.Class{Key: "wizard"},
 		Level: 1,
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeStrength:     {Score: 8, Bonus: -1},
-			AttributeDexterity:    {Score: 14, Bonus: 2},
-			AttributeIntelligence: {Score: 16, Bonus: 3},
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeStrength:     {Score: 8, Bonus: -1},
+			character.AttributeDexterity:    {Score: 14, Bonus: 2},
+			character.AttributeIntelligence: {Score: 16, Bonus: 3},
 		},
-		Proficiencies: map[ProficiencyType][]*Proficiency{
-			ProficiencyTypeWeapon: {
+		Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+			rulebook.ProficiencyTypeWeapon: {
 				{Key: "dagger", Name: "Dagger"},
 				{Key: "dart", Name: "Dart"},
 				{Key: "sling", Name: "Sling"},
@@ -137,13 +141,13 @@ func TestCharacter_Attack_WithoutCategoryProficiency(t *testing.T) {
 				{Key: "light-crossbow", Name: "Light Crossbow"},
 			},
 		},
-		EquippedSlots: make(map[Slot]Equipment),
-		Resources:     &CharacterResources{},
+		EquippedSlots: make(map[character.Slot]equipment.Equipment),
+		Resources:     &shared.CharacterResources{},
 	}
 
 	// Equip a martial weapon (longsword) - wizard is NOT proficient
-	longsword := &Weapon{
-		Base: BasicEquipment{
+	longsword := &equipment.Weapon{
+		Base: equipment.BasicEquipment{
 			Key:  "longsword",
 			Name: "Longsword",
 		},
@@ -155,7 +159,7 @@ func TestCharacter_Attack_WithoutCategoryProficiency(t *testing.T) {
 			DamageType: damage.TypeSlashing,
 		},
 	}
-	wizard.EquippedSlots[SlotMainHand] = longsword
+	wizard.EquippedSlots[character.SlotMainHand] = longsword
 
 	// Attack should NOT include proficiency bonus
 	attacks, err := wizard.Attack()

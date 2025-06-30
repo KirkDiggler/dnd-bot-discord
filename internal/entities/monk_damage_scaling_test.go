@@ -1,6 +1,8 @@
 package entities
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"testing"
 
 	mockdice "github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
@@ -91,20 +93,20 @@ func TestMonkMartialArts_DamageScaling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create character with specified level and features
-			features := []*CharacterFeature{}
+			features := []*rulebook.CharacterFeature{}
 			if tt.hasMartialArts {
-				features = append(features, &CharacterFeature{Key: "martial-arts", Name: "Martial Arts"})
+				features = append(features, &rulebook.CharacterFeature{Key: "martial-arts", Name: "Martial Arts"})
 			}
 
-			char := &Character{
+			char := &character.Character{
 				Level:    tt.level,
 				Features: features,
-				Attributes: map[Attribute]*AbilityScore{
-					AttributeStrength: {
+				Attributes: map[character.Attribute]*character.AbilityScore{
+					character.AttributeStrength: {
 						Score: 14, // +2 bonus
 						Bonus: 2,
 					},
-					AttributeDexterity: {
+					character.AttributeDexterity: {
 						Score: 16, // +3 bonus
 						Bonus: 3,
 					},
@@ -189,17 +191,17 @@ func TestMonkMartialArts_DamageScalingWithCombat(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			monk := &Character{
+			monk := &character.Character{
 				Level: tt.level,
-				Features: []*CharacterFeature{
+				Features: []*rulebook.CharacterFeature{
 					{Key: "martial-arts", Name: "Martial Arts"},
 				},
-				Attributes: map[Attribute]*AbilityScore{
-					AttributeStrength: {
+				Attributes: map[character.Attribute]*character.AbilityScore{
+					character.AttributeStrength: {
 						Score: tt.strScore,
 						Bonus: (tt.strScore - 10) / 2,
 					},
-					AttributeDexterity: {
+					character.AttributeDexterity: {
 						Score: tt.dexScore,
 						Bonus: (tt.dexScore - 10) / 2,
 					},

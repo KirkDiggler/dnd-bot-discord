@@ -1,10 +1,14 @@
 package entities
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdice "github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -12,83 +16,83 @@ import (
 func TestWeapon_IsMonkWeapon(t *testing.T) {
 	tests := []struct {
 		name           string
-		weapon         *Weapon
+		weapon         *equipment.Weapon
 		expectedResult bool
 		description    string
 	}{
 		{
 			name: "Shortsword is always a monk weapon",
-			weapon: &Weapon{
-				Base:           BasicEquipment{Key: WeaponKeyShortsword, Name: "Shortsword"},
+			weapon: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: equipment.WeaponKeyShortsword, Name: "Shortsword"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
-				Properties:     []*ReferenceItem{},
+				Properties:     []*shared.ReferenceItem{},
 			},
 			expectedResult: true,
 			description:    "Shortswords are specifically listed as monk weapons",
 		},
 		{
 			name: "Simple melee weapon without properties",
-			weapon: &Weapon{
-				Base:           BasicEquipment{Key: "club", Name: "Club"},
+			weapon: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: "club", Name: "Club"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
-				Properties:     []*ReferenceItem{},
+				Properties:     []*shared.ReferenceItem{},
 			},
 			expectedResult: true,
 			description:    "Simple melee weapons without two-handed or heavy are monk weapons",
 		},
 		{
 			name: "Simple melee weapon with light property",
-			weapon: &Weapon{
-				Base:           BasicEquipment{Key: "dagger", Name: "Dagger"},
+			weapon: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: "dagger", Name: "Dagger"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
-				Properties:     []*ReferenceItem{{Key: "light"}},
+				Properties:     []*shared.ReferenceItem{{Key: "light"}},
 			},
 			expectedResult: true,
 			description:    "Light property doesn't prevent monk weapon status",
 		},
 		{
 			name: "Simple melee weapon with two-handed property",
-			weapon: &Weapon{
-				Base:           BasicEquipment{Key: "quarterstaff", Name: "Quarterstaff"},
+			weapon: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: "quarterstaff", Name: "Quarterstaff"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
-				Properties:     []*ReferenceItem{{Key: "two-handed"}},
+				Properties:     []*shared.ReferenceItem{{Key: "two-handed"}},
 			},
 			expectedResult: false,
 			description:    "Two-handed weapons are not monk weapons",
 		},
 		{
 			name: "Simple melee weapon with heavy property",
-			weapon: &Weapon{
-				Base:           BasicEquipment{Key: "greatclub", Name: "Greatclub"},
+			weapon: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: "greatclub", Name: "Greatclub"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
-				Properties:     []*ReferenceItem{{Key: "heavy"}},
+				Properties:     []*shared.ReferenceItem{{Key: "heavy"}},
 			},
 			expectedResult: false,
 			description:    "Heavy weapons are not monk weapons",
 		},
 		{
 			name: "Martial melee weapon",
-			weapon: &Weapon{
-				Base:           BasicEquipment{Key: "longsword", Name: "Longsword"},
+			weapon: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: "longsword", Name: "Longsword"},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
-				Properties:     []*ReferenceItem{},
+				Properties:     []*shared.ReferenceItem{},
 			},
 			expectedResult: false,
 			description:    "Martial weapons are not monk weapons (except shortswords)",
 		},
 		{
 			name: "Simple ranged weapon",
-			weapon: &Weapon{
-				Base:           BasicEquipment{Key: "shortbow", Name: "Shortbow"},
+			weapon: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: "shortbow", Name: "Shortbow"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Ranged",
-				Properties:     []*ReferenceItem{},
+				Properties:     []*shared.ReferenceItem{},
 			},
 			expectedResult: false,
 			description:    "Ranged weapons are not monk weapons",
@@ -106,8 +110,8 @@ func TestWeapon_IsMonkWeapon(t *testing.T) {
 func TestMonkMartialArts_WeaponAttacks(t *testing.T) {
 	tests := []struct {
 		name           string
-		weapon         *Weapon
-		features       []*CharacterFeature
+		weapon         *equipment.Weapon
+		features       []*rulebook.CharacterFeature
 		strScore       int
 		dexScore       int
 		level          int
@@ -117,14 +121,14 @@ func TestMonkMartialArts_WeaponAttacks(t *testing.T) {
 	}{
 		{
 			name: "Monk with shortsword uses DEX",
-			weapon: &Weapon{
-				Base:           BasicEquipment{Key: WeaponKeyShortsword, Name: "Shortsword"},
+			weapon: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: equipment.WeaponKeyShortsword, Name: "Shortsword"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 6, DamageType: damage.TypeSlashing},
-				Properties:     []*ReferenceItem{},
+				Properties:     []*shared.ReferenceItem{},
 			},
-			features:       []*CharacterFeature{{Key: "martial-arts", Name: "Martial Arts"}},
+			features:       []*rulebook.CharacterFeature{{Key: "martial-arts", Name: "Martial Arts"}},
 			strScore:       10, // +0 bonus
 			dexScore:       16, // +3 bonus
 			level:          1,
@@ -134,14 +138,14 @@ func TestMonkMartialArts_WeaponAttacks(t *testing.T) {
 		},
 		{
 			name: "Monk with club uses higher of STR/DEX",
-			weapon: &Weapon{
-				Base:           BasicEquipment{Key: "club", Name: "Club"},
+			weapon: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: "club", Name: "Club"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 4, DamageType: damage.TypeBludgeoning},
-				Properties:     []*ReferenceItem{},
+				Properties:     []*shared.ReferenceItem{},
 			},
-			features:       []*CharacterFeature{{Key: "martial-arts", Name: "Martial Arts"}},
+			features:       []*rulebook.CharacterFeature{{Key: "martial-arts", Name: "Martial Arts"}},
 			strScore:       18, // +4 bonus
 			dexScore:       14, // +2 bonus
 			level:          1,
@@ -151,16 +155,16 @@ func TestMonkMartialArts_WeaponAttacks(t *testing.T) {
 		},
 		{
 			name: "Non-monk with shortsword must use STR",
-			weapon: &Weapon{
-				Base:           BasicEquipment{Key: WeaponKeyShortsword, Name: "Shortsword"},
+			weapon: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: equipment.WeaponKeyShortsword, Name: "Shortsword"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 6, DamageType: damage.TypeSlashing},
-				Properties:     []*ReferenceItem{},
+				Properties:     []*shared.ReferenceItem{},
 			},
-			features:       []*CharacterFeature{}, // No martial arts
-			strScore:       10,                    // +0 bonus
-			dexScore:       18,                    // +4 bonus
+			features:       []*rulebook.CharacterFeature{}, // No martial arts
+			strScore:       10,                             // +0 bonus
+			dexScore:       18,                             // +4 bonus
 			level:          1,
 			expectedAttack: 2, // STR(0) + proficiency(2)
 			expectedDamage: 0, // STR(0)
@@ -168,14 +172,14 @@ func TestMonkMartialArts_WeaponAttacks(t *testing.T) {
 		},
 		{
 			name: "Monk with non-monk weapon (longsword) uses STR",
-			weapon: &Weapon{
-				Base:           BasicEquipment{Key: "longsword", Name: "Longsword"},
+			weapon: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: "longsword", Name: "Longsword"},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 8, DamageType: damage.TypeSlashing},
-				Properties:     []*ReferenceItem{},
+				Properties:     []*shared.ReferenceItem{},
 			},
-			features:       []*CharacterFeature{{Key: "martial-arts", Name: "Martial Arts"}},
+			features:       []*rulebook.CharacterFeature{{Key: "martial-arts", Name: "Martial Arts"}},
 			strScore:       12, // +1 bonus
 			dexScore:       16, // +3 bonus
 			level:          1,
@@ -185,14 +189,14 @@ func TestMonkMartialArts_WeaponAttacks(t *testing.T) {
 		},
 		{
 			name: "Level 5 monk gets higher proficiency",
-			weapon: &Weapon{
-				Base:           BasicEquipment{Key: WeaponKeyShortsword, Name: "Shortsword"},
+			weapon: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: equipment.WeaponKeyShortsword, Name: "Shortsword"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 6, DamageType: damage.TypeSlashing},
-				Properties:     []*ReferenceItem{},
+				Properties:     []*shared.ReferenceItem{},
 			},
-			features:       []*CharacterFeature{{Key: "martial-arts", Name: "Martial Arts"}},
+			features:       []*rulebook.CharacterFeature{{Key: "martial-arts", Name: "Martial Arts"}},
 			strScore:       10, // +0 bonus
 			dexScore:       16, // +3 bonus
 			level:          5,
@@ -205,25 +209,25 @@ func TestMonkMartialArts_WeaponAttacks(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create character with specified attributes
-			char := &Character{
+			char := &character.Character{
 				Level:    tt.level,
 				Features: tt.features,
-				Attributes: map[Attribute]*AbilityScore{
-					AttributeStrength: {
+				Attributes: map[character.Attribute]*character.AbilityScore{
+					character.AttributeStrength: {
 						Score: tt.strScore,
 						Bonus: (tt.strScore - 10) / 2,
 					},
-					AttributeDexterity: {
+					character.AttributeDexterity: {
 						Score: tt.dexScore,
 						Bonus: (tt.dexScore - 10) / 2,
 					},
 				},
-				EquippedSlots: map[Slot]Equipment{
-					SlotMainHand: tt.weapon,
+				EquippedSlots: map[character.Slot]equipment.Equipment{
+					character.SlotMainHand: tt.weapon,
 				},
 				// Give proficiency with all weapons for testing
-				Proficiencies: map[ProficiencyType][]*Proficiency{
-					ProficiencyTypeWeapon: {
+				Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+					rulebook.ProficiencyTypeWeapon: {
 						{Key: tt.weapon.GetKey(), Name: tt.weapon.GetName()},
 						{Key: "simple-weapons", Name: "Simple Weapons"},
 						{Key: "martial-weapons", Name: "Martial Weapons"},
@@ -254,39 +258,39 @@ func TestMonkMartialArts_WeaponAttacks(t *testing.T) {
 
 func TestMonkMartialArts_DualWielding(t *testing.T) {
 	// Create a level 1 monk with two shortswords
-	monk := &Character{
+	monk := &character.Character{
 		Level: 1,
-		Features: []*CharacterFeature{
+		Features: []*rulebook.CharacterFeature{
 			{Key: "martial-arts", Name: "Martial Arts"},
 		},
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeStrength: {
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeStrength: {
 				Score: 10, // +0 bonus
 				Bonus: 0,
 			},
-			AttributeDexterity: {
+			character.AttributeDexterity: {
 				Score: 16, // +3 bonus
 				Bonus: 3,
 			},
 		},
-		EquippedSlots: map[Slot]Equipment{
-			SlotMainHand: &Weapon{
-				Base:           BasicEquipment{Key: WeaponKeyShortsword, Name: "Shortsword"},
+		EquippedSlots: map[character.Slot]equipment.Equipment{
+			character.SlotMainHand: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: equipment.WeaponKeyShortsword, Name: "Shortsword"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 6, DamageType: damage.TypeSlashing},
-				Properties:     []*ReferenceItem{{Key: "light"}},
+				Properties:     []*shared.ReferenceItem{{Key: "light"}},
 			},
-			SlotOffHand: &Weapon{
-				Base:           BasicEquipment{Key: WeaponKeyShortsword, Name: "Shortsword"},
+			character.SlotOffHand: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: equipment.WeaponKeyShortsword, Name: "Shortsword"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 6, DamageType: damage.TypeSlashing},
-				Properties:     []*ReferenceItem{{Key: "light"}},
+				Properties:     []*shared.ReferenceItem{{Key: "light"}},
 			},
 		},
-		Proficiencies: map[ProficiencyType][]*Proficiency{
-			ProficiencyTypeWeapon: {
+		Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+			rulebook.ProficiencyTypeWeapon: {
 				{Key: "shortsword", Name: "Shortsword"},
 				{Key: "simple-weapons", Name: "Simple Weapons"},
 			},

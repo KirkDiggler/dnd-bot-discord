@@ -3,11 +3,11 @@ package ability
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"log"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	charService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	encounterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
@@ -100,16 +100,16 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 	// Update action economy based on ability type
 	if character.Resources != nil {
 		switch ability.ActionType {
-		case entities.AbilityTypeAction:
+		case character.AbilityTypeAction:
 			character.Resources.ActionEconomy.ActionUsed = true
 			character.Resources.ActionEconomy.RecordAction("action", "ability", ability.Key)
-		case entities.AbilityTypeBonusAction:
+		case character.AbilityTypeBonusAction:
 			character.Resources.ActionEconomy.BonusActionUsed = true
 			character.Resources.ActionEconomy.RecordAction("bonus_action", "ability", ability.Key)
-		case entities.AbilityTypeReaction:
+		case character.AbilityTypeReaction:
 			character.Resources.ActionEconomy.ReactionUsed = true
 			character.Resources.ActionEconomy.RecordAction("reaction", "ability", ability.Key)
-		case entities.AbilityTypeFree:
+		case character.AbilityTypeFree:
 			// Free actions don't consume any action economy resources
 			character.Resources.ActionEconomy.RecordAction("free", "ability", ability.Key)
 		default:
@@ -154,7 +154,7 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 }
 
 // handleRage handles the Barbarian's Rage ability
-func (s *service) handleRage(character *entities.Character, ability *entities.ActiveAbility, result *UseAbilityResult) *UseAbilityResult {
+func (s *service) handleRage(character *character.Character, ability *character.ActiveAbility, result *UseAbilityResult) *UseAbilityResult {
 	// Create rage effect using the new status effect system
 	rageEffect := effects.BuildRageEffect(character.Level)
 
@@ -198,7 +198,7 @@ func (s *service) handleRage(character *entities.Character, ability *entities.Ac
 }
 
 // handleSecondWind handles the Fighter's Second Wind ability
-func (s *service) handleSecondWind(character *entities.Character, result *UseAbilityResult) *UseAbilityResult {
+func (s *service) handleSecondWind(character *character.Character, result *UseAbilityResult) *UseAbilityResult {
 	// Roll 1d10 + fighter level
 	rollResult, err := s.diceRoller.Roll(1, 10, character.Level)
 	if err != nil {
@@ -219,7 +219,7 @@ func (s *service) handleSecondWind(character *entities.Character, result *UseAbi
 }
 
 // handleBardicInspiration handles the Bard's Bardic Inspiration ability
-func (s *service) handleBardicInspiration(character *entities.Character, targetID string, ability *entities.ActiveAbility, result *UseAbilityResult) *UseAbilityResult {
+func (s *service) handleBardicInspiration(character *character.Character, targetID string, ability *character.ActiveAbility, result *UseAbilityResult) *UseAbilityResult {
 	if targetID == "" {
 		result.Success = false
 		result.Message = "Bardic Inspiration requires a target"
@@ -238,7 +238,7 @@ func (s *service) handleBardicInspiration(character *entities.Character, targetI
 }
 
 // handleLayOnHands handles the Paladin's Lay on Hands ability
-func (s *service) handleLayOnHands(character *entities.Character, targetID string, healAmount int, result *UseAbilityResult) *UseAbilityResult {
+func (s *service) handleLayOnHands(character *character.Character, targetID string, healAmount int, result *UseAbilityResult) *UseAbilityResult {
 	resources := character.GetResources()
 	ability := resources.Abilities["lay-on-hands"]
 
@@ -280,7 +280,7 @@ func (s *service) handleLayOnHands(character *entities.Character, targetID strin
 }
 
 // handleDivineSense handles the Paladin's Divine Sense ability
-func (s *service) handleDivineSense(character *entities.Character, result *UseAbilityResult) *UseAbilityResult {
+func (s *service) handleDivineSense(character *character.Character, result *UseAbilityResult) *UseAbilityResult {
 	result.Message = "You open your awareness to detect celestials, fiends, and undead within 60 feet"
 	result.EffectApplied = true
 	result.EffectName = "Divine Sense"

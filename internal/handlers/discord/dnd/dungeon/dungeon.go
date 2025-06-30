@@ -3,10 +3,11 @@ package dungeon
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	session2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"log"
 	"math/rand"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
 	"github.com/bwmarrin/discordgo"
@@ -94,13 +95,13 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 	// Add the bot as DM for dungeon mode
 	botID := req.Session.State.User.ID
 	log.Printf("Adding bot %s as DM to session %s", botID, sess.ID)
-	sess.AddMember(botID, entities.SessionRoleDM)
+	sess.AddMember(botID, session2.SessionRoleDM)
 	sess.DMID = botID // Set bot as the DM
 
 	// Creator is automatically added as DM, but for dungeon mode we want them as a player
 	// Update their role to player
 	if member, exists := sess.Members[req.Interaction.Member.User.ID]; exists {
-		member.Role = entities.SessionRolePlayer
+		member.Role = session2.SessionRolePlayer
 	}
 
 	// Log session members
@@ -120,7 +121,7 @@ func (h *StartDungeonHandler) Handle(req *StartDungeonRequest) error {
 		// Find first active character
 		var activeCount int
 		for _, char := range chars {
-			if char.Status == entities.CharacterStatusActive {
+			if char.Status == character.CharacterStatusActive {
 				activeCount++
 				if characterName == "" { // Auto-select first active
 					// Select this character for the session

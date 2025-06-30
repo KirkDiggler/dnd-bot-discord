@@ -3,9 +3,10 @@ package character
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
 )
@@ -62,7 +63,7 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 	}
 
 	// Determine which choice to show
-	var currentChoice *entities.Choice
+	var currentChoice *shared.Choice
 	var choiceSource string
 	totalClassChoices := len(class.ProficiencyChoices)
 
@@ -155,7 +156,7 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 	// Check if all options are nested choices
 	hasNestedChoices := false
 	for _, option := range currentChoice.Options {
-		if _, ok := option.(*entities.Choice); ok {
+		if _, ok := option.(*shared.Choice); ok {
 			hasNestedChoices = true
 			break
 		}
@@ -169,7 +170,7 @@ func (h *SelectProficienciesHandler) Handle(req *SelectProficienciesRequest) err
 		row := discordgo.ActionsRow{Components: []discordgo.MessageComponent{}}
 
 		for i, option := range currentChoice.Options {
-			if _, ok := option.(*entities.Choice); ok {
+			if _, ok := option.(*shared.Choice); ok {
 				button := discordgo.Button{
 					Label:    h.getOptionName(option),
 					Style:    discordgo.PrimaryButton,
@@ -261,21 +262,21 @@ func truncatePlaceholder(text string) string {
 }
 
 // getOptionName extracts the display name from an option
-func (h *SelectProficienciesHandler) getOptionName(option entities.Option) string {
+func (h *SelectProficienciesHandler) getOptionName(option shared.Option) string {
 	if option == nil {
 		return ""
 	}
 
 	switch opt := option.(type) {
-	case *entities.ReferenceOption:
+	case *shared.ReferenceOption:
 		if opt.Reference != nil {
 			return opt.Reference.Name
 		}
-	case *entities.CountedReferenceOption:
+	case *shared.CountedReferenceOption:
 		if opt.Reference != nil {
 			return fmt.Sprintf("%s (×%d)", opt.Reference.Name, opt.Count)
 		}
-	case *entities.MultipleOption:
+	case *shared.MultipleOption:
 		// For multiple options, show combined name
 		names := []string{}
 		for _, item := range opt.Items {
@@ -284,7 +285,7 @@ func (h *SelectProficienciesHandler) getOptionName(option entities.Option) strin
 			}
 		}
 		return strings.Join(names, " + ")
-	case *entities.Choice:
+	case *shared.Choice:
 		// Handle nested choices - show what type of choice it is
 		if opt.Name != "" {
 			return opt.Name
@@ -296,17 +297,17 @@ func (h *SelectProficienciesHandler) getOptionName(option entities.Option) strin
 }
 
 // getOptionKey extracts a unique key from an option
-func (h *SelectProficienciesHandler) getOptionKey(option entities.Option) string {
+func (h *SelectProficienciesHandler) getOptionKey(option shared.Option) string {
 	switch opt := option.(type) {
-	case *entities.ReferenceOption:
+	case *shared.ReferenceOption:
 		if opt.Reference != nil {
 			return opt.Reference.Key
 		}
-	case *entities.CountedReferenceOption:
+	case *shared.CountedReferenceOption:
 		if opt.Reference != nil {
 			return opt.Reference.Key
 		}
-	case *entities.MultipleOption:
+	case *shared.MultipleOption:
 		// For multiple options, combine keys
 		keys := []string{}
 		for _, item := range opt.Items {
@@ -315,7 +316,7 @@ func (h *SelectProficienciesHandler) getOptionKey(option entities.Option) string
 			}
 		}
 		return strings.Join(keys, "+")
-	case *entities.Choice:
+	case *shared.Choice:
 		// For nested choices, use the choice key or type
 		if opt.Key != "" {
 			return opt.Key
@@ -326,7 +327,7 @@ func (h *SelectProficienciesHandler) getOptionKey(option entities.Option) string
 }
 
 // moveToNextStep transitions to the next part of character creation
-func (h *SelectProficienciesHandler) moveToNextStep(req *SelectProficienciesRequest, race *entities.Race, class *entities.Class, message string) error {
+func (h *SelectProficienciesHandler) moveToNextStep(req *SelectProficienciesRequest, race *rulebook.Race, class *rulebook.Class, message string) error {
 	embed := &discordgo.MessageEmbed{
 		Title:       "Proficiencies Complete",
 		Description: fmt.Sprintf("**Race:** %s\n**Class:** %s\n\n%s", race.Name, class.Name, message),

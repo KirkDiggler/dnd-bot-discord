@@ -2,12 +2,14 @@ package encounter_test
 
 import (
 	"context"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	session2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/gamesessions"
@@ -37,17 +39,17 @@ func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 	})
 
 	// Create a test character
-	testChar := &entities.Character{
+	testChar := &character2.Character{
 		ID:               "char-1",
 		Name:             "Player",
 		OwnerID:          "player-1",
-		Status:           entities.CharacterStatusActive,
+		Status:           character2.CharacterStatusActive,
 		Level:            1,
 		CurrentHitPoints: 10,
 		MaxHitPoints:     10,
 		AC:               15,
-		Attributes: map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeDexterity: {Score: 16, Bonus: 3}, // +3 DEX bonus for initiative
+		Attributes: map[character2.Attribute]*character2.AbilityScore{
+			character2.AttributeDexterity: {Score: 16, Bonus: 3}, // +3 DEX bonus for initiative
 		},
 	}
 	err := charRepo.Create(ctx, testChar)
@@ -60,7 +62,7 @@ func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 	})
 
 	// Create session with all required fields
-	sess := &entities.Session{
+	sess := &session2.Session{
 		ID:          "test-session",
 		Name:        "Test Session",
 		InviteCode:  "TEST123",
@@ -68,14 +70,14 @@ func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 		CreatorID:   "user-1",
 		DMID:        "user-1",
 		Description: "Test session for dice rolling",
-		Members:     make(map[string]*entities.SessionMember),
-		Status:      entities.SessionStatusActive,
+		Members:     make(map[string]*session2.SessionMember),
+		Status:      session2.SessionStatusActive,
 		CreatedAt:   time.Now(),
 		LastActive:  time.Now(),
 	}
-	sess.Members["user-1"] = &entities.SessionMember{
+	sess.Members["user-1"] = &session2.SessionMember{
 		UserID: "user-1",
-		Role:   entities.SessionRoleDM,
+		Role:   session2.SessionRoleDM,
 	}
 	createErr := sessionRepo.Create(ctx, sess)
 	require.NoError(t, createErr)
@@ -123,7 +125,7 @@ func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 	enc, err = encounterService.GetEncounter(ctx, enc.ID)
 	require.NoError(t, err)
 	for _, combatant := range enc.Combatants {
-		if combatant.Type == entities.CombatantTypePlayer {
+		if combatant.Type == combat.CombatantTypePlayer {
 			combatant.InitiativeBonus = 3 // Will roll 20 + 3 = 23
 		}
 	}
@@ -209,11 +211,11 @@ func TestEncounterService_CombatScenario_WithMockDice(t *testing.T) {
 	})
 
 	// Create test character
-	testChar := &entities.Character{
+	testChar := &character2.Character{
 		ID:               "char-1",
 		Name:             "Fighter",
 		OwnerID:          "player-1",
-		Status:           entities.CharacterStatusActive,
+		Status:           character2.CharacterStatusActive,
 		Level:            1,
 		CurrentHitPoints: 10,
 		MaxHitPoints:     10,
@@ -229,7 +231,7 @@ func TestEncounterService_CombatScenario_WithMockDice(t *testing.T) {
 	})
 
 	// Create session
-	sess := &entities.Session{
+	sess := &session2.Session{
 		ID:          "test-session",
 		Name:        "Test Session",
 		InviteCode:  "TEST456",
@@ -237,14 +239,14 @@ func TestEncounterService_CombatScenario_WithMockDice(t *testing.T) {
 		CreatorID:   "user-1",
 		DMID:        "user-1",
 		Description: "Combat test session",
-		Members:     make(map[string]*entities.SessionMember),
-		Status:      entities.SessionStatusActive,
+		Members:     make(map[string]*session2.SessionMember),
+		Status:      session2.SessionStatusActive,
 		CreatedAt:   time.Now(),
 		LastActive:  time.Now(),
 	}
-	sess.Members["user-1"] = &entities.SessionMember{
+	sess.Members["user-1"] = &session2.SessionMember{
 		UserID: "user-1",
-		Role:   entities.SessionRoleDM,
+		Role:   session2.SessionRoleDM,
 	}
 	createErr := sessionRepo.Create(ctx, sess)
 	require.NoError(t, createErr)
@@ -294,7 +296,7 @@ func TestEncounterService_CombatScenario_WithMockDice(t *testing.T) {
 	// We can't predict the order due to random UUIDs
 	firstCombatant := enc.GetCurrentCombatant()
 	assert.NotNil(t, firstCombatant)
-	assert.True(t, firstCombatant.Type == entities.CombatantTypePlayer || firstCombatant.Type == entities.CombatantTypeMonster)
+	assert.True(t, firstCombatant.Type == combat.CombatantTypePlayer || firstCombatant.Type == combat.CombatantTypeMonster)
 
 	// In a real scenario, the player would attack here
 	// The mock dice would provide: attack roll 16 (hit), damage 8 (kills goblin)

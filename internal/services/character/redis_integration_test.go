@@ -5,12 +5,13 @@ package character_test
 
 import (
 	"context"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"log"
 	"os"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	charactersRepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/redis/go-redis/v9"
@@ -64,25 +65,25 @@ func TestCharacterAbilityAssignment_RedisIntegration(t *testing.T) {
 	mockClient := mockdnd5e.NewMockClient(ctrl)
 
 	// Set up mock expectations for the flow
-	mockClient.EXPECT().GetRace("elf").Return(&entities.Race{
+	mockClient.EXPECT().GetRace("elf").Return(&rulebook.Race{
 		Key:  "elf",
 		Name: "Elf",
-		AbilityBonuses: []*entities.AbilityBonus{
-			{Attribute: entities.AttributeDexterity, Bonus: 2},
+		AbilityBonuses: []*character2.AbilityBonus{
+			{Attribute: character2.AttributeDexterity, Bonus: 2},
 		},
 		Speed: 30,
 	}, nil).AnyTimes()
 
-	mockClient.EXPECT().GetClass("monk").Return(&entities.Class{
+	mockClient.EXPECT().GetClass("monk").Return(&rulebook.Class{
 		Key:    "monk",
 		Name:   "Monk",
 		HitDie: 8,
 	}, nil).AnyTimes()
 
-	mockClient.EXPECT().GetClassFeatures("monk", 1).Return([]*entities.CharacterFeature{
+	mockClient.EXPECT().GetClassFeatures("monk", 1).Return([]*rulebook.CharacterFeature{
 		{
 			Name: "Unarmored Defense",
-			Type: entities.FeatureTypeClass,
+			Type: rulebook.FeatureTypeClass,
 		},
 	}, nil).AnyTimes()
 
@@ -118,7 +119,7 @@ func TestCharacterAbilityAssignment_RedisIntegration(t *testing.T) {
 		require.NoError(t, err)
 
 		// Step 4: Assign abilities
-		abilityRolls := []entities.AbilityRoll{
+		abilityRolls := []character2.AbilityRoll{
 			{ID: "roll_1", Value: 15},
 			{ID: "roll_2", Value: 14},
 			{ID: "roll_3", Value: 13},
@@ -171,7 +172,7 @@ func TestCharacterAbilityAssignment_RedisIntegration(t *testing.T) {
 		assert.True(t, loaded.IsComplete(), "Loaded character should be complete")
 
 		// Verify specific values
-		assert.Equal(t, 16, loaded.Attributes[entities.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
+		assert.Equal(t, 16, loaded.Attributes[character2.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
 
 		// Clean up
 		err = repo.Delete(ctx, final.ID)

@@ -1,11 +1,12 @@
 package character
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"strings"
 	"testing"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,7 +14,7 @@ import (
 
 func TestBuildActiveEffectsDisplay(t *testing.T) {
 	t.Run("no active effects", func(t *testing.T) {
-		char := &entities.Character{
+		char := &character.Character{
 			ID:   "test_char",
 			Name: "Test Character",
 		}
@@ -23,11 +24,11 @@ func TestBuildActiveEffectsDisplay(t *testing.T) {
 	})
 
 	t.Run("single rage effect", func(t *testing.T) {
-		char := &entities.Character{
+		char := &character.Character{
 			ID:    "barbarian_char",
 			Name:  "Grog",
 			Level: 1,
-			Class: &entities.Class{Key: "barbarian"},
+			Class: &rulebook.Class{Key: "barbarian"},
 		}
 
 		// Initialize resources to get the effect manager
@@ -46,16 +47,16 @@ func TestBuildActiveEffectsDisplay(t *testing.T) {
 	})
 
 	t.Run("ranger favored enemy effect", func(t *testing.T) {
-		char := &entities.Character{
+		char := &character.Character{
 			ID:    "ranger_char",
 			Name:  "Legolas",
 			Level: 1,
-			Class: &entities.Class{Key: "ranger"},
-			Features: []*entities.CharacterFeature{
+			Class: &rulebook.Class{Key: "ranger"},
+			Features: []*rulebook.CharacterFeature{
 				{
 					Key:  "favored_enemy",
 					Name: "Favored Enemy",
-					Type: entities.FeatureTypeClass,
+					Type: rulebook.FeatureTypeClass,
 					Metadata: map[string]any{
 						"enemy_type": "orc",
 					},
@@ -78,7 +79,7 @@ func TestBuildActiveEffectsDisplay(t *testing.T) {
 	})
 
 	t.Run("multiple effects from different sources", func(t *testing.T) {
-		char := &entities.Character{
+		char := &character.Character{
 			ID:    "multi_char",
 			Name:  "Multi",
 			Level: 1,
@@ -109,7 +110,7 @@ func TestBuildActiveEffectsDisplay(t *testing.T) {
 	})
 
 	t.Run("concentration effects show properly", func(t *testing.T) {
-		char := &entities.Character{
+		char := &character.Character{
 			ID:   "caster_char",
 			Name: "Wizard",
 		}
@@ -131,25 +132,25 @@ func TestBuildActiveEffectsDisplay(t *testing.T) {
 
 func TestCharacterSheetWithActiveEffects(t *testing.T) {
 	// Create a barbarian with rage effect
-	char := &entities.Character{
+	char := &character.Character{
 		ID:    "test_barbarian",
 		Name:  "Conan",
 		Level: 1,
-		Class: &entities.Class{
+		Class: &rulebook.Class{
 			Key:  "barbarian",
 			Name: "Barbarian",
 		},
-		Race: &entities.Race{
+		Race: &rulebook.Race{
 			Key:  "human",
 			Name: "Human",
 		},
-		Attributes: map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeStrength:     {Score: 16, Bonus: 3},
-			entities.AttributeDexterity:    {Score: 14, Bonus: 2},
-			entities.AttributeConstitution: {Score: 15, Bonus: 2},
-			entities.AttributeIntelligence: {Score: 10, Bonus: 0},
-			entities.AttributeWisdom:       {Score: 12, Bonus: 1},
-			entities.AttributeCharisma:     {Score: 8, Bonus: -1},
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeStrength:     {Score: 16, Bonus: 3},
+			character.AttributeDexterity:    {Score: 14, Bonus: 2},
+			character.AttributeConstitution: {Score: 15, Bonus: 2},
+			character.AttributeIntelligence: {Score: 10, Bonus: 0},
+			character.AttributeWisdom:       {Score: 12, Bonus: 1},
+			character.AttributeCharisma:     {Score: 8, Bonus: -1},
 		},
 		MaxHitPoints:     13, // d12 + 2 CON
 		CurrentHitPoints: 13,

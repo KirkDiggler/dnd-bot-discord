@@ -3,10 +3,13 @@ package character_test
 import (
 	"context"
 	"errors"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	mockrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	mockcharacters "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
@@ -59,12 +62,12 @@ func (s *CharacterServiceTestSuite) TestResolveChoices_Success() {
 		ClassKey: "fighter",
 	}
 
-	humanRace := &entities.Race{
+	humanRace := &rulebook.Race{
 		Key:  "human",
 		Name: "Human",
 	}
 
-	fighterClass := &entities.Class{
+	fighterClass := &rulebook.Class{
 		Key:  "fighter",
 		Name: "Fighter",
 	}
@@ -130,7 +133,7 @@ func (s *CharacterServiceTestSuite) TestResolveChoices_ClassNotFound() {
 	}
 
 	// Expectations
-	s.mockDNDClient.EXPECT().GetRace("human").Return(&entities.Race{Key: "human", Name: "Human"}, nil)
+	s.mockDNDClient.EXPECT().GetRace("human").Return(&rulebook.Race{Key: "human", Name: "Human"}, nil)
 	s.mockDNDClient.EXPECT().GetClass("invalid-class").Return(nil, errors.New("class not found"))
 
 	// Execute
@@ -256,21 +259,21 @@ func (s *CharacterServiceTestSuite) TestCreateCharacter_Success() {
 		Equipment:     []string{"chain-mail", "longsword", "shield"},
 	}
 
-	dwarfRace := &entities.Race{
+	dwarfRace := &rulebook.Race{
 		Key:   "dwarf",
 		Name:  "Dwarf",
 		Speed: 25,
-		AbilityBonuses: []*entities.AbilityBonus{
-			{Attribute: entities.AttributeConstitution, Bonus: 2},
+		AbilityBonuses: []*character2.AbilityBonus{
+			{Attribute: character2.AttributeConstitution, Bonus: 2},
 		},
 	}
 
-	fighterClass := &entities.Class{
+	fighterClass := &rulebook.Class{
 		Key:    "fighter",
 		Name:   "Fighter",
 		HitDie: 10,
-		StartingEquipment: []*entities.StartingEquipment{
-			{Quantity: 1, Equipment: &entities.ReferenceItem{Key: "chain-shirt"}},
+		StartingEquipment: []*rulebook.StartingEquipment{
+			{Quantity: 1, Equipment: &shared.ReferenceItem{Key: "chain-shirt"}},
 		},
 	}
 
@@ -279,35 +282,35 @@ func (s *CharacterServiceTestSuite) TestCreateCharacter_Success() {
 	s.mockDNDClient.EXPECT().GetClass("fighter").Return(fighterClass, nil)
 
 	// Proficiency expectations
-	s.mockDNDClient.EXPECT().GetProficiency("skill-athletics").Return(&entities.Proficiency{
+	s.mockDNDClient.EXPECT().GetProficiency("skill-athletics").Return(&rulebook.Proficiency{
 		Key:  "skill-athletics",
 		Name: "Athletics",
-		Type: entities.ProficiencyTypeSkill,
+		Type: rulebook.ProficiencyTypeSkill,
 	}, nil)
-	s.mockDNDClient.EXPECT().GetProficiency("skill-intimidation").Return(&entities.Proficiency{
+	s.mockDNDClient.EXPECT().GetProficiency("skill-intimidation").Return(&rulebook.Proficiency{
 		Key:  "skill-intimidation",
 		Name: "Intimidation",
-		Type: entities.ProficiencyTypeSkill,
+		Type: rulebook.ProficiencyTypeSkill,
 	}, nil)
 
 	// Equipment expectations
-	s.mockDNDClient.EXPECT().GetEquipment("chain-shirt").Return(&entities.BasicEquipment{
+	s.mockDNDClient.EXPECT().GetEquipment("chain-shirt").Return(&equipment.BasicEquipment{
 		Key:  "chain-shirt",
 		Name: "Chain Shirt",
 	}, nil)
-	s.mockDNDClient.EXPECT().GetEquipment("chain-mail").Return(&entities.Armor{
-		Base: entities.BasicEquipment{Key: "chain-mail", Name: "Chain Mail"},
+	s.mockDNDClient.EXPECT().GetEquipment("chain-mail").Return(&equipment.Armor{
+		Base: equipment.BasicEquipment{Key: "chain-mail", Name: "Chain Mail"},
 	}, nil)
-	s.mockDNDClient.EXPECT().GetEquipment("longsword").Return(&entities.Weapon{
-		Base: entities.BasicEquipment{Key: "longsword", Name: "Longsword"},
+	s.mockDNDClient.EXPECT().GetEquipment("longsword").Return(&equipment.Weapon{
+		Base: equipment.BasicEquipment{Key: "longsword", Name: "Longsword"},
 	}, nil)
-	s.mockDNDClient.EXPECT().GetEquipment("shield").Return(&entities.BasicEquipment{
+	s.mockDNDClient.EXPECT().GetEquipment("shield").Return(&equipment.BasicEquipment{
 		Key:  "shield",
 		Name: "Shield",
 	}, nil)
 
 	// Repository expectation
-	s.mockRepository.EXPECT().Create(s.ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *entities.Character) error {
+	s.mockRepository.EXPECT().Create(s.ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *character2.Character) error {
 		// Validate the character being saved
 		s.Equal("Thorin", char.Name)
 		s.Equal("user123", char.OwnerID)
@@ -375,12 +378,12 @@ func (s *CharacterServiceTestSuite) TestCreateCharacter_RepositoryError() {
 	}
 
 	// Expectations
-	s.mockDNDClient.EXPECT().GetRace("dwarf").Return(&entities.Race{
+	s.mockDNDClient.EXPECT().GetRace("dwarf").Return(&rulebook.Race{
 		Key:   "dwarf",
 		Name:  "Dwarf",
 		Speed: 25,
 	}, nil)
-	s.mockDNDClient.EXPECT().GetClass("fighter").Return(&entities.Class{
+	s.mockDNDClient.EXPECT().GetClass("fighter").Return(&rulebook.Class{
 		Key:    "fighter",
 		Name:   "Fighter",
 		HitDie: 10,
@@ -400,7 +403,7 @@ func (s *CharacterServiceTestSuite) TestCreateCharacter_RepositoryError() {
 
 func (s *CharacterServiceTestSuite) TestGetCharacter_Success() {
 	// Setup
-	expectedChar := &entities.Character{
+	expectedChar := &character2.Character{
 		ID:      "char_123",
 		Name:    "Thorin",
 		OwnerID: "user_123",
@@ -434,7 +437,7 @@ func (s *CharacterServiceTestSuite) TestGetCharacter_NotFound() {
 
 func (s *CharacterServiceTestSuite) TestListCharacters_Success() {
 	// Setup
-	expectedChars := []*entities.Character{
+	expectedChars := []*character2.Character{
 		{ID: "char_1", Name: "Thorin", OwnerID: "user_123"},
 		{ID: "char_2", Name: "Gandalf", OwnerID: "user_123"},
 	}
@@ -454,7 +457,7 @@ func (s *CharacterServiceTestSuite) TestListCharacters_Success() {
 
 func (s *CharacterServiceTestSuite) TestListCharacters_Empty() {
 	// Expectations
-	s.mockRepository.EXPECT().GetByOwner(s.ctx, "user_123").Return([]*entities.Character{}, nil)
+	s.mockRepository.EXPECT().GetByOwner(s.ctx, "user_123").Return([]*character2.Character{}, nil)
 
 	// Execute
 	chars, err := s.service.ListCharacters(s.ctx, "user_123")

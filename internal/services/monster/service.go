@@ -5,12 +5,12 @@ package monster
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"math/rand"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -20,16 +20,16 @@ import (
 
 type Service interface {
 	// GetMonster fetches a specific monster by key
-	GetMonster(ctx context.Context, key string) (*entities.MonsterTemplate, error)
+	GetMonster(ctx context.Context, key string) (*combat.MonsterTemplate, error)
 
 	// GetMonstersByCR returns monsters within a CR range
-	GetMonstersByCR(ctx context.Context, minCR, maxCR float32) ([]*entities.MonsterTemplate, error)
+	GetMonstersByCR(ctx context.Context, minCR, maxCR float32) ([]*combat.MonsterTemplate, error)
 
 	// GetRandomMonsters returns random monsters for a given difficulty
-	GetRandomMonsters(ctx context.Context, difficulty string, count int) ([]*entities.MonsterTemplate, error)
+	GetRandomMonsters(ctx context.Context, difficulty string, count int) ([]*combat.MonsterTemplate, error)
 
 	// GetMonsterForEncounter converts a monster template to encounter format
-	GetMonsterForEncounter(template *entities.MonsterTemplate) *MonsterEncounterData
+	GetMonsterForEncounter(template *combat.MonsterTemplate) *MonsterEncounterData
 }
 
 // MonsterEncounterData represents monster data formatted for the encounter service
@@ -42,13 +42,13 @@ type MonsterEncounterData struct {
 	CR              float64
 	XP              int
 	Abilities       map[string]int
-	Actions         []*entities.MonsterAction
+	Actions         []*combat.MonsterAction
 }
 
 type service struct {
 	dndClient dnd5e.Client
 	// Cache of monster templates by key
-	monsterCache map[string]*entities.MonsterTemplate
+	monsterCache map[string]*combat.MonsterTemplate
 }
 
 // ServiceConfig holds configuration for the service
@@ -64,12 +64,12 @@ func NewService(cfg *ServiceConfig) Service {
 
 	return &service{
 		dndClient:    cfg.DNDClient,
-		monsterCache: make(map[string]*entities.MonsterTemplate),
+		monsterCache: make(map[string]*combat.MonsterTemplate),
 	}
 }
 
 // GetMonster fetches a specific monster by key
-func (s *service) GetMonster(ctx context.Context, key string) (*entities.MonsterTemplate, error) {
+func (s *service) GetMonster(ctx context.Context, key string) (*combat.MonsterTemplate, error) {
 	if key == "" {
 		return nil, dnderr.InvalidArgument("monster key is req")
 	}
@@ -92,10 +92,10 @@ func (s *service) GetMonster(ctx context.Context, key string) (*entities.Monster
 }
 
 // GetMonstersByCR returns monsters within a CR range
-func (s *service) GetMonstersByCR(ctx context.Context, minCR, maxCR float32) ([]*entities.MonsterTemplate, error) {
+func (s *service) GetMonstersByCR(ctx context.Context, minCR, maxCR float32) ([]*combat.MonsterTemplate, error) {
 	// Try to use API if available
 	if s.dndClient != nil {
-		var allMonsters []*entities.MonsterTemplate
+		var allMonsters []*combat.MonsterTemplate
 
 		// The API requires exact CR values, so we need to query for each CR in range
 		// Common CR values: 0, 0.125, 0.25, 0.5, 1, 2, 3, 4, 5, etc.
@@ -119,7 +119,7 @@ func (s *service) GetMonstersByCR(ctx context.Context, minCR, maxCR float32) ([]
 	}
 
 	// Fallback to hardcoded list
-	var monsters []*entities.MonsterTemplate
+	var monsters []*combat.MonsterTemplate
 
 	// CR 0-0.5
 	if minCR <= 0.5 {
@@ -145,7 +145,7 @@ func (s *service) GetMonstersByCR(ctx context.Context, minCR, maxCR float32) ([]
 }
 
 // GetRandomMonsters returns random monsters for a given difficulty
-func (s *service) GetRandomMonsters(ctx context.Context, difficulty string, count int) ([]*entities.MonsterTemplate, error) {
+func (s *service) GetRandomMonsters(ctx context.Context, difficulty string, count int) ([]*combat.MonsterTemplate, error) {
 	var minCR, maxCR float32
 
 	switch strings.ToLower(difficulty) {
@@ -172,7 +172,7 @@ func (s *service) GetRandomMonsters(ctx context.Context, difficulty string, coun
 	}
 
 	// Select random monsters
-	result := make([]*entities.MonsterTemplate, 0, count)
+	result := make([]*combat.MonsterTemplate, 0, count)
 	for i := 0; i < count; i++ {
 		idx := rand.Intn(len(availableMonsters))
 		result = append(result, availableMonsters[idx])
@@ -182,7 +182,7 @@ func (s *service) GetRandomMonsters(ctx context.Context, difficulty string, coun
 }
 
 // GetMonsterForEncounter converts a monster template to encounter format
-func (s *service) GetMonsterForEncounter(template *entities.MonsterTemplate) *MonsterEncounterData {
+func (s *service) GetMonsterForEncounter(template *combat.MonsterTemplate) *MonsterEncounterData {
 	if template == nil {
 		return nil
 	}
@@ -193,10 +193,10 @@ func (s *service) GetMonsterForEncounter(template *entities.MonsterTemplate) *Mo
 }
 
 // getHardcodedMonsters returns hardcoded monster templates
-func (s *service) getHardcodedMonsters(keys ...string) []*entities.MonsterTemplate {
-	var monsters []*entities.MonsterTemplate
+func (s *service) getHardcodedMonsters(keys ...string) []*combat.MonsterTemplate {
+	var monsters []*combat.MonsterTemplate
 	for _, key := range keys {
-		monsters = append(monsters, &entities.MonsterTemplate{
+		monsters = append(monsters, &combat.MonsterTemplate{
 			Key:  key,
 			Name: cases.Title(language.English).String(strings.ReplaceAll(key, "-", " ")),
 		})
@@ -219,7 +219,7 @@ func (s *service) getHardcodedEncounterData(key string) *MonsterEncounterData {
 				"STR": 8, "DEX": 14, "CON": 10,
 				"INT": 10, "WIS": 8, "CHA": 8,
 			},
-			Actions: []*entities.MonsterAction{
+			Actions: []*combat.MonsterAction{
 				{
 					Name:        "Scimitar",
 					AttackBonus: 4,
@@ -243,7 +243,7 @@ func (s *service) getHardcodedEncounterData(key string) *MonsterEncounterData {
 				"STR": 10, "DEX": 14, "CON": 15,
 				"INT": 6, "WIS": 8, "CHA": 5,
 			},
-			Actions: []*entities.MonsterAction{
+			Actions: []*combat.MonsterAction{
 				{
 					Name:        "Shortsword",
 					AttackBonus: 4,
@@ -267,7 +267,7 @@ func (s *service) getHardcodedEncounterData(key string) *MonsterEncounterData {
 				"STR": 16, "DEX": 12, "CON": 16,
 				"INT": 7, "WIS": 11, "CHA": 10,
 			},
-			Actions: []*entities.MonsterAction{
+			Actions: []*combat.MonsterAction{
 				{
 					Name:        "Greataxe",
 					AttackBonus: 5,
@@ -291,7 +291,7 @@ func (s *service) getHardcodedEncounterData(key string) *MonsterEncounterData {
 				"STR": 17, "DEX": 15, "CON": 15,
 				"INT": 3, "WIS": 12, "CHA": 7,
 			},
-			Actions: []*entities.MonsterAction{
+			Actions: []*combat.MonsterAction{
 				{
 					Name:        "Bite",
 					AttackBonus: 5,
@@ -315,7 +315,7 @@ func (s *service) getHardcodedEncounterData(key string) *MonsterEncounterData {
 				"STR": 20, "DEX": 12, "CON": 17,
 				"INT": 3, "WIS": 12, "CHA": 7,
 			},
-			Actions: []*entities.MonsterAction{
+			Actions: []*combat.MonsterAction{
 				{
 					Name:        "Beak",
 					AttackBonus: 7,

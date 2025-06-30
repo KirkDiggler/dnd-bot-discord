@@ -2,12 +2,13 @@ package character_test
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -64,7 +65,7 @@ func TestRangerWeaponProficiencyAndAttackBonus(t *testing.T) {
 
 	// Test 1: Verify Ranger has weapon proficiencies
 	t.Run("Ranger has weapon proficiencies", func(t *testing.T) {
-		weaponProfs, exists := char.Proficiencies[entities.ProficiencyTypeWeapon]
+		weaponProfs, exists := char.Proficiencies[rulebook.ProficiencyTypeWeapon]
 		assert.True(t, exists, "Ranger should have weapon proficiencies")
 		assert.NotEmpty(t, weaponProfs, "Ranger should have at least one weapon proficiency")
 
@@ -82,15 +83,15 @@ func TestRangerWeaponProficiencyAndAttackBonus(t *testing.T) {
 
 	// Test 2: Verify longbow is in inventory
 	t.Run("Longbow in inventory", func(t *testing.T) {
-		weapons, exists := char.Inventory[entities.EquipmentTypeWeapon]
+		weapons, exists := char.Inventory[equipment.EquipmentTypeWeapon]
 		assert.True(t, exists, "Should have weapons in inventory")
 
 		hasLongbow := false
-		var longbow *entities.Weapon
+		var longbow *equipment.Weapon
 		for _, weapon := range weapons {
 			if weapon.GetKey() == "longbow" {
 				hasLongbow = true
-				if w, ok := weapon.(*entities.Weapon); ok {
+				if w, ok := weapon.(*equipment.Weapon); ok {
 					longbow = w
 				}
 				break

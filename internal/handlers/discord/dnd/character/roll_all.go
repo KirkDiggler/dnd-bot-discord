@@ -3,12 +3,12 @@ package character
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"math/rand"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
 )
@@ -179,8 +179,8 @@ func (h *RollAllHandler) Handle(req *RollAllRequest) error {
 }
 
 // rollAbilityScores rolls 6 ability scores using 4d6 drop lowest
-func (h *RollAllHandler) rollAbilityScores() []entities.AbilityRoll {
-	rolls := make([]entities.AbilityRoll, 6)
+func (h *RollAllHandler) rollAbilityScores() []character.AbilityRoll {
+	rolls := make([]character.AbilityRoll, 6)
 
 	for i := 0; i < 6; i++ {
 		// Roll 4d6
@@ -196,7 +196,7 @@ func (h *RollAllHandler) rollAbilityScores() []entities.AbilityRoll {
 			total += dice[j]
 		}
 
-		rolls[i] = entities.AbilityRoll{
+		rolls[i] = character.AbilityRoll{
 			ID:    fmt.Sprintf("roll_%d_%d", time.Now().UnixNano(), i),
 			Value: total,
 		}

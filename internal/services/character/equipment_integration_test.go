@@ -2,13 +2,14 @@ package character_test
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 )
 
@@ -116,47 +117,47 @@ func (s *EquipmentIntegrationTestSuite) TestFullEquipmentSelectionFlow_Wizard() 
 func (s *EquipmentIntegrationTestSuite) TestEquipmentBundleHandling() {
 	// Test that equipment bundles are properly formatted
 
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "ranger",
 		Name: "Ranger",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "Ranged weapon choice",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.MultipleOption{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.MultipleOption{
 						Key:  "longbow-bundle",
 						Name: "longbow and 20 arrows",
-						Items: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Items: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "longbow",
 									Name: "Longbow",
 								},
 							},
-							&entities.CountedReferenceOption{
+							&shared.CountedReferenceOption{
 								Count: 20,
-								Reference: &entities.ReferenceItem{
+								Reference: &shared.ReferenceItem{
 									Key:  "arrow",
 									Name: "Arrow",
 								},
 							},
 						},
 					},
-					&entities.MultipleOption{
+					&shared.MultipleOption{
 						Key:  "crossbow-bundle",
 						Name: "light crossbow and 20 bolts",
-						Items: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Items: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "light-crossbow",
 									Name: "Light Crossbow",
 								},
 							},
-							&entities.CountedReferenceOption{
+							&shared.CountedReferenceOption{
 								Count: 20,
-								Reference: &entities.ReferenceItem{
+								Reference: &shared.ReferenceItem{
 									Key:  "crossbow-bolt",
 									Name: "Crossbow Bolt",
 								},
@@ -182,51 +183,51 @@ func (s *EquipmentIntegrationTestSuite) TestEquipmentBundleHandling() {
 
 // Test Data Creation Helpers
 
-func createFullFighterClass() *entities.Class {
-	return &entities.Class{
+func createFullFighterClass() *rulebook.Class {
+	return &rulebook.Class{
 		Key:  "fighter",
 		Name: "Fighter",
-		StartingEquipment: []*entities.StartingEquipment{
+		StartingEquipment: []*rulebook.StartingEquipment{
 			{
-				Equipment: &entities.ReferenceItem{
+				Equipment: &shared.ReferenceItem{
 					Key:  "explorers-pack",
 					Name: "Explorer's Pack",
 				},
 				Quantity: 1,
 			},
 		},
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			// Choice 1: Armor
 			{
 				Name:  "(a) chain mail or (b) leather armor, longbow, and 20 arrows",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "chain-mail",
 							Name: "Chain Mail",
 						},
 					},
-					&entities.MultipleOption{
+					&shared.MultipleOption{
 						Key:  "armor-bow-bundle",
 						Name: "leather armor, longbow, and 20 arrows",
-						Items: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Items: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "leather-armor",
 									Name: "Leather Armor",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "longbow",
 									Name: "Longbow",
 								},
 							},
-							&entities.CountedReferenceOption{
+							&shared.CountedReferenceOption{
 								Count: 20,
-								Reference: &entities.ReferenceItem{
+								Reference: &shared.ReferenceItem{
 									Key:  "arrow",
 									Name: "Arrow",
 								},
@@ -239,30 +240,30 @@ func createFullFighterClass() *entities.Class {
 			{
 				Name:  "(a) a martial weapon and a shield or (b) two martial weapons",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.MultipleOption{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.MultipleOption{
 						Key:  "weapon-shield",
 						Name: "a martial weapon and a shield",
-						Items: []entities.Option{
-							&entities.Choice{
+						Items: []shared.Option{
+							&shared.Choice{
 								Name:    "martial weapon",
 								Count:   1,
-								Type:    entities.ChoiceTypeEquipment,
+								Type:    shared.ChoiceTypeEquipment,
 								Options: createMartialWeaponOptions(),
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "shield",
 									Name: "Shield",
 								},
 							},
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:    "two martial weapons",
 						Count:   2,
-						Type:    entities.ChoiceTypeEquipment,
+						Type:    shared.ChoiceTypeEquipment,
 						Options: createMartialWeaponOptions(),
 					},
 				},
@@ -271,30 +272,30 @@ func createFullFighterClass() *entities.Class {
 			{
 				Name:  "(a) a light crossbow and 20 bolts or (b) two handaxes",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.MultipleOption{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.MultipleOption{
 						Key:  "crossbow-bundle",
 						Name: "a light crossbow and 20 bolts",
-						Items: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Items: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "light-crossbow",
 									Name: "Light Crossbow",
 								},
 							},
-							&entities.CountedReferenceOption{
+							&shared.CountedReferenceOption{
 								Count: 20,
-								Reference: &entities.ReferenceItem{
+								Reference: &shared.ReferenceItem{
 									Key:  "crossbow-bolt",
 									Name: "Crossbow Bolt",
 								},
 							},
 						},
 					},
-					&entities.CountedReferenceOption{
+					&shared.CountedReferenceOption{
 						Count: 2,
-						Reference: &entities.ReferenceItem{
+						Reference: &shared.ReferenceItem{
 							Key:  "handaxe",
 							Name: "Handaxe",
 						},
@@ -305,16 +306,16 @@ func createFullFighterClass() *entities.Class {
 			{
 				Name:  "(a) a dungeoneer's pack or (b) an explorer's pack",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "dungeoneers-pack",
 							Name: "Dungeoneer's Pack",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "explorers-pack",
 							Name: "Explorer's Pack",
 						},
@@ -325,34 +326,34 @@ func createFullFighterClass() *entities.Class {
 	}
 }
 
-func createFullWizardClass() *entities.Class {
-	return &entities.Class{
+func createFullWizardClass() *rulebook.Class {
+	return &rulebook.Class{
 		Key:  "wizard",
 		Name: "Wizard",
-		StartingEquipment: []*entities.StartingEquipment{
+		StartingEquipment: []*rulebook.StartingEquipment{
 			{
-				Equipment: &entities.ReferenceItem{
+				Equipment: &shared.ReferenceItem{
 					Key:  "spellbook",
 					Name: "Spellbook",
 				},
 				Quantity: 1,
 			},
 		},
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			// Choice 1: Weapon
 			{
 				Name:  "(a) a quarterstaff or (b) a dagger",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "quarterstaff",
 							Name: "Quarterstaff",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "dagger",
 							Name: "Dagger",
 						},
@@ -363,45 +364,45 @@ func createFullWizardClass() *entities.Class {
 			{
 				Name:  "(a) a component pouch or (b) an arcane focus",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "component-pouch",
 							Name: "Component Pouch",
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:  "arcane focus",
 						Count: 1,
-						Type:  entities.ChoiceTypeEquipment,
-						Options: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Type:  shared.ChoiceTypeEquipment,
+						Options: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "crystal",
 									Name: "Crystal",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "orb",
 									Name: "Orb",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "rod",
 									Name: "Rod",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "staff",
 									Name: "Staff",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "wand",
 									Name: "Wand",
 								},
@@ -414,16 +415,16 @@ func createFullWizardClass() *entities.Class {
 			{
 				Name:  "(a) a scholar's pack or (b) an explorer's pack",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "scholars-pack",
 							Name: "Scholar's Pack",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "explorers-pack",
 							Name: "Explorer's Pack",
 						},
@@ -434,112 +435,112 @@ func createFullWizardClass() *entities.Class {
 	}
 }
 
-func createMartialWeaponOptions() []entities.Option {
-	return []entities.Option{
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+func createMartialWeaponOptions() []shared.Option {
+	return []shared.Option{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "battleaxe",
 				Name: "Battleaxe",
 			},
 		},
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "flail",
 				Name: "Flail",
 			},
 		},
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "glaive",
 				Name: "Glaive",
 			},
 		},
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "greataxe",
 				Name: "Greataxe",
 			},
 		},
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "greatsword",
 				Name: "Greatsword",
 			},
 		},
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "halberd",
 				Name: "Halberd",
 			},
 		},
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "lance",
 				Name: "Lance",
 			},
 		},
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "longsword",
 				Name: "Longsword",
 			},
 		},
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "maul",
 				Name: "Maul",
 			},
 		},
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "morningstar",
 				Name: "Morningstar",
 			},
 		},
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "pike",
 				Name: "Pike",
 			},
 		},
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "rapier",
 				Name: "Rapier",
 			},
 		},
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "scimitar",
 				Name: "Scimitar",
 			},
 		},
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "shortsword",
 				Name: "Shortsword",
 			},
 		},
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "trident",
 				Name: "Trident",
 			},
 		},
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "war-pick",
 				Name: "War Pick",
 			},
 		},
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "warhammer",
 				Name: "Warhammer",
 			},
 		},
-		&entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		&shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  "whip",
 				Name: "Whip",
 			},

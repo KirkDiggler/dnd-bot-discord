@@ -3,10 +3,12 @@ package combat
 import (
 	"context"
 	"fmt"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"log"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/ability"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
@@ -120,7 +122,7 @@ func (h *Handler) handleAttack(s *discordgo.Session, i *discordgo.InteractionCre
 	}
 
 	// Find attacker - player who clicked or current turn for DM
-	var attacker *entities.Combatant
+	var attacker *combat.Combatant
 	for _, c := range enc.Combatants {
 		if c.PlayerID == i.Member.User.ID && c.IsActive {
 			attacker = c
@@ -145,12 +147,12 @@ func (h *Handler) handleAttack(s *discordgo.Session, i *discordgo.InteractionCre
 		}
 
 		// Players cannot attack other players
-		if attacker.Type == entities.CombatantTypePlayer && target.Type == entities.CombatantTypePlayer {
+		if attacker.Type == combat.CombatantTypePlayer && target.Type == combat.CombatantTypePlayer {
 			continue
 		}
 
 		emoji := "🧑"
-		if target.Type == entities.CombatantTypeMonster {
+		if target.Type == combat.CombatantTypeMonster {
 			emoji = "👹"
 		}
 
@@ -385,7 +387,7 @@ func (h *Handler) handleNextTurn(s *discordgo.Session, i *discordgo.InteractionC
 
 	// Process monster turns if any
 	var monsterResults []*encounter.AttackResult
-	if current := enc.GetCurrentCombatant(); current != nil && current.Type == entities.CombatantTypeMonster {
+	if current := enc.GetCurrentCombatant(); current != nil && current.Type == combat.CombatantTypeMonster {
 		monsterResults, err = h.encounterService.ProcessAllMonsterTurns(context.Background(), encounterID)
 		if err != nil {
 			log.Printf("Error processing monster turns: %v", err)
@@ -523,7 +525,7 @@ func (h *Handler) handleView(s *discordgo.Session, i *discordgo.InteractionCreat
 					Style:    discordgo.PrimaryButton,
 					CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
-					Disabled: enc.Status != entities.EncounterStatusActive,
+					Disabled: enc.Status != combat.EncounterStatusActive,
 				},
 				discordgo.Button{
 					Label:    "Get My Actions",
@@ -568,7 +570,7 @@ func (h *Handler) handleContinueRound(s *discordgo.Session, i *discordgo.Interac
 
 	// Process any monster turns at start of round
 	var monsterResults []*encounter.AttackResult
-	if current := enc.GetCurrentCombatant(); current != nil && current.Type == entities.CombatantTypeMonster {
+	if current := enc.GetCurrentCombatant(); current != nil && current.Type == combat.CombatantTypeMonster {
 		monsterResults, err = h.encounterService.ProcessAllMonsterTurns(context.Background(), encounterID)
 		if err != nil {
 			log.Printf("Error processing monster turns in continue round: %v", err)
@@ -644,7 +646,7 @@ func (h *Handler) handleContinueRound(s *discordgo.Session, i *discordgo.Interac
 }
 
 // showRoundComplete shows the round complete UI (updates the message)
-func (h *Handler) showRoundComplete(s *discordgo.Session, i *discordgo.InteractionCreate, enc *entities.Encounter) error {
+func (h *Handler) showRoundComplete(s *discordgo.Session, i *discordgo.InteractionCreate, enc *combat.Encounter) error {
 	embed := &discordgo.MessageEmbed{
 		Title:       fmt.Sprintf("🔄 Round %d Complete!", enc.Round),
 		Description: "All combatants have acted this round.",
@@ -774,7 +776,7 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 	}
 
 	// Find the player's combatant
-	var playerCombatant *entities.Combatant
+	var playerCombatant *combat.Combatant
 	for _, c := range enc.Combatants {
 		if c.PlayerID == i.Member.User.ID && c.IsActive {
 			playerCombatant = c
@@ -793,13 +795,13 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 	}
 
 	// Check if combat has ended
-	combatEnded := enc.Status == entities.EncounterStatusCompleted
+	combatEnded := enc.Status == combat.EncounterStatusCompleted
 	playersWon := false
 
 	// Check if players won by seeing if any players are still active
 	if combatEnded {
 		for _, c := range enc.Combatants {
-			if c.Type == entities.CombatantTypePlayer && c.IsActive {
+			if c.Type == combat.CombatantTypePlayer && c.IsActive {
 				playersWon = true
 				break
 			}
@@ -816,7 +818,7 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 	// Add combat end message if applicable
 	if combatEnded {
 		appendCombatEndMessage(embed, combatEnded, playersWon)
-	} else if !isMyTurn && enc.Status == entities.EncounterStatusActive {
+	} else if !isMyTurn && enc.Status == combat.EncounterStatusActive {
 		if current := enc.GetCurrentCombatant(); current != nil {
 			embed.Description = fmt.Sprintf("Waiting for %s's turn...", current.Name)
 		}
@@ -827,8 +829,8 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 
 	// Get character data to check available bonus actions and action economy
 	var actionEconomyInfo string
-	var availableBonusActions []entities.BonusActionOption
-	var char *entities.Character
+	var availableBonusActions []character2.BonusActionOption
+	var char *character2.Character
 	if playerCombatant.CharacterID != "" && h.characterService != nil {
 		// Get the character
 		ch, err := h.characterService.GetByID(playerCombatant.CharacterID)
@@ -878,7 +880,7 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 		})
 	} else {
 		// Build action buttons - disable if action already used
-		attackDisabled := enc.Status != entities.EncounterStatusActive
+		attackDisabled := enc.Status != combat.EncounterStatusActive
 		if char != nil && char.Resources != nil && char.Resources.ActionEconomy.ActionUsed {
 			attackDisabled = true
 		}
@@ -898,14 +900,14 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 						Style:    discordgo.PrimaryButton,
 						CustomID: fmt.Sprintf("combat:abilities:%s", encounterID),
 						Emoji:    &discordgo.ComponentEmoji{Name: "✨"},
-						Disabled: enc.Status != entities.EncounterStatusActive,
+						Disabled: enc.Status != combat.EncounterStatusActive,
 					},
 					discordgo.Button{
 						Label:    "End Turn",
 						Style:    discordgo.SecondaryButton,
 						CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
 						Emoji:    &discordgo.ComponentEmoji{Name: "⏭️"},
-						Disabled: enc.Status != entities.EncounterStatusActive,
+						Disabled: enc.Status != combat.EncounterStatusActive,
 					},
 				},
 			},
@@ -930,7 +932,7 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 			}
 
 			// Disable bonus action buttons if bonus action already used
-			bonusActionDisabled := enc.Status != entities.EncounterStatusActive
+			bonusActionDisabled := enc.Status != combat.EncounterStatusActive
 			if char != nil && char.Resources != nil && char.Resources.ActionEconomy.BonusActionUsed {
 				bonusActionDisabled = true
 			}
@@ -994,7 +996,7 @@ func (h *Handler) handleAttackFromEphemeral(s *discordgo.Session, i *discordgo.I
 	}
 
 	// Find attacker - player who clicked
-	var attacker *entities.Combatant
+	var attacker *combat.Combatant
 	for _, c := range enc.Combatants {
 		if c.PlayerID == i.Member.User.ID && c.IsActive {
 			attacker = c
@@ -1049,12 +1051,12 @@ func (h *Handler) handleAttackFromEphemeral(s *discordgo.Session, i *discordgo.I
 		}
 
 		// Players cannot attack other players
-		if attacker.Type == entities.CombatantTypePlayer && target.Type == entities.CombatantTypePlayer {
+		if attacker.Type == combat.CombatantTypePlayer && target.Type == combat.CombatantTypePlayer {
 			continue
 		}
 
 		emoji := "🧑"
-		if target.Type == entities.CombatantTypeMonster {
+		if target.Type == combat.CombatantTypeMonster {
 			emoji = "👹"
 		}
 
@@ -1108,7 +1110,7 @@ func (h *Handler) handleBonusAction(s *discordgo.Session, i *discordgo.Interacti
 	}
 
 	// Find the player's combatant
-	var playerCombatant *entities.Combatant
+	var playerCombatant *combat.Combatant
 	for _, c := range enc.Combatants {
 		if c.PlayerID == i.Member.User.ID && c.IsActive {
 			playerCombatant = c
@@ -1166,7 +1168,7 @@ func (h *Handler) handleBonusAction(s *discordgo.Session, i *discordgo.Interacti
 }
 
 // handleMartialArtsStrike shows target selection for unarmed strike bonus action
-func (h *Handler) handleMartialArtsStrike(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string, attacker *entities.Combatant) error {
+func (h *Handler) handleMartialArtsStrike(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string, attacker *combat.Combatant) error {
 	// Get encounter for target list
 	enc, err := h.encounterService.GetEncounter(context.Background(), encounterID)
 	if err != nil {
@@ -1181,12 +1183,12 @@ func (h *Handler) handleMartialArtsStrike(s *discordgo.Session, i *discordgo.Int
 		}
 
 		// Players cannot attack other players
-		if attacker.Type == entities.CombatantTypePlayer && target.Type == entities.CombatantTypePlayer {
+		if attacker.Type == combat.CombatantTypePlayer && target.Type == combat.CombatantTypePlayer {
 			continue
 		}
 
 		emoji := "🧑"
-		if target.Type == entities.CombatantTypeMonster {
+		if target.Type == combat.CombatantTypeMonster {
 			emoji = "👹"
 		}
 
@@ -1243,7 +1245,7 @@ func (h *Handler) handleMartialArtsStrike(s *discordgo.Session, i *discordgo.Int
 }
 
 // handleTwoWeaponAttack shows target selection for off-hand weapon attack
-func (h *Handler) handleTwoWeaponAttack(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string, attacker *entities.Combatant) error {
+func (h *Handler) handleTwoWeaponAttack(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string, attacker *combat.Combatant) error {
 	// Get encounter for target list
 	enc, err := h.encounterService.GetEncounter(context.Background(), encounterID)
 	if err != nil {
@@ -1258,12 +1260,12 @@ func (h *Handler) handleTwoWeaponAttack(s *discordgo.Session, i *discordgo.Inter
 		}
 
 		// Players cannot attack other players
-		if attacker.Type == entities.CombatantTypePlayer && target.Type == entities.CombatantTypePlayer {
+		if attacker.Type == combat.CombatantTypePlayer && target.Type == combat.CombatantTypePlayer {
 			continue
 		}
 
 		emoji := "🧑"
-		if target.Type == entities.CombatantTypeMonster {
+		if target.Type == combat.CombatantTypeMonster {
 			emoji = "👹"
 		}
 
@@ -1384,7 +1386,7 @@ func (h *Handler) executeBonusAction(s *discordgo.Session, i *discordgo.Interact
 	}
 
 	// Find attacker combatant
-	var attacker *entities.Combatant
+	var attacker *combat.Combatant
 	for _, c := range enc.Combatants {
 		if c.PlayerID == i.Member.User.ID && c.IsActive {
 			attacker = c
@@ -1403,7 +1405,7 @@ func (h *Handler) executeBonusAction(s *discordgo.Session, i *discordgo.Interact
 	}
 
 	// Get target combatant
-	var target *entities.Combatant
+	var target *combat.Combatant
 	for _, c := range enc.Combatants {
 		if c.ID == targetID {
 			target = c
@@ -1416,7 +1418,7 @@ func (h *Handler) executeBonusAction(s *discordgo.Session, i *discordgo.Interact
 	}
 
 	// Get character and mark bonus action as used
-	var char *entities.Character
+	var char *character2.Character
 	if attacker.CharacterID != "" && h.characterService != nil {
 		ch, errGetChar := h.characterService.GetByID(attacker.CharacterID)
 		if errGetChar != nil {
@@ -1513,7 +1515,7 @@ func (h *Handler) executeBonusAction(s *discordgo.Session, i *discordgo.Interact
 						Style:    discordgo.PrimaryButton,
 						CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
 						Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
-						Disabled: enc.Status != entities.EncounterStatusActive,
+						Disabled: enc.Status != combat.EncounterStatusActive,
 					},
 					discordgo.Button{
 						Label:    "Back to Actions",
@@ -1586,9 +1588,9 @@ func (h *Handler) handleBonusTarget(s *discordgo.Session, i *discordgo.Interacti
 }
 
 // buildActionController builds the action controller embed and components
-func (h *Handler) buildActionController(enc *entities.Encounter, encounterID, userID string) (*discordgo.MessageEmbed, []discordgo.MessageComponent, error) {
+func (h *Handler) buildActionController(enc *combat.Encounter, encounterID, userID string) (*discordgo.MessageEmbed, []discordgo.MessageComponent, error) {
 	// Find the player's combatant
-	var playerCombatant *entities.Combatant
+	var playerCombatant *combat.Combatant
 	for _, c := range enc.Combatants {
 		if c.PlayerID == userID && c.IsActive {
 			playerCombatant = c
@@ -1607,13 +1609,13 @@ func (h *Handler) buildActionController(enc *entities.Encounter, encounterID, us
 	}
 
 	// Check if combat has ended
-	combatEnded := enc.Status == entities.EncounterStatusCompleted
+	combatEnded := enc.Status == combat.EncounterStatusCompleted
 	playersWon := false
 
 	// Check if players won by seeing if any players are still active
 	if combatEnded {
 		for _, c := range enc.Combatants {
-			if c.Type == entities.CombatantTypePlayer && c.IsActive {
+			if c.Type == combat.CombatantTypePlayer && c.IsActive {
 				playersWon = true
 				break
 			}
@@ -1630,7 +1632,7 @@ func (h *Handler) buildActionController(enc *entities.Encounter, encounterID, us
 	// Add combat end message if applicable
 	if combatEnded {
 		appendCombatEndMessage(embed, combatEnded, playersWon)
-	} else if !isMyTurn && enc.Status == entities.EncounterStatusActive {
+	} else if !isMyTurn && enc.Status == combat.EncounterStatusActive {
 		if current := enc.GetCurrentCombatant(); current != nil {
 			embed.Description = fmt.Sprintf("Waiting for %s's turn...", current.Name)
 		}
@@ -1641,8 +1643,8 @@ func (h *Handler) buildActionController(enc *entities.Encounter, encounterID, us
 
 	// Get character data to check available bonus actions and action economy
 	var actionEconomyInfo string
-	var availableBonusActions []entities.BonusActionOption
-	var char *entities.Character
+	var availableBonusActions []character2.BonusActionOption
+	var char *character2.Character
 	if playerCombatant.CharacterID != "" && h.characterService != nil {
 		// Get the character
 		ch, err := h.characterService.GetByID(playerCombatant.CharacterID)
@@ -1692,7 +1694,7 @@ func (h *Handler) buildActionController(enc *entities.Encounter, encounterID, us
 		})
 	} else {
 		// Build action buttons - disable if action already used
-		attackDisabled := enc.Status != entities.EncounterStatusActive || !isMyTurn
+		attackDisabled := enc.Status != combat.EncounterStatusActive || !isMyTurn
 		if char != nil && char.Resources != nil && char.Resources.ActionEconomy.ActionUsed {
 			attackDisabled = true
 		}
@@ -1712,14 +1714,14 @@ func (h *Handler) buildActionController(enc *entities.Encounter, encounterID, us
 						Style:    discordgo.PrimaryButton,
 						CustomID: fmt.Sprintf("combat:abilities:%s", encounterID),
 						Emoji:    &discordgo.ComponentEmoji{Name: "✨"},
-						Disabled: enc.Status != entities.EncounterStatusActive || !isMyTurn,
+						Disabled: enc.Status != combat.EncounterStatusActive || !isMyTurn,
 					},
 					discordgo.Button{
 						Label:    "End Turn",
 						Style:    discordgo.SecondaryButton,
 						CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
 						Emoji:    &discordgo.ComponentEmoji{Name: "⏭️"},
-						Disabled: enc.Status != entities.EncounterStatusActive || !isMyTurn,
+						Disabled: enc.Status != combat.EncounterStatusActive || !isMyTurn,
 					},
 				},
 			},
@@ -1744,7 +1746,7 @@ func (h *Handler) buildActionController(enc *entities.Encounter, encounterID, us
 			}
 
 			// Disable bonus action buttons if bonus action already used
-			bonusActionDisabled := enc.Status != entities.EncounterStatusActive || !isMyTurn
+			bonusActionDisabled := enc.Status != combat.EncounterStatusActive || !isMyTurn
 			if char != nil && char.Resources != nil && char.Resources.ActionEconomy.BonusActionUsed {
 				bonusActionDisabled = true
 			}
@@ -1774,7 +1776,7 @@ func (h *Handler) buildActionController(enc *entities.Encounter, encounterID, us
 }
 
 // executeUnarmedStrike executes an unarmed strike attack
-func (h *Handler) executeUnarmedStrike(enc *entities.Encounter, attacker, target *entities.Combatant, char *entities.Character, isMartialArts bool) (*encounter.AttackResult, error) {
+func (h *Handler) executeUnarmedStrike(enc *combat.Encounter, attacker, target *combat.Combatant, char *character2.Character, isMartialArts bool) (*encounter.AttackResult, error) {
 	result := &encounter.AttackResult{
 		AttackerName: attacker.Name,
 		TargetName:   target.Name,
@@ -1787,11 +1789,11 @@ func (h *Handler) executeUnarmedStrike(enc *entities.Encounter, attacker, target
 	if char != nil && char.Attributes != nil {
 		strBonus := 0
 		dexBonus := 0
-		if char.Attributes[entities.AttributeStrength] != nil {
-			strBonus = char.Attributes[entities.AttributeStrength].Bonus
+		if char.Attributes[character2.AttributeStrength] != nil {
+			strBonus = char.Attributes[character2.AttributeStrength].Bonus
 		}
-		if char.Attributes[entities.AttributeDexterity] != nil {
-			dexBonus = char.Attributes[entities.AttributeDexterity].Bonus
+		if char.Attributes[character2.AttributeDexterity] != nil {
+			dexBonus = char.Attributes[character2.AttributeDexterity].Bonus
 		}
 
 		// Monks with martial arts can use DEX instead of STR
@@ -1876,7 +1878,7 @@ func (h *Handler) executeUnarmedStrike(enc *entities.Encounter, attacker, target
 }
 
 // executeOffHandAttack executes an off-hand weapon attack
-func (h *Handler) executeOffHandAttack(enc *entities.Encounter, attacker, target *entities.Combatant, char *entities.Character) (*encounter.AttackResult, error) {
+func (h *Handler) executeOffHandAttack(enc *combat.Encounter, attacker, target *combat.Combatant, char *character2.Character) (*encounter.AttackResult, error) {
 	result := &encounter.AttackResult{
 		AttackerName: attacker.Name,
 		TargetName:   target.Name,
@@ -1884,9 +1886,9 @@ func (h *Handler) executeOffHandAttack(enc *entities.Encounter, attacker, target
 	}
 
 	// Get off-hand weapon
-	var offHandWeapon *entities.Weapon
+	var offHandWeapon *equipment.Weapon
 	if char != nil && char.EquippedSlots != nil {
-		if weapon, ok := char.EquippedSlots[entities.SlotOffHand].(*entities.Weapon); ok {
+		if weapon, ok := char.EquippedSlots[character2.SlotOffHand].(*equipment.Weapon); ok {
 			offHandWeapon = weapon
 			result.WeaponName = offHandWeapon.GetName()
 		}
@@ -1900,10 +1902,10 @@ func (h *Handler) executeOffHandAttack(enc *entities.Encounter, attacker, target
 	abilityBonus := 0
 	damageAbilityBonus := 0
 	if char != nil && char.Attributes != nil {
-		if char.Attributes[entities.AttributeDexterity] != nil && offHandWeapon.IsFinesse() {
-			abilityBonus = char.Attributes[entities.AttributeDexterity].Bonus
-		} else if char.Attributes[entities.AttributeStrength] != nil {
-			abilityBonus = char.Attributes[entities.AttributeStrength].Bonus
+		if char.Attributes[character2.AttributeDexterity] != nil && offHandWeapon.IsFinesse() {
+			abilityBonus = char.Attributes[character2.AttributeDexterity].Bonus
+		} else if char.Attributes[character2.AttributeStrength] != nil {
+			abilityBonus = char.Attributes[character2.AttributeStrength].Bonus
 		}
 
 		// Check for Two-Weapon Fighting style

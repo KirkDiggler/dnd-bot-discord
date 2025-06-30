@@ -2,9 +2,9 @@ package character
 
 import (
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
 )
@@ -107,7 +107,7 @@ func (h *DeleteHandler) showCharacterSelection(req *DeleteRequest) error {
 	return err
 }
 
-func (h *DeleteHandler) buildButtonComponents(characters []*entities.Character) []discordgo.MessageComponent {
+func (h *DeleteHandler) buildButtonComponents(characters []*character.Character) []discordgo.MessageComponent {
 	var components []discordgo.MessageComponent
 	var currentRow []discordgo.MessageComponent
 
@@ -150,7 +150,7 @@ func (h *DeleteHandler) buildButtonComponents(characters []*entities.Character) 
 	return components
 }
 
-func (h *DeleteHandler) buildSelectMenuComponents(characters []*entities.Character) []discordgo.MessageComponent {
+func (h *DeleteHandler) buildSelectMenuComponents(characters []*character.Character) []discordgo.MessageComponent {
 	var options []discordgo.SelectMenuOption
 
 	for _, char := range characters {
@@ -388,13 +388,13 @@ func (h *DeleteHandler) HandleSelectMenu(req *DeleteRequest) error {
 	return h.showDeleteConfirmation(req, characterID)
 }
 
-func (h *DeleteHandler) getStatusEmoji(status entities.CharacterStatus) string {
+func (h *DeleteHandler) getStatusEmoji(status character.CharacterStatus) string {
 	switch status {
-	case entities.CharacterStatusActive:
+	case character.CharacterStatusActive:
 		return "✅"
-	case entities.CharacterStatusDraft:
+	case character.CharacterStatusDraft:
 		return "📝"
-	case entities.CharacterStatusArchived:
+	case character.CharacterStatusArchived:
 		return "🗄️"
 	default:
 		return "❓"

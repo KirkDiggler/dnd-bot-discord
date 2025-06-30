@@ -3,10 +3,10 @@ package characters_test
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"sync"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/stretchr/testify/suite"
@@ -34,7 +34,7 @@ func TestInMemoryRepositorySuite(t *testing.T) {
 
 func (s *InMemoryRepositoryTestSuite) TestCreate_Success() {
 	// Setup
-	char := &entities.Character{
+	char := &character.Character{
 		ID:      "char_123",
 		OwnerID: "user_456",
 		RealmID: "realm_789",
@@ -55,7 +55,7 @@ func (s *InMemoryRepositoryTestSuite) TestCreate_Success() {
 
 func (s *InMemoryRepositoryTestSuite) TestCreate_DuplicateID() {
 	// Setup
-	char := &entities.Character{
+	char := &character.Character{
 		ID:      "char_123",
 		OwnerID: "user_456",
 		RealmID: "realm_789",
@@ -76,7 +76,7 @@ func (s *InMemoryRepositoryTestSuite) TestCreate_DuplicateID() {
 
 func (s *InMemoryRepositoryTestSuite) TestCreate_IsolatesData() {
 	// Setup
-	char := &entities.Character{
+	char := &character.Character{
 		ID:      "char_123",
 		OwnerID: "user_456",
 		RealmID: "realm_789",
@@ -102,7 +102,7 @@ func (s *InMemoryRepositoryTestSuite) TestCreate_IsolatesData() {
 
 func (s *InMemoryRepositoryTestSuite) TestGet_Success() {
 	// Setup
-	char := &entities.Character{
+	char := &character.Character{
 		ID:      "char_123",
 		OwnerID: "user_456",
 		RealmID: "realm_789",
@@ -134,7 +134,7 @@ func (s *InMemoryRepositoryTestSuite) TestGet_NotFound() {
 
 func (s *InMemoryRepositoryTestSuite) TestGet_ReturnsCopy() {
 	// Setup
-	char := &entities.Character{
+	char := &character.Character{
 		ID:      "char_123",
 		OwnerID: "user_456",
 		RealmID: "realm_789",
@@ -161,7 +161,7 @@ func (s *InMemoryRepositoryTestSuite) TestGet_ReturnsCopy() {
 
 func (s *InMemoryRepositoryTestSuite) TestGetByOwner_Success() {
 	// Setup - create multiple characters
-	chars := []*entities.Character{
+	chars := []*character.Character{
 		{
 			ID:      "char_1",
 			OwnerID: "user_123",
@@ -213,7 +213,7 @@ func (s *InMemoryRepositoryTestSuite) TestGetByOwner_Empty() {
 
 func (s *InMemoryRepositoryTestSuite) TestGetByOwnerAndRealm_Success() {
 	// Setup
-	chars := []*entities.Character{
+	chars := []*character.Character{
 		{
 			ID:      "char_1",
 			OwnerID: "user_123",
@@ -256,7 +256,7 @@ func (s *InMemoryRepositoryTestSuite) TestGetByOwnerAndRealm_Success() {
 
 func (s *InMemoryRepositoryTestSuite) TestUpdate_Success() {
 	// Setup
-	char := &entities.Character{
+	char := &character.Character{
 		ID:      "char_123",
 		OwnerID: "user_456",
 		RealmID: "realm_789",
@@ -280,7 +280,7 @@ func (s *InMemoryRepositoryTestSuite) TestUpdate_Success() {
 
 func (s *InMemoryRepositoryTestSuite) TestUpdate_NotFound() {
 	// Setup
-	char := &entities.Character{
+	char := &character.Character{
 		ID:      "nonexistent",
 		OwnerID: "user_456",
 		RealmID: "realm_789",
@@ -299,7 +299,7 @@ func (s *InMemoryRepositoryTestSuite) TestUpdate_NotFound() {
 
 func (s *InMemoryRepositoryTestSuite) TestDelete_Success() {
 	// Setup
-	char := &entities.Character{
+	char := &character.Character{
 		ID:      "char_123",
 		OwnerID: "user_456",
 		RealmID: "realm_789",
@@ -341,7 +341,7 @@ func (s *InMemoryRepositoryTestSuite) TestConcurrentCreates() {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			char := &entities.Character{
+			char := &character.Character{
 				ID:      fmt.Sprintf("char_%d", id),
 				OwnerID: "user_123",
 				RealmID: "realm_456",
@@ -362,7 +362,7 @@ func (s *InMemoryRepositoryTestSuite) TestConcurrentCreates() {
 
 func (s *InMemoryRepositoryTestSuite) TestConcurrentReadsAndWrites() {
 	// Setup - create initial character
-	char := &entities.Character{
+	char := &character.Character{
 		ID:      "char_123",
 		OwnerID: "user_456",
 		RealmID: "realm_789",
@@ -395,7 +395,7 @@ func (s *InMemoryRepositoryTestSuite) TestConcurrentReadsAndWrites() {
 		go func(writerID int) {
 			defer wg.Done()
 			for j := 0; j < 5; j++ {
-				char := &entities.Character{
+				char := &character.Character{
 					ID:      "char_123",
 					OwnerID: "user_456",
 					RealmID: "realm_789",

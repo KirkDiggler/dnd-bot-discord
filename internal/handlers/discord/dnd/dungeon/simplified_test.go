@@ -2,9 +2,10 @@ package dungeon_test
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/exploration"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/dungeon"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	mockdungeon "github.com/KirkDiggler/dnd-bot-discord/internal/services/dungeon/mock"
@@ -23,11 +24,11 @@ func TestStartDungeonHandler_InitializesSessionMetadata(t *testing.T) {
 	mockDungeonService := mockdungeon.NewMockService(ctrl)
 
 	// Session without metadata
-	createdSession := &entities.Session{
+	createdSession := &session.Session{
 		ID:        "session123",
 		Name:      "Dungeon Delve",
 		CreatorID: "user123",
-		Members:   map[string]*entities.SessionMember{},
+		Members:   map[string]*session.SessionMember{},
 		Metadata:  nil, // This is the key - metadata is nil
 	}
 
@@ -39,7 +40,7 @@ func TestStartDungeonHandler_InitializesSessionMetadata(t *testing.T) {
 	// Expect SaveSession to be called and verify metadata is initialized
 	mockSessionService.EXPECT().
 		SaveSession(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(ctx interface{}, sess *entities.Session) error {
+		DoAndReturn(func(ctx interface{}, sess *session.Session) error {
 			// The first call is for saving bot as DM
 			// The second call should have initialized metadata
 			if sess.Metadata != nil && sess.Metadata["dungeonID"] != nil {
@@ -51,7 +52,7 @@ func TestStartDungeonHandler_InitializesSessionMetadata(t *testing.T) {
 
 	mockDungeonService.EXPECT().
 		CreateDungeon(gomock.Any(), gomock.Any()).
-		Return(&entities.Dungeon{
+		Return(&exploration.Dungeon{
 			ID:        "dungeon123",
 			SessionID: "session123",
 		}, nil)

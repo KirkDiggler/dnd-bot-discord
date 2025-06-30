@@ -1,21 +1,21 @@
 package dungeon_test
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestEnterRoomValidation(t *testing.T) {
 	t.Run("Player cannot enter room without joining party", func(t *testing.T) {
 		// Session without the player as member
-		session := &entities.Session{
+		session := &session.Session{
 			ID: "session-123",
-			Members: map[string]*entities.SessionMember{
+			Members: map[string]*session.SessionMember{
 				"dm-123": {
 					UserID: "dm-123",
-					Role:   entities.SessionRoleDM,
+					Role:   session.SessionRoleDM,
 				},
 				// Player is NOT in members
 			},
@@ -29,12 +29,12 @@ func TestEnterRoomValidation(t *testing.T) {
 
 	t.Run("Player cannot enter combat room without character", func(t *testing.T) {
 		// Session with player but no character selected
-		session := &entities.Session{
+		session := &session.Session{
 			ID: "session-456",
-			Members: map[string]*entities.SessionMember{
+			Members: map[string]*session.SessionMember{
 				"player-456": {
 					UserID:      "player-456",
-					Role:        entities.SessionRolePlayer,
+					Role:        session.SessionRolePlayer,
 					CharacterID: "", // No character!
 				},
 			},
@@ -48,12 +48,12 @@ func TestEnterRoomValidation(t *testing.T) {
 
 	t.Run("Player with character can enter room", func(t *testing.T) {
 		// Session with player and character selected
-		session := &entities.Session{
+		session := &session.Session{
 			ID: "session-789",
-			Members: map[string]*entities.SessionMember{
+			Members: map[string]*session.SessionMember{
 				"player-789": {
 					UserID:      "player-789",
-					Role:        entities.SessionRolePlayer,
+					Role:        session.SessionRolePlayer,
 					CharacterID: "char-789", // Has character!
 				},
 			},
@@ -68,12 +68,12 @@ func TestEnterRoomValidation(t *testing.T) {
 
 	t.Run("DM can enter room without character", func(t *testing.T) {
 		// DM doesn't need a character
-		session := &entities.Session{
+		session := &session.Session{
 			ID: "session-dm",
-			Members: map[string]*entities.SessionMember{
+			Members: map[string]*session.SessionMember{
 				"dm-999": {
 					UserID:      "dm-999",
-					Role:        entities.SessionRoleDM,
+					Role:        session.SessionRoleDM,
 					CharacterID: "", // DM has no character
 				},
 			},
@@ -84,7 +84,7 @@ func TestEnterRoomValidation(t *testing.T) {
 
 		// DM can enter regardless of character
 		canEnter := session.IsUserInSession(dmID) &&
-			(member.Role == entities.SessionRoleDM || member.CharacterID != "")
+			(member.Role == session.SessionRoleDM || member.CharacterID != "")
 
 		assert.True(t, canEnter, "DM should be able to enter without character")
 	})

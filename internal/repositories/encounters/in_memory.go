@@ -3,14 +3,13 @@ package encounters
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"sync"
-
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 )
 
 type inMemoryRepository struct {
 	mu         sync.RWMutex
-	encounters map[string]*entities.Encounter
+	encounters map[string]*combat.Encounter
 	bySession  map[string][]string // sessionID -> encounter IDs
 	byMessage  map[string]string   // messageID -> encounter ID
 }
@@ -18,14 +17,14 @@ type inMemoryRepository struct {
 // NewInMemoryRepository creates a new in-memory encounter repository
 func NewInMemoryRepository() Repository {
 	return &inMemoryRepository{
-		encounters: make(map[string]*entities.Encounter),
+		encounters: make(map[string]*combat.Encounter),
 		bySession:  make(map[string][]string),
 		byMessage:  make(map[string]string),
 	}
 }
 
 // Create stores a new encounter
-func (r *inMemoryRepository) Create(ctx context.Context, encounter *entities.Encounter) error {
+func (r *inMemoryRepository) Create(ctx context.Context, encounter *combat.Encounter) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -47,7 +46,7 @@ func (r *inMemoryRepository) Create(ctx context.Context, encounter *entities.Enc
 }
 
 // Get retrieves an encounter by ID
-func (r *inMemoryRepository) Get(ctx context.Context, id string) (*entities.Encounter, error) {
+func (r *inMemoryRepository) Get(ctx context.Context, id string) (*combat.Encounter, error) {
 	// Removed verbose logging - this method is called frequently
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -61,7 +60,7 @@ func (r *inMemoryRepository) Get(ctx context.Context, id string) (*entities.Enco
 }
 
 // Update modifies an existing encounter
-func (r *inMemoryRepository) Update(ctx context.Context, encounter *entities.Encounter) error {
+func (r *inMemoryRepository) Update(ctx context.Context, encounter *combat.Encounter) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -114,12 +113,12 @@ func (r *inMemoryRepository) Delete(ctx context.Context, id string) error {
 }
 
 // GetBySession retrieves all encounters for a session
-func (r *inMemoryRepository) GetBySession(ctx context.Context, sessionID string) ([]*entities.Encounter, error) {
+func (r *inMemoryRepository) GetBySession(ctx context.Context, sessionID string) ([]*combat.Encounter, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	encounterIDs := r.bySession[sessionID]
-	encounters := make([]*entities.Encounter, 0, len(encounterIDs))
+	encounters := make([]*combat.Encounter, 0, len(encounterIDs))
 
 	for _, id := range encounterIDs {
 		if encounter, exists := r.encounters[id]; exists {
@@ -131,7 +130,7 @@ func (r *inMemoryRepository) GetBySession(ctx context.Context, sessionID string)
 }
 
 // GetActiveBySession retrieves the active encounter for a session
-func (r *inMemoryRepository) GetActiveBySession(ctx context.Context, sessionID string) (*entities.Encounter, error) {
+func (r *inMemoryRepository) GetActiveBySession(ctx context.Context, sessionID string) (*combat.Encounter, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -139,9 +138,9 @@ func (r *inMemoryRepository) GetActiveBySession(ctx context.Context, sessionID s
 
 	for _, id := range encounterIDs {
 		if encounter, exists := r.encounters[id]; exists {
-			if encounter.Status == entities.EncounterStatusActive ||
-				encounter.Status == entities.EncounterStatusSetup ||
-				encounter.Status == entities.EncounterStatusRolling {
+			if encounter.Status == combat.EncounterStatusActive ||
+				encounter.Status == combat.EncounterStatusSetup ||
+				encounter.Status == combat.EncounterStatusRolling {
 				return encounter, nil
 			}
 		}
@@ -151,7 +150,7 @@ func (r *inMemoryRepository) GetActiveBySession(ctx context.Context, sessionID s
 }
 
 // GetByMessage retrieves an encounter by Discord message ID
-func (r *inMemoryRepository) GetByMessage(ctx context.Context, messageID string) (*entities.Encounter, error) {
+func (r *inMemoryRepository) GetByMessage(ctx context.Context, messageID string) (*combat.Encounter, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 

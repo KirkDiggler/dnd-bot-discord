@@ -3,10 +3,10 @@ package dungeon
 import (
 	"context"
 	"fmt"
+	session2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"log"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
 	"github.com/bwmarrin/discordgo"
@@ -59,13 +59,13 @@ func UpdateDungeonLobbyMessage(s *discordgo.Session, sessionService session.Serv
 }
 
 // buildPartyMembersList builds a list of party members with their characters
-func buildPartyMembersList(sess *entities.Session, characterService character.Service) []string {
+func buildPartyMembersList(sess *session2.Session, characterService character.Service) []string {
 	var partyLines []string
 
 	// TODO: Optimize with batch character fetching to avoid N+1 queries
 	// For now, we fetch individually
 	for userID, member := range sess.Members {
-		if member.Role == entities.SessionRolePlayer {
+		if member.Role == session2.SessionRolePlayer {
 			if member.CharacterID != "" {
 				// Get character info
 				char, err := characterService.GetByID(member.CharacterID)

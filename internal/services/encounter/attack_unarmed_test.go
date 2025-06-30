@@ -2,11 +2,12 @@ package encounter_test
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	session2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"testing"
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/gamesessions"
@@ -20,7 +21,7 @@ import (
 func TestPerformAttack_UnarmedStrike_AllScenarios(t *testing.T) {
 	tests := []struct {
 		name           string
-		setupAttacker  func(ctx context.Context, enc *entities.Encounter, service encounter.Service) (*entities.Combatant, error)
+		setupAttacker  func(ctx context.Context, enc *combat.Encounter, service encounter.Service) (*combat.Combatant, error)
 		actionIndex    int
 		expectedWeapon string
 		expectedDamage int
@@ -28,7 +29,7 @@ func TestPerformAttack_UnarmedStrike_AllScenarios(t *testing.T) {
 	}{
 		{
 			name: "Monster with no actions uses unarmed strike",
-			setupAttacker: func(ctx context.Context, enc *entities.Encounter, service encounter.Service) (*entities.Combatant, error) {
+			setupAttacker: func(ctx context.Context, enc *combat.Encounter, service encounter.Service) (*combat.Combatant, error) {
 				return service.AddMonster(ctx, enc.ID, "dm-1", &encounter.AddMonsterInput{
 					Name:  "Commoner",
 					MaxHP: 4,
@@ -43,12 +44,12 @@ func TestPerformAttack_UnarmedStrike_AllScenarios(t *testing.T) {
 		},
 		{
 			name: "Monster with empty actions array uses unarmed strike",
-			setupAttacker: func(ctx context.Context, enc *entities.Encounter, service encounter.Service) (*entities.Combatant, error) {
+			setupAttacker: func(ctx context.Context, enc *combat.Encounter, service encounter.Service) (*combat.Combatant, error) {
 				return service.AddMonster(ctx, enc.ID, "dm-1", &encounter.AddMonsterInput{
 					Name:    "Peasant",
 					MaxHP:   4,
 					AC:      10,
-					Actions: []*entities.MonsterAction{}, // Empty actions
+					Actions: []*combat.MonsterAction{}, // Empty actions
 				})
 			},
 			actionIndex:    0,
@@ -58,12 +59,12 @@ func TestPerformAttack_UnarmedStrike_AllScenarios(t *testing.T) {
 		},
 		{
 			name: "Monster with invalid action index uses unarmed strike",
-			setupAttacker: func(ctx context.Context, enc *entities.Encounter, service encounter.Service) (*entities.Combatant, error) {
+			setupAttacker: func(ctx context.Context, enc *combat.Encounter, service encounter.Service) (*combat.Combatant, error) {
 				return service.AddMonster(ctx, enc.ID, "dm-1", &encounter.AddMonsterInput{
 					Name:  "Guard",
 					MaxHP: 11,
 					AC:    16,
-					Actions: []*entities.MonsterAction{
+					Actions: []*combat.MonsterAction{
 						{
 							Name:        "Spear",
 							AttackBonus: 3,
@@ -78,12 +79,12 @@ func TestPerformAttack_UnarmedStrike_AllScenarios(t *testing.T) {
 		},
 		{
 			name: "Non-combatant type uses unarmed strike",
-			setupAttacker: func(ctx context.Context, enc *entities.Encounter, service encounter.Service) (*entities.Combatant, error) {
+			setupAttacker: func(ctx context.Context, enc *combat.Encounter, service encounter.Service) (*combat.Combatant, error) {
 				// Manually create an NPC combatant
-				npc := &entities.Combatant{
+				npc := &combat.Combatant{
 					ID:        "npc-1",
 					Name:      "Villager",
-					Type:      entities.CombatantTypeNPC,
+					Type:      combat.CombatantTypeNPC,
 					CurrentHP: 4,
 					MaxHP:     4,
 					AC:        10,
@@ -130,16 +131,16 @@ func TestPerformAttack_UnarmedStrike_AllScenarios(t *testing.T) {
 			})
 
 			// Create a test session
-			sess := &entities.Session{
+			sess := &session2.Session{
 				ID:        "test-session",
 				Name:      "Test Session",
 				ChannelID: "channel-1",
 				CreatorID: "dm-1",
 				DMID:      "dm-1",
-				Members: map[string]*entities.SessionMember{
-					"dm-1": {UserID: "dm-1", Role: entities.SessionRoleDM},
+				Members: map[string]*session2.SessionMember{
+					"dm-1": {UserID: "dm-1", Role: session2.SessionRoleDM},
 				},
-				Status:     entities.SessionStatusActive,
+				Status:     session2.SessionStatusActive,
 				CreatedAt:  time.Now(),
 				LastActive: time.Now(),
 			}
@@ -170,7 +171,7 @@ func TestPerformAttack_UnarmedStrike_AllScenarios(t *testing.T) {
 			// Get updated encounter and set it up for combat
 			enc, err = encounterService.GetEncounter(ctx, enc.ID)
 			require.NoError(t, err)
-			enc.Status = entities.EncounterStatusActive
+			enc.Status = combat.EncounterStatusActive
 			enc.Turn = 0
 			enc.TurnOrder = []string{attacker.ID, target.ID}
 

@@ -10,9 +10,11 @@
 package mockdnd5e
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	entities "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	reflect "reflect"
 
-	entities "github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -41,10 +43,10 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 }
 
 // GetClass mocks base method.
-func (m *MockClient) GetClass(key string) (*entities.Class, error) {
+func (m *MockClient) GetClass(key string) (*rulebook.Class, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetClass", key)
-	ret0, _ := ret[0].(*entities.Class)
+	ret0, _ := ret[0].(*rulebook.Class)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -56,10 +58,10 @@ func (mr *MockClientMockRecorder) GetClass(key any) *gomock.Call {
 }
 
 // GetClassFeatures mocks base method.
-func (m *MockClient) GetClassFeatures(classKey string, level int) ([]*entities.CharacterFeature, error) {
+func (m *MockClient) GetClassFeatures(classKey string, level int) ([]*rulebook.CharacterFeature, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetClassFeatures", classKey, level)
-	ret0, _ := ret[0].([]*entities.CharacterFeature)
+	ret0, _ := ret[0].([]*rulebook.CharacterFeature)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -71,10 +73,10 @@ func (mr *MockClientMockRecorder) GetClassFeatures(classKey, level any) *gomock.
 }
 
 // GetEquipment mocks base method.
-func (m *MockClient) GetEquipment(key string) (entities.Equipment, error) {
+func (m *MockClient) GetEquipment(key string) (equipment.Equipment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEquipment", key)
-	ret0, _ := ret[0].(entities.Equipment)
+	ret0, _ := ret[0].(equipment.Equipment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -86,10 +88,10 @@ func (mr *MockClientMockRecorder) GetEquipment(key any) *gomock.Call {
 }
 
 // GetEquipmentByCategory mocks base method.
-func (m *MockClient) GetEquipmentByCategory(category string) ([]entities.Equipment, error) {
+func (m *MockClient) GetEquipmentByCategory(category string) ([]equipment.Equipment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEquipmentByCategory", category)
-	ret0, _ := ret[0].([]entities.Equipment)
+	ret0, _ := ret[0].([]equipment.Equipment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -116,10 +118,10 @@ func (mr *MockClientMockRecorder) GetMonster(key any) *gomock.Call {
 }
 
 // GetProficiency mocks base method.
-func (m *MockClient) GetProficiency(key string) (*entities.Proficiency, error) {
+func (m *MockClient) GetProficiency(key string) (*rulebook.Proficiency, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetProficiency", key)
-	ret0, _ := ret[0].(*entities.Proficiency)
+	ret0, _ := ret[0].(*rulebook.Proficiency)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -131,10 +133,10 @@ func (mr *MockClientMockRecorder) GetProficiency(key any) *gomock.Call {
 }
 
 // GetRace mocks base method.
-func (m *MockClient) GetRace(key string) (*entities.Race, error) {
+func (m *MockClient) GetRace(key string) (*rulebook.Race, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRace", key)
-	ret0, _ := ret[0].(*entities.Race)
+	ret0, _ := ret[0].(*rulebook.Race)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -146,10 +148,10 @@ func (mr *MockClientMockRecorder) GetRace(key any) *gomock.Call {
 }
 
 // ListClasses mocks base method.
-func (m *MockClient) ListClasses() ([]*entities.Class, error) {
+func (m *MockClient) ListClasses() ([]*rulebook.Class, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListClasses")
-	ret0, _ := ret[0].([]*entities.Class)
+	ret0, _ := ret[0].([]*rulebook.Class)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -161,10 +163,10 @@ func (mr *MockClientMockRecorder) ListClasses() *gomock.Call {
 }
 
 // ListEquipment mocks base method.
-func (m *MockClient) ListEquipment() ([]entities.Equipment, error) {
+func (m *MockClient) ListEquipment() ([]equipment.Equipment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListEquipment")
-	ret0, _ := ret[0].([]entities.Equipment)
+	ret0, _ := ret[0].([]equipment.Equipment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -191,10 +193,10 @@ func (mr *MockClientMockRecorder) ListMonstersByCR(minCR, maxCR any) *gomock.Cal
 }
 
 // ListRaces mocks base method.
-func (m *MockClient) ListRaces() ([]*entities.Race, error) {
+func (m *MockClient) ListRaces() ([]*rulebook.Race, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListRaces")
-	ret0, _ := ret[0].([]*entities.Race)
+	ret0, _ := ret[0].([]*rulebook.Race)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

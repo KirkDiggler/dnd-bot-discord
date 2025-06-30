@@ -2,9 +2,9 @@ package character
 
 import (
 	"fmt"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"log"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
 )
@@ -75,7 +75,7 @@ func (h *ClassFeaturesHandler) Handle(req *ClassFeaturesRequest) error {
 }
 
 // handleFavoredEnemy stores the ranger's favored enemy selection
-func (h *ClassFeaturesHandler) handleFavoredEnemy(req *ClassFeaturesRequest, char *entities.Character) error {
+func (h *ClassFeaturesHandler) handleFavoredEnemy(req *ClassFeaturesRequest, char *character2.Character) error {
 	// Find the favored enemy feature and update its metadata
 	for _, feature := range char.Features {
 		if feature.Key == "favored_enemy" {
@@ -94,7 +94,7 @@ func (h *ClassFeaturesHandler) handleFavoredEnemy(req *ClassFeaturesRequest, cha
 }
 
 // handleNaturalExplorer stores the ranger's natural explorer terrain selection
-func (h *ClassFeaturesHandler) handleNaturalExplorer(req *ClassFeaturesRequest, char *entities.Character) error {
+func (h *ClassFeaturesHandler) handleNaturalExplorer(req *ClassFeaturesRequest, char *character2.Character) error {
 	// Find the natural explorer feature and update its metadata
 	for _, feature := range char.Features {
 		if feature.Key == "natural_explorer" {
@@ -113,7 +113,7 @@ func (h *ClassFeaturesHandler) handleNaturalExplorer(req *ClassFeaturesRequest, 
 }
 
 // handleFightingStyle stores the fighter's fighting style selection
-func (h *ClassFeaturesHandler) handleFightingStyle(req *ClassFeaturesRequest, char *entities.Character) error {
+func (h *ClassFeaturesHandler) handleFightingStyle(req *ClassFeaturesRequest, char *character2.Character) error {
 	log.Printf("DEBUG: handleFightingStyle called with selection: %s", req.Selection)
 
 	// Find the fighting style feature and update its metadata
@@ -296,7 +296,7 @@ func (h *ClassFeaturesHandler) ShowNaturalExplorerSelection(req *InteractionRequ
 }
 
 // ShouldShowClassFeatures checks if a character needs to select class features
-func (h *ClassFeaturesHandler) ShouldShowClassFeatures(char *entities.Character) (needsSelection bool, featureType string) {
+func (h *ClassFeaturesHandler) ShouldShowClassFeatures(char *character2.Character) (needsSelection bool, featureType string) {
 	if char.Class == nil {
 		return false, ""
 	}

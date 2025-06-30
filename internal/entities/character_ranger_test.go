@@ -1,6 +1,8 @@
 package entities
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"testing"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
@@ -10,29 +12,29 @@ import (
 
 func TestCharacter_RangerInitialization(t *testing.T) {
 	// Create a ranger character
-	ranger := &Character{
+	ranger := &character.Character{
 		ID:    "ranger_1",
 		Name:  "Legolas",
 		Level: 1,
-		Class: &Class{
+		Class: &rulebook.Class{
 			Key:  "ranger",
 			Name: "Ranger",
 		},
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeStrength:     {Score: 14, Bonus: 2},
-			AttributeDexterity:    {Score: 16, Bonus: 3},
-			AttributeConstitution: {Score: 13, Bonus: 1},
-			AttributeIntelligence: {Score: 10, Bonus: 0},
-			AttributeWisdom:       {Score: 15, Bonus: 2},
-			AttributeCharisma:     {Score: 8, Bonus: -1},
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeStrength:     {Score: 14, Bonus: 2},
+			character.AttributeDexterity:    {Score: 16, Bonus: 3},
+			character.AttributeConstitution: {Score: 13, Bonus: 1},
+			character.AttributeIntelligence: {Score: 10, Bonus: 0},
+			character.AttributeWisdom:       {Score: 15, Bonus: 2},
+			character.AttributeCharisma:     {Score: 8, Bonus: -1},
 		},
 		MaxHitPoints:     11, // d10 + 1 CON
 		CurrentHitPoints: 11,
-		Features: []*CharacterFeature{
+		Features: []*rulebook.CharacterFeature{
 			{
 				Key:  "favored_enemy",
 				Name: "Favored Enemy",
-				Type: FeatureTypeClass,
+				Type: rulebook.FeatureTypeClass,
 				Metadata: map[string]any{
 					"enemy_type": "orc",
 				},
@@ -109,19 +111,19 @@ func TestCharacter_RangerInitialization(t *testing.T) {
 
 func TestCharacter_RangerMultipleEffects(t *testing.T) {
 	// Create a ranger
-	ranger := &Character{
+	ranger := &character.Character{
 		ID:    "ranger_1",
 		Name:  "Aragorn",
 		Level: 1,
-		Class: &Class{
+		Class: &rulebook.Class{
 			Key:  "ranger",
 			Name: "Ranger",
 		},
-		Features: []*CharacterFeature{
+		Features: []*rulebook.CharacterFeature{
 			{
 				Key:  "favored_enemy",
 				Name: "Favored Enemy",
-				Type: FeatureTypeClass,
+				Type: rulebook.FeatureTypeClass,
 				Metadata: map[string]any{
 					"enemy_type": "undead",
 				},

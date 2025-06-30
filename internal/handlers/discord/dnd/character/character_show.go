@@ -2,8 +2,8 @@ package character
 
 import (
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
 )
@@ -93,7 +93,7 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 	// Attributes
 	if len(character.Attributes) > 0 {
 		attrValue := ""
-		for _, attr := range entities.Attributes {
+		for _, attr := range character.Attributes {
 			if character.Attributes[attr] != nil {
 				attrValue += fmt.Sprintf("**%s:** %d (%+d)\n",
 					attr.Short(),
@@ -206,7 +206,7 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 	// Add action buttons based on status
 	components := []discordgo.MessageComponent{}
 	switch character.Status {
-	case entities.CharacterStatusActive:
+	case character.CharacterStatusActive:
 		components = append(components, discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.Button{
@@ -235,7 +235,7 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 				},
 			},
 		})
-	case entities.CharacterStatusDraft:
+	case character.CharacterStatusDraft:
 		components = append(components, discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.Button{
@@ -256,7 +256,7 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 				},
 			},
 		})
-	case entities.CharacterStatusArchived:
+	case character.CharacterStatusArchived:
 		components = append(components, discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.Button{
@@ -287,13 +287,13 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 	return err
 }
 
-func getColorForStatus(status entities.CharacterStatus) int {
+func getColorForStatus(status character.CharacterStatus) int {
 	switch status {
-	case entities.CharacterStatusActive:
+	case character.CharacterStatusActive:
 		return 0x2ecc71 // Green
-	case entities.CharacterStatusDraft:
+	case character.CharacterStatusDraft:
 		return 0xf39c12 // Orange
-	case entities.CharacterStatusArchived:
+	case character.CharacterStatusArchived:
 		return 0x95a5a6 // Gray
 	default:
 		return 0x3498db // Blue

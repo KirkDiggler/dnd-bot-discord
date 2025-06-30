@@ -1,10 +1,12 @@
 package entities
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"testing"
 
 	mockdice "github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -12,7 +14,7 @@ import (
 func TestMonkMartialArts_UnarmedStrike(t *testing.T) {
 	tests := []struct {
 		name           string
-		features       []*CharacterFeature
+		features       []*rulebook.CharacterFeature
 		strScore       int
 		dexScore       int
 		expectedAttack int // Expected attack bonus (not including d20)
@@ -21,7 +23,7 @@ func TestMonkMartialArts_UnarmedStrike(t *testing.T) {
 	}{
 		{
 			name:           "Monk with higher DEX uses DEX for attack and damage",
-			features:       []*CharacterFeature{{Key: "martial-arts", Name: "Martial Arts"}},
+			features:       []*rulebook.CharacterFeature{{Key: "martial-arts", Name: "Martial Arts"}},
 			strScore:       10, // +0 bonus
 			dexScore:       16, // +3 bonus
 			expectedAttack: 3,
@@ -30,7 +32,7 @@ func TestMonkMartialArts_UnarmedStrike(t *testing.T) {
 		},
 		{
 			name:           "Monk with higher STR uses STR for attack and damage",
-			features:       []*CharacterFeature{{Key: "martial-arts", Name: "Martial Arts"}},
+			features:       []*rulebook.CharacterFeature{{Key: "martial-arts", Name: "Martial Arts"}},
 			strScore:       18, // +4 bonus
 			dexScore:       14, // +2 bonus
 			expectedAttack: 4,
@@ -39,16 +41,16 @@ func TestMonkMartialArts_UnarmedStrike(t *testing.T) {
 		},
 		{
 			name:           "Non-monk always uses STR",
-			features:       []*CharacterFeature{}, // No martial arts
-			strScore:       10,                    // +0 bonus
-			dexScore:       18,                    // +4 bonus
+			features:       []*rulebook.CharacterFeature{}, // No martial arts
+			strScore:       10,                             // +0 bonus
+			dexScore:       18,                             // +4 bonus
 			expectedAttack: 0,
 			expectedDamage: 0,
 			description:    "Characters without Martial Arts must use STR",
 		},
 		{
 			name:           "Non-monk fighter uses STR even with high DEX",
-			features:       []*CharacterFeature{{Key: "dueling", Name: "Dueling"}},
+			features:       []*rulebook.CharacterFeature{{Key: "dueling", Name: "Dueling"}},
 			strScore:       12, // +1 bonus
 			dexScore:       16, // +3 bonus
 			expectedAttack: 1,
@@ -60,14 +62,14 @@ func TestMonkMartialArts_UnarmedStrike(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create character with specified attributes
-			char := &Character{
+			char := &character.Character{
 				Features: tt.features,
-				Attributes: map[Attribute]*AbilityScore{
-					AttributeStrength: {
+				Attributes: map[character.Attribute]*character.AbilityScore{
+					character.AttributeStrength: {
 						Score: tt.strScore,
 						Bonus: (tt.strScore - 10) / 2,
 					},
-					AttributeDexterity: {
+					character.AttributeDexterity: {
 						Score: tt.dexScore,
 						Bonus: (tt.dexScore - 10) / 2,
 					},
@@ -103,17 +105,17 @@ func TestMonkMartialArts_WithProficiencyBonus(t *testing.T) {
 	// Currently proficiency is handled elsewhere in the attack system
 
 	// Create a level 1 monk with martial arts
-	monk := &Character{
+	monk := &character.Character{
 		Level: 1,
-		Features: []*CharacterFeature{
+		Features: []*rulebook.CharacterFeature{
 			{Key: "martial-arts", Name: "Martial Arts"},
 		},
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeStrength: {
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeStrength: {
 				Score: 10, // +0 bonus
 				Bonus: 0,
 			},
-			AttributeDexterity: {
+			character.AttributeDexterity: {
 				Score: 16, // +3 bonus
 				Bonus: 3,
 			},
@@ -139,16 +141,16 @@ func TestMonkMartialArts_WithProficiencyBonus(t *testing.T) {
 
 func TestMonkMartialArts_EdgeCases(t *testing.T) {
 	t.Run("Monk with equal STR and DEX uses STR", func(t *testing.T) {
-		monk := &Character{
-			Features: []*CharacterFeature{
+		monk := &character.Character{
+			Features: []*rulebook.CharacterFeature{
 				{Key: "martial-arts", Name: "Martial Arts"},
 			},
-			Attributes: map[Attribute]*AbilityScore{
-				AttributeStrength: {
+			Attributes: map[character.Attribute]*character.AbilityScore{
+				character.AttributeStrength: {
 					Score: 14, // +2 bonus
 					Bonus: 2,
 				},
-				AttributeDexterity: {
+				character.AttributeDexterity: {
 					Score: 14, // +2 bonus
 					Bonus: 2,
 				},
@@ -168,8 +170,8 @@ func TestMonkMartialArts_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("Monk with nil attributes", func(t *testing.T) {
-		monk := &Character{
-			Features: []*CharacterFeature{
+		monk := &character.Character{
+			Features: []*rulebook.CharacterFeature{
 				{Key: "martial-arts", Name: "Martial Arts"},
 			},
 			Attributes: nil,
@@ -187,14 +189,14 @@ func TestMonkMartialArts_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("Character with nil features", func(t *testing.T) {
-		char := &Character{
+		char := &character.Character{
 			Features: nil,
-			Attributes: map[Attribute]*AbilityScore{
-				AttributeStrength: {
+			Attributes: map[character.Attribute]*character.AbilityScore{
+				character.AttributeStrength: {
 					Score: 10,
 					Bonus: 0,
 				},
-				AttributeDexterity: {
+				character.AttributeDexterity: {
 					Score: 18,
 					Bonus: 4,
 				},

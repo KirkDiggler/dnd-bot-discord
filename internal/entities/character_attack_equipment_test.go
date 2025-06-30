@@ -1,10 +1,11 @@
 package entities_test
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -14,14 +15,14 @@ import (
 func TestCharacterAttackWithBasicEquipment(t *testing.T) {
 	tests := []struct {
 		name          string
-		equipped      entities.Equipment
+		equipped      equipment.Equipment
 		expectResults bool
 		description   string
 	}{
 		{
 			name: "weapon in main hand",
-			equipped: &entities.Weapon{
-				Base: entities.BasicEquipment{
+			equipped: &equipment.Weapon{
+				Base: equipment.BasicEquipment{
 					Key:  "greataxe",
 					Name: "Greataxe",
 				},
@@ -36,7 +37,7 @@ func TestCharacterAttackWithBasicEquipment(t *testing.T) {
 		},
 		{
 			name: "basic equipment in main hand",
-			equipped: &entities.BasicEquipment{
+			equipped: &equipment.BasicEquipment{
 				Key:  "greataxe",
 				Name: "Greataxe",
 			},
@@ -45,7 +46,7 @@ func TestCharacterAttackWithBasicEquipment(t *testing.T) {
 		},
 		{
 			name:          "empty basic equipment",
-			equipped:      &entities.BasicEquipment{},
+			equipped:      &equipment.BasicEquipment{},
 			expectResults: false,
 			description:   "Should not attack with empty equipment",
 		},
@@ -54,14 +55,14 @@ func TestCharacterAttackWithBasicEquipment(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create character with equipped item
-			char := &entities.Character{
+			char := &character.Character{
 				Name:  "Test Fighter",
 				Level: 1,
-				Attributes: map[entities.Attribute]*entities.AbilityScore{
-					entities.AttributeStrength: {Score: 16, Bonus: 3},
+				Attributes: map[character.Attribute]*character.AbilityScore{
+					character.AttributeStrength: {Score: 16, Bonus: 3},
 				},
-				EquippedSlots: map[entities.Slot]entities.Equipment{
-					entities.SlotMainHand: tt.equipped,
+				EquippedSlots: map[character.Slot]equipment.Equipment{
+					character.SlotMainHand: tt.equipped,
 				},
 			}
 
@@ -84,14 +85,14 @@ func TestCharacterAttackWithBasicEquipment(t *testing.T) {
 // TestCharacterAttackFallbackBehavior tests what should happen when
 // equipped item is not a weapon
 func TestCharacterAttackFallbackBehavior(t *testing.T) {
-	char := &entities.Character{
+	char := &character.Character{
 		Name:  "Test Fighter",
 		Level: 1,
-		Attributes: map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeStrength: {Score: 16, Bonus: 3},
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeStrength: {Score: 16, Bonus: 3},
 		},
-		EquippedSlots: map[entities.Slot]entities.Equipment{
-			entities.SlotMainHand: &entities.BasicEquipment{
+		EquippedSlots: map[character.Slot]equipment.Equipment{
+			character.SlotMainHand: &equipment.BasicEquipment{
 				Key:  "torch",
 				Name: "Torch",
 			},

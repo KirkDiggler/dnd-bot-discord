@@ -2,9 +2,13 @@ package encounter
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	encountermock "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters/mock"
 	mockcharacters "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
 	sessionmock "github.com/KirkDiggler/dnd-bot-discord/internal/services/session/mock"
@@ -38,7 +42,7 @@ func TestAddPlayer_DungeonLongRest(t *testing.T) {
 	combatantID := "combatant123"
 
 	// Create a barbarian character with used rage
-	character := &entities.Character{
+	character := &character.Character{
 		ID:               characterID,
 		OwnerID:          playerID,
 		Name:             "Grognak",
@@ -46,19 +50,19 @@ func TestAddPlayer_DungeonLongRest(t *testing.T) {
 		CurrentHitPoints: 20,
 		MaxHitPoints:     30,
 		AC:               14,
-		Class: &entities.Class{
+		Class: &rulebook.Class{
 			Key:  "barbarian",
 			Name: "Barbarian",
 		},
-		Attributes: map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeDexterity: {Score: 14, Bonus: 2},
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeDexterity: {Score: 14, Bonus: 2},
 		},
-		Resources: &entities.CharacterResources{
-			HP: entities.HPResource{
+		Resources: &shared.CharacterResources{
+			HP: shared.HPResource{
 				Current: 20,
 				Max:     30,
 			},
-			Abilities: map[string]*entities.ActiveAbility{
+			Abilities: map[string]*character.ActiveAbility{
 				"rage": {
 					Key:           "rage",
 					Name:          "Rage",
@@ -70,17 +74,17 @@ func TestAddPlayer_DungeonLongRest(t *testing.T) {
 	}
 
 	// Create a dungeon session
-	dungeonSession := &entities.Session{
+	dungeonSession := &session.Session{
 		ID: sessionID,
 		Metadata: map[string]interface{}{
 			"sessionType": "dungeon",
 		},
 	}
 
-	encounter := &entities.Encounter{
+	encounter := &combat.Encounter{
 		ID:         encounterID,
 		SessionID:  sessionID,
-		Combatants: make(map[string]*entities.Combatant),
+		Combatants: make(map[string]*combat.Combatant),
 	}
 
 	// Setup expectations
@@ -89,7 +93,7 @@ func TestAddPlayer_DungeonLongRest(t *testing.T) {
 	mockSessionService.EXPECT().GetSession(ctx, sessionID).Return(dungeonSession, nil)
 
 	// Expect the character to be saved after long rest
-	mockCharService.EXPECT().UpdateEquipment(gomock.Any()).DoAndReturn(func(char *entities.Character) error {
+	mockCharService.EXPECT().UpdateEquipment(gomock.Any()).DoAndReturn(func(char *character.Character) error {
 		// Verify the character's resources were reset
 		assert.Equal(t, 3, char.Resources.Abilities["rage"].UsesRemaining, "Rage uses should be reset to max")
 		assert.Equal(t, 30, char.Resources.HP.Current, "HP should be restored to max")
@@ -139,7 +143,7 @@ func TestAddPlayer_NonDungeonNoLongRest(t *testing.T) {
 	combatantID := "combatant123"
 
 	// Create a barbarian character with used rage
-	character := &entities.Character{
+	character := &character.Character{
 		ID:               characterID,
 		OwnerID:          playerID,
 		Name:             "Grognak",
@@ -147,19 +151,19 @@ func TestAddPlayer_NonDungeonNoLongRest(t *testing.T) {
 		CurrentHitPoints: 20,
 		MaxHitPoints:     30,
 		AC:               14,
-		Class: &entities.Class{
+		Class: &rulebook.Class{
 			Key:  "barbarian",
 			Name: "Barbarian",
 		},
-		Attributes: map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeDexterity: {Score: 14, Bonus: 2},
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeDexterity: {Score: 14, Bonus: 2},
 		},
-		Resources: &entities.CharacterResources{
-			HP: entities.HPResource{
+		Resources: &shared.CharacterResources{
+			HP: shared.HPResource{
 				Current: 20,
 				Max:     30,
 			},
-			Abilities: map[string]*entities.ActiveAbility{
+			Abilities: map[string]*character.ActiveAbility{
 				"rage": {
 					Key:           "rage",
 					Name:          "Rage",
@@ -171,17 +175,17 @@ func TestAddPlayer_NonDungeonNoLongRest(t *testing.T) {
 	}
 
 	// Create a regular combat session (not dungeon)
-	regularSession := &entities.Session{
+	regularSession := &session.Session{
 		ID: sessionID,
 		Metadata: map[string]interface{}{
 			"sessionType": "combat",
 		},
 	}
 
-	encounter := &entities.Encounter{
+	encounter := &combat.Encounter{
 		ID:         encounterID,
 		SessionID:  sessionID,
-		Combatants: make(map[string]*entities.Combatant),
+		Combatants: make(map[string]*combat.Combatant),
 	}
 
 	// Setup expectations

@@ -1,9 +1,10 @@
 package character
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,15 +13,15 @@ func TestClassFeaturesHandler_ShouldShowClassFeatures_Fighter(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		character       *entities.Character
+		character       *character.Character
 		expectedNeed    bool
 		expectedFeature string
 	}{
 		{
 			name: "fighter without fighting style selection",
-			character: &entities.Character{
-				Class: &entities.Class{Key: "fighter"},
-				Features: []*entities.CharacterFeature{
+			character: &character.Character{
+				Class: &rulebook.Class{Key: "fighter"},
+				Features: []*rulebook.CharacterFeature{
 					{
 						Key:      "fighting_style",
 						Name:     "Fighting Style",
@@ -33,9 +34,9 @@ func TestClassFeaturesHandler_ShouldShowClassFeatures_Fighter(t *testing.T) {
 		},
 		{
 			name: "fighter with fighting style selected",
-			character: &entities.Character{
-				Class: &entities.Class{Key: "fighter"},
-				Features: []*entities.CharacterFeature{
+			character: &character.Character{
+				Class: &rulebook.Class{Key: "fighter"},
+				Features: []*rulebook.CharacterFeature{
 					{
 						Key:  "fighting_style",
 						Name: "Fighting Style",
@@ -50,8 +51,8 @@ func TestClassFeaturesHandler_ShouldShowClassFeatures_Fighter(t *testing.T) {
 		},
 		{
 			name: "non-fighter class",
-			character: &entities.Character{
-				Class: &entities.Class{Key: "wizard"},
+			character: &character.Character{
+				Class: &rulebook.Class{Key: "wizard"},
 			},
 			expectedNeed:    false,
 			expectedFeature: "",
@@ -69,8 +70,8 @@ func TestClassFeaturesHandler_ShouldShowClassFeatures_Fighter(t *testing.T) {
 
 func TestFightingStyleMetadata(t *testing.T) {
 	// Test that we can store and retrieve fighting style metadata
-	fighter := &entities.Character{
-		Features: []*entities.CharacterFeature{
+	fighter := &character.Character{
+		Features: []*rulebook.CharacterFeature{
 			{
 				Key:      "fighting_style",
 				Name:     "Fighting Style",

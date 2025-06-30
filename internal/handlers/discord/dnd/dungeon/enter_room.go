@@ -3,12 +3,13 @@ package dungeon
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	combat2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"log"
 	"math/rand"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/combat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
@@ -67,7 +68,7 @@ func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 
 	// Check if user has a character selected (except for DM/bot)
 	member, exists := sess.Members[i.Member.User.ID]
-	if exists && member.Role == entities.SessionRolePlayer && member.CharacterID == "" {
+	if exists && member.Role == session.SessionRolePlayer && member.CharacterID == "" {
 		log.Printf("EnterRoom - Player %s has no character selected", i.Member.User.ID)
 		content := "❌ You need to select a character! Click 'Select Character' first."
 		_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
@@ -101,7 +102,7 @@ func (h *EnterRoomHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 	}
 }
 
-func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *entities.Session) error {
+func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *session.Session) error {
 	// Get difficulty and room number from session metadata
 	difficulty := sess.GetDifficulty()
 	roomNumber := sess.GetRoomNumber()
@@ -202,9 +203,9 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 	}
 
 	// Process initial monster turns if they go first
-	for enc.Status == entities.EncounterStatusActive {
+	for enc.Status == combat2.EncounterStatusActive {
 		current := enc.GetCurrentCombatant()
-		if current == nil || current.Type != entities.CombatantTypeMonster {
+		if current == nil || current.Type != combat2.CombatantTypeMonster {
 			break // Stop when we reach a player's turn
 		}
 
@@ -212,9 +213,9 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 		log.Printf("Processing initial monster turn for %s", current.Name)
 
 		// Find a target (first active player)
-		var target *entities.Combatant
+		var target *combat2.Combatant
 		for _, combatant := range enc.Combatants {
-			if combatant.Type == entities.CombatantTypePlayer && combatant.IsActive {
+			if combatant.Type == combat2.CombatantTypePlayer && combatant.IsActive {
 				target = combatant
 				break
 			}
@@ -270,7 +271,7 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 
 	// Check if it's a player's turn
 	isPlayerTurn := false
-	if current := enc.GetCurrentCombatant(); current != nil && current.Type == entities.CombatantTypePlayer {
+	if current := enc.GetCurrentCombatant(); current != nil && current.Type == combat2.CombatantTypePlayer {
 		isPlayerTurn = true
 	}
 
@@ -349,7 +350,7 @@ func (h *EnterRoomHandler) handleCombatRoom(s *discordgo.Session, i *discordgo.I
 	return nil
 }
 
-func (h *EnterRoomHandler) handlePuzzleRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *entities.Session) error {
+func (h *EnterRoomHandler) handlePuzzleRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *session.Session) error {
 	// Placeholder for puzzle room
 	embed := &discordgo.MessageEmbed{
 		Title:       "🧩 Puzzle Room",
@@ -370,7 +371,7 @@ func (h *EnterRoomHandler) handlePuzzleRoom(s *discordgo.Session, i *discordgo.I
 	return err
 }
 
-func (h *EnterRoomHandler) handleTrapRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *entities.Session) error {
+func (h *EnterRoomHandler) handleTrapRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *session.Session) error {
 	// Placeholder for trap room
 	embed := &discordgo.MessageEmbed{
 		Title:       "⚠️ Trap Room",
@@ -391,7 +392,7 @@ func (h *EnterRoomHandler) handleTrapRoom(s *discordgo.Session, i *discordgo.Int
 	return err
 }
 
-func (h *EnterRoomHandler) handleTreasureRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *entities.Session) error {
+func (h *EnterRoomHandler) handleTreasureRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *session.Session) error {
 	// Placeholder for treasure room
 	embed := &discordgo.MessageEmbed{
 		Title:       "💰 Treasure Room",
@@ -412,7 +413,7 @@ func (h *EnterRoomHandler) handleTreasureRoom(s *discordgo.Session, i *discordgo
 	return err
 }
 
-func (h *EnterRoomHandler) handleRestRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *entities.Session) error {
+func (h *EnterRoomHandler) handleRestRoom(s *discordgo.Session, i *discordgo.InteractionCreate, sess *session.Session) error {
 	// Placeholder for rest room
 	embed := &discordgo.MessageEmbed{
 		Title:       "💤 Rest Area",
@@ -455,7 +456,7 @@ func (h *EnterRoomHandler) getMonster(name string) *encounter.AddMonsterInput {
 				"wisdom":       8,
 				"charisma":     8,
 			},
-			Actions: []*entities.MonsterAction{
+			Actions: []*combat2.MonsterAction{
 				{
 					Name:        "Scimitar",
 					AttackBonus: 4,
@@ -483,7 +484,7 @@ func (h *EnterRoomHandler) getMonster(name string) *encounter.AddMonsterInput {
 				"wisdom":       8,
 				"charisma":     5,
 			},
-			Actions: []*entities.MonsterAction{
+			Actions: []*combat2.MonsterAction{
 				{
 					Name:        "Shortsword",
 					AttackBonus: 4,
@@ -511,7 +512,7 @@ func (h *EnterRoomHandler) getMonster(name string) *encounter.AddMonsterInput {
 				"wisdom":       11,
 				"charisma":     10,
 			},
-			Actions: []*entities.MonsterAction{
+			Actions: []*combat2.MonsterAction{
 				{
 					Name:        "Greataxe",
 					AttackBonus: 5,
@@ -539,7 +540,7 @@ func (h *EnterRoomHandler) getMonster(name string) *encounter.AddMonsterInput {
 				"wisdom":       12,
 				"charisma":     7,
 			},
-			Actions: []*entities.MonsterAction{
+			Actions: []*combat2.MonsterAction{
 				{
 					Name:        "Bite",
 					AttackBonus: 5,

@@ -5,14 +5,17 @@ package encounter
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat/attack"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"log"
 	"sort"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/attack"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
 	charService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
@@ -23,19 +26,19 @@ import (
 // Service defines the encounter service interface
 type Service interface {
 	// CreateEncounter creates a new encounter in a session
-	CreateEncounter(ctx context.Context, input *CreateEncounterInput) (*entities.Encounter, error)
+	CreateEncounter(ctx context.Context, input *CreateEncounterInput) (*combat.Encounter, error)
 
 	// GetEncounter retrieves an encounter by ID
-	GetEncounter(ctx context.Context, encounterID string) (*entities.Encounter, error)
+	GetEncounter(ctx context.Context, encounterID string) (*combat.Encounter, error)
 
 	// GetActiveEncounter retrieves the active encounter for a session
-	GetActiveEncounter(ctx context.Context, sessionID string) (*entities.Encounter, error)
+	GetActiveEncounter(ctx context.Context, sessionID string) (*combat.Encounter, error)
 
 	// AddMonster adds a monster to an encounter
-	AddMonster(ctx context.Context, encounterID, userID string, input *AddMonsterInput) (*entities.Combatant, error)
+	AddMonster(ctx context.Context, encounterID, userID string, input *AddMonsterInput) (*combat.Combatant, error)
 
 	// AddPlayer adds a player character to an encounter
-	AddPlayer(ctx context.Context, encounterID, playerID, characterID string) (*entities.Combatant, error)
+	AddPlayer(ctx context.Context, encounterID, playerID, characterID string) (*combat.Combatant, error)
 
 	// RemoveCombatant removes a combatant from an encounter
 	RemoveCombatant(ctx context.Context, encounterID, combatantID, userID string) error
@@ -98,7 +101,7 @@ type AddMonsterInput struct {
 	XP              int
 	MonsterRef      string // D&D API reference
 	Abilities       map[string]int
-	Actions         []*entities.MonsterAction
+	Actions         []*combat.MonsterAction
 }
 
 // AttackInput contains data for performing an attack
@@ -176,7 +179,7 @@ type ExecuteAttackResult struct {
 
 	// Updated encounter state
 	IsPlayerTurn bool
-	CurrentTurn  *entities.Combatant
+	CurrentTurn  *combat.Combatant
 	CombatEnded  bool
 	PlayersWon   bool
 }
@@ -232,7 +235,7 @@ func NewService(cfg *ServiceConfig) Service {
 }
 
 // CreateEncounter creates a new encounter in a session
-func (s *service) CreateEncounter(ctx context.Context, input *CreateEncounterInput) (*entities.Encounter, error) {
+func (s *service) CreateEncounter(ctx context.Context, input *CreateEncounterInput) (*combat.Encounter, error) {
 	if input == nil {
 		return nil, dnderr.InvalidArgument("input cannot be nil")
 	}
@@ -256,7 +259,7 @@ func (s *service) CreateEncounter(ctx context.Context, input *CreateEncounterInp
 			return nil, dnderr.PermissionDenied("only the DM can create encounters")
 		}
 		// For dungeon sessions, bot/system can create encounters
-	} else if member.Role != entities.SessionRoleDM {
+	} else if member.Role != session.SessionRoleDM {
 		return nil, dnderr.PermissionDenied("only the DM can create encounters")
 	}
 
@@ -274,7 +277,7 @@ func (s *service) CreateEncounter(ctx context.Context, input *CreateEncounterInp
 
 	// Create encounter
 	encounterID := s.uuidGenerator.New()
-	encounter := entities.NewEncounter(encounterID, input.SessionID, input.ChannelID, input.Name, input.UserID)
+	encounter := combat.NewEncounter(encounterID, input.SessionID, input.ChannelID, input.Name, input.UserID)
 	encounter.Description = input.Description
 
 	// Save encounter
@@ -293,7 +296,7 @@ func (s *service) CreateEncounter(ctx context.Context, input *CreateEncounterInp
 }
 
 // GetEncounter retrieves an encounter by ID
-func (s *service) GetEncounter(ctx context.Context, encounterID string) (*entities.Encounter, error) {
+func (s *service) GetEncounter(ctx context.Context, encounterID string) (*combat.Encounter, error) {
 	if strings.TrimSpace(encounterID) == "" {
 		return nil, dnderr.InvalidArgument("encounter ID is required")
 	}
@@ -307,7 +310,7 @@ func (s *service) GetEncounter(ctx context.Context, encounterID string) (*entiti
 }
 
 // GetActiveEncounter retrieves the active encounter for a session
-func (s *service) GetActiveEncounter(ctx context.Context, sessionID string) (*entities.Encounter, error) {
+func (s *service) GetActiveEncounter(ctx context.Context, sessionID string) (*combat.Encounter, error) {
 	if strings.TrimSpace(sessionID) == "" {
 		return nil, dnderr.InvalidArgument("session ID is required")
 	}
@@ -321,7 +324,7 @@ func (s *service) GetActiveEncounter(ctx context.Context, sessionID string) (*en
 }
 
 // AddMonster adds a monster to an encounter
-func (s *service) AddMonster(ctx context.Context, encounterID, userID string, input *AddMonsterInput) (*entities.Combatant, error) {
+func (s *service) AddMonster(ctx context.Context, encounterID, userID string, input *AddMonsterInput) (*combat.Combatant, error) {
 	if input == nil {
 		return nil, dnderr.InvalidArgument("input cannot be nil")
 	}
@@ -346,17 +349,17 @@ func (s *service) AddMonster(ctx context.Context, encounterID, userID string, in
 			if !session.IsDungeon() {
 				return nil, dnderr.PermissionDenied("only the DM can add monsters")
 			}
-		} else if member.Role != entities.SessionRoleDM {
+		} else if member.Role != session.SessionRoleDM {
 			return nil, dnderr.PermissionDenied("only the DM can add monsters")
 		}
 	}
 
 	// Create combatant
 	combatantID := s.uuidGenerator.New()
-	combatant := &entities.Combatant{
+	combatant := &combat.Combatant{
 		ID:              combatantID,
 		Name:            input.Name,
-		Type:            entities.CombatantTypeMonster,
+		Type:            combat.CombatantTypeMonster,
 		Initiative:      input.Initiative,
 		InitiativeBonus: input.InitiativeBonus,
 		CurrentHP:       input.MaxHP,
@@ -383,7 +386,7 @@ func (s *service) AddMonster(ctx context.Context, encounterID, userID string, in
 }
 
 // AddPlayer adds a player character to an encounter
-func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characterID string) (*entities.Combatant, error) {
+func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characterID string) (*combat.Combatant, error) {
 	// Get encounter
 	encounter, err := s.repository.Get(ctx, encounterID)
 	if err != nil {
@@ -446,7 +449,7 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 
 	// Get dexterity modifier for initiative
 	dexBonus := 0
-	if dexScore, exists := character.Attributes[entities.AttributeDexterity]; exists {
+	if dexScore, exists := character.Attributes[character.AttributeDexterity]; exists {
 		dexBonus = dexScore.Bonus
 	}
 
@@ -460,10 +463,10 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 		raceName = character.Race.Name
 	}
 
-	combatant := &entities.Combatant{
+	combatant := &combat.Combatant{
 		ID:              combatantID,
 		Name:            character.Name,
-		Type:            entities.CombatantTypePlayer,
+		Type:            combat.CombatantTypePlayer,
 		InitiativeBonus: dexBonus,
 		CurrentHP:       character.CurrentHitPoints,
 		MaxHP:           character.MaxHitPoints,
@@ -532,7 +535,7 @@ func (s *service) RollInitiative(ctx context.Context, encounterID, userID string
 	}
 
 	// Check status
-	if encounter.Status != entities.EncounterStatusSetup {
+	if encounter.Status != combat.EncounterStatusSetup {
 		return dnderr.InvalidArgument("encounter is not in setup phase")
 	}
 
@@ -581,7 +584,7 @@ func (s *service) RollInitiative(ctx context.Context, encounterID, userID string
 		}
 	}
 
-	encounter.Status = entities.EncounterStatusRolling
+	encounter.Status = combat.EncounterStatusRolling
 
 	// Save changes
 	if err := s.repository.Update(ctx, encounter); err != nil {
@@ -645,7 +648,7 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 			// - Players can advance monster turns
 			// - Players can advance their own turn
 			// - DM (bot) can advance any turn
-			if current.Type == entities.CombatantTypeMonster {
+			if current.Type == combat.CombatantTypeMonster {
 				// Any player can advance monster turns in dungeons
 			} else if current.PlayerID != userID && encounter.CreatedBy != userID {
 				return dnderr.PermissionDenied("not your turn")
@@ -673,7 +676,7 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 	if encounter.Round > prevRound {
 		// Reset per-turn abilities for all player characters
 		for _, combatant := range encounter.Combatants {
-			if combatant.Type != entities.CombatantTypePlayer || combatant.CharacterID == "" {
+			if combatant.Type != combat.CombatantTypePlayer || combatant.CharacterID == "" {
 				continue
 			}
 
@@ -716,7 +719,7 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 	}
 
 	// Validate encounter is active
-	if encounter.Status != entities.EncounterStatusActive {
+	if encounter.Status != combat.EncounterStatusActive {
 		return nil, dnderr.InvalidArgument("encounter is not active")
 	}
 
@@ -762,7 +765,7 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 	}
 
 	// Handle different attacker types
-	if attacker.Type == entities.CombatantTypePlayer && attacker.CharacterID != "" {
+	if attacker.Type == combat.CombatantTypePlayer && attacker.CharacterID != "" {
 		// Player attack using character
 		char, err := s.characterService.GetByID(attacker.CharacterID)
 		if err != nil {
@@ -789,10 +792,10 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		weaponKey := attackResult.WeaponKey
 		if weaponKey == "" {
 			// Fallback to equipped weapon if not in result (for backward compatibility)
-			if char.EquippedSlots[entities.SlotMainHand] != nil {
-				weaponKey = char.EquippedSlots[entities.SlotMainHand].GetKey()
-			} else if char.EquippedSlots[entities.SlotTwoHanded] != nil {
-				weaponKey = char.EquippedSlots[entities.SlotTwoHanded].GetKey()
+			if char.EquippedSlots[character.SlotMainHand] != nil {
+				weaponKey = char.EquippedSlots[character.SlotMainHand].GetKey()
+			} else if char.EquippedSlots[character.SlotTwoHanded] != nil {
+				weaponKey = char.EquippedSlots[character.SlotTwoHanded].GetKey()
 			}
 		}
 		char.RecordAction("attack", "weapon", weaponKey)
@@ -824,10 +827,10 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		}
 
 		// Get weapon name
-		if char.EquippedSlots[entities.SlotMainHand] != nil {
-			result.WeaponName = char.EquippedSlots[entities.SlotMainHand].GetName()
-		} else if char.EquippedSlots[entities.SlotTwoHanded] != nil {
-			result.WeaponName = char.EquippedSlots[entities.SlotTwoHanded].GetName()
+		if char.EquippedSlots[character.SlotMainHand] != nil {
+			result.WeaponName = char.EquippedSlots[character.SlotMainHand].GetName()
+		} else if char.EquippedSlots[character.SlotTwoHanded] != nil {
+			result.WeaponName = char.EquippedSlots[character.SlotTwoHanded].GetName()
 		} else {
 			result.WeaponName = "Unarmed Strike"
 		}
@@ -858,13 +861,13 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			// Check for sneak attack
 			if char.Class != nil && char.Class.Key == "rogue" {
 				// Get the weapon used
-				var weapon *entities.Weapon
-				if char.EquippedSlots[entities.SlotMainHand] != nil {
-					if w, ok := char.EquippedSlots[entities.SlotMainHand].(*entities.Weapon); ok {
+				var weapon *equipment.Weapon
+				if char.EquippedSlots[character.SlotMainHand] != nil {
+					if w, ok := char.EquippedSlots[character.SlotMainHand].(*equipment.Weapon); ok {
 						weapon = w
 					}
-				} else if char.EquippedSlots[entities.SlotTwoHanded] != nil {
-					if w, ok := char.EquippedSlots[entities.SlotTwoHanded].(*entities.Weapon); ok {
+				} else if char.EquippedSlots[character.SlotTwoHanded] != nil {
+					if w, ok := char.EquippedSlots[character.SlotTwoHanded].(*equipment.Weapon); ok {
 						weapon = w
 					}
 				}
@@ -872,7 +875,7 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 				// Check if sneak attack is eligible
 				if weapon != nil && char.CanSneakAttack(weapon, input.HasAdvantage, input.AllyAdjacent, input.HasDisadvantage) {
 					// Create combat context for sneak attack
-					ctx := &entities.CombatContext{
+					ctx := &character.CombatContext{
 						AttackResult: attackResult,
 						IsCritical:   result.Critical,
 					}
@@ -893,7 +896,7 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			}
 		}
 
-	} else if attacker.Type == entities.CombatantTypeMonster && len(attacker.Actions) > 0 && input.ActionIndex >= 0 && input.ActionIndex < len(attacker.Actions) {
+	} else if attacker.Type == combat.CombatantTypeMonster && len(attacker.Actions) > 0 && input.ActionIndex >= 0 && input.ActionIndex < len(attacker.Actions) {
 		// Monster attack with valid action
 		action := attacker.Actions[input.ActionIndex]
 		result.WeaponName = action.Name
@@ -1008,7 +1011,7 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		// Use the ApplyDamage method which handles defeat and combat end detection
 		// Apply damage with resistance check if target is a player character
 		finalDamage := result.Damage
-		if target.Type == entities.CombatantTypePlayer && target.CharacterID != "" {
+		if target.Type == combat.CombatantTypePlayer && target.CharacterID != "" {
 			// Get the character to check for resistances
 			if targetChar, err := s.characterService.GetByID(target.CharacterID); err == nil {
 				// Apply resistance/vulnerability/immunity
@@ -1151,7 +1154,7 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 
 				// Add note if damage bonus seems higher than just ability modifier
 				// This helps indicate rage or other effects
-				if attacker.Type == entities.CombatantTypePlayer && result.DamageBonus > 5 {
+				if attacker.Type == combat.CombatantTypePlayer && result.DamageBonus > 5 {
 					damageRollStr += " (includes effects)"
 				}
 			}
@@ -1352,11 +1355,11 @@ func (s *service) ProcessMonsterTurn(ctx context.Context, encounterID, monsterID
 	}
 
 	// Find a target (first active player)
-	var target *entities.Combatant
+	var target *combat.Combatant
 	for _, combatant := range encounter.Combatants {
 		log.Printf("ProcessMonsterTurn - Checking combatant %s: Type=%s, IsActive=%v, HP=%d/%d",
 			combatant.Name, combatant.Type, combatant.IsActive, combatant.CurrentHP, combatant.MaxHP)
-		if combatant.Type == entities.CombatantTypePlayer && combatant.IsActive {
+		if combatant.Type == combat.CombatantTypePlayer && combatant.IsActive {
 			target = combatant
 			break
 		}
@@ -1395,7 +1398,7 @@ func (s *service) ProcessAllMonsterTurns(ctx context.Context, encounterID string
 
 		// Check if current turn is a monster
 		current := encounter.GetCurrentCombatant()
-		if current == nil || current.Type != entities.CombatantTypeMonster || !current.IsActive {
+		if current == nil || current.Type != combat.CombatantTypeMonster || !current.IsActive {
 			break // Not a monster's turn or no current combatant
 		}
 
@@ -1420,7 +1423,7 @@ func (s *service) ProcessAllMonsterTurns(ctx context.Context, encounterID string
 			return results, dnderr.Wrap(err, "failed to get encounter after turn")
 		}
 
-		if encounter.Status != entities.EncounterStatusActive {
+		if encounter.Status != combat.EncounterStatusActive {
 			break // Combat ended
 		}
 	}
@@ -1441,7 +1444,7 @@ func (s *service) ExecuteAttackWithTarget(ctx context.Context, input *ExecuteAtt
 	}
 
 	// Find the attacker - could be the player who clicked or current turn (for DM)
-	var attacker *entities.Combatant
+	var attacker *combat.Combatant
 
 	// First, try to find the player's combatant
 	for _, combatant := range encounter.Combatants {
@@ -1482,7 +1485,7 @@ func (s *service) ExecuteAttackWithTarget(ctx context.Context, input *ExecuteAtt
 
 	// Don't auto-advance turn for player attacks - they may have bonus actions
 	// Only auto-advance for monster attacks
-	if attacker.Type == entities.CombatantTypeMonster {
+	if attacker.Type == combat.CombatantTypeMonster {
 		err = s.NextTurn(ctx, input.EncounterID, input.UserID)
 		if err != nil {
 			log.Printf("Error auto-advancing turn after monster attack: %v", err)
@@ -1510,7 +1513,7 @@ func (s *service) ExecuteAttackWithTarget(ctx context.Context, input *ExecuteAtt
 		}
 
 		// Check if combat ended
-		if encounter.Status == entities.EncounterStatusCompleted {
+		if encounter.Status == combat.EncounterStatusCompleted {
 			result.CombatEnded = true
 			_, result.PlayersWon = encounter.CheckCombatEnd()
 		}

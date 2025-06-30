@@ -3,9 +3,9 @@ package character
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
 )
@@ -87,14 +87,14 @@ func (h *ProficiencyChoicesHandler) Handle(req *ProficiencyChoicesRequest) error
 		scoreLines := []string{}
 		abilities := []struct {
 			name string
-			attr entities.Attribute
+			attr character.Attribute
 		}{
-			{"STR", entities.AttributeStrength},
-			{"DEX", entities.AttributeDexterity},
-			{"CON", entities.AttributeConstitution},
-			{"INT", entities.AttributeIntelligence},
-			{"WIS", entities.AttributeWisdom},
-			{"CHA", entities.AttributeCharisma},
+			{"STR", character.AttributeStrength},
+			{"DEX", character.AttributeDexterity},
+			{"CON", character.AttributeConstitution},
+			{"INT", character.AttributeIntelligence},
+			{"WIS", character.AttributeWisdom},
+			{"CHA", character.AttributeCharisma},
 		}
 
 		for _, ability := range abilities {

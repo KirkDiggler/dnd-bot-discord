@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"strings"
 	"time"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/uuid"
 	"github.com/redis/go-redis/v9"
@@ -27,24 +30,24 @@ type CharacterData struct {
 	RealmID            string                                               `json:"realm_id"`
 	Name               string                                               `json:"name"`
 	Speed              int                                                  `json:"speed"`
-	Race               *entities.Race                                       `json:"race"`
-	Class              *entities.Class                                      `json:"class"`
-	Background         *entities.Background                                 `json:"background"`
-	Attributes         map[entities.Attribute]*entities.AbilityScore        `json:"attributes"`
-	AbilityRolls       []entities.AbilityRoll                               `json:"ability_rolls"`
+	Race               *rulebook.Race                                       `json:"race"`
+	Class              *rulebook.Class                                      `json:"class"`
+	Background         *rulebook.Background                                 `json:"background"`
+	Attributes         map[character.Attribute]*character.AbilityScore      `json:"attributes"`
+	AbilityRolls       []character.AbilityRoll                              `json:"ability_rolls"`
 	AbilityAssignments map[string]string                                    `json:"ability_assignments"`
-	Proficiencies      map[entities.ProficiencyType][]*entities.Proficiency `json:"proficiencies"`
+	Proficiencies      map[rulebook.ProficiencyType][]*rulebook.Proficiency `json:"proficiencies"`
 	HitDie             int                                                  `json:"hit_die"`
 	AC                 int                                                  `json:"ac"`
 	MaxHitPoints       int                                                  `json:"max_hit_points"`
 	CurrentHitPoints   int                                                  `json:"current_hit_points"`
 	Level              int                                                  `json:"level"`
 	Experience         int                                                  `json:"experience"`
-	Status             entities.CharacterStatus                             `json:"status"`
-	Features           []*entities.CharacterFeature                         `json:"features"`
-	Inventory          map[entities.EquipmentType][]EquipmentData           `json:"inventory"`
-	EquippedSlots      map[entities.Slot]EquipmentData                      `json:"equipped_slots"`
-	Resources          *entities.CharacterResources                         `json:"resources"`
+	Status             character.CharacterStatus                            `json:"status"`
+	Features           []*rulebook.CharacterFeature                         `json:"features"`
+	Inventory          map[equipment.EquipmentType][]EquipmentData          `json:"inventory"`
+	EquippedSlots      map[character.Slot]EquipmentData                     `json:"equipped_slots"`
+	Resources          *shared.CharacterResources                           `json:"resources"`
 	CreatedAt          time.Time                                            `json:"created_at"`
 	UpdatedAt          time.Time                                            `json:"updated_at"`
 }
@@ -57,7 +60,7 @@ type redisRepo struct {
 }
 
 // equipmentToData converts an Equipment interface to EquipmentData for storage
-func equipmentToData(eq entities.Equipment) (EquipmentData, error) {
+func equipmentToData(eq equipment.Equipment) (EquipmentData, error) {
 	// Marshal the concrete type
 	data, err := json.Marshal(eq)
 	if err != nil {
@@ -67,11 +70,11 @@ func equipmentToData(eq entities.Equipment) (EquipmentData, error) {
 	// Determine the concrete type
 	var typeStr string
 	switch eq.(type) {
-	case *entities.Weapon:
+	case *equipment.Weapon:
 		typeStr = "weapon"
-	case *entities.Armor:
+	case *equipment.Armor:
 		typeStr = "armor"
-	case *entities.BasicEquipment:
+	case *equipment.BasicEquipment:
 		typeStr = "basic"
 	default:
 		typeStr = "unknown"
@@ -84,25 +87,25 @@ func equipmentToData(eq entities.Equipment) (EquipmentData, error) {
 }
 
 // dataToEquipment converts EquipmentData back to Equipment interface
-func dataToEquipment(data EquipmentData) (entities.Equipment, error) {
+func dataToEquipment(data EquipmentData) (equipment.Equipment, error) {
 	// Normalize type to handle legacy data
 	normalizedType := strings.ToLower(data.Type)
 
 	switch normalizedType {
 	case "weapon":
-		var weapon entities.Weapon
+		var weapon equipment.Weapon
 		if err := json.Unmarshal(data.Equipment, &weapon); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal weapon: %w", err)
 		}
 		return &weapon, nil
 	case "armor":
-		var armor entities.Armor
+		var armor equipment.Armor
 		if err := json.Unmarshal(data.Equipment, &armor); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal armor: %w", err)
 		}
 		return &armor, nil
 	case "basic", "basicequipment", "":
-		var basic entities.BasicEquipment
+		var basic equipment.BasicEquipment
 		if err := json.Unmarshal(data.Equipment, &basic); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal basic equipment: %w", err)
 		}
@@ -113,7 +116,7 @@ func dataToEquipment(data EquipmentData) (entities.Equipment, error) {
 		if err := json.Unmarshal(data.Equipment, &rawData); err == nil {
 			// Check for weapon-specific fields
 			if _, hasWeaponCategory := rawData["weapon_category"]; hasWeaponCategory {
-				var weapon entities.Weapon
+				var weapon equipment.Weapon
 				if err := json.Unmarshal(data.Equipment, &weapon); err != nil {
 					return nil, fmt.Errorf("failed to unmarshal weapon: %w", err)
 				}
@@ -121,7 +124,7 @@ func dataToEquipment(data EquipmentData) (entities.Equipment, error) {
 			}
 			// Check for armor-specific fields
 			if _, hasArmorCategory := rawData["armor_category"]; hasArmorCategory {
-				var armor entities.Armor
+				var armor equipment.Armor
 				if err := json.Unmarshal(data.Equipment, &armor); err != nil {
 					return nil, fmt.Errorf("failed to unmarshal armor: %w", err)
 				}
@@ -130,7 +133,7 @@ func dataToEquipment(data EquipmentData) (entities.Equipment, error) {
 		}
 
 		// Default to basic equipment
-		var basic entities.BasicEquipment
+		var basic equipment.BasicEquipment
 		if err := json.Unmarshal(data.Equipment, &basic); err != nil {
 			return nil, fmt.Errorf("unknown equipment type '%s': %w", data.Type, err)
 		}
@@ -190,7 +193,7 @@ func (r *redisRepo) ownerRealmCharactersKey(ownerID, realmID string) string {
 }
 
 // Create stores a new character
-func (r *redisRepo) Create(ctx context.Context, character *entities.Character) error {
+func (r *redisRepo) Create(ctx context.Context, character *character.Character) error {
 	if character == nil {
 		return dnderr.InvalidArgument("character cannot be nil")
 	}
@@ -249,7 +252,7 @@ func (r *redisRepo) Create(ctx context.Context, character *entities.Character) e
 }
 
 // Get retrieves a character by ID
-func (r *redisRepo) Get(ctx context.Context, id string) (*entities.Character, error) {
+func (r *redisRepo) Get(ctx context.Context, id string) (*character.Character, error) {
 	if id == "" {
 		return nil, dnderr.InvalidArgument("character ID is required")
 	}
@@ -285,7 +288,7 @@ func (r *redisRepo) Get(ctx context.Context, id string) (*entities.Character, er
 }
 
 // GetByOwner retrieves all characters for a specific owner
-func (r *redisRepo) GetByOwner(ctx context.Context, ownerID string) ([]*entities.Character, error) {
+func (r *redisRepo) GetByOwner(ctx context.Context, ownerID string) ([]*character.Character, error) {
 	if ownerID == "" {
 		return nil, dnderr.InvalidArgument("owner ID is required")
 	}
@@ -297,7 +300,7 @@ func (r *redisRepo) GetByOwner(ctx context.Context, ownerID string) ([]*entities
 	}
 
 	// Get each character
-	characters := make([]*entities.Character, 0, len(ids))
+	characters := make([]*character.Character, 0, len(ids))
 	for _, id := range ids {
 		character, err := r.Get(ctx, id)
 		if err != nil {
@@ -311,7 +314,7 @@ func (r *redisRepo) GetByOwner(ctx context.Context, ownerID string) ([]*entities
 }
 
 // GetByOwnerAndRealm retrieves all characters for a specific owner in a realm
-func (r *redisRepo) GetByOwnerAndRealm(ctx context.Context, ownerID, realmID string) ([]*entities.Character, error) {
+func (r *redisRepo) GetByOwnerAndRealm(ctx context.Context, ownerID, realmID string) ([]*character.Character, error) {
 	if ownerID == "" {
 		return nil, dnderr.InvalidArgument("owner ID is required")
 	}
@@ -326,7 +329,7 @@ func (r *redisRepo) GetByOwnerAndRealm(ctx context.Context, ownerID, realmID str
 	}
 
 	// Get each character
-	characters := make([]*entities.Character, 0, len(ids))
+	characters := make([]*character.Character, 0, len(ids))
 	for _, id := range ids {
 		character, err := r.Get(ctx, id)
 		if err != nil {
@@ -340,7 +343,7 @@ func (r *redisRepo) GetByOwnerAndRealm(ctx context.Context, ownerID, realmID str
 }
 
 // Update updates an existing character
-func (r *redisRepo) Update(ctx context.Context, character *entities.Character) error {
+func (r *redisRepo) Update(ctx context.Context, character *character.Character) error {
 	if character == nil {
 		return dnderr.InvalidArgument("character cannot be nil")
 	}
@@ -446,9 +449,9 @@ func (r *redisRepo) Delete(ctx context.Context, id string) error {
 }
 
 // toCharacterData converts an entity to the data struct for storage
-func (r *redisRepo) toCharacterData(char *entities.Character) (*CharacterData, error) {
+func (r *redisRepo) toCharacterData(char *character.Character) (*CharacterData, error) {
 	// Convert inventory
-	inventory := make(map[entities.EquipmentType][]EquipmentData)
+	inventory := make(map[equipment.EquipmentType][]EquipmentData)
 	for eqType, items := range char.Inventory {
 		var dataItems []EquipmentData
 		for _, item := range items {
@@ -462,7 +465,7 @@ func (r *redisRepo) toCharacterData(char *entities.Character) (*CharacterData, e
 	}
 
 	// Convert equipped slots
-	equippedSlots := make(map[entities.Slot]EquipmentData)
+	equippedSlots := make(map[character.Slot]EquipmentData)
 	for slot, item := range char.EquippedSlots {
 		// Skip nil items (empty slots)
 		if item == nil {
@@ -503,11 +506,11 @@ func (r *redisRepo) toCharacterData(char *entities.Character) (*CharacterData, e
 }
 
 // fromCharacterData converts a data struct to an entity
-func (r *redisRepo) fromCharacterData(data *CharacterData) (*entities.Character, error) {
+func (r *redisRepo) fromCharacterData(data *CharacterData) (*character.Character, error) {
 	// Convert inventory back
-	inventory := make(map[entities.EquipmentType][]entities.Equipment)
+	inventory := make(map[equipment.EquipmentType][]equipment.Equipment)
 	for eqType, items := range data.Inventory {
-		var eqItems []entities.Equipment
+		var eqItems []equipment.Equipment
 		for _, item := range items {
 			eq, err := DataToEquipmentWithMigration(item)
 			if err != nil {
@@ -519,7 +522,7 @@ func (r *redisRepo) fromCharacterData(data *CharacterData) (*entities.Character,
 	}
 
 	// Convert equipped slots back
-	equippedSlots := make(map[entities.Slot]entities.Equipment)
+	equippedSlots := make(map[character.Slot]equipment.Equipment)
 	for slot, item := range data.EquippedSlots {
 		eq, err := DataToEquipmentWithMigration(item)
 		if err != nil {
@@ -528,7 +531,7 @@ func (r *redisRepo) fromCharacterData(data *CharacterData) (*entities.Character,
 		equippedSlots[slot] = eq
 	}
 
-	return &entities.Character{
+	return &character.Character{
 		ID:                 data.ID,
 		OwnerID:            data.OwnerID,
 		RealmID:            data.RealmID,

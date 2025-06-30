@@ -5,22 +5,23 @@ package character
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 )
 
 // ChoiceResolver handles the complex D&D 5e choice resolution
 type ChoiceResolver interface {
 	// ResolveProficiencyChoices returns simplified proficiency choices for a race/class
-	ResolveProficiencyChoices(ctx context.Context, race *entities.Race, class *entities.Class) ([]SimplifiedChoice, error)
+	ResolveProficiencyChoices(ctx context.Context, race *rulebook.Race, class *rulebook.Class) ([]SimplifiedChoice, error)
 
 	// ResolveEquipmentChoices returns simplified equipment choices for a class
-	ResolveEquipmentChoices(ctx context.Context, class *entities.Class) ([]SimplifiedChoice, error)
+	ResolveEquipmentChoices(ctx context.Context, class *rulebook.Class) ([]SimplifiedChoice, error)
 
 	// ValidateProficiencySelections validates that the selected proficiencies are valid
-	ValidateProficiencySelections(ctx context.Context, race *entities.Race, class *entities.Class, selections []string) error
+	ValidateProficiencySelections(ctx context.Context, race *rulebook.Race, class *rulebook.Class, selections []string) error
 }
 
 // choiceResolver implements ChoiceResolver
@@ -36,7 +37,7 @@ func NewChoiceResolver(dndClient dnd5e.Client) ChoiceResolver {
 }
 
 // ResolveProficiencyChoices returns simplified proficiency choices
-func (r *choiceResolver) ResolveProficiencyChoices(ctx context.Context, race *entities.Race, class *entities.Class) ([]SimplifiedChoice, error) {
+func (r *choiceResolver) ResolveProficiencyChoices(ctx context.Context, race *rulebook.Race, class *rulebook.Class) ([]SimplifiedChoice, error) {
 	choices := []SimplifiedChoice{}
 
 	// Process class proficiency choices
@@ -84,7 +85,7 @@ func (r *choiceResolver) ResolveProficiencyChoices(ctx context.Context, race *en
 }
 
 // ResolveEquipmentChoices returns simplified equipment choices
-func (r *choiceResolver) ResolveEquipmentChoices(ctx context.Context, class *entities.Class) ([]SimplifiedChoice, error) {
+func (r *choiceResolver) ResolveEquipmentChoices(ctx context.Context, class *rulebook.Class) ([]SimplifiedChoice, error) {
 	choices := []SimplifiedChoice{}
 
 	// Handle nil class
@@ -114,26 +115,26 @@ func (r *choiceResolver) ResolveEquipmentChoices(ctx context.Context, class *ent
 }
 
 // ValidateProficiencySelections validates proficiency selections
-func (r *choiceResolver) ValidateProficiencySelections(ctx context.Context, race *entities.Race, class *entities.Class, selections []string) error {
+func (r *choiceResolver) ValidateProficiencySelections(ctx context.Context, race *rulebook.Race, class *rulebook.Class, selections []string) error {
 	// TODO: Implement validation
 	// Check that each selection is valid for the available choices
 	return nil
 }
 
 // extractOptions converts entity options to simple choice options
-func (r *choiceResolver) extractOptions(options []entities.Option) []ChoiceOption {
+func (r *choiceResolver) extractOptions(options []shared.Option) []ChoiceOption {
 	result := []ChoiceOption{}
 
 	for _, opt := range options {
 		switch o := opt.(type) {
-		case *entities.ReferenceOption:
+		case *shared.ReferenceOption:
 			if o.Reference != nil {
 				result = append(result, ChoiceOption{
 					Key:  o.Reference.Key,
 					Name: o.Reference.Name,
 				})
 			}
-		case *entities.CountedReferenceOption:
+		case *shared.CountedReferenceOption:
 			if o.Reference != nil {
 				result = append(result, ChoiceOption{
 					Key:  o.Reference.Key,
@@ -148,9 +149,9 @@ func (r *choiceResolver) extractOptions(options []entities.Option) []ChoiceOptio
 }
 
 // hasNestedChoices checks if options contain nested choices
-func (r *choiceResolver) hasNestedChoices(options []entities.Option) bool {
+func (r *choiceResolver) hasNestedChoices(options []shared.Option) bool {
 	for _, opt := range options {
-		if _, ok := opt.(*entities.Choice); ok {
+		if _, ok := opt.(*shared.Choice); ok {
 			return true
 		}
 	}
@@ -158,7 +159,7 @@ func (r *choiceResolver) hasNestedChoices(options []entities.Option) bool {
 }
 
 // extractEquipmentOptions converts equipment options with descriptions
-func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []ChoiceOption {
+func (r *choiceResolver) extractEquipmentOptions(options []shared.Option) []ChoiceOption {
 	result := []ChoiceOption{}
 
 	for _, opt := range options {
@@ -166,7 +167,7 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 			continue
 		}
 		switch o := opt.(type) {
-		case *entities.ReferenceOption:
+		case *shared.ReferenceOption:
 			if o.Reference != nil && o.Reference.Key != "" && o.Reference.Name != "" {
 				choiceOpt := ChoiceOption{
 					Key:  o.Reference.Key,
@@ -181,7 +182,7 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 
 				result = append(result, choiceOpt)
 			}
-		case *entities.CountedReferenceOption:
+		case *shared.CountedReferenceOption:
 			if o.Reference != nil && o.Reference.Key != "" && o.Reference.Name != "" {
 				name := o.Reference.Name
 				if o.Count > 1 {
@@ -201,7 +202,7 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 
 				result = append(result, choiceOpt)
 			}
-		case *entities.MultipleOption:
+		case *shared.MultipleOption:
 			// Skip if no items
 			if len(o.Items) == 0 {
 				continue
@@ -223,7 +224,7 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 					continue
 				}
 				switch itemRef := item.(type) {
-				case *entities.CountedReferenceOption:
+				case *shared.CountedReferenceOption:
 					if itemRef.Reference != nil && itemRef.Reference.Key != "" && itemRef.Reference.Name != "" {
 						itemName := itemRef.Reference.Name
 						if itemRef.Count > 1 {
@@ -239,7 +240,7 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 							descriptions = append(descriptions, fmt.Sprintf("%s (%s)", itemRef.Reference.Name, desc))
 						}
 					}
-				case *entities.ReferenceOption:
+				case *shared.ReferenceOption:
 					if itemRef.Reference != nil && itemRef.Reference.Key != "" && itemRef.Reference.Name != "" {
 						names = append(names, itemRef.Reference.Name)
 
@@ -251,7 +252,7 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 							descriptions = append(descriptions, fmt.Sprintf("%s (%s)", itemRef.Reference.Name, desc))
 						}
 					}
-				case *entities.Choice:
+				case *shared.Choice:
 					// Handle nested choices like "a martial weapon" or "two martial weapons"
 					hasNestedChoice = true
 					if itemRef.Count > 1 {
@@ -284,9 +285,9 @@ func (r *choiceResolver) extractEquipmentOptions(options []entities.Option) []Ch
 
 				result = append(result, choiceOpt)
 			}
-		case *entities.Choice:
+		case *shared.Choice:
 			// Handle nested equipment choices like "any martial weapon"
-			if o.Type == entities.ChoiceTypeEquipment {
+			if o.Type == shared.ChoiceTypeEquipment {
 				// Mark as nested choice so it triggers the weapon selection UI
 				result = append(result, ChoiceOption{
 					Key:         fmt.Sprintf("nested-%d", len(result)),
@@ -390,7 +391,7 @@ func (r *choiceResolver) getEquipmentDescription(key, name string) string {
 }
 
 // flattenNestedChoice handles special cases like Monk's tool choices
-func (r *choiceResolver) flattenNestedChoice(classKey string, index int, choice *entities.Choice) SimplifiedChoice {
+func (r *choiceResolver) flattenNestedChoice(classKey string, index int, choice *shared.Choice) SimplifiedChoice {
 	// Special handling for known nested choices
 	if classKey == "monk" && index == 1 {
 		// Monk's second choice: artisan tools or musical instrument

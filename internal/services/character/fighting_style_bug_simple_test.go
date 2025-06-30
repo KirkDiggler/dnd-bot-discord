@@ -2,10 +2,11 @@ package character_test
 
 import (
 	"context"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -30,29 +31,29 @@ func TestFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 		characterID := "test-fighter-id"
 
 		// Create a draft character with fighting style metadata
-		draftChar := &entities.Character{
+		draftChar := &character2.Character{
 			ID:      characterID,
 			OwnerID: "user123",
 			RealmID: "realm123",
 			Name:    "Draft Character",
-			Status:  entities.CharacterStatusDraft,
+			Status:  character2.CharacterStatusDraft,
 			Level:   1,
-			Race: &entities.Race{
+			Race: &rulebook.Race{
 				Key:   "human",
 				Name:  "Human",
 				Speed: 30,
 			},
-			Class: &entities.Class{
+			Class: &rulebook.Class{
 				Key:    "fighter",
 				Name:   "Fighter",
 				HitDie: 10,
 			},
-			Features: []*entities.CharacterFeature{
+			Features: []*rulebook.CharacterFeature{
 				{
 					Key:         "fighting_style",
 					Name:        "Fighting Style",
 					Description: "You adopt a particular style of fighting as your specialty.",
-					Type:        entities.FeatureTypeClass,
+					Type:        rulebook.FeatureTypeClass,
 					Level:       1,
 					Source:      "Fighter",
 					Metadata: map[string]any{
@@ -63,18 +64,18 @@ func TestFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 					Key:         "second_wind",
 					Name:        "Second Wind",
 					Description: "You have a limited well of stamina that you can draw on to protect yourself from harm.",
-					Type:        entities.FeatureTypeClass,
+					Type:        rulebook.FeatureTypeClass,
 					Level:       1,
 					Source:      "Fighter",
 				},
 			},
-			Attributes: map[entities.Attribute]*entities.AbilityScore{
-				entities.AttributeStrength:     {Score: 16, Bonus: 3},
-				entities.AttributeDexterity:    {Score: 14, Bonus: 2},
-				entities.AttributeConstitution: {Score: 15, Bonus: 2},
-				entities.AttributeIntelligence: {Score: 13, Bonus: 1},
-				entities.AttributeWisdom:       {Score: 12, Bonus: 1},
-				entities.AttributeCharisma:     {Score: 10, Bonus: 0},
+			Attributes: map[character2.Attribute]*character2.AbilityScore{
+				character2.AttributeStrength:     {Score: 16, Bonus: 3},
+				character2.AttributeDexterity:    {Score: 14, Bonus: 2},
+				character2.AttributeConstitution: {Score: 15, Bonus: 2},
+				character2.AttributeIntelligence: {Score: 13, Bonus: 1},
+				character2.AttributeWisdom:       {Score: 12, Bonus: 1},
+				character2.AttributeCharisma:     {Score: 10, Bonus: 0},
 			},
 		}
 
@@ -87,7 +88,7 @@ func TestFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 
 		// Mock expectations
 		mockRepo.EXPECT().Get(ctx, characterID).Return(draftChar, nil)
-		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *entities.Character) error {
+		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *character2.Character) error {
 			// This is where we'll capture the finalized character to verify the fix
 			// Copy the character back to draftChar so we can verify it
 			// Update key fields to avoid copying mutex
@@ -103,7 +104,7 @@ func TestFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 		require.NotNil(t, finalizedChar)
 
 		// Verify the fix - metadata should be preserved!
-		assert.Equal(t, entities.CharacterStatusActive, finalizedChar.Status, "Character should be active")
+		assert.Equal(t, character2.CharacterStatusActive, finalizedChar.Status, "Character should be active")
 
 		fightingStyleAfter := findFeatureByKey(finalizedChar.Features, "fighting_style")
 		require.NotNil(t, fightingStyleAfter, "Fighting style feature should exist")
@@ -124,7 +125,7 @@ func TestFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 }
 
 // Helper function to find a feature by key
-func findFeatureByKey(features []*entities.CharacterFeature, key string) *entities.CharacterFeature {
+func findFeatureByKey(features []*rulebook.CharacterFeature, key string) *rulebook.CharacterFeature {
 	for _, feature := range features {
 		if feature.Key == key {
 			return feature

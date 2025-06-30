@@ -2,10 +2,11 @@ package character_test
 
 import (
 	"context"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -29,27 +30,27 @@ func TestService_FinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T)
 	characterID := "char_123"
 
 	// Create a draft character with AbilityAssignments but no Attributes
-	draftChar := &entities.Character{
+	draftChar := &character2.Character{
 		ID:      characterID,
 		Name:    "Test Character",
 		OwnerID: "user_123",
 		RealmID: "realm_123",
-		Status:  entities.CharacterStatusDraft,
+		Status:  character2.CharacterStatusDraft,
 		Level:   1,
-		Race: &entities.Race{
+		Race: &rulebook.Race{
 			Key:  "elf",
 			Name: "Elf",
-			AbilityBonuses: []*entities.AbilityBonus{
-				{Attribute: entities.AttributeDexterity, Bonus: 2},
-				{Attribute: entities.AttributeIntelligence, Bonus: 1},
+			AbilityBonuses: []*character2.AbilityBonus{
+				{Attribute: character2.AttributeDexterity, Bonus: 2},
+				{Attribute: character2.AttributeIntelligence, Bonus: 1},
 			},
 		},
-		Class: &entities.Class{
+		Class: &rulebook.Class{
 			Key:    "wizard",
 			Name:   "Wizard",
 			HitDie: 6,
 		},
-		AbilityRolls: []entities.AbilityRoll{
+		AbilityRolls: []character2.AbilityRoll{
 			{ID: "roll_1", Value: 15},
 			{ID: "roll_2", Value: 14},
 			{ID: "roll_3", Value: 13},
@@ -65,31 +66,31 @@ func TestService_FinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T)
 			"WIS": "roll_5", // Wis uses roll 5 with 11
 			"CHA": "roll_6", // Cha uses roll 6 with 10
 		},
-		Attributes: make(map[entities.Attribute]*entities.AbilityScore), // Empty attributes
+		Attributes: make(map[character2.Attribute]*character2.AbilityScore), // Empty attributes
 	}
 
 	// Mock repository calls
 	mockRepo.EXPECT().Get(ctx, characterID).Return(draftChar, nil)
 
 	// Expect update with converted attributes
-	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *entities.Character) error {
+	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *character2.Character) error {
 		// Verify attributes were converted correctly
-		assert.Equal(t, entities.CharacterStatusActive, char.Status)
+		assert.Equal(t, character2.CharacterStatusActive, char.Status)
 
 		// Check STR (13, no racial bonus)
-		assert.NotNil(t, char.Attributes[entities.AttributeStrength])
-		assert.Equal(t, 13, char.Attributes[entities.AttributeStrength].Score)
-		assert.Equal(t, 1, char.Attributes[entities.AttributeStrength].Bonus) // (13-10)/2 = 1
+		assert.NotNil(t, char.Attributes[character2.AttributeStrength])
+		assert.Equal(t, 13, char.Attributes[character2.AttributeStrength].Score)
+		assert.Equal(t, 1, char.Attributes[character2.AttributeStrength].Bonus) // (13-10)/2 = 1
 
 		// Check DEX (14 + 2 racial = 16)
-		assert.NotNil(t, char.Attributes[entities.AttributeDexterity])
-		assert.Equal(t, 16, char.Attributes[entities.AttributeDexterity].Score)
-		assert.Equal(t, 3, char.Attributes[entities.AttributeDexterity].Bonus) // (16-10)/2 = 3
+		assert.NotNil(t, char.Attributes[character2.AttributeDexterity])
+		assert.Equal(t, 16, char.Attributes[character2.AttributeDexterity].Score)
+		assert.Equal(t, 3, char.Attributes[character2.AttributeDexterity].Bonus) // (16-10)/2 = 3
 
 		// Check INT (15 + 1 racial = 16)
-		assert.NotNil(t, char.Attributes[entities.AttributeIntelligence])
-		assert.Equal(t, 16, char.Attributes[entities.AttributeIntelligence].Score)
-		assert.Equal(t, 3, char.Attributes[entities.AttributeIntelligence].Bonus) // (16-10)/2 = 3
+		assert.NotNil(t, char.Attributes[character2.AttributeIntelligence])
+		assert.Equal(t, 16, char.Attributes[character2.AttributeIntelligence].Score)
+		assert.Equal(t, 3, char.Attributes[character2.AttributeIntelligence].Bonus) // (16-10)/2 = 3
 
 		// Check HP calculation (6 base + 1 con modifier)
 		assert.Equal(t, 7, char.MaxHitPoints)
@@ -107,7 +108,7 @@ func TestService_FinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T)
 	// Assert
 	require.NoError(t, err)
 	assert.NotNil(t, result)
-	assert.Equal(t, entities.CharacterStatusActive, result.Status)
+	assert.Equal(t, character2.CharacterStatusActive, result.Status)
 }
 
 func TestService_FinalizeDraftCharacter_PreservesExistingAttributes(t *testing.T) {
@@ -126,25 +127,25 @@ func TestService_FinalizeDraftCharacter_PreservesExistingAttributes(t *testing.T
 	characterID := "char_456"
 
 	// Create a draft character with existing Attributes (should not convert)
-	draftChar := &entities.Character{
+	draftChar := &character2.Character{
 		ID:      characterID,
 		Name:    "Test Character",
 		OwnerID: "user_123",
 		RealmID: "realm_123",
-		Status:  entities.CharacterStatusDraft,
+		Status:  character2.CharacterStatusDraft,
 		Level:   1,
-		Class: &entities.Class{
+		Class: &rulebook.Class{
 			Key:    "fighter",
 			Name:   "Fighter",
 			HitDie: 10,
 		},
-		Attributes: map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeStrength:     {Score: 16, Bonus: 3},
-			entities.AttributeDexterity:    {Score: 14, Bonus: 2},
-			entities.AttributeConstitution: {Score: 15, Bonus: 2},
-			entities.AttributeIntelligence: {Score: 10, Bonus: 0},
-			entities.AttributeWisdom:       {Score: 12, Bonus: 1},
-			entities.AttributeCharisma:     {Score: 8, Bonus: -1},
+		Attributes: map[character2.Attribute]*character2.AbilityScore{
+			character2.AttributeStrength:     {Score: 16, Bonus: 3},
+			character2.AttributeDexterity:    {Score: 14, Bonus: 2},
+			character2.AttributeConstitution: {Score: 15, Bonus: 2},
+			character2.AttributeIntelligence: {Score: 10, Bonus: 0},
+			character2.AttributeWisdom:       {Score: 12, Bonus: 1},
+			character2.AttributeCharisma:     {Score: 8, Bonus: -1},
 		},
 		MaxHitPoints:     12, // Already calculated
 		CurrentHitPoints: 12,
@@ -157,11 +158,11 @@ func TestService_FinalizeDraftCharacter_PreservesExistingAttributes(t *testing.T
 	// Mock GetClassFeatures call (happens during finalization)
 
 	// Expect update without conversion
-	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *entities.Character) error {
+	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *character2.Character) error {
 		// Verify attributes were NOT changed
-		assert.Equal(t, entities.CharacterStatusActive, char.Status)
-		assert.Equal(t, 16, char.Attributes[entities.AttributeStrength].Score)
-		assert.Equal(t, 3, char.Attributes[entities.AttributeStrength].Bonus)
+		assert.Equal(t, character2.CharacterStatusActive, char.Status)
+		assert.Equal(t, 16, char.Attributes[character2.AttributeStrength].Score)
+		assert.Equal(t, 3, char.Attributes[character2.AttributeStrength].Bonus)
 
 		// HP and AC should remain the same
 		assert.Equal(t, 12, char.MaxHitPoints)
@@ -176,5 +177,5 @@ func TestService_FinalizeDraftCharacter_PreservesExistingAttributes(t *testing.T
 	// Assert
 	require.NoError(t, err)
 	assert.NotNil(t, result)
-	assert.Equal(t, entities.CharacterStatusActive, result.Status)
+	assert.Equal(t, character2.CharacterStatusActive, result.Status)
 }

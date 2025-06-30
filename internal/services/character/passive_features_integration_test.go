@@ -2,10 +2,11 @@ package character_test
 
 import (
 	"context"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -31,17 +32,17 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 		userID := "user-123"
 		realmID := "realm-123"
 
-		elf := &entities.Character{
+		elf := &character2.Character{
 			ID:               characterID,
 			OwnerID:          userID,
 			RealmID:          realmID,
 			Name:             "Legolas",
-			Status:           entities.CharacterStatusDraft,
+			Status:           character2.CharacterStatusDraft,
 			Level:            1,
 			HitDie:           6,
 			MaxHitPoints:     8,
 			CurrentHitPoints: 8,
-			AbilityRolls: []entities.AbilityRoll{
+			AbilityRolls: []character2.AbilityRoll{
 				{ID: "roll1", Value: 16},
 				{ID: "roll2", Value: 14},
 				{ID: "roll3", Value: 14},
@@ -57,16 +58,16 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 				"WIS": "roll5", // 10
 				"CHA": "roll6", // 8
 			},
-			Race: &entities.Race{
+			Race: &rulebook.Race{
 				Key:  "elf",
 				Name: "Elf",
 			},
-			Class: &entities.Class{
+			Class: &rulebook.Class{
 				Key:    "ranger",
 				Name:   "Ranger",
 				HitDie: 10,
 			},
-			Proficiencies: make(map[entities.ProficiencyType][]*entities.Proficiency),
+			Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		}
 
 		// Mock repository Get
@@ -77,7 +78,7 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 		// Mock repository Update
 		mockRepo.EXPECT().
 			Update(ctx, gomock.Any()).
-			DoAndReturn(func(_ context.Context, char *entities.Character) error {
+			DoAndReturn(func(_ context.Context, char *character2.Character) error {
 				// Verify that passive features were applied
 				assert.NotNil(t, char.Features)
 
@@ -106,7 +107,7 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 		result, err := svc.FinalizeDraftCharacter(ctx, characterID)
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, entities.CharacterStatusActive, result.Status)
+		assert.Equal(t, character2.CharacterStatusActive, result.Status)
 	})
 
 	t.Run("Multiple racial features apply correctly", func(t *testing.T) {
@@ -114,31 +115,31 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 		userID := "user-456"
 		realmID := "realm-456"
 
-		dwarf := &entities.Character{
+		dwarf := &character2.Character{
 			ID:      characterID,
 			OwnerID: userID,
 			RealmID: realmID,
 			Name:    "Gimli",
-			Status:  entities.CharacterStatusDraft,
+			Status:  character2.CharacterStatusDraft,
 			Level:   1,
-			Attributes: map[entities.Attribute]*entities.AbilityScore{
-				entities.AttributeStrength:     {Score: 16, Bonus: 3},
-				entities.AttributeDexterity:    {Score: 12, Bonus: 1},
-				entities.AttributeConstitution: {Score: 16, Bonus: 3},
-				entities.AttributeIntelligence: {Score: 10, Bonus: 0},
-				entities.AttributeWisdom:       {Score: 14, Bonus: 2},
-				entities.AttributeCharisma:     {Score: 8, Bonus: -1},
+			Attributes: map[character2.Attribute]*character2.AbilityScore{
+				character2.AttributeStrength:     {Score: 16, Bonus: 3},
+				character2.AttributeDexterity:    {Score: 12, Bonus: 1},
+				character2.AttributeConstitution: {Score: 16, Bonus: 3},
+				character2.AttributeIntelligence: {Score: 10, Bonus: 0},
+				character2.AttributeWisdom:       {Score: 14, Bonus: 2},
+				character2.AttributeCharisma:     {Score: 8, Bonus: -1},
 			},
-			Race: &entities.Race{
+			Race: &rulebook.Race{
 				Key:  "dwarf",
 				Name: "Dwarf",
 			},
-			Class: &entities.Class{
+			Class: &rulebook.Class{
 				Key:    "fighter",
 				Name:   "Fighter",
 				HitDie: 10,
 			},
-			Proficiencies: make(map[entities.ProficiencyType][]*entities.Proficiency),
+			Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		}
 
 		// Mock repository Get
@@ -149,7 +150,7 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 		// Mock repository Update
 		mockRepo.EXPECT().
 			Update(ctx, gomock.Any()).
-			DoAndReturn(func(_ context.Context, char *entities.Character) error {
+			DoAndReturn(func(_ context.Context, char *character2.Character) error {
 				// Verify that dwarf racial features exist
 				hasDarkvision := false
 				hasDwarvenResilience := false
@@ -175,7 +176,7 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 		result, err := svc.FinalizeDraftCharacter(ctx, characterID)
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, entities.CharacterStatusActive, result.Status)
+		assert.Equal(t, character2.CharacterStatusActive, result.Status)
 	})
 
 	t.Run("UpdateDraftCharacter applies passive effects when race changes", func(t *testing.T) {
@@ -183,26 +184,26 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 		userID := "user-789"
 		realmID := "realm-789"
 
-		char := &entities.Character{
+		char := &character2.Character{
 			ID:      characterID,
 			OwnerID: userID,
 			RealmID: realmID,
 			Name:    "Changeling",
-			Status:  entities.CharacterStatusDraft,
+			Status:  character2.CharacterStatusDraft,
 			Level:   1,
-			Attributes: map[entities.Attribute]*entities.AbilityScore{
-				entities.AttributeStrength:     {Score: 10, Bonus: 0},
-				entities.AttributeDexterity:    {Score: 16, Bonus: 3},
-				entities.AttributeConstitution: {Score: 14, Bonus: 2},
-				entities.AttributeIntelligence: {Score: 12, Bonus: 1},
-				entities.AttributeWisdom:       {Score: 13, Bonus: 1},
-				entities.AttributeCharisma:     {Score: 8, Bonus: -1},
+			Attributes: map[character2.Attribute]*character2.AbilityScore{
+				character2.AttributeStrength:     {Score: 10, Bonus: 0},
+				character2.AttributeDexterity:    {Score: 16, Bonus: 3},
+				character2.AttributeConstitution: {Score: 14, Bonus: 2},
+				character2.AttributeIntelligence: {Score: 12, Bonus: 1},
+				character2.AttributeWisdom:       {Score: 13, Bonus: 1},
+				character2.AttributeCharisma:     {Score: 8, Bonus: -1},
 			},
-			Race: &entities.Race{
+			Race: &rulebook.Race{
 				Key:  "human",
 				Name: "Human",
 			},
-			Proficiencies: make(map[entities.ProficiencyType][]*entities.Proficiency),
+			Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		}
 
 		// Mock repository Get
@@ -211,7 +212,7 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 			Return(char, nil)
 
 		// Mock getting elf race
-		elfRace := &entities.Race{
+		elfRace := &rulebook.Race{
 			Key:  "elf",
 			Name: "Elf",
 		}
@@ -222,7 +223,7 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 		// Mock repository Update
 		mockRepo.EXPECT().
 			Update(ctx, gomock.Any()).
-			DoAndReturn(func(_ context.Context, updated *entities.Character) error {
+			DoAndReturn(func(_ context.Context, updated *character2.Character) error {
 				// Verify elf racial features were applied
 				hasKeenSenses := false
 				for _, feat := range updated.Features {

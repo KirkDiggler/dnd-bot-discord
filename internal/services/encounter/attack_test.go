@@ -2,13 +2,17 @@ package encounter_test
 
 import (
 	"context"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	session2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	mockdice "github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/gamesessions"
@@ -50,17 +54,17 @@ func TestPerformAttack_PlayerVsMonster(t *testing.T) {
 	})
 
 	// Create a test session
-	sess := &entities.Session{
+	sess := &session2.Session{
 		ID:        "test-session",
 		Name:      "Test Session",
 		ChannelID: "channel-1",
 		CreatorID: "dm-1",
 		DMID:      "dm-1",
-		Members: map[string]*entities.SessionMember{
-			"player-1": {UserID: "player-1", Role: entities.SessionRolePlayer},
-			"dm-1":     {UserID: "dm-1", Role: entities.SessionRoleDM},
+		Members: map[string]*session2.SessionMember{
+			"player-1": {UserID: "player-1", Role: session2.SessionRolePlayer},
+			"dm-1":     {UserID: "dm-1", Role: session2.SessionRoleDM},
 		},
-		Status:     entities.SessionStatusActive,
+		Status:     session2.SessionStatusActive,
 		CreatedAt:  time.Now(),
 		LastActive: time.Now(),
 	}
@@ -77,21 +81,21 @@ func TestPerformAttack_PlayerVsMonster(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a test character with equipment
-	testChar := &entities.Character{
+	testChar := &character2.Character{
 		ID:               "char-1",
 		Name:             "Fighter",
 		OwnerID:          "player-1",
-		Status:           entities.CharacterStatusActive,
+		Status:           character2.CharacterStatusActive,
 		Level:            1,
 		CurrentHitPoints: 10,
 		MaxHitPoints:     10,
 		AC:               16,
-		Attributes: map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeStrength: {Score: 16}, // +3 modifier
+		Attributes: map[character2.Attribute]*character2.AbilityScore{
+			character2.AttributeStrength: {Score: 16}, // +3 modifier
 		},
-		EquippedSlots: map[entities.Slot]entities.Equipment{
-			entities.SlotMainHand: &entities.Weapon{
-				Base: entities.BasicEquipment{
+		EquippedSlots: map[character2.Slot]equipment.Equipment{
+			character2.SlotMainHand: &equipment.Weapon{
+				Base: equipment.BasicEquipment{
 					Key:  "longsword",
 					Name: "Longsword",
 				},
@@ -102,7 +106,7 @@ func TestPerformAttack_PlayerVsMonster(t *testing.T) {
 					DamageType: damage.TypeSlashing,
 				},
 				WeaponRange: "Melee",
-				Properties: []*entities.ReferenceItem{
+				Properties: []*shared.ReferenceItem{
 					{Key: "versatile"},
 				},
 			},
@@ -124,7 +128,7 @@ func TestPerformAttack_PlayerVsMonster(t *testing.T) {
 	require.NoError(t, err)
 
 	// Start encounter
-	enc.Status = entities.EncounterStatusActive
+	enc.Status = combat.EncounterStatusActive
 	enc.Turn = 0
 	enc.TurnOrder = []string{playerCombatant.ID, monsterCombatant.ID}
 	enc.Combatants[playerCombatant.ID].Initiative = 15
@@ -195,17 +199,17 @@ func TestPerformAttack_MonsterVsPlayer(t *testing.T) {
 	})
 
 	// Create a test session
-	sess := &entities.Session{
+	sess := &session2.Session{
 		ID:        "test-session",
 		Name:      "Test Session",
 		ChannelID: "channel-1",
 		CreatorID: "dm-1",
 		DMID:      "dm-1",
-		Members: map[string]*entities.SessionMember{
-			"player-1": {UserID: "player-1", Role: entities.SessionRolePlayer},
-			"dm-1":     {UserID: "dm-1", Role: entities.SessionRoleDM},
+		Members: map[string]*session2.SessionMember{
+			"player-1": {UserID: "player-1", Role: session2.SessionRolePlayer},
+			"dm-1":     {UserID: "dm-1", Role: session2.SessionRoleDM},
 		},
-		Status:     entities.SessionStatusActive,
+		Status:     session2.SessionStatusActive,
 		CreatedAt:  time.Now(),
 		LastActive: time.Now(),
 	}
@@ -222,11 +226,11 @@ func TestPerformAttack_MonsterVsPlayer(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a test character
-	testChar := &entities.Character{
+	testChar := &character2.Character{
 		ID:               "char-1",
 		Name:             "Fighter",
 		OwnerID:          "player-1",
-		Status:           entities.CharacterStatusActive,
+		Status:           character2.CharacterStatusActive,
 		Level:            1,
 		CurrentHitPoints: 10,
 		MaxHitPoints:     10,
@@ -244,7 +248,7 @@ func TestPerformAttack_MonsterVsPlayer(t *testing.T) {
 		Name:  "Goblin",
 		MaxHP: 7,
 		AC:    15,
-		Actions: []*entities.MonsterAction{
+		Actions: []*combat.MonsterAction{
 			{
 				Name:        "Scimitar",
 				AttackBonus: 4,
@@ -262,7 +266,7 @@ func TestPerformAttack_MonsterVsPlayer(t *testing.T) {
 	require.NoError(t, err)
 
 	// Start encounter with goblin's turn
-	enc.Status = entities.EncounterStatusActive
+	enc.Status = combat.EncounterStatusActive
 	enc.Turn = 1 // Goblin's turn
 	enc.TurnOrder = []string{playerCombatant.ID, monsterCombatant.ID}
 
@@ -327,16 +331,16 @@ func TestPerformAttack_CriticalHit(t *testing.T) {
 	})
 
 	// Create a test session
-	sess := &entities.Session{
+	sess := &session2.Session{
 		ID:        "test-session",
 		Name:      "Test Session",
 		ChannelID: "channel-1",
 		CreatorID: "dm-1",
 		DMID:      "dm-1",
-		Members: map[string]*entities.SessionMember{
-			"dm-1": {UserID: "dm-1", Role: entities.SessionRoleDM},
+		Members: map[string]*session2.SessionMember{
+			"dm-1": {UserID: "dm-1", Role: session2.SessionRoleDM},
 		},
-		Status:     entities.SessionStatusActive,
+		Status:     session2.SessionStatusActive,
 		CreatedAt:  time.Now(),
 		LastActive: time.Now(),
 	}
@@ -368,7 +372,7 @@ func TestPerformAttack_CriticalHit(t *testing.T) {
 	require.NoError(t, err)
 
 	// Start encounter
-	enc.Status = entities.EncounterStatusActive
+	enc.Status = combat.EncounterStatusActive
 	enc.Turn = 0
 	enc.TurnOrder = []string{attacker.ID, target.ID}
 
@@ -414,16 +418,16 @@ func TestPerformAttack_Validations(t *testing.T) {
 	})
 
 	// Create a test session
-	sess := &entities.Session{
+	sess := &session2.Session{
 		ID:        "test-session",
 		Name:      "Test Session",
 		ChannelID: "channel-1",
 		CreatorID: "dm-1",
 		DMID:      "dm-1",
-		Members: map[string]*entities.SessionMember{
-			"dm-1": {UserID: "dm-1", Role: entities.SessionRoleDM},
+		Members: map[string]*session2.SessionMember{
+			"dm-1": {UserID: "dm-1", Role: session2.SessionRoleDM},
 		},
-		Status:     entities.SessionStatusActive,
+		Status:     session2.SessionStatusActive,
 		CreatedAt:  time.Now(),
 		LastActive: time.Now(),
 	}
@@ -465,7 +469,7 @@ func TestPerformAttack_Validations(t *testing.T) {
 	assert.Contains(t, err.Error(), "not active")
 
 	// Start encounter
-	enc.Status = entities.EncounterStatusActive
+	enc.Status = combat.EncounterStatusActive
 	enc.Turn = 0
 	enc.TurnOrder = []string{attacker.ID, target.ID}
 

@@ -3,13 +3,14 @@ package character_test
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 )
 
@@ -62,21 +63,21 @@ func (s *EquipmentEdgeCasesTestSuite) TestNilClass() {
 }
 
 func (s *EquipmentEdgeCasesTestSuite) TestEmptyOptions() {
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "test",
 		Name: "Test",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:    "Empty choice",
 				Count:   1,
-				Type:    entities.ChoiceTypeEquipment,
-				Options: []entities.Option{}, // Empty options
+				Type:    shared.ChoiceTypeEquipment,
+				Options: []shared.Option{}, // Empty options
 			},
 			nil, // Nil choice
 			{
 				Name:    "Nil options",
 				Count:   1,
-				Type:    entities.ChoiceTypeEquipment,
+				Type:    shared.ChoiceTypeEquipment,
 				Options: nil, // Nil options
 			},
 		},
@@ -88,36 +89,36 @@ func (s *EquipmentEdgeCasesTestSuite) TestEmptyOptions() {
 }
 
 func (s *EquipmentEdgeCasesTestSuite) TestNilReferences() {
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "test",
 		Name: "Test",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "Choice with nil references",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
 						Reference: nil, // Nil reference
 					},
-					&entities.CountedReferenceOption{
+					&shared.CountedReferenceOption{
 						Count:     2,
 						Reference: nil, // Nil reference
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "", // Empty key
 							Name: "Test",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "test",
 							Name: "", // Empty name
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "valid",
 							Name: "Valid Item",
 						},
@@ -137,32 +138,32 @@ func (s *EquipmentEdgeCasesTestSuite) TestNilReferences() {
 // Complex Nested Cases
 
 func (s *EquipmentEdgeCasesTestSuite) TestDeeplyNestedChoices() {
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "test",
 		Name: "Test",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "Triple nested choice",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.Choice{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.Choice{
 						Name:  "Level 1",
 						Count: 1,
-						Type:  entities.ChoiceTypeEquipment,
-						Options: []entities.Option{
-							&entities.Choice{
+						Type:  shared.ChoiceTypeEquipment,
+						Options: []shared.Option{
+							&shared.Choice{
 								Name:  "Level 2",
 								Count: 1,
-								Type:  entities.ChoiceTypeEquipment,
-								Options: []entities.Option{
-									&entities.Choice{
+								Type:  shared.ChoiceTypeEquipment,
+								Options: []shared.Option{
+									&shared.Choice{
 										Name:  "Level 3",
 										Count: 1,
-										Type:  entities.ChoiceTypeEquipment,
-										Options: []entities.Option{
-											&entities.ReferenceOption{
-												Reference: &entities.ReferenceItem{
+										Type:  shared.ChoiceTypeEquipment,
+										Options: []shared.Option{
+											&shared.ReferenceOption{
+												Reference: &shared.ReferenceItem{
 													Key:  "deeply-nested-item",
 													Name: "Deeply Nested Item",
 												},
@@ -185,50 +186,50 @@ func (s *EquipmentEdgeCasesTestSuite) TestDeeplyNestedChoices() {
 }
 
 func (s *EquipmentEdgeCasesTestSuite) TestMixedValidInvalidOptions() {
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "test",
 		Name: "Test",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "Mixed options",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "valid1",
 							Name: "Valid Item 1",
 						},
 					},
 					nil, // Nil option
-					&entities.ReferenceOption{
+					&shared.ReferenceOption{
 						Reference: nil, // Nil reference
 					},
-					&entities.MultipleOption{
+					&shared.MultipleOption{
 						Key:   "bundle",
 						Name:  "Item Bundle",
 						Items: nil, // Nil items
 					},
-					&entities.MultipleOption{
+					&shared.MultipleOption{
 						Key:  "valid-bundle",
 						Name: "Valid Bundle",
-						Items: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Items: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "item1",
 									Name: "Item 1",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "item2",
 									Name: "Item 2",
 								},
 							},
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "valid2",
 							Name: "Valid Item 2",
 						},
@@ -250,29 +251,29 @@ func (s *EquipmentEdgeCasesTestSuite) TestMixedValidInvalidOptions() {
 // Special Character and Formatting Cases
 
 func (s *EquipmentEdgeCasesTestSuite) TestSpecialCharactersInNames() {
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "test",
 		Name: "Test",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "Items with special characters",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "item-with-apostrophe",
 							Name: "Thief's Tools",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "item-with-parentheses",
 							Name: "Leather Armor (Studded)",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "item-with-ampersand",
 							Name: "Ball & Chain",
 						},
@@ -294,17 +295,17 @@ func (s *EquipmentEdgeCasesTestSuite) TestSpecialCharactersInNames() {
 // Count Edge Cases
 
 func (s *EquipmentEdgeCasesTestSuite) TestZeroAndNegativeCounts() {
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "test",
 		Name: "Test",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "Zero count choice",
 				Count: 0, // Zero count
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "item",
 							Name: "Item",
 						},
@@ -314,10 +315,10 @@ func (s *EquipmentEdgeCasesTestSuite) TestZeroAndNegativeCounts() {
 			{
 				Name:  "Negative count choice",
 				Count: -1, // Negative count
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "item2",
 							Name: "Item 2",
 						},
@@ -327,25 +328,25 @@ func (s *EquipmentEdgeCasesTestSuite) TestZeroAndNegativeCounts() {
 			{
 				Name:  "Items with zero count",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.CountedReferenceOption{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.CountedReferenceOption{
 						Count: 0, // Zero count
-						Reference: &entities.ReferenceItem{
+						Reference: &shared.ReferenceItem{
 							Key:  "zero-items",
 							Name: "Zero Items",
 						},
 					},
-					&entities.CountedReferenceOption{
+					&shared.CountedReferenceOption{
 						Count: -5, // Negative count
-						Reference: &entities.ReferenceItem{
+						Reference: &shared.ReferenceItem{
 							Key:  "negative-items",
 							Name: "Negative Items",
 						},
 					},
-					&entities.CountedReferenceOption{
+					&shared.CountedReferenceOption{
 						Count: 10,
-						Reference: &entities.ReferenceItem{
+						Reference: &shared.ReferenceItem{
 							Key:  "valid-items",
 							Name: "Valid Items",
 						},
@@ -369,24 +370,24 @@ func (s *EquipmentEdgeCasesTestSuite) TestZeroAndNegativeCounts() {
 
 func (s *EquipmentEdgeCasesTestSuite) TestLargeNumberOfOptions() {
 	// Create a choice with many options
-	options := []entities.Option{}
+	options := []shared.Option{}
 	for i := 0; i < 100; i++ {
-		options = append(options, &entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		options = append(options, &shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  fmt.Sprintf("item-%d", i),
 				Name: fmt.Sprintf("Item %d", i),
 			},
 		})
 	}
 
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "test",
 		Name: "Test",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:    "Many options",
 				Count:   1,
-				Type:    entities.ChoiceTypeEquipment,
+				Type:    shared.ChoiceTypeEquipment,
 				Options: options,
 			},
 		},
@@ -401,36 +402,36 @@ func (s *EquipmentEdgeCasesTestSuite) TestLargeNumberOfOptions() {
 // Bundle Edge Cases
 
 func (s *EquipmentEdgeCasesTestSuite) TestEmptyBundles() {
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "test",
 		Name: "Test",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "Empty bundles",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.MultipleOption{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.MultipleOption{
 						Key:   "empty-bundle",
 						Name:  "Empty Bundle",
-						Items: []entities.Option{}, // Empty items
+						Items: []shared.Option{}, // Empty items
 					},
-					&entities.MultipleOption{
+					&shared.MultipleOption{
 						Key:  "nil-items-bundle",
 						Name: "Nil Items Bundle",
-						Items: []entities.Option{
+						Items: []shared.Option{
 							nil, // Nil item
-							&entities.ReferenceOption{
+							&shared.ReferenceOption{
 								Reference: nil, // Nil reference
 							},
 						},
 					},
-					&entities.MultipleOption{
+					&shared.MultipleOption{
 						Key:  "valid-bundle",
 						Name: "Valid Bundle",
-						Items: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Items: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "item",
 									Name: "Valid Item",
 								},
@@ -461,17 +462,17 @@ func (s *EquipmentEdgeCasesTestSuite) TestEmptyBundles() {
 // Type Mismatches
 
 func (s *EquipmentEdgeCasesTestSuite) TestWrongChoiceTypes() {
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "test",
 		Name: "Test",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "Wrong type choice",
 				Count: 1,
-				Type:  entities.ChoiceTypeProficiency, // Wrong type
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeProficiency, // Wrong type
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "item",
 							Name: "Item",
 						},
@@ -481,10 +482,10 @@ func (s *EquipmentEdgeCasesTestSuite) TestWrongChoiceTypes() {
 			{
 				Name:  "Language choice",
 				Count: 1,
-				Type:  entities.ChoiceTypeLanguage, // Wrong type
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeLanguage, // Wrong type
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "elvish",
 							Name: "Elvish",
 						},
@@ -494,10 +495,10 @@ func (s *EquipmentEdgeCasesTestSuite) TestWrongChoiceTypes() {
 			{
 				Name:  "Correct equipment choice",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "sword",
 							Name: "Sword",
 						},
@@ -519,19 +520,19 @@ func (s *EquipmentEdgeCasesTestSuite) TestSelfReferencingChoices() {
 	// Note: This tests a theoretical case where a choice might reference itself
 	// The current data model might not allow this, but it's good to test
 
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "test",
 		Name: "Test",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "Recursive choice",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
 					// In theory, if a choice could reference itself
 					// this would test infinite recursion protection
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "normal-item",
 							Name: "Normal Item",
 						},

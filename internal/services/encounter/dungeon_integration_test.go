@@ -1,9 +1,10 @@
 package encounter_test
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,21 +22,21 @@ func TestDungeonCombatIntegration(t *testing.T) {
 		sessionID := "dungeon-session-123"
 
 		// Create a dungeon session with player who has character selected
-		_ = &entities.Session{
+		_ = &session.Session{
 			ID:        sessionID,
 			Name:      "Test Dungeon",
 			CreatorID: "bot-123",
 			DMID:      "bot-123",
-			Status:    entities.SessionStatusActive,
-			Members: map[string]*entities.SessionMember{
+			Status:    session.SessionStatusActive,
+			Members: map[string]*session.SessionMember{
 				playerID: {
 					UserID:      playerID,
-					Role:        entities.SessionRolePlayer,
+					Role:        session.SessionRolePlayer,
 					CharacterID: characterID, // Character is selected!
 				},
 				"bot-123": {
 					UserID: "bot-123",
-					Role:   entities.SessionRoleDM,
+					Role:   session.SessionRoleDM,
 				},
 			},
 			Metadata: map[string]interface{}{
@@ -44,22 +45,22 @@ func TestDungeonCombatIntegration(t *testing.T) {
 		}
 
 		// Create encounter for combat room
-		encounter := entities.NewEncounter("enc-123", sessionID, "channel-123", "Guard Chamber", "bot-123")
+		encounter := combat.NewEncounter("enc-123", sessionID, "channel-123", "Guard Chamber", "bot-123")
 
 		// Simulate adding monsters (what happens in enter_room.go)
-		goblin := &entities.Combatant{
+		goblin := &combat.Combatant{
 			ID:        "goblin-1",
 			Name:      "Goblin",
-			Type:      entities.CombatantTypeMonster,
+			Type:      combat.CombatantTypeMonster,
 			CurrentHP: 7,
 			MaxHP:     7,
 			AC:        15,
 			IsActive:  true,
 		}
-		orc := &entities.Combatant{
+		orc := &combat.Combatant{
 			ID:        "orc-1",
 			Name:      "Orc",
-			Type:      entities.CombatantTypeMonster,
+			Type:      combat.CombatantTypeMonster,
 			CurrentHP: 15,
 			MaxHP:     15,
 			AC:        13,
@@ -69,10 +70,10 @@ func TestDungeonCombatIntegration(t *testing.T) {
 		encounter.AddCombatant(orc)
 
 		// Now simulate adding player (what SHOULD happen when character is selected)
-		playerCombatant := &entities.Combatant{
+		playerCombatant := &combat.Combatant{
 			ID:              "player-comb-1",
 			Name:            "Aragorn", // Player's character name
-			Type:            entities.CombatantTypePlayer,
+			Type:            combat.CombatantTypePlayer,
 			PlayerID:        playerID,
 			CharacterID:     characterID,
 			CurrentHP:       50,
@@ -87,14 +88,14 @@ func TestDungeonCombatIntegration(t *testing.T) {
 		assert.Len(t, encounter.Combatants, 3, "Should have 3 combatants total")
 
 		// Verify we can filter monsters for enemy list
-		var enemies []*entities.Combatant
-		var players []*entities.Combatant
+		var enemies []*combat.Combatant
+		var players []*combat.Combatant
 
 		for _, c := range encounter.Combatants {
 			switch c.Type {
-			case entities.CombatantTypeMonster:
+			case combat.CombatantTypeMonster:
 				enemies = append(enemies, c)
-			case entities.CombatantTypePlayer:
+			case combat.CombatantTypePlayer:
 				players = append(players, c)
 			}
 		}
@@ -104,7 +105,7 @@ func TestDungeonCombatIntegration(t *testing.T) {
 
 		// Verify enemy list contains only monsters
 		for _, enemy := range enemies {
-			assert.Equal(t, entities.CombatantTypeMonster, enemy.Type)
+			assert.Equal(t, combat.CombatantTypeMonster, enemy.Type)
 			assert.Empty(t, enemy.PlayerID, "Monsters should not have PlayerID")
 		}
 
@@ -119,25 +120,25 @@ func TestDungeonCombatIntegration(t *testing.T) {
 		sessionID := "dungeon-session-456"
 
 		// Session where player has NOT selected a character
-		_ = &entities.Session{
+		_ = &session.Session{
 			ID: sessionID,
-			Members: map[string]*entities.SessionMember{
+			Members: map[string]*session.SessionMember{
 				playerID: {
 					UserID:      playerID,
-					Role:        entities.SessionRolePlayer,
+					Role:        session.SessionRolePlayer,
 					CharacterID: "", // No character selected!
 				},
 			},
 		}
 
 		// Create encounter
-		encounter := entities.NewEncounter("enc-456", sessionID, "channel-456", "Dark Crypt", "bot-456")
+		encounter := combat.NewEncounter("enc-456", sessionID, "channel-456", "Dark Crypt", "bot-456")
 
 		// Add monsters
-		skeleton := &entities.Combatant{
+		skeleton := &combat.Combatant{
 			ID:   "skeleton-1",
 			Name: "Skeleton",
-			Type: entities.CombatantTypeMonster,
+			Type: combat.CombatantTypeMonster,
 		}
 		encounter.AddCombatant(skeleton)
 
@@ -146,20 +147,20 @@ func TestDungeonCombatIntegration(t *testing.T) {
 
 		// Verify only monster in encounter
 		assert.Len(t, encounter.Combatants, 1)
-		assert.Equal(t, entities.CombatantTypeMonster, encounter.Combatants["skeleton-1"].Type)
+		assert.Equal(t, combat.CombatantTypeMonster, encounter.Combatants["skeleton-1"].Type)
 	})
 }
 
 func TestPlayerMonsterNameCollision(t *testing.T) {
 	// Specific test for the "Orc" issue - when a player might be confused with a monster
 
-	encounter := entities.NewEncounter("enc-789", "session-789", "channel-789", "Mixed Battle", "dm-789")
+	encounter := combat.NewEncounter("enc-789", "session-789", "channel-789", "Mixed Battle", "dm-789")
 
 	// Add Orc monster
-	orcMonster := &entities.Combatant{
+	orcMonster := &combat.Combatant{
 		ID:        "monster-orc",
 		Name:      "Orc",
-		Type:      entities.CombatantTypeMonster,
+		Type:      combat.CombatantTypeMonster,
 		CurrentHP: 15,
 		MaxHP:     15,
 		AC:        13,
@@ -168,10 +169,10 @@ func TestPlayerMonsterNameCollision(t *testing.T) {
 	encounter.AddCombatant(orcMonster)
 
 	// Add player with unfortunate name "Orc"
-	playerOrc := &entities.Combatant{
+	playerOrc := &combat.Combatant{
 		ID:          "player-orc",
 		Name:        "Orc", // Player named their character "Orc"!
-		Type:        entities.CombatantTypePlayer,
+		Type:        combat.CombatantTypePlayer,
 		PlayerID:    "player-999",
 		CharacterID: "char-orc",
 		CurrentHP:   30,
@@ -185,10 +186,10 @@ func TestPlayerMonsterNameCollision(t *testing.T) {
 	t.Run("Can identify player vs monster by Type", func(t *testing.T) {
 		for _, combatant := range encounter.Combatants {
 			switch combatant.Type {
-			case entities.CombatantTypePlayer:
+			case combat.CombatantTypePlayer:
 				assert.NotEmpty(t, combatant.PlayerID, "Players must have PlayerID")
 				assert.NotEmpty(t, combatant.CharacterID, "Players must have CharacterID")
-			case entities.CombatantTypeMonster:
+			case combat.CombatantTypeMonster:
 				assert.Empty(t, combatant.PlayerID, "Monsters must not have PlayerID")
 				assert.Empty(t, combatant.CharacterID, "Monsters must not have CharacterID")
 			}
@@ -198,7 +199,7 @@ func TestPlayerMonsterNameCollision(t *testing.T) {
 	t.Run("Enemy list excludes player Orc", func(t *testing.T) {
 		var enemyNames []string
 		for _, c := range encounter.Combatants {
-			if c.Type == entities.CombatantTypeMonster {
+			if c.Type == combat.CombatantTypeMonster {
 				enemyNames = append(enemyNames, c.Name)
 			}
 		}

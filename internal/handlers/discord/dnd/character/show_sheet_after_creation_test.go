@@ -1,9 +1,10 @@
 package character_test
 
 import (
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stretchr/testify/assert"
@@ -16,18 +17,18 @@ func TestShowCharacterSheetAfterCreation(t *testing.T) {
 
 	t.Run("BuildCharacterSheetEmbed shows complete character info", func(t *testing.T) {
 		// Create a test character that represents a newly finalized character
-		finalChar := &entities.Character{
+		finalChar := &character2.Character{
 			ID:      "test-char-123",
 			Name:    "Thorin Ironforge",
 			OwnerID: "user123",
 			Level:   1,
-			Status:  entities.CharacterStatusActive,
-			Race: &entities.Race{
+			Status:  character2.CharacterStatusActive,
+			Race: &rulebook.Race{
 				Key:   "dwarf",
 				Name:  "Dwarf",
 				Speed: 25,
 			},
-			Class: &entities.Class{
+			Class: &rulebook.Class{
 				Key:    "fighter",
 				Name:   "Fighter",
 				HitDie: 10,
@@ -36,19 +37,19 @@ func TestShowCharacterSheetAfterCreation(t *testing.T) {
 			MaxHitPoints:     12,
 			AC:               16,
 			HitDie:           10,
-			Attributes: map[entities.Attribute]*entities.AbilityScore{
-				entities.AttributeStrength:     {Score: 16, Bonus: 3},
-				entities.AttributeDexterity:    {Score: 14, Bonus: 2},
-				entities.AttributeConstitution: {Score: 15, Bonus: 2},
-				entities.AttributeIntelligence: {Score: 13, Bonus: 1},
-				entities.AttributeWisdom:       {Score: 12, Bonus: 1},
-				entities.AttributeCharisma:     {Score: 10, Bonus: 0},
+			Attributes: map[character2.Attribute]*character2.AbilityScore{
+				character2.AttributeStrength:     {Score: 16, Bonus: 3},
+				character2.AttributeDexterity:    {Score: 14, Bonus: 2},
+				character2.AttributeConstitution: {Score: 15, Bonus: 2},
+				character2.AttributeIntelligence: {Score: 13, Bonus: 1},
+				character2.AttributeWisdom:       {Score: 12, Bonus: 1},
+				character2.AttributeCharisma:     {Score: 10, Bonus: 0},
 			},
-			Features: []*entities.CharacterFeature{
+			Features: []*rulebook.CharacterFeature{
 				{
 					Key:  "fighting_style",
 					Name: "Fighting Style",
-					Type: entities.FeatureTypeClass,
+					Type: rulebook.FeatureTypeClass,
 					Metadata: map[string]any{
 						"style": "defense",
 					},
@@ -56,15 +57,15 @@ func TestShowCharacterSheetAfterCreation(t *testing.T) {
 				{
 					Key:  "dwarven_resilience",
 					Name: "Dwarven Resilience",
-					Type: entities.FeatureTypeRacial,
+					Type: rulebook.FeatureTypeRacial,
 				},
 			},
-			Proficiencies: map[entities.ProficiencyType][]*entities.Proficiency{
-				entities.ProficiencyTypeWeapon: {
+			Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+				rulebook.ProficiencyTypeWeapon: {
 					{Key: "simple-weapons", Name: "Simple Weapons"},
 					{Key: "martial-weapons", Name: "Martial Weapons"},
 				},
-				entities.ProficiencyTypeArmor: {
+				rulebook.ProficiencyTypeArmor: {
 					{Key: "light-armor", Name: "Light Armor"},
 					{Key: "medium-armor", Name: "Medium Armor"},
 					{Key: "heavy-armor", Name: "Heavy Armor"},
@@ -152,16 +153,16 @@ func TestShowCharacterSheetAfterCreation(t *testing.T) {
 
 	t.Run("BuildCreationSuccessResponse provides simple success with view button", func(t *testing.T) {
 		// Create a test character
-		finalChar := &entities.Character{
+		finalChar := &character2.Character{
 			ID:     "test-char-789",
 			Name:   "Gimli",
 			Level:  1,
-			Status: entities.CharacterStatusActive,
-			Race: &entities.Race{
+			Status: character2.CharacterStatusActive,
+			Race: &rulebook.Race{
 				Key:  "dwarf",
 				Name: "Dwarf",
 			},
-			Class: &entities.Class{
+			Class: &rulebook.Class{
 				Key:    "fighter",
 				Name:   "Fighter",
 				HitDie: 10,

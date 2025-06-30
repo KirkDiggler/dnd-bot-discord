@@ -2,10 +2,10 @@ package combat
 
 import (
 	"fmt"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"log"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
 	"golang.org/x/text/cases"
@@ -13,25 +13,25 @@ import (
 )
 
 // Common skill mappings to attributes
-var SkillToAttribute = map[string]entities.Attribute{
-	"skill-acrobatics":      entities.AttributeDexterity,
-	"skill-animal-handling": entities.AttributeWisdom,
-	"skill-arcana":          entities.AttributeIntelligence,
-	"skill-athletics":       entities.AttributeStrength,
-	"skill-deception":       entities.AttributeCharisma,
-	"skill-history":         entities.AttributeIntelligence,
-	"skill-insight":         entities.AttributeWisdom,
-	"skill-intimidation":    entities.AttributeCharisma,
-	"skill-investigation":   entities.AttributeIntelligence,
-	"skill-medicine":        entities.AttributeWisdom,
-	"skill-nature":          entities.AttributeIntelligence,
-	"skill-perception":      entities.AttributeWisdom,
-	"skill-performance":     entities.AttributeCharisma,
-	"skill-persuasion":      entities.AttributeCharisma,
-	"skill-religion":        entities.AttributeIntelligence,
-	"skill-sleight-of-hand": entities.AttributeDexterity,
-	"skill-stealth":         entities.AttributeDexterity,
-	"skill-survival":        entities.AttributeWisdom,
+var SkillToAttribute = map[string]character2.Attribute{
+	"skill-acrobatics":      character2.AttributeDexterity,
+	"skill-animal-handling": character2.AttributeWisdom,
+	"skill-arcana":          character2.AttributeIntelligence,
+	"skill-athletics":       character2.AttributeStrength,
+	"skill-deception":       character2.AttributeCharisma,
+	"skill-history":         character2.AttributeIntelligence,
+	"skill-insight":         character2.AttributeWisdom,
+	"skill-intimidation":    character2.AttributeCharisma,
+	"skill-investigation":   character2.AttributeIntelligence,
+	"skill-medicine":        character2.AttributeWisdom,
+	"skill-nature":          character2.AttributeIntelligence,
+	"skill-perception":      character2.AttributeWisdom,
+	"skill-performance":     character2.AttributeCharisma,
+	"skill-persuasion":      character2.AttributeCharisma,
+	"skill-religion":        character2.AttributeIntelligence,
+	"skill-sleight-of-hand": character2.AttributeDexterity,
+	"skill-stealth":         character2.AttributeDexterity,
+	"skill-survival":        character2.AttributeWisdom,
 }
 
 // SkillCheckHandler handles skill check interactions
@@ -53,7 +53,7 @@ func NewSkillCheckHandler(cfg *SkillCheckHandlerConfig) *SkillCheckHandler {
 
 // ShowSkillCheckPrompt displays a prompt for a player to make a skill check
 func (h *SkillCheckHandler) ShowSkillCheckPrompt(s *discordgo.Session, i *discordgo.InteractionCreate,
-	char *entities.Character, skillKey string, dc int, reason string) error {
+	char *character2.Character, skillKey string, dc int, reason string) error {
 
 	// Get the attribute for this skill
 	attribute, ok := SkillToAttribute[skillKey]

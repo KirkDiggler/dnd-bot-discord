@@ -3,21 +3,23 @@ package dnd5e
 //go:generate mockgen -destination=mock/mock_client.go -package=mockdnd5e . Client
 
 import (
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 )
 
 type Client interface {
-	ListClasses() ([]*entities.Class, error)
-	ListRaces() ([]*entities.Race, error)
-	GetRace(key string) (*entities.Race, error)
-	GetClass(key string) (*entities.Class, error)
-	GetProficiency(key string) (*entities.Proficiency, error)
-	GetMonster(key string) (*entities.MonsterTemplate, error)
-	GetEquipment(key string) (entities.Equipment, error)
-	GetEquipmentByCategory(category string) ([]entities.Equipment, error)
+	ListClasses() ([]*rulebook.Class, error)
+	ListRaces() ([]*rulebook.Race, error)
+	GetRace(key string) (*rulebook.Race, error)
+	GetClass(key string) (*rulebook.Class, error)
+	GetProficiency(key string) (*rulebook.Proficiency, error)
+	GetMonster(key string) (*combat.MonsterTemplate, error)
+	GetEquipment(key string) (equipment.Equipment, error)
+	GetEquipmentByCategory(category string) ([]equipment.Equipment, error)
 
 	// New methods needed by services
-	GetClassFeatures(classKey string, level int) ([]*entities.CharacterFeature, error)
-	ListMonstersByCR(minCR, maxCR float32) ([]*entities.MonsterTemplate, error)
-	ListEquipment() ([]entities.Equipment, error)
+	GetClassFeatures(classKey string, level int) ([]*rulebook.CharacterFeature, error)
+	ListMonstersByCR(minCR, maxCR float32) ([]*combat.MonsterTemplate, error)
+	ListEquipment() ([]equipment.Equipment, error)
 }

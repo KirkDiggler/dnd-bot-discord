@@ -3,10 +3,13 @@ package character_test
 import (
 	"context"
 	"errors"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"strings"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -20,33 +23,33 @@ func TestFighterWeaponPlusShieldFlow(t *testing.T) {
 
 	// Create mock D&D client
 	mockClient := &mockDndClient{
-		equipment: map[string]entities.Equipment{
-			"chain-mail": &entities.Armor{
-				Base: entities.BasicEquipment{
+		equipment: map[string]equipment.Equipment{
+			"chain-mail": &equipment.Armor{
+				Base: equipment.BasicEquipment{
 					Key:  "chain-mail",
 					Name: "Chain Mail",
 				},
-				ArmorCategory: entities.ArmorCategoryHeavy,
+				ArmorCategory: equipment.ArmorCategoryHeavy,
 			},
-			"warhammer": &entities.Weapon{
-				Base: entities.BasicEquipment{
+			"warhammer": &equipment.Weapon{
+				Base: equipment.BasicEquipment{
 					Key:  "warhammer",
 					Name: "Warhammer",
 				},
 				WeaponCategory: "martial",
 			},
-			"shield": &entities.Armor{
-				Base: entities.BasicEquipment{
+			"shield": &equipment.Armor{
+				Base: equipment.BasicEquipment{
 					Key:  "shield",
 					Name: "Shield",
 				},
-				ArmorCategory: entities.ArmorCategoryShield,
+				ArmorCategory: equipment.ArmorCategoryShield,
 			},
 		},
-		classes: map[string]*entities.Class{
+		classes: map[string]*rulebook.Class{
 			"fighter": createFighterClassWithEquipmentChoices(),
 		},
-		races: map[string]*entities.Race{
+		races: map[string]*rulebook.Race{
 			"human": {
 				Key:  "human",
 				Name: "Human",
@@ -117,7 +120,7 @@ func TestFighterWeaponPlusShieldFlow(t *testing.T) {
 
 	// Verify the character has all expected equipment
 	// Check weapons
-	weapons, hasWeapons := finalChar.Inventory[entities.EquipmentTypeWeapon]
+	weapons, hasWeapons := finalChar.Inventory[equipment.EquipmentTypeWeapon]
 	assert.True(t, hasWeapons, "Character should have weapons")
 	assert.Len(t, weapons, 1, "Should have 1 weapon")
 	if len(weapons) > 0 {
@@ -125,7 +128,7 @@ func TestFighterWeaponPlusShieldFlow(t *testing.T) {
 	}
 
 	// Check armor (includes shields)
-	armor, hasArmor := finalChar.Inventory[entities.EquipmentTypeArmor]
+	armor, hasArmor := finalChar.Inventory[equipment.EquipmentTypeArmor]
 	assert.True(t, hasArmor, "Character should have armor")
 	assert.Len(t, armor, 2, "Should have 2 armor items (chain mail + shield)")
 
@@ -139,8 +142,8 @@ func TestFighterWeaponPlusShieldFlow(t *testing.T) {
 		if item.GetKey() == "shield" {
 			hasShield = true
 			// Verify shield is properly categorized
-			if armorItem, ok := item.(*entities.Armor); ok {
-				assert.Equal(t, entities.ArmorCategoryShield, armorItem.ArmorCategory,
+			if armorItem, ok := item.(*equipment.Armor); ok {
+				assert.Equal(t, equipment.ArmorCategoryShield, armorItem.ArmorCategory,
 					"Shield should be categorized as shield")
 			}
 		}
@@ -150,21 +153,21 @@ func TestFighterWeaponPlusShieldFlow(t *testing.T) {
 }
 
 // Helper to create Fighter class with equipment choices
-func createFighterClassWithEquipmentChoices() *entities.Class {
-	return &entities.Class{
+func createFighterClassWithEquipmentChoices() *rulebook.Class {
+	return &rulebook.Class{
 		Key:    "fighter",
 		Name:   "Fighter",
 		HitDie: 10,
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "(a) chain mail or (b) leather armor",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
+				Type:  shared.ChoiceTypeEquipment,
 			},
 			{
 				Name:  "(a) a martial weapon and a shield or (b) two martial weapons",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
+				Type:  shared.ChoiceTypeEquipment,
 			},
 		},
 	}
@@ -172,85 +175,85 @@ func createFighterClassWithEquipmentChoices() *entities.Class {
 
 // Mock D&D client for testing
 type mockDndClient struct {
-	equipment map[string]entities.Equipment
-	classes   map[string]*entities.Class
-	races     map[string]*entities.Race
+	equipment map[string]equipment.Equipment
+	classes   map[string]*rulebook.Class
+	races     map[string]*rulebook.Race
 }
 
-func (m *mockDndClient) ListClasses() ([]*entities.Class, error) {
-	var result []*entities.Class
+func (m *mockDndClient) ListClasses() ([]*rulebook.Class, error) {
+	var result []*rulebook.Class
 	for _, c := range m.classes {
 		result = append(result, c)
 	}
 	return result, nil
 }
 
-func (m *mockDndClient) GetClass(key string) (*entities.Class, error) {
+func (m *mockDndClient) GetClass(key string) (*rulebook.Class, error) {
 	if c, ok := m.classes[key]; ok {
 		return c, nil
 	}
 	return nil, errors.New("not found")
 }
 
-func (m *mockDndClient) GetClassLevel(classKey string, level int) ([]*entities.Feature, error) {
-	return []*entities.Feature{}, nil
+func (m *mockDndClient) GetClassLevel(classKey string, level int) ([]*rulebook.Feature, error) {
+	return []*rulebook.Feature{}, nil
 }
 
-func (m *mockDndClient) ListRaces() ([]*entities.Race, error) {
-	var result []*entities.Race
+func (m *mockDndClient) ListRaces() ([]*rulebook.Race, error) {
+	var result []*rulebook.Race
 	for _, r := range m.races {
 		result = append(result, r)
 	}
 	return result, nil
 }
 
-func (m *mockDndClient) GetRace(key string) (*entities.Race, error) {
+func (m *mockDndClient) GetRace(key string) (*rulebook.Race, error) {
 	if r, ok := m.races[key]; ok {
 		return r, nil
 	}
 	return nil, errors.New("not found")
 }
 
-func (m *mockDndClient) GetEquipment(key string) (entities.Equipment, error) {
+func (m *mockDndClient) GetEquipment(key string) (equipment.Equipment, error) {
 	if e, ok := m.equipment[key]; ok {
 		return e, nil
 	}
 	return nil, errors.New("not found")
 }
 
-func (m *mockDndClient) GetProficiency(key string) (*entities.Proficiency, error) {
-	return &entities.Proficiency{
+func (m *mockDndClient) GetProficiency(key string) (*rulebook.Proficiency, error) {
+	return &rulebook.Proficiency{
 		Key:  key,
 		Name: key,
-		Type: entities.ProficiencyTypeSkill,
+		Type: rulebook.ProficiencyTypeSkill,
 	}, nil
 }
 
-func (m *mockDndClient) GetMonster(key string) (*entities.MonsterTemplate, error) {
+func (m *mockDndClient) GetMonster(key string) (*combat.MonsterTemplate, error) {
 	return nil, errors.New("not found")
 }
 
-func (m *mockDndClient) GetEquipmentByCategory(category string) ([]entities.Equipment, error) {
+func (m *mockDndClient) GetEquipmentByCategory(category string) ([]equipment.Equipment, error) {
 	return nil, nil
 }
 
-func (m *mockDndClient) ListEquipment() ([]entities.Equipment, error) {
-	var result []entities.Equipment
+func (m *mockDndClient) ListEquipment() ([]equipment.Equipment, error) {
+	var result []equipment.Equipment
 	for _, e := range m.equipment {
 		result = append(result, e)
 	}
 	return result, nil
 }
 
-func (m *mockDndClient) ListClassFeatures(classKey string, level int) ([]*entities.Feature, error) {
+func (m *mockDndClient) ListClassFeatures(classKey string, level int) ([]*rulebook.Feature, error) {
 	return nil, nil
 }
 
-func (m *mockDndClient) ListMonstersByCR(minCR, maxCR float32) ([]*entities.MonsterTemplate, error) {
+func (m *mockDndClient) ListMonstersByCR(minCR, maxCR float32) ([]*combat.MonsterTemplate, error) {
 	return nil, nil
 }
 
-func (m *mockDndClient) GetClassFeatures(classKey string, level int) ([]*entities.CharacterFeature, error) {
+func (m *mockDndClient) GetClassFeatures(classKey string, level int) ([]*rulebook.CharacterFeature, error) {
 	return nil, nil
 }
 

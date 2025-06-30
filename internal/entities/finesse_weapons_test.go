@@ -1,10 +1,14 @@
 package entities
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdice "github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -12,38 +16,38 @@ import (
 func TestWeapon_IsFinesse(t *testing.T) {
 	tests := []struct {
 		name           string
-		weapon         *Weapon
+		weapon         *equipment.Weapon
 		expectedResult bool
 	}{
 		{
 			name: "Rapier is a finesse weapon",
-			weapon: &Weapon{
-				Base:       BasicEquipment{Key: "rapier", Name: "Rapier"},
-				Properties: []*ReferenceItem{{Key: "finesse"}},
+			weapon: &equipment.Weapon{
+				Base:       equipment.BasicEquipment{Key: "rapier", Name: "Rapier"},
+				Properties: []*shared.ReferenceItem{{Key: "finesse"}},
 			},
 			expectedResult: true,
 		},
 		{
 			name: "Dagger is a finesse weapon",
-			weapon: &Weapon{
-				Base:       BasicEquipment{Key: "dagger", Name: "Dagger"},
-				Properties: []*ReferenceItem{{Key: "finesse"}, {Key: "light"}, {Key: "thrown"}},
+			weapon: &equipment.Weapon{
+				Base:       equipment.BasicEquipment{Key: "dagger", Name: "Dagger"},
+				Properties: []*shared.ReferenceItem{{Key: "finesse"}, {Key: "light"}, {Key: "thrown"}},
 			},
 			expectedResult: true,
 		},
 		{
 			name: "Longsword is not a finesse weapon",
-			weapon: &Weapon{
-				Base:       BasicEquipment{Key: "longsword", Name: "Longsword"},
-				Properties: []*ReferenceItem{{Key: "versatile"}},
+			weapon: &equipment.Weapon{
+				Base:       equipment.BasicEquipment{Key: "longsword", Name: "Longsword"},
+				Properties: []*shared.ReferenceItem{{Key: "versatile"}},
 			},
 			expectedResult: false,
 		},
 		{
 			name: "Weapon with no properties",
-			weapon: &Weapon{
-				Base:       BasicEquipment{Key: "club", Name: "Club"},
-				Properties: []*ReferenceItem{},
+			weapon: &equipment.Weapon{
+				Base:       equipment.BasicEquipment{Key: "club", Name: "Club"},
+				Properties: []*shared.ReferenceItem{},
 			},
 			expectedResult: false,
 		},
@@ -60,8 +64,8 @@ func TestWeapon_IsFinesse(t *testing.T) {
 func TestFinesseWeapon_UseDexForAttack(t *testing.T) {
 	tests := []struct {
 		name           string
-		weapon         *Weapon
-		features       []*CharacterFeature
+		weapon         *equipment.Weapon
+		features       []*rulebook.CharacterFeature
 		strScore       int
 		dexScore       int
 		expectedAttack int // Expected attack bonus (not including d20)
@@ -70,30 +74,30 @@ func TestFinesseWeapon_UseDexForAttack(t *testing.T) {
 	}{
 		{
 			name: "Rapier uses DEX when higher than STR",
-			weapon: &Weapon{
-				Base:           BasicEquipment{Key: "rapier", Name: "Rapier"},
+			weapon: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: "rapier", Name: "Rapier"},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 8, DamageType: damage.TypePiercing},
-				Properties:     []*ReferenceItem{{Key: "finesse"}},
+				Properties:     []*shared.ReferenceItem{{Key: "finesse"}},
 			},
-			features:       []*CharacterFeature{}, // No special features needed
-			strScore:       10,                    // +0 bonus
-			dexScore:       16,                    // +3 bonus
-			expectedAttack: 5,                     // DEX(3) + proficiency(2)
-			expectedDamage: 3,                     // DEX(3)
+			features:       []*rulebook.CharacterFeature{}, // No special features needed
+			strScore:       10,                             // +0 bonus
+			dexScore:       16,                             // +3 bonus
+			expectedAttack: 5,                              // DEX(3) + proficiency(2)
+			expectedDamage: 3,                              // DEX(3)
 			description:    "Finesse weapons should use DEX when it's higher",
 		},
 		{
 			name: "Rapier uses STR when higher than DEX",
-			weapon: &Weapon{
-				Base:           BasicEquipment{Key: "rapier", Name: "Rapier"},
+			weapon: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: "rapier", Name: "Rapier"},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 8, DamageType: damage.TypePiercing},
-				Properties:     []*ReferenceItem{{Key: "finesse"}},
+				Properties:     []*shared.ReferenceItem{{Key: "finesse"}},
 			},
-			features:       []*CharacterFeature{},
+			features:       []*rulebook.CharacterFeature{},
 			strScore:       18, // +4 bonus
 			dexScore:       14, // +2 bonus
 			expectedAttack: 6,  // STR(4) + proficiency(2)
@@ -102,14 +106,14 @@ func TestFinesseWeapon_UseDexForAttack(t *testing.T) {
 		},
 		{
 			name: "Non-finesse weapon must use STR",
-			weapon: &Weapon{
-				Base:           BasicEquipment{Key: "longsword", Name: "Longsword"},
+			weapon: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: "longsword", Name: "Longsword"},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 8, DamageType: damage.TypeSlashing},
-				Properties:     []*ReferenceItem{{Key: "versatile"}},
+				Properties:     []*shared.ReferenceItem{{Key: "versatile"}},
 			},
-			features:       []*CharacterFeature{},
+			features:       []*rulebook.CharacterFeature{},
 			strScore:       10, // +0 bonus
 			dexScore:       18, // +4 bonus
 			expectedAttack: 2,  // STR(0) + proficiency(2)
@@ -118,14 +122,14 @@ func TestFinesseWeapon_UseDexForAttack(t *testing.T) {
 		},
 		{
 			name: "Monk with rapier uses DEX (both finesse and martial arts apply)",
-			weapon: &Weapon{
-				Base:           BasicEquipment{Key: "rapier", Name: "Rapier"},
+			weapon: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: "rapier", Name: "Rapier"},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 8, DamageType: damage.TypePiercing},
-				Properties:     []*ReferenceItem{{Key: "finesse"}},
+				Properties:     []*shared.ReferenceItem{{Key: "finesse"}},
 			},
-			features:       []*CharacterFeature{{Key: "martial-arts", Name: "Martial Arts"}},
+			features:       []*rulebook.CharacterFeature{{Key: "martial-arts", Name: "Martial Arts"}},
 			strScore:       10, // +0 bonus
 			dexScore:       16, // +3 bonus
 			expectedAttack: 5,  // DEX(3) + proficiency(2)
@@ -137,25 +141,25 @@ func TestFinesseWeapon_UseDexForAttack(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create character
-			char := &Character{
+			char := &character.Character{
 				Level:    1,
 				Features: tt.features,
-				Attributes: map[Attribute]*AbilityScore{
-					AttributeStrength: {
+				Attributes: map[character.Attribute]*character.AbilityScore{
+					character.AttributeStrength: {
 						Score: tt.strScore,
 						Bonus: (tt.strScore - 10) / 2,
 					},
-					AttributeDexterity: {
+					character.AttributeDexterity: {
 						Score: tt.dexScore,
 						Bonus: (tt.dexScore - 10) / 2,
 					},
 				},
-				EquippedSlots: map[Slot]Equipment{
-					SlotMainHand: tt.weapon,
+				EquippedSlots: map[character.Slot]equipment.Equipment{
+					character.SlotMainHand: tt.weapon,
 				},
 				// Give proficiency with all weapons for testing
-				Proficiencies: map[ProficiencyType][]*Proficiency{
-					ProficiencyTypeWeapon: {
+				Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+					rulebook.ProficiencyTypeWeapon: {
 						{Key: tt.weapon.GetKey(), Name: tt.weapon.GetName()},
 						{Key: "martial-weapons", Name: "Martial Weapons"},
 					},
@@ -185,32 +189,32 @@ func TestFinesseWeapon_UseDexForAttack(t *testing.T) {
 
 func TestFinesseWeapon_DualWielding(t *testing.T) {
 	// Create a character with two finesse weapons
-	character := &Character{
+	character := &character.Character{
 		Name:  "Dual Wielder",
 		Level: 1,
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeStrength:  {Score: 12, Bonus: 1}, // +1
-			AttributeDexterity: {Score: 16, Bonus: 3}, // +3
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeStrength:  {Score: 12, Bonus: 1}, // +1
+			character.AttributeDexterity: {Score: 16, Bonus: 3}, // +3
 		},
-		Features: []*CharacterFeature{}, // No special features
-		EquippedSlots: map[Slot]Equipment{
-			SlotMainHand: &Weapon{
-				Base:           BasicEquipment{Key: "rapier", Name: "Rapier"},
+		Features: []*rulebook.CharacterFeature{}, // No special features
+		EquippedSlots: map[character.Slot]equipment.Equipment{
+			character.SlotMainHand: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: "rapier", Name: "Rapier"},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 8, DamageType: damage.TypePiercing},
-				Properties:     []*ReferenceItem{{Key: "finesse"}},
+				Properties:     []*shared.ReferenceItem{{Key: "finesse"}},
 			},
-			SlotOffHand: &Weapon{
-				Base:           BasicEquipment{Key: "dagger", Name: "Dagger"},
+			character.SlotOffHand: &equipment.Weapon{
+				Base:           equipment.BasicEquipment{Key: "dagger", Name: "Dagger"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
 				Damage:         &damage.Damage{DiceCount: 1, DiceSize: 4, DamageType: damage.TypePiercing},
-				Properties:     []*ReferenceItem{{Key: "finesse"}, {Key: "light"}},
+				Properties:     []*shared.ReferenceItem{{Key: "finesse"}, {Key: "light"}},
 			},
 		},
-		Proficiencies: map[ProficiencyType][]*Proficiency{
-			ProficiencyTypeWeapon: {
+		Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+			rulebook.ProficiencyTypeWeapon: {
 				{Key: "rapier", Name: "Rapier"},
 				{Key: "dagger", Name: "Dagger"},
 				{Key: "simple-weapons", Name: "Simple Weapons"},

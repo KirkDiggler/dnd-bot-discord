@@ -5,13 +5,13 @@ package character_test
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"log"
 	"net/http"
 	"os"
 	"testing"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	charactersRepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/redis/go-redis/v9"
@@ -105,7 +105,7 @@ func TestInventoryDisplayBug(t *testing.T) {
 			log.Printf("Type '%s': %d items", eqType, len(items))
 			totalItems += len(items)
 
-			if eqType == entities.EquipmentTypeWeapon {
+			if eqType == equipment.EquipmentTypeWeapon {
 				weaponTypeCount = len(items)
 			}
 			if eqType == "BasicEquipment" {
@@ -130,8 +130,8 @@ func TestInventoryDisplayBug(t *testing.T) {
 		assert.Greater(t, weaponTypeCount, 0, "Should have weapons with EquipmentTypeWeapon")
 
 		// After fix: weapons should use the constant
-		for _, item := range finalChar.Inventory[entities.EquipmentTypeWeapon] {
-			assert.Equal(t, entities.EquipmentTypeWeapon, item.GetEquipmentType(),
+		for _, item := range finalChar.Inventory[equipment.EquipmentTypeWeapon] {
+			assert.Equal(t, equipment.EquipmentTypeWeapon, item.GetEquipmentType(),
 				"Weapon should return EquipmentTypeWeapon constant")
 		}
 	})

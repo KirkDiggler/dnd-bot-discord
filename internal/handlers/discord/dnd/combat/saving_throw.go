@@ -2,10 +2,10 @@ package combat
 
 import (
 	"fmt"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"log"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
 	"github.com/bwmarrin/discordgo"
@@ -33,7 +33,7 @@ func NewSavingThrowHandler(cfg *SavingThrowHandlerConfig) *SavingThrowHandler {
 
 // ShowSavingThrowPrompt displays a prompt for a player to make a saving throw
 func (h *SavingThrowHandler) ShowSavingThrowPrompt(s *discordgo.Session, i *discordgo.InteractionCreate,
-	char *entities.Character, attribute entities.Attribute, dc int, reason string) error {
+	char *character2.Character, attribute character2.Attribute, dc int, reason string) error {
 
 	// Calculate the bonus
 	bonus := char.GetSavingThrowBonus(attribute)
@@ -92,7 +92,7 @@ func (h *SavingThrowHandler) ShowSavingThrowPrompt(s *discordgo.Session, i *disc
 
 // HandleSavingThrowRoll processes a saving throw roll
 func (h *SavingThrowHandler) HandleSavingThrowRoll(s *discordgo.Session, i *discordgo.InteractionCreate,
-	characterID string, attribute entities.Attribute, dc int) error {
+	characterID string, attribute character2.Attribute, dc int) error {
 
 	// Get the character
 	char, err := h.characterService.GetByID(characterID)

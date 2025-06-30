@@ -4,36 +4,35 @@ package gamesessions
 
 import (
 	"context"
-
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 )
 
 // Repository defines the interface for game session storage
 type Repository interface {
 	// Create creates a new session
-	Create(ctx context.Context, session *entities.Session) error
+	Create(ctx context.Context, session *session.Session) error
 
 	// Get retrieves a session by ID
-	Get(ctx context.Context, id string) (*entities.Session, error)
+	Get(ctx context.Context, id string) (*session.Session, error)
 
 	// GetByInviteCode retrieves a session by its invite code
-	GetByInviteCode(ctx context.Context, code string) (*entities.Session, error)
+	GetByInviteCode(ctx context.Context, code string) (*session.Session, error)
 
 	// Update updates an existing session
-	Update(ctx context.Context, session *entities.Session) error
+	Update(ctx context.Context, session *session.Session) error
 
 	// Delete removes a session
 	Delete(ctx context.Context, id string) error
 
 	// GetByRealm retrieves all sessions for a realm (Discord server)
-	GetByRealm(ctx context.Context, realmID string) ([]*entities.Session, error)
+	GetByRealm(ctx context.Context, realmID string) ([]*session.Session, error)
 
 	// GetByUser retrieves all sessions a user is part of
-	GetByUser(ctx context.Context, userID string) ([]*entities.Session, error)
+	GetByUser(ctx context.Context, userID string) ([]*session.Session, error)
 
 	// GetActiveByRealm retrieves all active sessions for a realm
-	GetActiveByRealm(ctx context.Context, realmID string) ([]*entities.Session, error)
+	GetActiveByRealm(ctx context.Context, realmID string) ([]*session.Session, error)
 
 	// GetActiveByUser retrieves all active sessions a user is part of
-	GetActiveByUser(ctx context.Context, userID string) ([]*entities.Session, error)
+	GetActiveByUser(ctx context.Context, userID string) ([]*session.Session, error)
 }

@@ -4,11 +4,11 @@
 package dnd5e_test
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"net/http"
 	"testing"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -93,7 +93,7 @@ func TestClient_GetClassFeatures_Integration(t *testing.T) {
 	for _, feature := range features {
 		assert.NotEmpty(t, feature.Key, "Feature should have a key")
 		assert.NotEmpty(t, feature.Name, "Feature should have a name")
-		assert.Equal(t, entities.FeatureTypeClass, feature.Type)
+		assert.Equal(t, rulebook.FeatureTypeClass, feature.Type)
 		assert.Equal(t, 1, feature.Level)
 		assert.Equal(t, "fighter", feature.Source)
 	}

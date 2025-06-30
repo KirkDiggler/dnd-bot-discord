@@ -5,12 +5,12 @@ package loot
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"log"
 	"math/rand"
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 )
 
@@ -27,7 +27,7 @@ type Service interface {
 type LootTable struct {
 	Gold      GoldRange
 	Items     []LootItem
-	MagicItem *entities.Equipment // Optional magic item
+	MagicItem *equipment.Equipment // Optional magic item
 }
 
 // GoldRange represents a range of gold pieces
@@ -186,7 +186,7 @@ func (s *service) getGoldRangeForCR(cr float64) GoldRange {
 }
 
 // getRandomEquipment tries to get a random equipment item from the API
-func (s *service) getRandomEquipment(ctx context.Context) (entities.Equipment, error) {
+func (s *service) getRandomEquipment(ctx context.Context) (equipment.Equipment, error) {
 	if s.dndClient == nil {
 		return nil, dnderr.NotFound("DND client not available")
 	}

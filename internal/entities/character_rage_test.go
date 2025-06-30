@@ -1,32 +1,35 @@
 package entities
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"testing"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCharacter_RageDamageBonus(t *testing.T) {
 	// Create a barbarian character
-	char := &Character{
+	char := &character.Character{
 		ID:    "barbarian_1",
 		Name:  "Grog",
 		Level: 1,
-		Class: &Class{
+		Class: &rulebook.Class{
 			Key:  "barbarian",
 			Name: "Barbarian",
 		},
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeStrength: {Score: 16, Bonus: 3},
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeStrength: {Score: 16, Bonus: 3},
 		},
 	}
 
 	// Create a simple weapon
-	weapon := &Weapon{
-		Base: BasicEquipment{
+	weapon := &equipment.Weapon{
+		Base: equipment.BasicEquipment{
 			Key:  "handaxe",
 			Name: "Handaxe",
 		},
@@ -89,11 +92,11 @@ func TestCharacter_RageDamageBonus(t *testing.T) {
 
 func TestCharacter_RageDamageResistance(t *testing.T) {
 	// Create a barbarian character
-	char := &Character{
+	char := &character.Character{
 		ID:    "barbarian_1",
 		Name:  "Grog",
 		Level: 1,
-		Class: &Class{
+		Class: &rulebook.Class{
 			Key:  "barbarian",
 			Name: "Barbarian",
 		},
@@ -128,7 +131,7 @@ func TestCharacter_RageDamageResistance(t *testing.T) {
 
 func TestCharacter_MultipleStatusEffects(t *testing.T) {
 	// Create a character
-	char := &Character{
+	char := &character.Character{
 		ID:    "test_char",
 		Name:  "Test",
 		Level: 1,

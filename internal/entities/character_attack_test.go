@@ -1,10 +1,12 @@
 package entities_test
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -12,21 +14,21 @@ import (
 func TestCharacter_Attack_ImprovisedMelee(t *testing.T) {
 	tests := []struct {
 		name string
-		char *entities.Character
+		char *character.Character
 	}{
 		{
 			name: "Character with no equipment uses improvised attack",
-			char: &entities.Character{
+			char: &character.Character{
 				Name:  "Test Fighter",
 				Level: 1,
-				Attributes: map[entities.Attribute]*entities.AbilityScore{
-					entities.AttributeStrength: {Score: 14, Bonus: 2},
+				Attributes: map[character.Attribute]*character.AbilityScore{
+					character.AttributeStrength: {Score: 14, Bonus: 2},
 				},
 			},
 		},
 		{
 			name: "Character with nil attributes doesn't crash",
-			char: &entities.Character{
+			char: &character.Character{
 				Name:       "Broken Character",
 				Level:      1,
 				Attributes: nil,
@@ -34,12 +36,12 @@ func TestCharacter_Attack_ImprovisedMelee(t *testing.T) {
 		},
 		{
 			name: "Character with empty equipped slots",
-			char: &entities.Character{
+			char: &character.Character{
 				Name:          "Empty Handed",
 				Level:         1,
-				EquippedSlots: make(map[entities.Slot]entities.Equipment),
-				Attributes: map[entities.Attribute]*entities.AbilityScore{
-					entities.AttributeStrength: {Score: 10, Bonus: 0},
+				EquippedSlots: make(map[character.Slot]equipment.Equipment),
+				Attributes: map[character.Attribute]*character.AbilityScore{
+					character.AttributeStrength: {Score: 10, Bonus: 0},
 				},
 			},
 		},
@@ -67,16 +69,16 @@ func TestCharacter_Attack_ImprovisedMelee(t *testing.T) {
 }
 
 func TestCharacter_Attack_WithWeapon(t *testing.T) {
-	char := &entities.Character{
+	char := &character.Character{
 		Name:  "Armed Fighter",
 		Level: 3,
-		Attributes: map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeStrength:  {Score: 16, Bonus: 3},
-			entities.AttributeDexterity: {Score: 12, Bonus: 1},
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeStrength:  {Score: 16, Bonus: 3},
+			character.AttributeDexterity: {Score: 12, Bonus: 1},
 		},
-		EquippedSlots: map[entities.Slot]entities.Equipment{
-			entities.SlotMainHand: &entities.Weapon{
-				Base: entities.BasicEquipment{
+		EquippedSlots: map[character.Slot]equipment.Equipment{
+			character.SlotMainHand: &equipment.Weapon{
+				Base: equipment.BasicEquipment{
 					Key:  "shortsword",
 					Name: "Shortsword",
 				},
@@ -88,8 +90,8 @@ func TestCharacter_Attack_WithWeapon(t *testing.T) {
 				WeaponRange: "Melee",
 			},
 		},
-		Proficiencies: map[entities.ProficiencyType][]*entities.Proficiency{
-			entities.ProficiencyTypeWeapon: {
+		Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+			rulebook.ProficiencyTypeWeapon: {
 				{Key: "shortsword", Name: "Shortsword"},
 			},
 		},

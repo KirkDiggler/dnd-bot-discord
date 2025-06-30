@@ -3,10 +3,11 @@ package characters
 import (
 	"context"
 	"encoding/json"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"testing"
 	"time"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	mockredis "github.com/KirkDiggler/dnd-bot-discord/internal/mocks/redis"
 	mockUUID "github.com/KirkDiggler/dnd-bot-discord/internal/uuid/mocks"
@@ -43,27 +44,27 @@ func TestRedisMockTestSuite(t *testing.T) {
 }
 
 // Helper function to create test character
-func (s *RedisMockTestSuite) createTestCharacter() *entities.Character {
-	return &entities.Character{
+func (s *RedisMockTestSuite) createTestCharacter() *character.Character {
+	return &character.Character{
 		ID:               "test-id",
 		OwnerID:          "owner-id",
 		RealmID:          "realm-id",
 		Name:             "Test Character",
 		Level:            1,
-		Race:             &entities.Race{Key: "human", Name: "Human"},
-		Class:            &entities.Class{Key: "fighter", Name: "Fighter"},
+		Race:             &rulebook.Race{Key: "human", Name: "Human"},
+		Class:            &rulebook.Class{Key: "fighter", Name: "Fighter"},
 		HitDie:           10,
 		MaxHitPoints:     10,
 		CurrentHitPoints: 10,
-		Attributes: map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeStrength:     {Score: 16, Bonus: 3},
-			entities.AttributeDexterity:    {Score: 14, Bonus: 2},
-			entities.AttributeConstitution: {Score: 15, Bonus: 2},
-			entities.AttributeIntelligence: {Score: 10, Bonus: 0},
-			entities.AttributeWisdom:       {Score: 12, Bonus: 1},
-			entities.AttributeCharisma:     {Score: 8, Bonus: -1},
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeStrength:     {Score: 16, Bonus: 3},
+			character.AttributeDexterity:    {Score: 14, Bonus: 2},
+			character.AttributeConstitution: {Score: 15, Bonus: 2},
+			character.AttributeIntelligence: {Score: 10, Bonus: 0},
+			character.AttributeWisdom:       {Score: 12, Bonus: 1},
+			character.AttributeCharisma:     {Score: 8, Bonus: -1},
 		},
-		Status: entities.CharacterStatusActive,
+		Status: character.CharacterStatusActive,
 	}
 }
 

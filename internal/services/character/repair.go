@@ -2,9 +2,9 @@ package character
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"log"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 )
 
@@ -32,7 +32,7 @@ func (s *service) RepairCharacterAttributes(ctx context.Context, characterID str
 	}
 
 	// Initialize attributes map
-	char.Attributes = make(map[entities.Attribute]*entities.AbilityScore)
+	char.Attributes = make(map[character.Attribute]*character.AbilityScore)
 
 	// Convert assignments to attributes
 	for abilityStr, rollID := range char.AbilityAssignments {
@@ -42,20 +42,20 @@ func (s *service) RepairCharacterAttributes(ctx context.Context, characterID str
 		}
 		rollValue := rollValues[rollID]
 		// Parse ability string to Attribute type
-		var attr entities.Attribute
+		var attr character.Attribute
 		switch abilityStr {
 		case "STR":
-			attr = entities.AttributeStrength
+			attr = character.AttributeStrength
 		case "DEX":
-			attr = entities.AttributeDexterity
+			attr = character.AttributeDexterity
 		case "CON":
-			attr = entities.AttributeConstitution
+			attr = character.AttributeConstitution
 		case "INT":
-			attr = entities.AttributeIntelligence
+			attr = character.AttributeIntelligence
 		case "WIS":
-			attr = entities.AttributeWisdom
+			attr = character.AttributeWisdom
 		case "CHA":
-			attr = entities.AttributeCharisma
+			attr = character.AttributeCharisma
 		default:
 			continue
 		}
@@ -76,7 +76,7 @@ func (s *service) RepairCharacterAttributes(ctx context.Context, characterID str
 		modifier := (score - 10) / 2
 
 		// Create ability score
-		char.Attributes[attr] = &entities.AbilityScore{
+		char.Attributes[attr] = &character.AbilityScore{
 			Score: score,
 			Bonus: modifier,
 		}
@@ -87,7 +87,7 @@ func (s *service) RepairCharacterAttributes(ctx context.Context, characterID str
 	if char.MaxHitPoints == 0 && char.Class != nil {
 		conMod := 0
 		if char.Attributes != nil {
-			if con, ok := char.Attributes[entities.AttributeConstitution]; ok && con != nil {
+			if con, ok := char.Attributes[character.AttributeConstitution]; ok && con != nil {
 				conMod = con.Bonus
 			}
 		}
@@ -101,7 +101,7 @@ func (s *service) RepairCharacterAttributes(ctx context.Context, characterID str
 		dexMod := 0
 
 		if char.Attributes != nil {
-			if dex, ok := char.Attributes[entities.AttributeDexterity]; ok && dex != nil {
+			if dex, ok := char.Attributes[character.AttributeDexterity]; ok && dex != nil {
 				dexMod = dex.Bonus
 			}
 		}

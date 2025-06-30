@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"log"
 	"os"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -52,7 +52,7 @@ func main() {
 	}
 
 	// Parse the session
-	var session entities.Session
+	var session session.Session
 	if err := json.Unmarshal([]byte(data), &session); err != nil {
 		log.Printf("Failed to parse session: %v", err)
 		return

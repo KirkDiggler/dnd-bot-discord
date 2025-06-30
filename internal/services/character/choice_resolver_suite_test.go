@@ -2,10 +2,11 @@ package character_test
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -42,28 +43,28 @@ func TestChoiceResolverSuite(t *testing.T) {
 
 func (s *ChoiceResolverTestSuite) TestResolveProficiencyChoices_FighterWithSkillChoices() {
 	// Setup
-	race := &entities.Race{
+	race := &rulebook.Race{
 		Key:  "human",
 		Name: "Human",
 	}
 
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "fighter",
 		Name: "Fighter",
-		ProficiencyChoices: []*entities.Choice{
+		ProficiencyChoices: []*shared.Choice{
 			{
 				Name:  "Choose 2 skills",
 				Count: 2,
-				Type:  entities.ChoiceTypeProficiency,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeProficiency,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "skill-athletics",
 							Name: "Athletics",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "skill-intimidation",
 							Name: "Intimidation",
 						},
@@ -89,22 +90,22 @@ func (s *ChoiceResolverTestSuite) TestResolveProficiencyChoices_FighterWithSkill
 
 func (s *ChoiceResolverTestSuite) TestResolveProficiencyChoices_MonkWithNestedToolChoice() {
 	// Setup
-	race := &entities.Race{
+	race := &rulebook.Race{
 		Key:  "human",
 		Name: "Human",
 	}
 
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "monk",
 		Name: "Monk",
-		ProficiencyChoices: []*entities.Choice{
+		ProficiencyChoices: []*shared.Choice{
 			{
 				Name:  "Choose 2 skills",
 				Count: 2,
-				Type:  entities.ChoiceTypeProficiency,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeProficiency,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "skill-acrobatics",
 							Name: "Acrobatics",
 						},
@@ -114,10 +115,10 @@ func (s *ChoiceResolverTestSuite) TestResolveProficiencyChoices_MonkWithNestedTo
 			{
 				Name:  "Choose 1 tool or instrument",
 				Count: 1,
-				Type:  entities.ChoiceTypeProficiency,
-				Options: []entities.Option{
+				Type:  shared.ChoiceTypeProficiency,
+				Options: []shared.Option{
 					// Nested choice detected
-					&entities.Choice{
+					&shared.Choice{
 						Name:  "Artisan's Tools",
 						Count: 1,
 					},
@@ -146,22 +147,22 @@ func (s *ChoiceResolverTestSuite) TestResolveProficiencyChoices_MonkWithNestedTo
 
 func (s *ChoiceResolverTestSuite) TestResolveProficiencyChoices_RaceWithProficiencyChoices() {
 	// Setup
-	race := &entities.Race{
+	race := &rulebook.Race{
 		Key:  "half-elf",
 		Name: "Half-Elf",
-		StartingProficiencyOptions: &entities.Choice{
+		StartingProficiencyOptions: &shared.Choice{
 			Name:  "Choose 2 skills",
 			Count: 2,
-			Type:  entities.ChoiceTypeProficiency,
-			Options: []entities.Option{
-				&entities.ReferenceOption{
-					Reference: &entities.ReferenceItem{
+			Type:  shared.ChoiceTypeProficiency,
+			Options: []shared.Option{
+				&shared.ReferenceOption{
+					Reference: &shared.ReferenceItem{
 						Key:  "skill-perception",
 						Name: "Perception",
 					},
 				},
-				&entities.ReferenceOption{
-					Reference: &entities.ReferenceItem{
+				&shared.ReferenceOption{
+					Reference: &shared.ReferenceItem{
 						Key:  "skill-insight",
 						Name: "Insight",
 					},
@@ -170,7 +171,7 @@ func (s *ChoiceResolverTestSuite) TestResolveProficiencyChoices_RaceWithProficie
 		},
 	}
 
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "fighter",
 		Name: "Fighter",
 		// No proficiency choices
@@ -190,12 +191,12 @@ func (s *ChoiceResolverTestSuite) TestResolveProficiencyChoices_RaceWithProficie
 
 func (s *ChoiceResolverTestSuite) TestResolveProficiencyChoices_EmptyChoices() {
 	// Setup
-	race := &entities.Race{
+	race := &rulebook.Race{
 		Key:  "human",
 		Name: "Human",
 	}
 
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "fighter",
 		Name: "Fighter",
 		// No proficiency choices
@@ -213,22 +214,22 @@ func (s *ChoiceResolverTestSuite) TestResolveProficiencyChoices_EmptyChoices() {
 
 func (s *ChoiceResolverTestSuite) TestResolveEquipmentChoices_FighterEquipment() {
 	// Setup
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "fighter",
 		Name: "Fighter",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "Choose armor",
 				Count: 1,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "chain-mail",
 							Name: "Chain Mail",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "leather-armor",
 							Name: "Leather Armor",
 						},
@@ -238,10 +239,10 @@ func (s *ChoiceResolverTestSuite) TestResolveEquipmentChoices_FighterEquipment()
 			{
 				Name:  "Choose weapon",
 				Count: 1,
-				Options: []entities.Option{
-					&entities.CountedReferenceOption{
+				Options: []shared.Option{
+					&shared.CountedReferenceOption{
 						Count: 2,
-						Reference: &entities.ReferenceItem{
+						Reference: &shared.ReferenceItem{
 							Key:  "shortsword",
 							Name: "Shortsword",
 						},
@@ -276,7 +277,7 @@ func (s *ChoiceResolverTestSuite) TestResolveEquipmentChoices_FighterEquipment()
 
 func (s *ChoiceResolverTestSuite) TestResolveEquipmentChoices_NoChoices() {
 	// Setup
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "monk",
 		Name: "Monk",
 		// No equipment choices
@@ -292,10 +293,10 @@ func (s *ChoiceResolverTestSuite) TestResolveEquipmentChoices_NoChoices() {
 
 func (s *ChoiceResolverTestSuite) TestResolveEquipmentChoices_NilOptions() {
 	// Setup
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "wizard",
 		Name: "Wizard",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:    "Choose focus",
 				Count:   1,
@@ -304,7 +305,7 @@ func (s *ChoiceResolverTestSuite) TestResolveEquipmentChoices_NilOptions() {
 			{
 				Name:    "Choose weapon",
 				Count:   1,
-				Options: []entities.Option{}, // Empty options
+				Options: []shared.Option{}, // Empty options
 			},
 		},
 	}
@@ -321,8 +322,8 @@ func (s *ChoiceResolverTestSuite) TestResolveEquipmentChoices_NilOptions() {
 
 func (s *ChoiceResolverTestSuite) TestValidateProficiencySelections_NotImplemented() {
 	// Setup
-	race := &entities.Race{Key: "human", Name: "Human"}
-	class := &entities.Class{Key: "fighter", Name: "Fighter"}
+	race := &rulebook.Race{Key: "human", Name: "Human"}
+	class := &rulebook.Class{Key: "fighter", Name: "Fighter"}
 	selections := []string{"skill-athletics", "skill-intimidation"}
 
 	// Execute

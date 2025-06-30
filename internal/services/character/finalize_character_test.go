@@ -2,9 +2,9 @@ package character_test
 
 import (
 	"context"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/testutils"
@@ -23,7 +23,7 @@ func TestFinalizeDraftCharacter(t *testing.T) {
 	t.Run("successfully finalizes draft character", func(t *testing.T) {
 		// Create a draft character
 		draft := testutils.CreateTestCharacter("test-char-1", "user-123", "realm-456", "Gandalf")
-		draft.Status = entities.CharacterStatusDraft
+		draft.Status = character2.CharacterStatusDraft
 		err := repo.Create(ctx, draft)
 		require.NoError(t, err)
 
@@ -33,19 +33,19 @@ func TestFinalizeDraftCharacter(t *testing.T) {
 		require.NotNil(t, finalized)
 
 		// Verify status changed to active
-		assert.Equal(t, entities.CharacterStatusActive, finalized.Status)
+		assert.Equal(t, character2.CharacterStatusActive, finalized.Status)
 		assert.Equal(t, "Gandalf", finalized.Name)
 
 		// Verify it's persisted
 		stored, err := repo.Get(ctx, draft.ID)
 		require.NoError(t, err)
-		assert.Equal(t, entities.CharacterStatusActive, stored.Status)
+		assert.Equal(t, character2.CharacterStatusActive, stored.Status)
 	})
 
 	t.Run("cannot finalize non-draft character", func(t *testing.T) {
 		// Create an active character
 		active := testutils.CreateTestCharacter("test-char-2", "user-123", "realm-456", "Aragorn")
-		active.Status = entities.CharacterStatusActive
+		active.Status = character2.CharacterStatusActive
 		err := repo.Create(ctx, active)
 		require.NoError(t, err)
 
@@ -58,13 +58,13 @@ func TestFinalizeDraftCharacter(t *testing.T) {
 	t.Run("character must have name before finalizing", func(t *testing.T) {
 		// Create a draft without name
 		draft := testutils.CreateTestCharacter("test-char-3", "user-123", "realm-456", "")
-		draft.Status = entities.CharacterStatusDraft
+		draft.Status = character2.CharacterStatusDraft
 		err := repo.Create(ctx, draft)
 		require.NoError(t, err)
 
 		// Should still finalize (name validation happens elsewhere)
 		finalized, err := service.FinalizeDraftCharacter(ctx, draft.ID)
 		require.NoError(t, err)
-		assert.Equal(t, entities.CharacterStatusActive, finalized.Status)
+		assert.Equal(t, character2.CharacterStatusActive, finalized.Status)
 	})
 }

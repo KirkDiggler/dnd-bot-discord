@@ -5,9 +5,11 @@ package ability
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/testutils"
 	"github.com/stretchr/testify/assert"
@@ -22,25 +24,25 @@ func TestBasicRedisIntegration(t *testing.T) {
 	charRepo := characters.NewRedis(redisClient)
 
 	// Create a simple character
-	char := &entities.Character{
+	char := &character.Character{
 		ID:               "test_123",
 		OwnerID:          "player_123",
 		RealmID:          "realm_123",
 		Name:             "TestChar",
-		Class:            &entities.Class{Key: "fighter", Name: "Fighter"},
+		Class:            &rulebook.Class{Key: "fighter", Name: "Fighter"},
 		Level:            1,
-		Status:           entities.CharacterStatusActive,
+		Status:           character.CharacterStatusActive,
 		CurrentHitPoints: 10,
 		MaxHitPoints:     10,
-		Resources: &entities.CharacterResources{
-			Abilities: map[string]*entities.ActiveAbility{
+		Resources: &shared.CharacterResources{
+			Abilities: map[string]*character.ActiveAbility{
 				"test_ability": {
 					Name:          "Test Ability",
 					Key:           "test_ability",
-					ActionType:    entities.AbilityTypeAction,
+					ActionType:    character.AbilityTypeAction,
 					UsesMax:       3,
 					UsesRemaining: 3,
-					RestType:      entities.RestTypeLong,
+					RestType:      character.RestTypeLong,
 				},
 			},
 		},

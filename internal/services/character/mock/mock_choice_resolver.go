@@ -6,9 +6,9 @@ package mockcharacters
 
 import (
 	context "context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	reflect "reflect"
 
-	entities "github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	character "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -37,7 +37,7 @@ func (m *MockChoiceResolver) EXPECT() *MockChoiceResolverMockRecorder {
 }
 
 // ResolveEquipmentChoices mocks base method.
-func (m *MockChoiceResolver) ResolveEquipmentChoices(ctx context.Context, class *entities.Class) ([]character.SimplifiedChoice, error) {
+func (m *MockChoiceResolver) ResolveEquipmentChoices(ctx context.Context, class *rulebook.Class) ([]character.SimplifiedChoice, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResolveEquipmentChoices", ctx, class)
 	ret0, _ := ret[0].([]character.SimplifiedChoice)
@@ -52,7 +52,7 @@ func (mr *MockChoiceResolverMockRecorder) ResolveEquipmentChoices(ctx, class int
 }
 
 // ResolveProficiencyChoices mocks base method.
-func (m *MockChoiceResolver) ResolveProficiencyChoices(ctx context.Context, race *entities.Race, class *entities.Class) ([]character.SimplifiedChoice, error) {
+func (m *MockChoiceResolver) ResolveProficiencyChoices(ctx context.Context, race *rulebook.Race, class *rulebook.Class) ([]character.SimplifiedChoice, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResolveProficiencyChoices", ctx, race, class)
 	ret0, _ := ret[0].([]character.SimplifiedChoice)
@@ -67,7 +67,7 @@ func (mr *MockChoiceResolverMockRecorder) ResolveProficiencyChoices(ctx, race, c
 }
 
 // ValidateProficiencySelections mocks base method.
-func (m *MockChoiceResolver) ValidateProficiencySelections(ctx context.Context, race *entities.Race, class *entities.Class, selections []string) error {
+func (m *MockChoiceResolver) ValidateProficiencySelections(ctx context.Context, race *rulebook.Race, class *rulebook.Class, selections []string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ValidateProficiencySelections", ctx, race, class, selections)
 	ret0, _ := ret[0].(error)

@@ -2,9 +2,9 @@ package characters
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"sync"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 )
 
@@ -12,18 +12,18 @@ import (
 // Useful for testing and development
 type InMemoryRepository struct {
 	mu         sync.RWMutex
-	characters map[string]*entities.Character
+	characters map[string]*character.Character
 }
 
 // NewInMemoryRepository creates a new in-memory repository
 func NewInMemoryRepository() Repository {
 	return &InMemoryRepository{
-		characters: make(map[string]*entities.Character),
+		characters: make(map[string]*character.Character),
 	}
 }
 
 // Create stores a new character
-func (r *InMemoryRepository) Create(ctx context.Context, character *entities.Character) error {
+func (r *InMemoryRepository) Create(ctx context.Context, character *character.Character) error {
 	if character == nil {
 		return dnderr.InvalidArgument("character cannot be nil")
 	}
@@ -47,7 +47,7 @@ func (r *InMemoryRepository) Create(ctx context.Context, character *entities.Cha
 }
 
 // Get retrieves a character by ID
-func (r *InMemoryRepository) Get(ctx context.Context, id string) (*entities.Character, error) {
+func (r *InMemoryRepository) Get(ctx context.Context, id string) (*character.Character, error) {
 	if id == "" {
 		return nil, dnderr.InvalidArgument("character ID is required")
 	}
@@ -66,7 +66,7 @@ func (r *InMemoryRepository) Get(ctx context.Context, id string) (*entities.Char
 }
 
 // GetByOwner retrieves all characters for a specific owner
-func (r *InMemoryRepository) GetByOwner(ctx context.Context, ownerID string) ([]*entities.Character, error) {
+func (r *InMemoryRepository) GetByOwner(ctx context.Context, ownerID string) ([]*character.Character, error) {
 	if ownerID == "" {
 		return nil, dnderr.InvalidArgument("owner ID is required")
 	}
@@ -74,7 +74,7 @@ func (r *InMemoryRepository) GetByOwner(ctx context.Context, ownerID string) ([]
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	var result []*entities.Character
+	var result []*character.Character
 	for _, char := range r.characters {
 		if char.OwnerID == ownerID {
 			// Create a copy
@@ -86,7 +86,7 @@ func (r *InMemoryRepository) GetByOwner(ctx context.Context, ownerID string) ([]
 }
 
 // GetByOwnerAndRealm retrieves all characters for a specific owner in a realm
-func (r *InMemoryRepository) GetByOwnerAndRealm(ctx context.Context, ownerID, realmID string) ([]*entities.Character, error) {
+func (r *InMemoryRepository) GetByOwnerAndRealm(ctx context.Context, ownerID, realmID string) ([]*character.Character, error) {
 	if ownerID == "" {
 		return nil, dnderr.InvalidArgument("owner ID is required")
 	}
@@ -98,7 +98,7 @@ func (r *InMemoryRepository) GetByOwnerAndRealm(ctx context.Context, ownerID, re
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	var result []*entities.Character
+	var result []*character.Character
 	for _, char := range r.characters {
 		if char.OwnerID == ownerID && char.RealmID == realmID {
 			// Create a copy
@@ -110,7 +110,7 @@ func (r *InMemoryRepository) GetByOwnerAndRealm(ctx context.Context, ownerID, re
 }
 
 // Update updates an existing character
-func (r *InMemoryRepository) Update(ctx context.Context, character *entities.Character) error {
+func (r *InMemoryRepository) Update(ctx context.Context, character *character.Character) error {
 	if character == nil {
 		return dnderr.InvalidArgument("character cannot be nil")
 	}

@@ -2,8 +2,7 @@ package ability
 
 import (
 	"context"
-
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 )
 
 // Service defines the ability service interface
@@ -46,7 +45,7 @@ type UseAbilityResult struct {
 
 // AvailableAbility represents an ability and whether it can be used
 type AvailableAbility struct {
-	Ability   *entities.ActiveAbility
+	Ability   *character.ActiveAbility
 	Available bool
 	Reason    string // Why it's not available (e.g., "No uses remaining", "Wrong action type")
 }

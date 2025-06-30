@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"time"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/uuid"
 	"github.com/redis/go-redis/v9"
 )
@@ -55,7 +55,7 @@ func NewRedisRepository(cfg *RedisRepoConfig) Repository {
 }
 
 // Create creates a new session
-func (r *redisRepository) Create(ctx context.Context, session *entities.Session) error {
+func (r *redisRepository) Create(ctx context.Context, session *session.Session) error {
 	if session == nil {
 		return fmt.Errorf("session cannot be nil")
 	}
@@ -114,7 +114,7 @@ func (r *redisRepository) Create(ctx context.Context, session *entities.Session)
 }
 
 // Get retrieves a session by ID
-func (r *redisRepository) Get(ctx context.Context, id string) (*entities.Session, error) {
+func (r *redisRepository) Get(ctx context.Context, id string) (*session.Session, error) {
 	sessionKey := sessionKeyPrefix + id
 
 	data, err := r.client.Get(ctx, sessionKey).Bytes()
@@ -125,7 +125,7 @@ func (r *redisRepository) Get(ctx context.Context, id string) (*entities.Session
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 
-	var session entities.Session
+	var session session.Session
 	if err := json.Unmarshal(data, &session); err != nil {
 		return nil, fmt.Errorf("failed to deserialize session: %w", err)
 	}
@@ -137,7 +137,7 @@ func (r *redisRepository) Get(ctx context.Context, id string) (*entities.Session
 }
 
 // GetByInviteCode retrieves a session by its invite code
-func (r *redisRepository) GetByInviteCode(ctx context.Context, code string) (*entities.Session, error) {
+func (r *redisRepository) GetByInviteCode(ctx context.Context, code string) (*session.Session, error) {
 	inviteKey := inviteCodeKeyPrefix + code
 
 	sessionID, err := r.client.Get(ctx, inviteKey).Result()
@@ -155,7 +155,7 @@ func (r *redisRepository) GetByInviteCode(ctx context.Context, code string) (*en
 }
 
 // Update updates an existing session
-func (r *redisRepository) Update(ctx context.Context, session *entities.Session) error {
+func (r *redisRepository) Update(ctx context.Context, session *session.Session) error {
 	if session == nil {
 		return fmt.Errorf("session cannot be nil")
 	}
@@ -264,7 +264,7 @@ func (r *redisRepository) Delete(ctx context.Context, id string) error {
 }
 
 // GetByRealm retrieves all sessions for a realm
-func (r *redisRepository) GetByRealm(ctx context.Context, realmID string) ([]*entities.Session, error) {
+func (r *redisRepository) GetByRealm(ctx context.Context, realmID string) ([]*session.Session, error) {
 	// Get session IDs for realm
 	sessionIDs, err := r.client.SMembers(ctx, fmt.Sprintf(realmSessionsKey, realmID)).Result()
 	if err != nil {
@@ -275,7 +275,7 @@ func (r *redisRepository) GetByRealm(ctx context.Context, realmID string) ([]*en
 }
 
 // GetByUser retrieves all sessions a user is part of
-func (r *redisRepository) GetByUser(ctx context.Context, userID string) ([]*entities.Session, error) {
+func (r *redisRepository) GetByUser(ctx context.Context, userID string) ([]*session.Session, error) {
 	// Get session IDs for user
 	sessionIDs, err := r.client.SMembers(ctx, fmt.Sprintf(userSessionsKey, userID)).Result()
 	if err != nil {
@@ -286,18 +286,18 @@ func (r *redisRepository) GetByUser(ctx context.Context, userID string) ([]*enti
 }
 
 // GetActiveByRealm retrieves all active sessions for a realm
-func (r *redisRepository) GetActiveByRealm(ctx context.Context, realmID string) ([]*entities.Session, error) {
+func (r *redisRepository) GetActiveByRealm(ctx context.Context, realmID string) ([]*session.Session, error) {
 	sessions, err := r.GetByRealm(ctx, realmID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Filter active sessions
-	var activeSessions []*entities.Session
+	var activeSessions []*session.Session
 	for _, session := range sessions {
-		if session.Status == entities.SessionStatusPlanning ||
-			session.Status == entities.SessionStatusActive ||
-			session.Status == entities.SessionStatusPaused {
+		if session.Status == session.SessionStatusPlanning ||
+			session.Status == session.SessionStatusActive ||
+			session.Status == session.SessionStatusPaused {
 			activeSessions = append(activeSessions, session)
 		}
 	}
@@ -306,18 +306,18 @@ func (r *redisRepository) GetActiveByRealm(ctx context.Context, realmID string) 
 }
 
 // GetActiveByUser retrieves all active sessions a user is part of
-func (r *redisRepository) GetActiveByUser(ctx context.Context, userID string) ([]*entities.Session, error) {
+func (r *redisRepository) GetActiveByUser(ctx context.Context, userID string) ([]*session.Session, error) {
 	sessions, err := r.GetByUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Filter active sessions
-	var activeSessions []*entities.Session
+	var activeSessions []*session.Session
 	for _, session := range sessions {
-		if session.Status == entities.SessionStatusPlanning ||
-			session.Status == entities.SessionStatusActive ||
-			session.Status == entities.SessionStatusPaused {
+		if session.Status == session.SessionStatusPlanning ||
+			session.Status == session.SessionStatusActive ||
+			session.Status == session.SessionStatusPaused {
 			activeSessions = append(activeSessions, session)
 		}
 	}
@@ -326,9 +326,9 @@ func (r *redisRepository) GetActiveByUser(ctx context.Context, userID string) ([
 }
 
 // getMultipleSessions retrieves multiple sessions by their IDs
-func (r *redisRepository) getMultipleSessions(ctx context.Context, sessionIDs []string) ([]*entities.Session, error) {
+func (r *redisRepository) getMultipleSessions(ctx context.Context, sessionIDs []string) ([]*session.Session, error) {
 	if len(sessionIDs) == 0 {
-		return []*entities.Session{}, nil
+		return []*session.Session{}, nil
 	}
 
 	// Build keys
@@ -344,7 +344,7 @@ func (r *redisRepository) getMultipleSessions(ctx context.Context, sessionIDs []
 	}
 
 	// Deserialize sessions
-	sessions := make([]*entities.Session, 0, len(sessionIDs))
+	sessions := make([]*session.Session, 0, len(sessionIDs))
 	for i, val := range values {
 		if val == nil {
 			// Session was deleted, remove from index
@@ -357,7 +357,7 @@ func (r *redisRepository) getMultipleSessions(ctx context.Context, sessionIDs []
 			continue
 		}
 
-		var session entities.Session
+		var session session.Session
 		if err := json.Unmarshal([]byte(data), &session); err != nil {
 			// Log error but continue with other sessions
 			continue

@@ -3,9 +3,10 @@ package session_test
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	session2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	mockchar "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
 	"github.com/stretchr/testify/assert"
@@ -15,21 +16,21 @@ import (
 
 // MockRepository is a simple in-memory repository for testing
 type MockRepository struct {
-	sessions map[string]*entities.Session
+	sessions map[string]*session2.Session
 }
 
 func NewMockRepository() *MockRepository {
 	return &MockRepository{
-		sessions: make(map[string]*entities.Session),
+		sessions: make(map[string]*session2.Session),
 	}
 }
 
-func (m *MockRepository) Create(_ context.Context, sess *entities.Session) error {
+func (m *MockRepository) Create(_ context.Context, sess *session2.Session) error {
 	m.sessions[sess.ID] = sess
 	return nil
 }
 
-func (m *MockRepository) Get(_ context.Context, id string) (*entities.Session, error) {
+func (m *MockRepository) Get(_ context.Context, id string) (*session2.Session, error) {
 	sess, exists := m.sessions[id]
 	if !exists {
 		return nil, fmt.Errorf("session not found")
@@ -37,7 +38,7 @@ func (m *MockRepository) Get(_ context.Context, id string) (*entities.Session, e
 	return sess, nil
 }
 
-func (m *MockRepository) Update(_ context.Context, sess *entities.Session) error {
+func (m *MockRepository) Update(_ context.Context, sess *session2.Session) error {
 	m.sessions[sess.ID] = sess
 	return nil
 }
@@ -47,8 +48,8 @@ func (m *MockRepository) Delete(_ context.Context, id string) error {
 	return nil
 }
 
-func (m *MockRepository) ListByOwner(_ context.Context, ownerID string) ([]*entities.Session, error) {
-	var result []*entities.Session
+func (m *MockRepository) ListByOwner(_ context.Context, ownerID string) ([]*session2.Session, error) {
+	var result []*session2.Session
 	for _, sess := range m.sessions {
 		if sess.CreatorID == ownerID {
 			result = append(result, sess)
@@ -57,20 +58,20 @@ func (m *MockRepository) ListByOwner(_ context.Context, ownerID string) ([]*enti
 	return result, nil
 }
 
-func (m *MockRepository) GetActiveByRealm(_ context.Context, realmID string) ([]*entities.Session, error) {
-	var result []*entities.Session
+func (m *MockRepository) GetActiveByRealm(_ context.Context, realmID string) ([]*session2.Session, error) {
+	var result []*session2.Session
 	for _, sess := range m.sessions {
-		if sess.RealmID == realmID && sess.Status == entities.SessionStatusActive {
+		if sess.RealmID == realmID && sess.Status == session2.SessionStatusActive {
 			result = append(result, sess)
 		}
 	}
 	return result, nil
 }
 
-func (m *MockRepository) GetActiveByUser(_ context.Context, userID string) ([]*entities.Session, error) {
-	var result []*entities.Session
+func (m *MockRepository) GetActiveByUser(_ context.Context, userID string) ([]*session2.Session, error) {
+	var result []*session2.Session
 	for _, sess := range m.sessions {
-		if sess.Status == entities.SessionStatusActive {
+		if sess.Status == session2.SessionStatusActive {
 			// Check if user is a member
 			if _, isMember := sess.Members[userID]; isMember {
 				result = append(result, sess)
@@ -84,8 +85,8 @@ func (m *MockRepository) GetActiveByUser(_ context.Context, userID string) ([]*e
 	return result, nil
 }
 
-func (m *MockRepository) GetByRealm(_ context.Context, realmID string) ([]*entities.Session, error) {
-	var result []*entities.Session
+func (m *MockRepository) GetByRealm(_ context.Context, realmID string) ([]*session2.Session, error) {
+	var result []*session2.Session
 	for _, sess := range m.sessions {
 		if sess.RealmID == realmID {
 			result = append(result, sess)
@@ -94,8 +95,8 @@ func (m *MockRepository) GetByRealm(_ context.Context, realmID string) ([]*entit
 	return result, nil
 }
 
-func (m *MockRepository) GetByUser(_ context.Context, userID string) ([]*entities.Session, error) {
-	var result []*entities.Session
+func (m *MockRepository) GetByUser(_ context.Context, userID string) ([]*session2.Session, error) {
+	var result []*session2.Session
 	for _, sess := range m.sessions {
 		// Check if user is a member
 		if _, isMember := sess.Members[userID]; isMember {
@@ -109,7 +110,7 @@ func (m *MockRepository) GetByUser(_ context.Context, userID string) ([]*entitie
 	return result, nil
 }
 
-func (m *MockRepository) GetByInviteCode(_ context.Context, code string) (*entities.Session, error) {
+func (m *MockRepository) GetByInviteCode(_ context.Context, code string) (*session2.Session, error) {
 	for _, sess := range m.sessions {
 		if sess.InviteCode == code {
 			return sess, nil
@@ -118,8 +119,8 @@ func (m *MockRepository) GetByInviteCode(_ context.Context, code string) (*entit
 	return nil, nil
 }
 
-func (m *MockRepository) ListUserSessions(_ context.Context, userID string) ([]*entities.Session, error) {
-	var result []*entities.Session
+func (m *MockRepository) ListUserSessions(_ context.Context, userID string) ([]*session2.Session, error) {
+	var result []*session2.Session
 	for _, sess := range m.sessions {
 		if _, exists := sess.Members[userID]; exists {
 			result = append(result, sess)
@@ -159,18 +160,18 @@ func TestSelectCharacter(t *testing.T) {
 	// Create a test session with a player
 	sessionID := "session-123"
 	playerID := "player-123"
-	testSession := &entities.Session{
+	testSession := &session2.Session{
 		ID:        sessionID,
 		Name:      "Test Dungeon",
 		CreatorID: "dm-123",
-		Members: map[string]*entities.SessionMember{
+		Members: map[string]*session2.SessionMember{
 			playerID: {
 				UserID: playerID,
-				Role:   entities.SessionRolePlayer,
+				Role:   session2.SessionRolePlayer,
 				// CharacterID is initially empty
 			},
 		},
-		Status: entities.SessionStatusActive,
+		Status: session2.SessionStatusActive,
 	}
 	err := mockRepo.Create(context.Background(), testSession)
 	require.NoError(t, err)
@@ -181,7 +182,7 @@ func TestSelectCharacter(t *testing.T) {
 		// Mock the character service to return a character that belongs to the player
 		mockCharService.EXPECT().
 			GetByID(characterID).
-			Return(&entities.Character{
+			Return(&character.Character{
 				ID:      characterID,
 				OwnerID: playerID,
 			}, nil)
@@ -206,7 +207,7 @@ func TestSelectCharacter(t *testing.T) {
 		// Mock the character service to return a character that belongs to the player
 		mockCharService.EXPECT().
 			GetByID(newCharacterID).
-			Return(&entities.Character{
+			Return(&character.Character{
 				ID:      newCharacterID,
 				OwnerID: playerID,
 			}, nil)
@@ -227,7 +228,7 @@ func TestSelectCharacter(t *testing.T) {
 		// Mock the character service - it gets called before session check
 		mockCharService.EXPECT().
 			GetByID("char-789").
-			Return(&entities.Character{
+			Return(&character.Character{
 				ID:      "char-789",
 				OwnerID: playerID,
 			}, nil)
@@ -241,7 +242,7 @@ func TestSelectCharacter(t *testing.T) {
 		// Mock the character service to return a character
 		mockCharService.EXPECT().
 			GetByID("char-789").
-			Return(&entities.Character{
+			Return(&character.Character{
 				ID:      "char-789",
 				OwnerID: "not-a-member",
 			}, nil)
@@ -255,7 +256,7 @@ func TestSelectCharacter(t *testing.T) {
 		// Mock the character service to return a character that belongs to a different player
 		mockCharService.EXPECT().
 			GetByID("char-890").
-			Return(&entities.Character{
+			Return(&character.Character{
 				ID:      "char-890",
 				OwnerID: "different-player",
 			}, nil)
@@ -272,7 +273,7 @@ func TestSelectCharacter(t *testing.T) {
 		// Mock the character service to return a character that belongs to the player
 		mockCharService.EXPECT().
 			GetByID(characterID).
-			Return(&entities.Character{
+			Return(&character.Character{
 				ID:      characterID,
 				OwnerID: playerID,
 			}, nil)
@@ -283,7 +284,7 @@ func TestSelectCharacter(t *testing.T) {
 		// Update session (simulate other operations)
 		sess, err := mockRepo.Get(context.Background(), sessionID)
 		require.NoError(t, err)
-		sess.Status = entities.SessionStatusPaused
+		sess.Status = session2.SessionStatusPaused
 		err = mockRepo.Update(context.Background(), sess)
 		require.NoError(t, err)
 
@@ -299,9 +300,9 @@ func TestSessionMemberCharacterPersistence(t *testing.T) {
 	// Test that character IDs persist properly in session members
 
 	t.Run("Character ID set in member struct", func(t *testing.T) {
-		member := &entities.SessionMember{
+		member := &session2.SessionMember{
 			UserID:      "user-123",
-			Role:        entities.SessionRolePlayer,
+			Role:        session2.SessionRolePlayer,
 			CharacterID: "char-123",
 		}
 
@@ -309,9 +310,9 @@ func TestSessionMemberCharacterPersistence(t *testing.T) {
 	})
 
 	t.Run("Empty character ID for new members", func(t *testing.T) {
-		member := &entities.SessionMember{
+		member := &session2.SessionMember{
 			UserID: "user-456",
-			Role:   entities.SessionRolePlayer,
+			Role:   session2.SessionRolePlayer,
 			// CharacterID not set
 		}
 

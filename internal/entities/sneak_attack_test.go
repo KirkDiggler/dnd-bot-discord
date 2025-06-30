@@ -4,18 +4,22 @@
 package entities
 
 import (
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat/attack"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/attack"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCharacter_CanSneakAttack(t *testing.T) {
 	tests := []struct {
 		name            string
-		character       *Character
-		weapon          *Weapon
+		character       *character2.Character
+		weapon          *equipment.Weapon
 		hasAdvantage    bool
 		allyAdjacent    bool
 		hasDisadvantage bool
@@ -23,28 +27,28 @@ func TestCharacter_CanSneakAttack(t *testing.T) {
 	}{
 		{
 			name: "finesse weapon with advantage",
-			character: &Character{
-				Class: &Class{Key: "rogue", Name: "Rogue"},
+			character: &character2.Character{
+				Class: &rulebook.Class{Key: "rogue", Name: "Rogue"},
 				Level: 1,
 			},
-			weapon: &Weapon{
-				Base: BasicEquipment{
+			weapon: &equipment.Weapon{
+				Base: equipment.BasicEquipment{
 					Key:  "dagger",
 					Name: "Dagger",
 				},
-				Properties: []*ReferenceItem{{Key: "finesse", Name: "Finesse"}},
+				Properties: []*shared.ReferenceItem{{Key: "finesse", Name: "Finesse"}},
 			},
 			hasAdvantage: true,
 			wantEligible: true,
 		},
 		{
 			name: "ranged weapon with adjacent ally",
-			character: &Character{
-				Class: &Class{Key: "rogue", Name: "Rogue"},
+			character: &character2.Character{
+				Class: &rulebook.Class{Key: "rogue", Name: "Rogue"},
 				Level: 1,
 			},
-			weapon: &Weapon{
-				Base: BasicEquipment{
+			weapon: &equipment.Weapon{
+				Base: equipment.BasicEquipment{
 					Key:  "shortbow",
 					Name: "Shortbow",
 				},
@@ -55,12 +59,12 @@ func TestCharacter_CanSneakAttack(t *testing.T) {
 		},
 		{
 			name: "non-finesse melee weapon",
-			character: &Character{
-				Class: &Class{Key: "rogue", Name: "Rogue"},
+			character: &character2.Character{
+				Class: &rulebook.Class{Key: "rogue", Name: "Rogue"},
 				Level: 1,
 			},
-			weapon: &Weapon{
-				Base: BasicEquipment{
+			weapon: &equipment.Weapon{
+				Base: equipment.BasicEquipment{
 					Key:  "longsword",
 					Name: "Longsword",
 				},
@@ -71,16 +75,16 @@ func TestCharacter_CanSneakAttack(t *testing.T) {
 		},
 		{
 			name: "finesse weapon but no advantage or ally",
-			character: &Character{
-				Class: &Class{Key: "rogue", Name: "Rogue"},
+			character: &character2.Character{
+				Class: &rulebook.Class{Key: "rogue", Name: "Rogue"},
 				Level: 1,
 			},
-			weapon: &Weapon{
-				Base: BasicEquipment{
+			weapon: &equipment.Weapon{
+				Base: equipment.BasicEquipment{
 					Key:  "rapier",
 					Name: "Rapier",
 				},
-				Properties: []*ReferenceItem{{Key: "finesse", Name: "Finesse"}},
+				Properties: []*shared.ReferenceItem{{Key: "finesse", Name: "Finesse"}},
 			},
 			hasAdvantage: false,
 			allyAdjacent: false,
@@ -88,16 +92,16 @@ func TestCharacter_CanSneakAttack(t *testing.T) {
 		},
 		{
 			name: "has advantage but also disadvantage",
-			character: &Character{
-				Class: &Class{Key: "rogue", Name: "Rogue"},
+			character: &character2.Character{
+				Class: &rulebook.Class{Key: "rogue", Name: "Rogue"},
 				Level: 1,
 			},
-			weapon: &Weapon{
-				Base: BasicEquipment{
+			weapon: &equipment.Weapon{
+				Base: equipment.BasicEquipment{
 					Key:  "dagger",
 					Name: "Dagger",
 				},
-				Properties: []*ReferenceItem{{Key: "finesse", Name: "Finesse"}},
+				Properties: []*shared.ReferenceItem{{Key: "finesse", Name: "Finesse"}},
 			},
 			hasAdvantage:    true,
 			hasDisadvantage: true,
@@ -106,16 +110,16 @@ func TestCharacter_CanSneakAttack(t *testing.T) {
 		},
 		{
 			name: "non-rogue with finesse weapon",
-			character: &Character{
-				Class: &Class{Key: "fighter", Name: "Fighter"},
+			character: &character2.Character{
+				Class: &rulebook.Class{Key: "fighter", Name: "Fighter"},
 				Level: 1,
 			},
-			weapon: &Weapon{
-				Base: BasicEquipment{
+			weapon: &equipment.Weapon{
+				Base: equipment.BasicEquipment{
 					Key:  "dagger",
 					Name: "Dagger",
 				},
-				Properties: []*ReferenceItem{{Key: "finesse", Name: "Finesse"}},
+				Properties: []*shared.ReferenceItem{{Key: "finesse", Name: "Finesse"}},
 			},
 			hasAdvantage: true,
 			wantEligible: false, // Not a rogue
@@ -151,8 +155,8 @@ func TestCharacter_GetSneakAttackDice(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rogue := &Character{
-				Class: &Class{Key: "rogue", Name: "Rogue"},
+			rogue := &character2.Character{
+				Class: &rulebook.Class{Key: "rogue", Name: "Rogue"},
 				Level: tt.level,
 			}
 
@@ -163,18 +167,18 @@ func TestCharacter_GetSneakAttackDice(t *testing.T) {
 }
 
 func TestCharacter_ApplySneakAttackDamage(t *testing.T) {
-	rogue := &Character{
+	rogue := &character2.Character{
 		ID:    "rogue_123",
 		Name:  "Shadowblade",
-		Class: &Class{Key: "rogue", Name: "Rogue"},
+		Class: &rulebook.Class{Key: "rogue", Name: "Rogue"},
 		Level: 5, // 3d6 sneak attack
-		Resources: &CharacterResources{
+		Resources: &shared.CharacterResources{
 			SneakAttackUsedThisTurn: false,
 		},
 	}
 
 	// Create a combat context
-	ctx := &CombatContext{
+	ctx := &character2.CombatContext{
 		AttackResult: &attack.Result{
 			AttackRoll: 15,
 			DamageRoll: 8,
@@ -197,18 +201,18 @@ func TestCharacter_ApplySneakAttackDamage(t *testing.T) {
 }
 
 func TestCharacter_SneakAttackCritical(t *testing.T) {
-	rogue := &Character{
+	rogue := &character2.Character{
 		ID:    "rogue_123",
 		Name:  "Shadowblade",
-		Class: &Class{Key: "rogue", Name: "Rogue"},
+		Class: &rulebook.Class{Key: "rogue", Name: "Rogue"},
 		Level: 1, // 1d6 sneak attack
-		Resources: &CharacterResources{
+		Resources: &shared.CharacterResources{
 			SneakAttackUsedThisTurn: false,
 		},
 	}
 
 	// Critical hit doubles sneak attack dice
-	ctx := &CombatContext{
+	ctx := &character2.CombatContext{
 		AttackResult: &attack.Result{
 			AttackRoll: 20,
 			DamageRoll: 10,
@@ -225,11 +229,11 @@ func TestCharacter_SneakAttackCritical(t *testing.T) {
 }
 
 func TestCharacter_ResetSneakAttackOnNewTurn(t *testing.T) {
-	rogue := &Character{
+	rogue := &character2.Character{
 		ID:    "rogue_123",
-		Class: &Class{Key: "rogue", Name: "Rogue"},
+		Class: &rulebook.Class{Key: "rogue", Name: "Rogue"},
 		Level: 1,
-		Resources: &CharacterResources{
+		Resources: &shared.CharacterResources{
 			SneakAttackUsedThisTurn: true,
 		},
 	}

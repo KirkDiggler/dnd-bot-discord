@@ -3,13 +3,16 @@ package discord
 import (
 	"context"
 	"fmt"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	combat2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"log"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/combat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/admin"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
@@ -1418,7 +1421,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 			case "archive":
 				// Archive the character
-				err := h.ServiceProvider.CharacterService.UpdateStatus(characterID, entities.CharacterStatusArchived)
+				err := h.ServiceProvider.CharacterService.UpdateStatus(characterID, character2.CharacterStatusArchived)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to archive character: %v", err)
 					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -1446,7 +1449,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 			case "restore":
 				// Restore archived character to active
-				err := h.ServiceProvider.CharacterService.UpdateStatus(characterID, entities.CharacterStatusActive)
+				err := h.ServiceProvider.CharacterService.UpdateStatus(characterID, character2.CharacterStatusActive)
 				if err != nil {
 					content := fmt.Sprintf("❌ Failed to restore character: %v", err)
 					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -1574,7 +1577,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 
 				// Verify it's a draft
-				if char.Status != entities.CharacterStatusDraft {
+				if char.Status != character2.CharacterStatusDraft {
 					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 						Type: discordgo.InteractionResponseChannelMessageWithSource,
 						Data: &discordgo.InteractionResponseData{
@@ -1861,7 +1864,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			}
 
 			// Build equipment list based on category
-			var items []entities.Equipment
+			var items []equipment.Equipment
 			var categoryName string
 
 			switch category {
@@ -1869,7 +1872,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				categoryName = "Weapons"
 				for _, equipList := range char.Inventory {
 					for _, equip := range equipList {
-						if weapon, ok := equip.(*entities.Weapon); ok {
+						if weapon, ok := equip.(*equipment.Weapon); ok {
 							items = append(items, weapon)
 						}
 					}
@@ -1878,7 +1881,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				categoryName = "Armor"
 				for _, equipList := range char.Inventory {
 					for _, equip := range equipList {
-						if armor, ok := equip.(*entities.Armor); ok {
+						if armor, ok := equip.(*equipment.Armor); ok {
 							items = append(items, armor)
 						}
 					}
@@ -1902,15 +1905,15 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			equippedInfo := "**Currently Equipped:**\n"
 			hasEquipped := false
 
-			if weapon := char.EquippedSlots[entities.SlotMainHand]; weapon != nil {
+			if weapon := char.EquippedSlots[character2.SlotMainHand]; weapon != nil {
 				equippedInfo += fmt.Sprintf("Main Hand: %s\n", weapon.GetName())
 				hasEquipped = true
 			}
-			if item := char.EquippedSlots[entities.SlotOffHand]; item != nil {
+			if item := char.EquippedSlots[character2.SlotOffHand]; item != nil {
 				equippedInfo += fmt.Sprintf("Off Hand: %s\n", item.GetName())
 				hasEquipped = true
 			}
-			if armor := char.EquippedSlots[entities.SlotBody]; armor != nil {
+			if armor := char.EquippedSlots[character2.SlotBody]; armor != nil {
 				equippedInfo += fmt.Sprintf("Armor: %s\n", armor.GetName())
 				hasEquipped = true
 			}
@@ -1981,7 +1984,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					// Build item description
 					desc := ""
 					switch item := invItem.(type) {
-					case *entities.Weapon:
+					case *equipment.Weapon:
 						if item.Damage != nil {
 							desc = fmt.Sprintf("Damage: %dd%d", item.Damage.DiceCount, item.Damage.DiceSize)
 							if item.Damage.Bonus > 0 {
@@ -1990,7 +1993,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						} else {
 							desc = "No damage data"
 						}
-					case *entities.Armor:
+					case *equipment.Armor:
 						if item.ArmorClass != nil {
 							desc = fmt.Sprintf("AC: %d", item.ArmorClass.Base)
 							if item.ArmorClass.MaxBonus > 0 {
@@ -2104,7 +2107,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			}
 
 			// Find the item in inventory
-			var selectedItem entities.Equipment
+			var selectedItem equipment.Equipment
 			currentIndex := make(map[string]int)
 
 			for _, equipList := range char.Inventory {
@@ -2136,7 +2139,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 			// Check if item is equipped
 			isEquipped := false
-			var equippedSlot entities.Slot
+			var equippedSlot character2.Slot
 			for slot, equipped := range char.EquippedSlots {
 				if equipped != nil && equipped == selectedItem {
 					isEquipped = true
@@ -2154,7 +2157,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 			// Add item-specific details
 			switch item := selectedItem.(type) {
-			case *entities.Weapon:
+			case *equipment.Weapon:
 				embed.Fields = append(embed.Fields,
 					&discordgo.MessageEmbedField{
 						Name: "⚔️ Weapon Details",
@@ -2181,7 +2184,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						},
 					)
 				}
-			case *entities.Armor:
+			case *equipment.Armor:
 				armorInfo := fmt.Sprintf("**Type:** %s", item.ArmorCategory)
 				if item.ArmorClass != nil {
 					armorInfo = fmt.Sprintf("**Base AC:** %d\n%s", item.ArmorClass.Base, armorInfo)
@@ -2238,7 +2241,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				buttons := []discordgo.MessageComponent{}
 
 				switch item := selectedItem.(type) {
-				case *entities.Weapon:
+				case *equipment.Weapon:
 					// Check if it's two-handed
 					isTwoHanded := false
 					for _, prop := range item.Properties {
@@ -2271,7 +2274,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							},
 						)
 					}
-				case *entities.Armor:
+				case *equipment.Armor:
 					buttons = append(buttons, discordgo.Button{
 						Label:    "Equip Armor",
 						Style:    discordgo.SuccessButton,
@@ -2338,7 +2341,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			}
 
 			// Find the item in inventory
-			var selectedItem entities.Equipment
+			var selectedItem equipment.Equipment
 			for _, equipList := range char.Inventory {
 				for _, equip := range equipList {
 					if equip.GetKey() == itemKey {
@@ -2361,13 +2364,13 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			switch slotType {
 			case "main-hand", "off-hand", "two-handed":
 				// Verify it's a weapon
-				if _, ok := selectedItem.(*entities.Weapon); !ok {
+				if _, ok := selectedItem.(*equipment.Weapon); !ok {
 					respondWithUpdateError(s, i, "This item cannot be equipped as a weapon!")
 					return
 				}
 			case "body":
 				// Verify it's armor
-				if _, ok := selectedItem.(*entities.Armor); !ok {
+				if _, ok := selectedItem.(*equipment.Armor); !ok {
 					respondWithUpdateError(s, i, "This item cannot be equipped as armor!")
 					return
 				}
@@ -2399,16 +2402,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 			// Add updated equipment info
 			equippedInfo := "**Currently Equipped:**\n"
-			if weapon := char.EquippedSlots[entities.SlotMainHand]; weapon != nil {
+			if weapon := char.EquippedSlots[character2.SlotMainHand]; weapon != nil {
 				equippedInfo += fmt.Sprintf("Main Hand: %s\n", weapon.GetName())
 			}
-			if item := char.EquippedSlots[entities.SlotOffHand]; item != nil {
+			if item := char.EquippedSlots[character2.SlotOffHand]; item != nil {
 				equippedInfo += fmt.Sprintf("Off Hand: %s\n", item.GetName())
 			}
-			if weapon := char.EquippedSlots[entities.SlotTwoHanded]; weapon != nil {
+			if weapon := char.EquippedSlots[character2.SlotTwoHanded]; weapon != nil {
 				equippedInfo += fmt.Sprintf("Two-Handed: %s\n", weapon.GetName())
 			}
-			if armor := char.EquippedSlots[entities.SlotBody]; armor != nil {
+			if armor := char.EquippedSlots[character2.SlotBody]; armor != nil {
 				equippedInfo += fmt.Sprintf("Armor: %s\n", armor.GetName())
 			}
 
@@ -2469,8 +2472,8 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			}
 
 			// Find which slot has the item and unequip it
-			var foundSlot entities.Slot
-			var foundItem entities.Equipment
+			var foundSlot character2.Slot
+			var foundItem equipment.Equipment
 			for slot, equipped := range char.EquippedSlots {
 				if equipped != nil && equipped.GetKey() == itemKey {
 					foundSlot = slot
@@ -2678,7 +2681,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 				// Add status field
 				statusStr := string(encounterResult.Status)
-				if encounterResult.Status == entities.EncounterStatusActive {
+				if encounterResult.Status == combat2.EncounterStatusActive {
 					statusStr = fmt.Sprintf("Active - Round %d", encounterResult.Round)
 				}
 				embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
@@ -2732,7 +2735,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				// Add appropriate buttons based on status
 				var components []discordgo.MessageComponent
 				switch encounterResult.Status {
-				case entities.EncounterStatusSetup:
+				case combat2.EncounterStatusSetup:
 					components = []discordgo.MessageComponent{
 						discordgo.ActionsRow{
 							Components: []discordgo.MessageComponent{
@@ -2751,7 +2754,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 							},
 						},
 					}
-				case entities.EncounterStatusActive:
+				case combat2.EncounterStatusActive:
 					// Show combat controls for active encounters
 					// Check if it's the viewing player's turn
 					isPlayerTurn := false
@@ -2794,7 +2797,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 				// Make the response ephemeral if this is an active encounter view
 				flags := discordgo.MessageFlags(0)
-				if encounterResult.Status == entities.EncounterStatusActive {
+				if encounterResult.Status == combat2.EncounterStatusActive {
 					flags = discordgo.MessageFlagsEphemeral
 				}
 
@@ -2933,14 +2936,14 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 				// Process any monster turns
 				monsterActed := false
-				if current := encounterResult.GetCurrentCombatant(); current != nil && current.Type == entities.CombatantTypeMonster && current.CanAct() {
+				if current := encounterResult.GetCurrentCombatant(); current != nil && current.Type == combat2.CombatantTypeMonster && current.CanAct() {
 					monsterActed = true
 					log.Printf("Processing monster turn for %s (HP: %d/%d)", current.Name, current.CurrentHP, current.MaxHP)
 
 					// Find a target (first active player)
-					var target *entities.Combatant
+					var target *combat2.Combatant
 					for _, combatant := range encounterResult.Combatants {
-						if combatant.Type == entities.CombatantTypePlayer && combatant.IsActive {
+						if combatant.Type == combat2.CombatantTypePlayer && combatant.IsActive {
 							target = combatant
 							break
 						}
@@ -3070,7 +3073,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 
 				// Check if combat ended
-				if encounterResult.Status == entities.EncounterStatusCompleted {
+				if encounterResult.Status == combat2.EncounterStatusCompleted {
 					// Show victory/defeat message
 					shouldEnd, playersWon := encounterResult.CheckCombatEnd()
 					if shouldEnd && playersWon {
@@ -3122,7 +3125,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 				// Combat action buttons
 				var components []discordgo.MessageComponent
-				if encounterResult.Status == entities.EncounterStatusCompleted {
+				if encounterResult.Status == combat2.EncounterStatusCompleted {
 					// Combat ended - show different buttons
 					components = []discordgo.MessageComponent{
 						discordgo.ActionsRow{
@@ -3450,7 +3453,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 
 				// Find the attacker - the player who clicked attack
-				var current *entities.Combatant
+				var current *combat2.Combatant
 				attackerID := i.Member.User.ID
 
 				// Find the player's combatant
@@ -3503,7 +3506,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					log.Printf("Adding target button for %s (ID: %s)", combatant.Name, id)
 					// Create button for this target
 					emoji := "🧑"
-					if combatant.Type == entities.CombatantTypeMonster {
+					if combatant.Type == combat2.CombatantTypeMonster {
 						emoji = "👹"
 					}
 
@@ -3871,8 +3874,8 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 
 					if freshSess != nil && freshSess.Metadata != nil {
 						// Get stored message ID from session metadata
-						messageID, msgErr := freshSess.Metadata.GetString(string(entities.MetadataKeyLobbyMessage))
-						channelID, chanErr := freshSess.Metadata.GetString(string(entities.MetadataKeyLobbyChannel))
+						messageID, msgErr := freshSess.Metadata.GetString(string(session.MetadataKeyLobbyMessage))
+						channelID, chanErr := freshSess.Metadata.GetString(string(session.MetadataKeyLobbyChannel))
 						if msgErr == nil && chanErr == nil {
 							log.Printf("Updating dungeon lobby message %s with new party member", messageID)
 
@@ -3953,7 +3956,7 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 		// Handle saving throw rolls
 		if len(parts) >= 4 {
 			characterID := parts[1]
-			attribute := entities.Attribute(parts[2])
+			attribute := character2.Attribute(parts[2])
 			dc, err := strconv.Atoi(parts[3])
 			if err == nil {
 				if err := h.savingThrowHandler.HandleSavingThrowRoll(s, i, characterID, attribute, dc); err != nil {
@@ -4068,17 +4071,17 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 				for attr, score := range char.Attributes {
 					var key string
 					switch attr {
-					case entities.AttributeStrength:
+					case character2.AttributeStrength:
 						key = "STR"
-					case entities.AttributeDexterity:
+					case character2.AttributeDexterity:
 						key = "DEX"
-					case entities.AttributeConstitution:
+					case character2.AttributeConstitution:
 						key = "CON"
-					case entities.AttributeIntelligence:
+					case character2.AttributeIntelligence:
 						key = "INT"
-					case entities.AttributeWisdom:
+					case character2.AttributeWisdom:
 						key = "WIS"
-					case entities.AttributeCharisma:
+					case character2.AttributeCharisma:
 						key = "CHA"
 					}
 					if key != "" && score != nil {
@@ -4455,7 +4458,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 
 				// Find target
 				var targetID string
-				var target *entities.Combatant
+				var target *combat2.Combatant
 				for id, combatant := range encounterResult.Combatants {
 					if strings.EqualFold(combatant.Name, targetName) {
 						targetID = id
@@ -4480,7 +4483,7 @@ func (h *Handler) handleModalSubmit(s *discordgo.Session, i *discordgo.Interacti
 
 				// Calculate attack bonus (simplified for testing)
 				attackBonus := 5 // Default
-				if attacker.Type == entities.CombatantTypeMonster && len(attacker.Actions) > 0 {
+				if attacker.Type == combat2.CombatantTypeMonster && len(attacker.Actions) > 0 {
 					attackBonus = attacker.Actions[0].AttackBonus
 				}
 
@@ -4604,7 +4607,7 @@ func respondWithUpdateError(s *discordgo.Session, i *discordgo.InteractionCreate
 }
 
 // getWeaponPropertiesString converts weapon properties to a comma-separated string
-func getWeaponPropertiesString(weapon *entities.Weapon) string {
+func getWeaponPropertiesString(weapon *equipment.Weapon) string {
 	if len(weapon.Properties) == 0 {
 		return "None"
 	}

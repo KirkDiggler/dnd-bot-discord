@@ -3,10 +3,10 @@ package character_test
 import (
 	"context"
 	"errors"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	mockrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
@@ -105,10 +105,10 @@ func (s *ErrorHandlingTestSuite) TestCreateCharacter_RepositoryErrorWithContext(
 	}
 
 	// Setup mocks
-	s.mockDNDClient.EXPECT().GetRace("dwarf").Return(&entities.Race{
+	s.mockDNDClient.EXPECT().GetRace("dwarf").Return(&rulebook.Race{
 		Key: "dwarf", Name: "Dwarf", Speed: 25,
 	}, nil)
-	s.mockDNDClient.EXPECT().GetClass("fighter").Return(&entities.Class{
+	s.mockDNDClient.EXPECT().GetClass("fighter").Return(&rulebook.Class{
 		Key: "fighter", Name: "Fighter", HitDie: 10,
 	}, nil)
 

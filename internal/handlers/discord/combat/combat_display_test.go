@@ -1,27 +1,27 @@
 package combat
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"strings"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestBuildInitiativeDisplay(t *testing.T) {
 	// Create test encounter
-	enc := &entities.Encounter{
+	enc := &combat.Encounter{
 		ID:     "test-enc",
 		Name:   "Test Combat",
 		Round:  2,
 		Turn:   1, // Second combatant's turn
-		Status: entities.EncounterStatusActive,
-		Combatants: map[string]*entities.Combatant{
+		Status: combat.EncounterStatusActive,
+		Combatants: map[string]*combat.Combatant{
 			"c1": {
 				ID:         "c1",
 				Name:       "Grunk",
 				Class:      "Barbarian",
-				Type:       entities.CombatantTypePlayer,
+				Type:       combat.CombatantTypePlayer,
 				Initiative: 18,
 				AC:         16,
 				MaxHP:      50,
@@ -31,7 +31,7 @@ func TestBuildInitiativeDisplay(t *testing.T) {
 			"c2": {
 				ID:         "c2",
 				Name:       "Goblin",
-				Type:       entities.CombatantTypeMonster,
+				Type:       combat.CombatantTypeMonster,
 				Initiative: 15,
 				AC:         13,
 				MaxHP:      12,
@@ -42,7 +42,7 @@ func TestBuildInitiativeDisplay(t *testing.T) {
 				ID:         "c3",
 				Name:       "Thorin",
 				Class:      "Fighter",
-				Type:       entities.CombatantTypePlayer,
+				Type:       combat.CombatantTypePlayer,
 				Initiative: 10,
 				AC:         18,
 				MaxHP:      40,
@@ -75,27 +75,27 @@ func TestBuildInitiativeDisplay(t *testing.T) {
 }
 
 func TestBuildCombatSummaryDisplay(t *testing.T) {
-	enc := &entities.Encounter{
+	enc := &combat.Encounter{
 		Round: 3,
-		Combatants: map[string]*entities.Combatant{
+		Combatants: map[string]*combat.Combatant{
 			"c1": {
 				Name:     "Player1",
-				Type:     entities.CombatantTypePlayer,
+				Type:     combat.CombatantTypePlayer,
 				IsActive: true,
 			},
 			"c2": {
 				Name:     "Player2",
-				Type:     entities.CombatantTypePlayer,
+				Type:     combat.CombatantTypePlayer,
 				IsActive: true,
 			},
 			"c3": {
 				Name:     "Goblin",
-				Type:     entities.CombatantTypeMonster,
+				Type:     combat.CombatantTypeMonster,
 				IsActive: true,
 			},
 			"c4": {
 				Name:     "Orc",
-				Type:     entities.CombatantTypeMonster,
+				Type:     combat.CombatantTypeMonster,
 				IsActive: false, // Dead
 			},
 		},
@@ -112,12 +112,12 @@ func TestBuildCombatSummaryDisplay(t *testing.T) {
 }
 
 func TestInitiativeDisplay_ColorCoding(t *testing.T) {
-	enc := &entities.Encounter{
-		Combatants: map[string]*entities.Combatant{
+	enc := &combat.Encounter{
+		Combatants: map[string]*combat.Combatant{
 			"c1": {
 				ID:         "c1",
 				Name:       "HealthyPlayer",
-				Type:       entities.CombatantTypePlayer,
+				Type:       combat.CombatantTypePlayer,
 				Initiative: 20,
 				AC:         15,
 				MaxHP:      40,
@@ -127,7 +127,7 @@ func TestInitiativeDisplay_ColorCoding(t *testing.T) {
 			"c2": {
 				ID:         "c2",
 				Name:       "HurtPlayer",
-				Type:       entities.CombatantTypePlayer,
+				Type:       combat.CombatantTypePlayer,
 				Initiative: 15,
 				AC:         14,
 				MaxHP:      40,
@@ -137,7 +137,7 @@ func TestInitiativeDisplay_ColorCoding(t *testing.T) {
 			"c3": {
 				ID:         "c3",
 				Name:       "CriticalMonster",
-				Type:       entities.CombatantTypeMonster,
+				Type:       combat.CombatantTypeMonster,
 				Initiative: 10,
 				AC:         12,
 				MaxHP:      20,

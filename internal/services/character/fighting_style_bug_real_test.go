@@ -2,9 +2,10 @@ package character
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,18 +25,18 @@ func TestActualFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 
 	t.Run("Real FinalizeDraftCharacter preserves fighting style metadata", func(t *testing.T) {
 		// Create draft character with fighting style metadata (like from logs)
-		draftChar := &entities.Character{
+		draftChar := &character.Character{
 			ID:     "char_real_test",
 			Name:   "Draft Character",
-			Status: entities.CharacterStatusDraft,
-			Race:   &entities.Race{Key: "human", Name: "Human"},
-			Class:  &entities.Class{Key: "fighter", Name: "Fighter", HitDie: 10},
+			Status: character.CharacterStatusDraft,
+			Race:   &rulebook.Race{Key: "human", Name: "Human"},
+			Class:  &rulebook.Class{Key: "fighter", Name: "Fighter", HitDie: 10},
 			Level:  1,
-			Features: []*entities.CharacterFeature{
+			Features: []*rulebook.CharacterFeature{
 				{
 					Key:      "human_versatility",
 					Name:     "Versatility",
-					Type:     entities.FeatureTypeRacial,
+					Type:     rulebook.FeatureTypeRacial,
 					Level:    0,
 					Source:   "Human",
 					Metadata: map[string]any{},
@@ -43,7 +44,7 @@ func TestActualFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 				{
 					Key:    "fighting_style",
 					Name:   "Fighting Style",
-					Type:   entities.FeatureTypeClass,
+					Type:   rulebook.FeatureTypeClass,
 					Level:  1,
 					Source: "Fighter",
 					Metadata: map[string]any{
@@ -53,7 +54,7 @@ func TestActualFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 				{
 					Key:      "second_wind",
 					Name:     "Second Wind",
-					Type:     entities.FeatureTypeClass,
+					Type:     rulebook.FeatureTypeClass,
 					Level:    1,
 					Source:   "Fighter",
 					Metadata: map[string]any{},
@@ -67,10 +68,10 @@ func TestActualFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 			Return(draftChar, nil)
 
 		// The finalized character should be saved back
-		var savedChar *entities.Character
+		var savedChar *character.Character
 		mockRepo.EXPECT().
 			Update(gomock.Any(), gomock.Any()).
-			Do(func(_ context.Context, char *entities.Character) {
+			Do(func(_ context.Context, char *character.Character) {
 				savedChar = char
 			}).
 			Return(nil)
@@ -81,7 +82,7 @@ func TestActualFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 		require.NotNil(t, finalizedChar)
 
 		// Check that the character status was updated
-		assert.Equal(t, entities.CharacterStatusActive, finalizedChar.Status)
+		assert.Equal(t, character.CharacterStatusActive, finalizedChar.Status)
 
 		// Most importantly: check if fighting style metadata is preserved
 		fightingStyleFeature := findFeatureByKey(finalizedChar.Features, "fighting_style")

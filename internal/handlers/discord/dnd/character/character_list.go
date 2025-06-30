@@ -2,9 +2,9 @@ package character
 
 import (
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
 )
@@ -64,20 +64,20 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 	}
 
 	// Group characters by status
-	activeChars := make([]*entities.Character, 0)
-	draftChars := make([]*entities.Character, 0)
-	archivedChars := make([]*entities.Character, 0)
+	activeChars := make([]*character.Character, 0)
+	draftChars := make([]*character.Character, 0)
+	archivedChars := make([]*character.Character, 0)
 
 	for _, char := range characters {
 		switch char.Status {
-		case entities.CharacterStatusActive:
+		case character.CharacterStatusActive:
 			activeChars = append(activeChars, char)
-		case entities.CharacterStatusDraft:
+		case character.CharacterStatusDraft:
 			// Only show drafts that have meaningful progress (name or race/class selected)
 			if char.Name != "" || char.Race != nil || char.Class != nil {
 				draftChars = append(draftChars, char)
 			}
-		case entities.CharacterStatusArchived:
+		case character.CharacterStatusArchived:
 			archivedChars = append(archivedChars, char)
 		}
 	}

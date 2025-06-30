@@ -1,22 +1,22 @@
 package character
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"strings"
 	"testing"
-
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 )
 
 func TestBuildFeatureSummary_RangerWithSelections(t *testing.T) {
 	// Create a ranger character with favored enemy and natural explorer selections
-	ranger := &entities.Character{
+	ranger := &character.Character{
 		Name:  "Test Ranger",
 		Level: 1,
-		Features: []*entities.CharacterFeature{
+		Features: []*rulebook.CharacterFeature{
 			{
 				Key:         "favored_enemy",
 				Name:        "Favored Enemy",
-				Type:        entities.FeatureTypeClass,
+				Type:        rulebook.FeatureTypeClass,
 				Description: "You have significant experience studying, tracking, hunting, and even talking to a certain type of enemy.",
 				Metadata: map[string]any{
 					"enemy_type": "undead",
@@ -25,7 +25,7 @@ func TestBuildFeatureSummary_RangerWithSelections(t *testing.T) {
 			{
 				Key:         "natural_explorer",
 				Name:        "Natural Explorer",
-				Type:        entities.FeatureTypeClass,
+				Type:        rulebook.FeatureTypeClass,
 				Description: "You are particularly familiar with one type of natural environment and are adept at traveling and surviving in such regions.",
 				Metadata: map[string]any{
 					"terrain_type": "forest",
@@ -60,14 +60,14 @@ func TestBuildFeatureSummary_RangerWithSelections(t *testing.T) {
 
 func TestBuildFeatureSummary_RangerWithoutSelections(t *testing.T) {
 	// Create a ranger character without metadata (shouldn't crash)
-	ranger := &entities.Character{
+	ranger := &character.Character{
 		Name:  "Test Ranger",
 		Level: 1,
-		Features: []*entities.CharacterFeature{
+		Features: []*rulebook.CharacterFeature{
 			{
 				Key:         "favored_enemy",
 				Name:        "Favored Enemy",
-				Type:        entities.FeatureTypeClass,
+				Type:        rulebook.FeatureTypeClass,
 				Description: "You have significant experience studying, tracking, hunting, and even talking to a certain type of enemy.",
 				// No metadata
 			},
@@ -91,14 +91,14 @@ func TestBuildFeatureSummary_RangerWithoutSelections(t *testing.T) {
 
 func TestBuildFeatureSummary_RangerHumanoids(t *testing.T) {
 	// Test the special case for humanoids
-	ranger := &entities.Character{
+	ranger := &character.Character{
 		Name:  "Test Ranger",
 		Level: 1,
-		Features: []*entities.CharacterFeature{
+		Features: []*rulebook.CharacterFeature{
 			{
 				Key:         "favored_enemy",
 				Name:        "Favored Enemy",
-				Type:        entities.FeatureTypeClass,
+				Type:        rulebook.FeatureTypeClass,
 				Description: "You have significant experience studying, tracking, hunting, and even talking to a certain type of enemy.",
 				Metadata: map[string]any{
 					"enemy_type": "humanoids",

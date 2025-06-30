@@ -3,9 +3,9 @@ package session
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
 )
@@ -62,20 +62,20 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 	}
 
 	// Group sessions by status
-	activeSessions := make([]*entities.Session, 0)
-	planningSessions := make([]*entities.Session, 0)
-	pausedSessions := make([]*entities.Session, 0)
-	endedSessions := make([]*entities.Session, 0)
+	activeSessions := make([]*session.Session, 0)
+	planningSessions := make([]*session.Session, 0)
+	pausedSessions := make([]*session.Session, 0)
+	endedSessions := make([]*session.Session, 0)
 
 	for _, session := range sessions {
 		switch session.Status {
-		case entities.SessionStatusActive:
+		case session.SessionStatusActive:
 			activeSessions = append(activeSessions, session)
-		case entities.SessionStatusPlanning:
+		case session.SessionStatusPlanning:
 			planningSessions = append(planningSessions, session)
-		case entities.SessionStatusPaused:
+		case session.SessionStatusPaused:
 			pausedSessions = append(pausedSessions, session)
-		case entities.SessionStatusEnded:
+		case session.SessionStatusEnded:
 			endedSessions = append(endedSessions, session)
 		}
 	}
@@ -162,14 +162,14 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 	return err
 }
 
-func (h *ListHandler) getUserRole(session *entities.Session, userID string) string {
+func (h *ListHandler) getUserRole(session *session.Session, userID string) string {
 	if member, exists := session.Members[userID]; exists {
 		switch member.Role {
-		case entities.SessionRoleDM:
+		case session.SessionRoleDM:
 			return "DM"
-		case entities.SessionRolePlayer:
+		case session.SessionRolePlayer:
 			return "Player"
-		case entities.SessionRoleSpectator:
+		case session.SessionRoleSpectator:
 			return "Spectator"
 		}
 	}

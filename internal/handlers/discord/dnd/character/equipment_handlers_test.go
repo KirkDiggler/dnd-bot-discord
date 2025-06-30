@@ -5,13 +5,14 @@ package character_test
 
 import (
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	mockcharacters "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
@@ -82,17 +83,17 @@ func (s *EquipmentHandlersTestSuite) TestEquipmentChoicesHandler_WithChoices() {
 	}
 
 	// Mock expectations
-	mockRace := &entities.Race{
+	mockRace := &rulebook.Race{
 		Key:  "human",
 		Name: "Human",
 	}
 
-	mockClass := &entities.Class{
+	mockClass := &rulebook.Class{
 		Key:  "fighter",
 		Name: "Fighter",
-		StartingEquipment: []*entities.StartingEquipment{
+		StartingEquipment: []*rulebook.StartingEquipment{
 			{
-				Equipment: &entities.ReferenceItem{
+				Equipment: &shared.ReferenceItem{
 					Key:  "explorers-pack",
 					Name: "Explorer's Pack",
 				},
@@ -154,17 +155,17 @@ func (s *EquipmentHandlersTestSuite) TestEquipmentChoicesHandler_NoChoices() {
 	}
 
 	// Mock expectations
-	mockRace := &entities.Race{
+	mockRace := &rulebook.Race{
 		Key:  "human",
 		Name: "Human",
 	}
 
-	mockClass := &entities.Class{
+	mockClass := &rulebook.Class{
 		Key:  "monk",
 		Name: "Monk",
-		StartingEquipment: []*entities.StartingEquipment{
+		StartingEquipment: []*rulebook.StartingEquipment{
 			{
-				Equipment: &entities.ReferenceItem{
+				Equipment: &shared.ReferenceItem{
 					Key:  "dart",
 					Name: "Dart",
 				},
@@ -243,50 +244,50 @@ func mockDiscordResponse(session *discordgo.Session, interaction *discordgo.Inte
 
 // Test Data Helpers
 
-func createTestFighterClass() *entities.Class {
-	return &entities.Class{
+func createTestFighterClass() *rulebook.Class {
+	return &rulebook.Class{
 		Key:  "fighter",
 		Name: "Fighter",
-		StartingEquipment: []*entities.StartingEquipment{
+		StartingEquipment: []*rulebook.StartingEquipment{
 			{
-				Equipment: &entities.ReferenceItem{
+				Equipment: &shared.ReferenceItem{
 					Key:  "explorers-pack",
 					Name: "Explorer's Pack",
 				},
 				Quantity: 1,
 			},
 		},
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "(a) chain mail or (b) leather armor, longbow, and 20 arrows",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "chain-mail",
 							Name: "Chain Mail",
 						},
 					},
-					&entities.MultipleOption{
+					&shared.MultipleOption{
 						Key:  "armor-bow-bundle",
 						Name: "leather armor, longbow, and 20 arrows",
-						Items: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Items: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "leather-armor",
 									Name: "Leather Armor",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "longbow",
 									Name: "Longbow",
 								},
 							},
-							&entities.CountedReferenceOption{
+							&shared.CountedReferenceOption{
 								Count: 20,
-								Reference: &entities.ReferenceItem{
+								Reference: &shared.ReferenceItem{
 									Key:  "arrow",
 									Name: "Arrow",
 								},
@@ -299,33 +300,33 @@ func createTestFighterClass() *entities.Class {
 	}
 }
 
-func createTestWizardClass() *entities.Class {
-	return &entities.Class{
+func createTestWizardClass() *rulebook.Class {
+	return &rulebook.Class{
 		Key:  "wizard",
 		Name: "Wizard",
-		StartingEquipment: []*entities.StartingEquipment{
+		StartingEquipment: []*rulebook.StartingEquipment{
 			{
-				Equipment: &entities.ReferenceItem{
+				Equipment: &shared.ReferenceItem{
 					Key:  "spellbook",
 					Name: "Spellbook",
 				},
 				Quantity: 1,
 			},
 		},
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "(a) a quarterstaff or (b) a dagger",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "quarterstaff",
 							Name: "Quarterstaff",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "dagger",
 							Name: "Dagger",
 						},

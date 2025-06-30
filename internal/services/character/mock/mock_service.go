@@ -6,9 +6,11 @@ package mockcharacters
 
 import (
 	context "context"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	reflect "reflect"
 
-	entities "github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	character "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -66,10 +68,10 @@ func (mr *MockServiceMockRecorder) Delete(characterID interface{}) *gomock.Call 
 }
 
 // FinalizeCharacterWithName mocks base method.
-func (m *MockService) FinalizeCharacterWithName(ctx context.Context, characterID, name, raceKey, classKey string) (*entities.Character, error) {
+func (m *MockService) FinalizeCharacterWithName(ctx context.Context, characterID, name, raceKey, classKey string) (*character2.Character, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FinalizeCharacterWithName", ctx, characterID, name, raceKey, classKey)
-	ret0, _ := ret[0].(*entities.Character)
+	ret0, _ := ret[0].(*character2.Character)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -81,10 +83,10 @@ func (mr *MockServiceMockRecorder) FinalizeCharacterWithName(ctx, characterID, n
 }
 
 // FinalizeDraftCharacter mocks base method.
-func (m *MockService) FinalizeDraftCharacter(ctx context.Context, characterID string) (*entities.Character, error) {
+func (m *MockService) FinalizeDraftCharacter(ctx context.Context, characterID string) (*character2.Character, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FinalizeDraftCharacter", ctx, characterID)
-	ret0, _ := ret[0].(*entities.Character)
+	ret0, _ := ret[0].(*character2.Character)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -96,10 +98,10 @@ func (mr *MockServiceMockRecorder) FinalizeDraftCharacter(ctx, characterID inter
 }
 
 // FixCharacterAttributes mocks base method.
-func (m *MockService) FixCharacterAttributes(ctx context.Context, characterID string) (*entities.Character, error) {
+func (m *MockService) FixCharacterAttributes(ctx context.Context, characterID string) (*character2.Character, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FixCharacterAttributes", ctx, characterID)
-	ret0, _ := ret[0].(*entities.Character)
+	ret0, _ := ret[0].(*character2.Character)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -111,10 +113,10 @@ func (mr *MockServiceMockRecorder) FixCharacterAttributes(ctx, characterID inter
 }
 
 // GetByID mocks base method.
-func (m *MockService) GetByID(characterID string) (*entities.Character, error) {
+func (m *MockService) GetByID(characterID string) (*character2.Character, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetByID", characterID)
-	ret0, _ := ret[0].(*entities.Character)
+	ret0, _ := ret[0].(*character2.Character)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -126,10 +128,10 @@ func (mr *MockServiceMockRecorder) GetByID(characterID interface{}) *gomock.Call
 }
 
 // GetCharacter mocks base method.
-func (m *MockService) GetCharacter(ctx context.Context, characterID string) (*entities.Character, error) {
+func (m *MockService) GetCharacter(ctx context.Context, characterID string) (*character2.Character, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCharacter", ctx, characterID)
-	ret0, _ := ret[0].(*entities.Character)
+	ret0, _ := ret[0].(*character2.Character)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -141,10 +143,10 @@ func (mr *MockServiceMockRecorder) GetCharacter(ctx, characterID interface{}) *g
 }
 
 // GetCharacterCreationSession mocks base method.
-func (m *MockService) GetCharacterCreationSession(ctx context.Context, sessionID string) (*entities.CharacterCreationSession, error) {
+func (m *MockService) GetCharacterCreationSession(ctx context.Context, sessionID string) (*character2.CharacterCreationSession, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCharacterCreationSession", ctx, sessionID)
-	ret0, _ := ret[0].(*entities.CharacterCreationSession)
+	ret0, _ := ret[0].(*character2.CharacterCreationSession)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -156,10 +158,10 @@ func (mr *MockServiceMockRecorder) GetCharacterCreationSession(ctx, sessionID in
 }
 
 // GetCharacterFromSession mocks base method.
-func (m *MockService) GetCharacterFromSession(ctx context.Context, sessionID string) (*entities.Character, error) {
+func (m *MockService) GetCharacterFromSession(ctx context.Context, sessionID string) (*character2.Character, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCharacterFromSession", ctx, sessionID)
-	ret0, _ := ret[0].(*entities.Character)
+	ret0, _ := ret[0].(*character2.Character)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -171,10 +173,10 @@ func (mr *MockServiceMockRecorder) GetCharacterFromSession(ctx, sessionID interf
 }
 
 // GetClass mocks base method.
-func (m *MockService) GetClass(ctx context.Context, classKey string) (*entities.Class, error) {
+func (m *MockService) GetClass(ctx context.Context, classKey string) (*rulebook.Class, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetClass", ctx, classKey)
-	ret0, _ := ret[0].(*entities.Class)
+	ret0, _ := ret[0].(*rulebook.Class)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -186,10 +188,10 @@ func (mr *MockServiceMockRecorder) GetClass(ctx, classKey interface{}) *gomock.C
 }
 
 // GetClasses mocks base method.
-func (m *MockService) GetClasses(ctx context.Context) ([]*entities.Class, error) {
+func (m *MockService) GetClasses(ctx context.Context) ([]*rulebook.Class, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetClasses", ctx)
-	ret0, _ := ret[0].([]*entities.Class)
+	ret0, _ := ret[0].([]*rulebook.Class)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -201,10 +203,10 @@ func (mr *MockServiceMockRecorder) GetClasses(ctx interface{}) *gomock.Call {
 }
 
 // GetEquipmentByCategory mocks base method.
-func (m *MockService) GetEquipmentByCategory(ctx context.Context, category string) ([]entities.Equipment, error) {
+func (m *MockService) GetEquipmentByCategory(ctx context.Context, category string) ([]equipment.Equipment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEquipmentByCategory", ctx, category)
-	ret0, _ := ret[0].([]entities.Equipment)
+	ret0, _ := ret[0].([]equipment.Equipment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -216,10 +218,10 @@ func (mr *MockServiceMockRecorder) GetEquipmentByCategory(ctx, category interfac
 }
 
 // GetOrCreateDraftCharacter mocks base method.
-func (m *MockService) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID string) (*entities.Character, error) {
+func (m *MockService) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID string) (*character2.Character, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetOrCreateDraftCharacter", ctx, userID, realmID)
-	ret0, _ := ret[0].(*entities.Character)
+	ret0, _ := ret[0].(*character2.Character)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -231,10 +233,10 @@ func (mr *MockServiceMockRecorder) GetOrCreateDraftCharacter(ctx, userID, realmI
 }
 
 // GetRace mocks base method.
-func (m *MockService) GetRace(ctx context.Context, raceKey string) (*entities.Race, error) {
+func (m *MockService) GetRace(ctx context.Context, raceKey string) (*rulebook.Race, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRace", ctx, raceKey)
-	ret0, _ := ret[0].(*entities.Race)
+	ret0, _ := ret[0].(*rulebook.Race)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -246,10 +248,10 @@ func (mr *MockServiceMockRecorder) GetRace(ctx, raceKey interface{}) *gomock.Cal
 }
 
 // GetRaces mocks base method.
-func (m *MockService) GetRaces(ctx context.Context) ([]*entities.Race, error) {
+func (m *MockService) GetRaces(ctx context.Context) ([]*rulebook.Race, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRaces", ctx)
-	ret0, _ := ret[0].([]*entities.Race)
+	ret0, _ := ret[0].([]*rulebook.Race)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -261,10 +263,10 @@ func (mr *MockServiceMockRecorder) GetRaces(ctx interface{}) *gomock.Call {
 }
 
 // ListByOwner mocks base method.
-func (m *MockService) ListByOwner(ownerID string) ([]*entities.Character, error) {
+func (m *MockService) ListByOwner(ownerID string) ([]*character2.Character, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListByOwner", ownerID)
-	ret0, _ := ret[0].([]*entities.Character)
+	ret0, _ := ret[0].([]*character2.Character)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -276,10 +278,10 @@ func (mr *MockServiceMockRecorder) ListByOwner(ownerID interface{}) *gomock.Call
 }
 
 // ListCharacters mocks base method.
-func (m *MockService) ListCharacters(ctx context.Context, userID string) ([]*entities.Character, error) {
+func (m *MockService) ListCharacters(ctx context.Context, userID string) ([]*character2.Character, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListCharacters", ctx, userID)
-	ret0, _ := ret[0].([]*entities.Character)
+	ret0, _ := ret[0].([]*character2.Character)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -306,10 +308,10 @@ func (mr *MockServiceMockRecorder) ResolveChoices(ctx, input interface{}) *gomoc
 }
 
 // StartCharacterCreation mocks base method.
-func (m *MockService) StartCharacterCreation(ctx context.Context, userID, guildID string) (*entities.CharacterCreationSession, error) {
+func (m *MockService) StartCharacterCreation(ctx context.Context, userID, guildID string) (*character2.CharacterCreationSession, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StartCharacterCreation", ctx, userID, guildID)
-	ret0, _ := ret[0].(*entities.CharacterCreationSession)
+	ret0, _ := ret[0].(*character2.CharacterCreationSession)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -321,10 +323,10 @@ func (mr *MockServiceMockRecorder) StartCharacterCreation(ctx, userID, guildID i
 }
 
 // StartFreshCharacterCreation mocks base method.
-func (m *MockService) StartFreshCharacterCreation(ctx context.Context, userID, realmID string) (*entities.Character, error) {
+func (m *MockService) StartFreshCharacterCreation(ctx context.Context, userID, realmID string) (*character2.Character, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StartFreshCharacterCreation", ctx, userID, realmID)
-	ret0, _ := ret[0].(*entities.Character)
+	ret0, _ := ret[0].(*character2.Character)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -350,10 +352,10 @@ func (mr *MockServiceMockRecorder) UpdateCharacterCreationSession(ctx, sessionID
 }
 
 // UpdateDraftCharacter mocks base method.
-func (m *MockService) UpdateDraftCharacter(ctx context.Context, characterID string, updates *character.UpdateDraftInput) (*entities.Character, error) {
+func (m *MockService) UpdateDraftCharacter(ctx context.Context, characterID string, updates *character.UpdateDraftInput) (*character2.Character, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateDraftCharacter", ctx, characterID, updates)
-	ret0, _ := ret[0].(*entities.Character)
+	ret0, _ := ret[0].(*character2.Character)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -365,7 +367,7 @@ func (mr *MockServiceMockRecorder) UpdateDraftCharacter(ctx, characterID, update
 }
 
 // UpdateEquipment mocks base method.
-func (m *MockService) UpdateEquipment(character *entities.Character) error {
+func (m *MockService) UpdateEquipment(character *character2.Character) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateEquipment", character)
 	ret0, _ := ret[0].(error)
@@ -379,7 +381,7 @@ func (mr *MockServiceMockRecorder) UpdateEquipment(character interface{}) *gomoc
 }
 
 // UpdateStatus mocks base method.
-func (m *MockService) UpdateStatus(characterID string, status entities.CharacterStatus) error {
+func (m *MockService) UpdateStatus(characterID string, status character2.CharacterStatus) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateStatus", characterID, status)
 	ret0, _ := ret[0].(error)

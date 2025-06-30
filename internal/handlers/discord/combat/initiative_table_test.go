@@ -1,26 +1,26 @@
 package combat
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"strings"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBuildInitiativeFields_DeadCreatureAlignment(t *testing.T) {
 	// Create test encounter with dead and alive creatures
-	enc := &entities.Encounter{
+	enc := &combat.Encounter{
 		ID:        "test-encounter",
 		Round:     1,
 		Turn:      0,
 		TurnOrder: []string{"player1", "goblin1", "goblin2"},
-		Combatants: map[string]*entities.Combatant{
+		Combatants: map[string]*combat.Combatant{
 			"player1": {
 				ID:         "player1",
 				Name:       "Stanthony",
-				Type:       entities.CombatantTypePlayer,
+				Type:       combat.CombatantTypePlayer,
 				Class:      "Fighter",
 				Initiative: 20,
 				CurrentHP:  9,
@@ -31,7 +31,7 @@ func TestBuildInitiativeFields_DeadCreatureAlignment(t *testing.T) {
 			"goblin1": {
 				ID:         "goblin1",
 				Name:       "Goblin",
-				Type:       entities.CombatantTypeMonster,
+				Type:       combat.CombatantTypeMonster,
 				Initiative: 17,
 				CurrentHP:  0, // Dead
 				MaxHP:      7,
@@ -41,7 +41,7 @@ func TestBuildInitiativeFields_DeadCreatureAlignment(t *testing.T) {
 			"goblin2": {
 				ID:         "goblin2",
 				Name:       "Skeleton",
-				Type:       entities.CombatantTypeMonster,
+				Type:       combat.CombatantTypeMonster,
 				Initiative: 15,
 				CurrentHP:  13,
 				MaxHP:      13,
@@ -97,16 +97,16 @@ func TestBuildInitiativeFields_DeadCreatureAlignment(t *testing.T) {
 
 func TestBuildInitiativeFields_LowHealthWarning(t *testing.T) {
 	// Test that low health creatures don't get extra indicators breaking alignment
-	enc := &entities.Encounter{
+	enc := &combat.Encounter{
 		ID:        "test-encounter",
 		Round:     1,
 		Turn:      0,
 		TurnOrder: []string{"player1"},
-		Combatants: map[string]*entities.Combatant{
+		Combatants: map[string]*combat.Combatant{
 			"player1": {
 				ID:         "player1",
 				Name:       "LowHealthHero",
-				Type:       entities.CombatantTypePlayer,
+				Type:       combat.CombatantTypePlayer,
 				Class:      "Fighter",
 				Initiative: 20,
 				CurrentHP:  2, // Very low health
@@ -137,15 +137,15 @@ func TestBuildInitiativeFields_LowHealthWarning(t *testing.T) {
 func TestFormatCombatantName(t *testing.T) {
 	tests := []struct {
 		name          string
-		combatant     *entities.Combatant
+		combatant     *combat.Combatant
 		expectedName  string
 		expectedWidth int
 	}{
 		{
 			name: "living player with regular icon",
-			combatant: &entities.Combatant{
+			combatant: &combat.Combatant{
 				Name:      "Gandalf",
-				Type:      entities.CombatantTypePlayer,
+				Type:      combat.CombatantTypePlayer,
 				Class:     "Wizard",
 				CurrentHP: 10,
 				MaxHP:     10,
@@ -155,9 +155,9 @@ func TestFormatCombatantName(t *testing.T) {
 		},
 		{
 			name: "living player with variation selector icon",
-			combatant: &entities.Combatant{
+			combatant: &combat.Combatant{
 				Name:      "Stanthony",
-				Type:      entities.CombatantTypePlayer,
+				Type:      combat.CombatantTypePlayer,
 				Class:     "Fighter",
 				CurrentHP: 10,
 				MaxHP:     10,
@@ -167,9 +167,9 @@ func TestFormatCombatantName(t *testing.T) {
 		},
 		{
 			name: "dead player",
-			combatant: &entities.Combatant{
+			combatant: &combat.Combatant{
 				Name:      "Fallen Hero",
-				Type:      entities.CombatantTypePlayer,
+				Type:      combat.CombatantTypePlayer,
 				Class:     "Fighter",
 				CurrentHP: 0,
 				MaxHP:     10,
@@ -179,9 +179,9 @@ func TestFormatCombatantName(t *testing.T) {
 		},
 		{
 			name: "living monster",
-			combatant: &entities.Combatant{
+			combatant: &combat.Combatant{
 				Name:      "Goblin",
-				Type:      entities.CombatantTypeMonster,
+				Type:      combat.CombatantTypeMonster,
 				CurrentHP: 5,
 				MaxHP:     7,
 			},
@@ -190,9 +190,9 @@ func TestFormatCombatantName(t *testing.T) {
 		},
 		{
 			name: "long name gets truncated",
-			combatant: &entities.Combatant{
+			combatant: &combat.Combatant{
 				Name:      "Very Long Monster Name",
-				Type:      entities.CombatantTypeMonster,
+				Type:      combat.CombatantTypeMonster,
 				CurrentHP: 10,
 				MaxHP:     10,
 			},

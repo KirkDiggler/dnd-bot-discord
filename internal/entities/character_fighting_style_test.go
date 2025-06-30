@@ -1,24 +1,28 @@
 package entities
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestFightingStyleArchery(t *testing.T) {
 	// Create a fighter with archery fighting style
-	char := &Character{
+	char := &character.Character{
 		Name:  "Archer",
 		Level: 1,
-		Class: &Class{Key: "fighter"},
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeDexterity: {Score: 16, Bonus: 3},
-			AttributeStrength:  {Score: 10, Bonus: 0},
+		Class: &rulebook.Class{Key: "fighter"},
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeDexterity: {Score: 16, Bonus: 3},
+			character.AttributeStrength:  {Score: 10, Bonus: 0},
 		},
-		Features: []*CharacterFeature{
+		Features: []*rulebook.CharacterFeature{
 			{
 				Key:  "fighting_style",
 				Name: "Fighting Style",
@@ -27,12 +31,12 @@ func TestFightingStyleArchery(t *testing.T) {
 				},
 			},
 		},
-		EquippedSlots: make(map[Slot]Equipment),
+		EquippedSlots: make(map[character.Slot]equipment.Equipment),
 	}
 
 	// Equip a ranged weapon
-	longbow := &Weapon{
-		Base: BasicEquipment{
+	longbow := &equipment.Weapon{
+		Base: equipment.BasicEquipment{
 			Key:  "longbow",
 			Name: "Longbow",
 		},
@@ -44,11 +48,11 @@ func TestFightingStyleArchery(t *testing.T) {
 			DamageType: damage.TypePiercing,
 		},
 	}
-	char.EquippedSlots[SlotMainHand] = longbow
+	char.EquippedSlots[character.SlotMainHand] = longbow
 
 	// Add martial weapon proficiency
-	char.Proficiencies = map[ProficiencyType][]*Proficiency{
-		ProficiencyTypeWeapon: {
+	char.Proficiencies = map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+		rulebook.ProficiencyTypeWeapon: {
 			{Key: "martial-weapons", Name: "Martial Weapons"},
 		},
 	}
@@ -67,15 +71,15 @@ func TestFightingStyleArchery(t *testing.T) {
 
 func TestFightingStyleDueling(t *testing.T) {
 	// Create a fighter with dueling fighting style
-	char := &Character{
+	char := &character.Character{
 		Name:  "Duelist",
 		Level: 1,
-		Class: &Class{Key: "fighter"},
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeStrength:  {Score: 16, Bonus: 3},
-			AttributeDexterity: {Score: 10, Bonus: 0},
+		Class: &rulebook.Class{Key: "fighter"},
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeStrength:  {Score: 16, Bonus: 3},
+			character.AttributeDexterity: {Score: 10, Bonus: 0},
 		},
-		Features: []*CharacterFeature{
+		Features: []*rulebook.CharacterFeature{
 			{
 				Key:  "fighting_style",
 				Name: "Fighting Style",
@@ -84,12 +88,12 @@ func TestFightingStyleDueling(t *testing.T) {
 				},
 			},
 		},
-		EquippedSlots: make(map[Slot]Equipment),
+		EquippedSlots: make(map[character.Slot]equipment.Equipment),
 	}
 
 	// Equip a one-handed weapon
-	longsword := &Weapon{
-		Base: BasicEquipment{
+	longsword := &equipment.Weapon{
+		Base: equipment.BasicEquipment{
 			Key:  "longsword",
 			Name: "Longsword",
 		},
@@ -100,15 +104,15 @@ func TestFightingStyleDueling(t *testing.T) {
 			DiceSize:   8,
 			DamageType: damage.TypeSlashing,
 		},
-		Properties: []*ReferenceItem{
+		Properties: []*shared.ReferenceItem{
 			{Key: "versatile"},
 		},
 	}
-	char.EquippedSlots[SlotMainHand] = longsword
+	char.EquippedSlots[character.SlotMainHand] = longsword
 
 	// Add martial weapon proficiency
-	char.Proficiencies = map[ProficiencyType][]*Proficiency{
-		ProficiencyTypeWeapon: {
+	char.Proficiencies = map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+		rulebook.ProficiencyTypeWeapon: {
 			{Key: "martial-weapons", Name: "Martial Weapons"},
 		},
 	}
@@ -122,18 +126,18 @@ func TestFightingStyleDueling(t *testing.T) {
 	assert.GreaterOrEqual(t, results[0].DamageRoll, 6) // At least 1 damage + 5 bonus
 
 	// Now equip a shield in off-hand (still gets dueling bonus)
-	shield := &Armor{
-		Base: BasicEquipment{
+	shield := &equipment.Armor{
+		Base: equipment.BasicEquipment{
 			Key:  "shield",
 			Name: "Shield",
 		},
-		ArmorClass: &ArmorClass{
+		ArmorClass: &equipment.ArmorClass{
 			Base:     2,
 			DexBonus: false,
 		},
 		ArmorCategory: "shield",
 	}
-	char.EquippedSlots[SlotOffHand] = shield
+	char.EquippedSlots[character.SlotOffHand] = shield
 
 	// Attack should still get dueling bonus with shield
 	results2, err := char.Attack()
@@ -142,8 +146,8 @@ func TestFightingStyleDueling(t *testing.T) {
 	assert.GreaterOrEqual(t, results2[0].DamageRoll, 6, "Should still get dueling bonus with shield")
 
 	// Now equip a weapon in off-hand (loses dueling bonus)
-	dagger := &Weapon{
-		Base: BasicEquipment{
+	dagger := &equipment.Weapon{
+		Base: equipment.BasicEquipment{
 			Key:  "dagger",
 			Name: "Dagger",
 		},
@@ -154,11 +158,11 @@ func TestFightingStyleDueling(t *testing.T) {
 			DiceSize:   4,
 			DamageType: damage.TypePiercing,
 		},
-		Properties: []*ReferenceItem{
+		Properties: []*shared.ReferenceItem{
 			{Key: "light"},
 		},
 	}
-	char.EquippedSlots[SlotOffHand] = dagger
+	char.EquippedSlots[character.SlotOffHand] = dagger
 
 	// Attack should NOT get dueling bonus with two weapons
 	results3, err := char.Attack()
@@ -171,15 +175,15 @@ func TestFightingStyleDueling(t *testing.T) {
 
 func TestFightingStyleTwoWeaponFighting(t *testing.T) {
 	// Create a fighter with two-weapon fighting style
-	char := &Character{
+	char := &character.Character{
 		Name:  "Dual Wielder",
 		Level: 1,
-		Class: &Class{Key: "fighter"},
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeStrength:  {Score: 16, Bonus: 3},
-			AttributeDexterity: {Score: 14, Bonus: 2},
+		Class: &rulebook.Class{Key: "fighter"},
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeStrength:  {Score: 16, Bonus: 3},
+			character.AttributeDexterity: {Score: 14, Bonus: 2},
 		},
-		Features: []*CharacterFeature{
+		Features: []*rulebook.CharacterFeature{
 			{
 				Key:  "fighting_style",
 				Name: "Fighting Style",
@@ -188,12 +192,12 @@ func TestFightingStyleTwoWeaponFighting(t *testing.T) {
 				},
 			},
 		},
-		EquippedSlots: make(map[Slot]Equipment),
+		EquippedSlots: make(map[character.Slot]equipment.Equipment),
 	}
 
 	// Equip two light weapons
-	shortsword := &Weapon{
-		Base: BasicEquipment{
+	shortsword := &equipment.Weapon{
+		Base: equipment.BasicEquipment{
 			Key:  "shortsword",
 			Name: "Shortsword",
 		},
@@ -204,16 +208,16 @@ func TestFightingStyleTwoWeaponFighting(t *testing.T) {
 			DiceSize:   6,
 			DamageType: damage.TypePiercing,
 		},
-		Properties: []*ReferenceItem{
+		Properties: []*shared.ReferenceItem{
 			{Key: "light"},
 		},
 	}
-	char.EquippedSlots[SlotMainHand] = shortsword
-	char.EquippedSlots[SlotOffHand] = shortsword
+	char.EquippedSlots[character.SlotMainHand] = shortsword
+	char.EquippedSlots[character.SlotOffHand] = shortsword
 
 	// Add martial weapon proficiency
-	char.Proficiencies = map[ProficiencyType][]*Proficiency{
-		ProficiencyTypeWeapon: {
+	char.Proficiencies = map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+		rulebook.ProficiencyTypeWeapon: {
 			{Key: "martial-weapons", Name: "Martial Weapons"},
 		},
 	}
@@ -232,15 +236,15 @@ func TestFightingStyleTwoWeaponFighting(t *testing.T) {
 
 func TestFightingStyleDefense(t *testing.T) {
 	// Create a fighter with defense fighting style
-	char := &Character{
+	char := &character.Character{
 		Name:  "Defender",
 		Level: 1,
-		Class: &Class{Key: "fighter"},
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeDexterity:    {Score: 14, Bonus: 2},
-			AttributeConstitution: {Score: 14, Bonus: 2},
+		Class: &rulebook.Class{Key: "fighter"},
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeDexterity:    {Score: 14, Bonus: 2},
+			character.AttributeConstitution: {Score: 14, Bonus: 2},
 		},
-		Features: []*CharacterFeature{
+		Features: []*rulebook.CharacterFeature{
 			{
 				Key:  "fighting_style",
 				Name: "Fighting Style",
@@ -249,7 +253,7 @@ func TestFightingStyleDefense(t *testing.T) {
 				},
 			},
 		},
-		EquippedSlots: make(map[Slot]Equipment),
+		EquippedSlots: make(map[character.Slot]equipment.Equipment),
 	}
 
 	// Calculate AC without armor (no defense bonus)
@@ -257,18 +261,18 @@ func TestFightingStyleDefense(t *testing.T) {
 	assert.Equal(t, 10, char.AC) // 10 base, no DEX without armor in 5e by default
 
 	// Equip armor
-	chainMail := &Armor{
-		Base: BasicEquipment{
+	chainMail := &equipment.Armor{
+		Base: equipment.BasicEquipment{
 			Key:  "chain-mail",
 			Name: "Chain Mail",
 		},
-		ArmorClass: &ArmorClass{
+		ArmorClass: &equipment.ArmorClass{
 			Base:     16,
 			DexBonus: false,
 		},
 		ArmorCategory: "heavy",
 	}
-	char.EquippedSlots[SlotBody] = chainMail
+	char.EquippedSlots[character.SlotBody] = chainMail
 
 	// Calculate AC with armor (gets defense bonus)
 	char.calculateAC()
@@ -277,15 +281,15 @@ func TestFightingStyleDefense(t *testing.T) {
 
 func TestFightingStyleGreatWeapon(t *testing.T) {
 	// Create a fighter with great weapon fighting style
-	char := &Character{
+	char := &character.Character{
 		Name:  "Great Weapon Fighter",
 		Level: 1,
-		Class: &Class{Key: "fighter"},
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeStrength:  {Score: 18, Bonus: 4},
-			AttributeDexterity: {Score: 10, Bonus: 0},
+		Class: &rulebook.Class{Key: "fighter"},
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeStrength:  {Score: 18, Bonus: 4},
+			character.AttributeDexterity: {Score: 10, Bonus: 0},
 		},
-		Features: []*CharacterFeature{
+		Features: []*rulebook.CharacterFeature{
 			{
 				Key:  "fighting_style",
 				Name: "Fighting Style",
@@ -294,12 +298,12 @@ func TestFightingStyleGreatWeapon(t *testing.T) {
 				},
 			},
 		},
-		EquippedSlots: make(map[Slot]Equipment),
+		EquippedSlots: make(map[character.Slot]equipment.Equipment),
 	}
 
 	// Equip a two-handed weapon
-	greatsword := &Weapon{
-		Base: BasicEquipment{
+	greatsword := &equipment.Weapon{
+		Base: equipment.BasicEquipment{
 			Key:  "greatsword",
 			Name: "Greatsword",
 		},
@@ -310,15 +314,15 @@ func TestFightingStyleGreatWeapon(t *testing.T) {
 			DiceSize:   6,
 			DamageType: damage.TypeSlashing,
 		},
-		Properties: []*ReferenceItem{
+		Properties: []*shared.ReferenceItem{
 			{Key: "two-handed"},
 		},
 	}
-	char.EquippedSlots[SlotTwoHanded] = greatsword
+	char.EquippedSlots[character.SlotTwoHanded] = greatsword
 
 	// Add martial weapon proficiency
-	char.Proficiencies = map[ProficiencyType][]*Proficiency{
-		ProficiencyTypeWeapon: {
+	char.Proficiencies = map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+		rulebook.ProficiencyTypeWeapon: {
 			{Key: "martial-weapons", Name: "Martial Weapons"},
 		},
 	}

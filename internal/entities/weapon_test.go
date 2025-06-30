@@ -1,32 +1,35 @@
 package entities
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestWeaponAttackCalculations(t *testing.T) {
 	// Create a test character
-	char := &Character{
+	char := &character.Character{
 		Level: 1,
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeStrength:  {Score: 16, Bonus: 3}, // +3 modifier
-			AttributeDexterity: {Score: 14, Bonus: 2}, // +2 modifier
+		Attributes: map[character.Attribute]*character.AbilityScore{
+			character.AttributeStrength:  {Score: 16, Bonus: 3}, // +3 modifier
+			character.AttributeDexterity: {Score: 14, Bonus: 2}, // +2 modifier
 		},
-		Proficiencies: map[ProficiencyType][]*Proficiency{
-			ProficiencyTypeWeapon: {
-				{Key: "longsword", Name: "Longsword", Type: ProficiencyTypeWeapon},
-				{Key: "shortbow", Name: "Shortbow", Type: ProficiencyTypeWeapon},
+		Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+			rulebook.ProficiencyTypeWeapon: {
+				{Key: "longsword", Name: "Longsword", Type: rulebook.ProficiencyTypeWeapon},
+				{Key: "shortbow", Name: "Shortbow", Type: rulebook.ProficiencyTypeWeapon},
 			},
 		},
 	}
 
 	t.Run("Melee weapon with proficiency", func(t *testing.T) {
-		weapon := &Weapon{
-			Base: BasicEquipment{
+		weapon := &equipment.Weapon{
+			Base: equipment.BasicEquipment{
 				Key:  "longsword",
 				Name: "Longsword",
 			},
@@ -50,8 +53,8 @@ func TestWeaponAttackCalculations(t *testing.T) {
 	})
 
 	t.Run("Ranged weapon with proficiency", func(t *testing.T) {
-		weapon := &Weapon{
-			Base: BasicEquipment{
+		weapon := &equipment.Weapon{
+			Base: equipment.BasicEquipment{
 				Key:  "shortbow",
 				Name: "Shortbow",
 			},
@@ -73,8 +76,8 @@ func TestWeaponAttackCalculations(t *testing.T) {
 	})
 
 	t.Run("Weapon without proficiency", func(t *testing.T) {
-		weapon := &Weapon{
-			Base: BasicEquipment{
+		weapon := &equipment.Weapon{
+			Base: equipment.BasicEquipment{
 				Key:  "greataxe",
 				Name: "Greataxe",
 			},
@@ -123,11 +126,11 @@ func TestWeaponAttackCalculations(t *testing.T) {
 
 func TestCharacterEquipMethod(t *testing.T) {
 	t.Run("Equip main hand weapon", func(t *testing.T) {
-		char := &Character{
-			Inventory: map[EquipmentType][]Equipment{
-				EquipmentTypeWeapon: {
-					&Weapon{
-						Base: BasicEquipment{
+		char := &character.Character{
+			Inventory: map[equipment.EquipmentType][]equipment.Equipment{
+				equipment.EquipmentTypeWeapon: {
+					&equipment.Weapon{
+						Base: equipment.BasicEquipment{
 							Key:  "longsword",
 							Name: "Longsword",
 						},
@@ -138,55 +141,55 @@ func TestCharacterEquipMethod(t *testing.T) {
 
 		success := char.Equip("longsword")
 		assert.True(t, success)
-		assert.NotNil(t, char.EquippedSlots[SlotMainHand])
-		assert.Equal(t, "longsword", char.EquippedSlots[SlotMainHand].GetKey())
+		assert.NotNil(t, char.EquippedSlots[character.SlotMainHand])
+		assert.Equal(t, "longsword", char.EquippedSlots[character.SlotMainHand].GetKey())
 	})
 
 	t.Run("Equip weapon not in inventory", func(t *testing.T) {
-		char := &Character{
-			Inventory: map[EquipmentType][]Equipment{
-				EquipmentTypeWeapon: {},
+		char := &character.Character{
+			Inventory: map[equipment.EquipmentType][]equipment.Equipment{
+				equipment.EquipmentTypeWeapon: {},
 			},
 		}
 
 		success := char.Equip("nonexistent-weapon")
 		assert.False(t, success)
-		assert.Nil(t, char.EquippedSlots[SlotMainHand])
+		assert.Nil(t, char.EquippedSlots[character.SlotMainHand])
 	})
 
 	t.Run("Dual wielding weapons", func(t *testing.T) {
-		mainHand := &Weapon{
-			Base: BasicEquipment{Key: "shortsword1", Name: "Shortsword"},
+		mainHand := &equipment.Weapon{
+			Base: equipment.BasicEquipment{Key: "shortsword1", Name: "Shortsword"},
 		}
-		offHand := &Weapon{
-			Base: BasicEquipment{Key: "shortsword2", Name: "Shortsword"},
+		offHand := &equipment.Weapon{
+			Base: equipment.BasicEquipment{Key: "shortsword2", Name: "Shortsword"},
 		}
 
-		char := &Character{
-			Inventory: map[EquipmentType][]Equipment{
-				EquipmentTypeWeapon: {mainHand, offHand},
+		char := &character.Character{
+			Inventory: map[equipment.EquipmentType][]equipment.Equipment{
+				equipment.EquipmentTypeWeapon: {mainHand, offHand},
 			},
 		}
 
 		// Equip main hand first
 		success1 := char.Equip("shortsword1")
 		assert.True(t, success1)
-		assert.Equal(t, "shortsword1", char.EquippedSlots[SlotMainHand].GetKey())
+		assert.Equal(t, "shortsword1", char.EquippedSlots[character.SlotMainHand].GetKey())
 
 		// Equip second weapon - should move first to off hand
 		success2 := char.Equip("shortsword2")
 		assert.True(t, success2)
-		assert.Equal(t, "shortsword2", char.EquippedSlots[SlotMainHand].GetKey())
-		assert.Equal(t, "shortsword1", char.EquippedSlots[SlotOffHand].GetKey())
+		assert.Equal(t, "shortsword2", char.EquippedSlots[character.SlotMainHand].GetKey())
+		assert.Equal(t, "shortsword1", char.EquippedSlots[character.SlotOffHand].GetKey())
 	})
 }
 
 func TestHasWeaponProficiency(t *testing.T) {
-	char := &Character{
-		Proficiencies: map[ProficiencyType][]*Proficiency{
-			ProficiencyTypeWeapon: {
-				{Key: "longsword", Name: "Longsword", Type: ProficiencyTypeWeapon},
-				{Key: "shortbow", Name: "Shortbow", Type: ProficiencyTypeWeapon},
+	char := &character.Character{
+		Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+			rulebook.ProficiencyTypeWeapon: {
+				{Key: "longsword", Name: "Longsword", Type: rulebook.ProficiencyTypeWeapon},
+				{Key: "shortbow", Name: "Shortbow", Type: rulebook.ProficiencyTypeWeapon},
 			},
 		},
 	}
@@ -202,14 +205,14 @@ func TestHasWeaponProficiency(t *testing.T) {
 	})
 
 	t.Run("No weapon proficiencies at all", func(t *testing.T) {
-		charNoProficiencies := &Character{
-			Proficiencies: map[ProficiencyType][]*Proficiency{},
+		charNoProficiencies := &character.Character{
+			Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{},
 		}
 		assert.False(t, charNoProficiencies.HasWeaponProficiency("longsword"))
 	})
 
 	t.Run("Nil proficiencies map", func(t *testing.T) {
-		charNilProficiencies := &Character{}
+		charNilProficiencies := &character.Character{}
 		assert.False(t, charNilProficiencies.HasWeaponProficiency("longsword"))
 	})
 }

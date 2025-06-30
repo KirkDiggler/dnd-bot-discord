@@ -4,10 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/exploration"
 	"log"
 	"os"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dungeonsRepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/dungeons"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
@@ -84,7 +84,7 @@ func main() {
 	// Debug the logic
 	fmt.Printf("\nDebug Info:\n")
 	fmt.Printf("  Party Size > 0: %v\n", len(dungeon.Party) > 0)
-	fmt.Printf("  State is AwaitingParty: %v\n", dungeon.State == entities.DungeonStateAwaitingParty)
-	fmt.Printf("  State is RoomReady: %v\n", dungeon.State == entities.DungeonStateRoomReady)
+	fmt.Printf("  State is AwaitingParty: %v\n", dungeon.State == exploration.DungeonStateAwaitingParty)
+	fmt.Printf("  State is RoomReady: %v\n", dungeon.State == exploration.DungeonStateRoomReady)
 
 }

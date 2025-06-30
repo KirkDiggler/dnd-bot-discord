@@ -2,15 +2,15 @@ package character
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"log"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 )
 
 // FinalizeCharacterWithName sets the name and finalizes a draft character in one operation
-func (s *service) FinalizeCharacterWithName(ctx context.Context, characterID, name, raceKey, classKey string) (*entities.Character, error) {
+func (s *service) FinalizeCharacterWithName(ctx context.Context, characterID, name, raceKey, classKey string) (*character.Character, error) {
 	if strings.TrimSpace(characterID) == "" {
 		return nil, dnderr.InvalidArgument("character ID is required")
 	}
