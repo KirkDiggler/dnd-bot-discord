@@ -170,6 +170,37 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 
 // RegisterCommands registers all slash commands with Discord
 func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
+	// First, clean up any existing commands
+	log.Println("Cleaning up existing commands...")
+
+	// Get all global commands
+	globalCommands, err := s.ApplicationCommands(s.State.User.ID, "")
+	if err != nil {
+		log.Printf("Failed to get global commands: %v", err)
+	} else {
+		for _, cmd := range globalCommands {
+			log.Printf("Deleting global command: %s", cmd.Name)
+			if deleteErr := s.ApplicationCommandDelete(s.State.User.ID, "", cmd.ID); deleteErr != nil {
+				log.Printf("Failed to delete global command %s: %v", cmd.Name, deleteErr)
+			}
+		}
+	}
+
+	// If we have a guild ID, also clean up guild-specific commands
+	if guildID != "" {
+		guildCommands, guildErr := s.ApplicationCommands(s.State.User.ID, guildID)
+		if guildErr != nil {
+			log.Printf("Failed to get guild commands: %v", guildErr)
+		} else {
+			for _, cmd := range guildCommands {
+				log.Printf("Deleting guild command: %s", cmd.Name)
+				if deleteErr := s.ApplicationCommandDelete(s.State.User.ID, guildID, cmd.ID); deleteErr != nil {
+					log.Printf("Failed to delete guild command %s: %v", cmd.Name, deleteErr)
+				}
+			}
+		}
+	}
+
 	commands := []*discordgo.ApplicationCommand{
 		{
 			Name:        "dnd",
@@ -304,7 +335,7 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 
 	// Use BulkOverwrite to ensure clean command registration
 	// This replaces ALL commands, removing any outdated ones
-	_, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, guildID, commands)
+	_, err = s.ApplicationCommandBulkOverwrite(s.State.User.ID, guildID, commands)
 	if err != nil {
 		return fmt.Errorf("failed to register commands: %w", err)
 	}
