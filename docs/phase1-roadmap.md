@@ -47,7 +47,7 @@ Implement all Level 1 class features for martial and hybrid classes.
   - [ ] Defense (#174 - needs AC calculation)
   - [ ] Protection (#176, #179 - needs reaction system)
   - [x] Two-Weapon Fighting (implemented)
-- [ ] Second Wind (bonus action heal)
+- [ ] Second Wind (action heal - 1d10 + fighter level)
 
 ### ⚠️ Ranger (Partial)
 - [x] Favored Enemy (PR #154)

@@ -474,7 +474,7 @@ func TestCharacter_InitializeResources(t *testing.T) {
 		secondWind, exists := char.Resources.Abilities["second-wind"]
 		require.True(t, exists)
 		assert.Equal(t, "second-wind", secondWind.Key)
-		assert.Equal(t, entities.AbilityTypeBonusAction, secondWind.ActionType)
+		assert.Equal(t, entities.AbilityTypeAction, secondWind.ActionType) // Second Wind uses an Action
 		assert.Equal(t, 1, secondWind.UsesMax)
 		assert.Equal(t, 1, secondWind.UsesRemaining)
 		assert.Equal(t, entities.RestTypeShort, secondWind.RestType)

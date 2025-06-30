@@ -266,7 +266,7 @@ func (c *Character) initializeClassAbilities() {
 			Name:          "Second Wind",
 			Description:   "Regain hit points equal to 1d10 + fighter level",
 			FeatureKey:    "fighter-second-wind",
-			ActionType:    AbilityTypeBonusAction,
+			ActionType:    AbilityTypeAction, // Second Wind uses an Action, not Bonus Action
 			UsesMax:       1,
 			UsesRemaining: 1,
 			RestType:      RestTypeShort,
