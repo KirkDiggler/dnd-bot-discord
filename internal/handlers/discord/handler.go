@@ -3117,6 +3117,10 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 		// Use new clean combat handler
 		if len(parts) >= 3 {
 			encounterID := parts[2]
+
+			// For shortened IDs in bonus target actions, we need the full encounter ID
+			// The combat handler will handle the resolution since it has access to the full context
+
 			if err := h.combatHandler.HandleButton(s, i, action, encounterID); err != nil {
 				log.Printf("Error handling combat button: %v", err)
 			}

@@ -195,16 +195,10 @@ func BuildCombatComponents(encounterID string, result *encounter.ExecuteAttackRe
 		}
 	}
 
-	// Normal combat buttons - no Attack button on shared messages
+	// Normal combat buttons - no Attack or Next Turn buttons on shared messages
 	return []discordgo.MessageComponent{
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
-				discordgo.Button{
-					Label:    "Next Turn",
-					Style:    discordgo.PrimaryButton,
-					CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
-					Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
-				},
 				discordgo.Button{
 					Label:    "Get My Actions",
 					Style:    discordgo.SuccessButton,

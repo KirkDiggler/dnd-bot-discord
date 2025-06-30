@@ -96,6 +96,9 @@ func TestAddPlayer_DungeonLongRest(t *testing.T) {
 		return nil
 	})
 
+	// Expect the character to be saved after action economy reset
+	mockCharService.EXPECT().UpdateEquipment(gomock.Any()).Return(nil)
+
 	mockUUID.EXPECT().New().Return(combatantID)
 	mockRepo.EXPECT().Update(ctx, gomock.Any()).Return(nil)
 
@@ -186,8 +189,8 @@ func TestAddPlayer_NonDungeonNoLongRest(t *testing.T) {
 	mockCharService.EXPECT().GetByID(characterID).Return(character, nil)
 	mockSessionService.EXPECT().GetSession(ctx, sessionID).Return(regularSession, nil)
 
-	// Should NOT save character since no long rest is performed
-	// mockCharService.EXPECT().UpdateEquipment(gomock.Any()).Times(0)
+	// Expect the character to be saved after action economy reset (but no long rest)
+	mockCharService.EXPECT().UpdateEquipment(gomock.Any()).Return(nil)
 
 	mockUUID.EXPECT().New().Return(combatantID)
 	mockRepo.EXPECT().Update(ctx, gomock.Any()).Return(nil)

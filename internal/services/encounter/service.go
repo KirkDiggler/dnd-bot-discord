@@ -420,6 +420,15 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 		}
 	}
 
+	// Reset action economy for the start of combat
+	log.Printf("[ACTION ECONOMY] Resetting actions for %s as they join combat", character.Name)
+	character.StartNewTurn()
+
+	// Save character to persist the reset action economy
+	if err := s.characterService.UpdateEquipment(character); err != nil {
+		log.Printf("Failed to save character after action economy reset: %v", err)
+	}
+
 	// Verify character belongs to player
 	if character.OwnerID != playerID {
 		return nil, dnderr.PermissionDenied("character does not belong to player")
