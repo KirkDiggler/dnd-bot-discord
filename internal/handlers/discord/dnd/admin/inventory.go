@@ -116,7 +116,7 @@ func (h *InventoryHandler) HandleGive(s *discordgo.Session, i *discordgo.Interac
 
 	// Determine equipment type
 	equipType := equipment.GetEquipmentType()
-	if equipType == "BasicEquipment" {
+	if equipType == entities.EquipmentTypeBasic {
 		// Try to determine type from key
 		if itemKey == "shield" {
 			equipType = entities.EquipmentTypeArmor
