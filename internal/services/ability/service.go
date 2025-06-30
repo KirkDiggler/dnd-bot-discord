@@ -97,6 +97,27 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 		}, nil
 	}
 
+	// Update action economy based on ability type
+	if character.Resources != nil {
+		switch ability.ActionType {
+		case entities.AbilityTypeAction:
+			character.Resources.ActionEconomy.ActionUsed = true
+			character.Resources.ActionEconomy.RecordAction("action", "ability", ability.Key)
+		case entities.AbilityTypeBonusAction:
+			character.Resources.ActionEconomy.BonusActionUsed = true
+			character.Resources.ActionEconomy.RecordAction("bonus_action", "ability", ability.Key)
+		case entities.AbilityTypeReaction:
+			character.Resources.ActionEconomy.ReactionUsed = true
+			character.Resources.ActionEconomy.RecordAction("reaction", "ability", ability.Key)
+		case entities.AbilityTypeFree:
+			// Free actions don't consume any action economy resources
+			character.Resources.ActionEconomy.RecordAction("free", "ability", ability.Key)
+		default:
+			// Log unexpected action types for debugging
+			log.Printf("Unexpected ability action type: %s for ability %s", ability.ActionType, ability.Key)
+		}
+	}
+
 	// Handle ability effects based on key
 	result := &UseAbilityResult{
 		Success:       true,

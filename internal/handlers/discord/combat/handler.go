@@ -8,6 +8,7 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/ability"
+	charService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
 	"github.com/bwmarrin/discordgo"
 )
@@ -16,6 +17,7 @@ import (
 type Handler struct {
 	encounterService encounter.Service
 	abilityService   ability.Service
+	characterService charService.Service
 }
 
 // appendCombatEndMessage adds combat end information to an embed
@@ -48,10 +50,11 @@ func getCombatEndMessage(combatEnded, playersWon bool) string {
 }
 
 // NewHandler creates a new combat handler
-func NewHandler(encounterService encounter.Service, abilityService ability.Service) *Handler {
+func NewHandler(encounterService encounter.Service, abilityService ability.Service, characterService charService.Service) *Handler {
 	return &Handler{
 		encounterService: encounterService,
 		abilityService:   abilityService,
+		characterService: characterService,
 	}
 }
 
@@ -82,6 +85,8 @@ func (h *Handler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCre
 		return h.handleUseAbility(s, i, encounterID)
 	case "lay_on_hands_amount":
 		return h.handleLayOnHandsAmount(s, i, encounterID)
+	case "bonus_action":
+		return h.handleBonusAction(s, i, encounterID)
 	default:
 		return fmt.Errorf("unknown combat action: %s", action)
 	}
@@ -778,13 +783,43 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 	// Add player status field showing HP, AC, and active effects
 	statusValue := fmt.Sprintf("**HP:** %d/%d | **AC:** %d", playerCombatant.CurrentHP, playerCombatant.MaxHP, playerCombatant.AC)
 
-	// TODO: Add active effects display when character service is accessible through encounter service
-	// For now, we'll need to enhance the encounter service to expose character data for effects
+	// Get character data to check available bonus actions and action economy
+	var actionEconomyInfo string
+	var availableBonusActions []entities.BonusActionOption
+	if playerCombatant.CharacterID != "" && h.characterService != nil {
+		// Get the character
+		char, err := h.characterService.GetByID(playerCombatant.CharacterID)
+		if err == nil && char != nil {
+			// Get action economy status
+			actionStatus := "✅ Available"
+			if char.Resources != nil && char.Resources.ActionEconomy.ActionUsed {
+				actionStatus = "❌ Used"
+			}
+
+			bonusActionStatus := "✅ Available"
+			if char.Resources != nil && char.Resources.ActionEconomy.BonusActionUsed {
+				bonusActionStatus = "❌ Used"
+			}
+
+			actionEconomyInfo = fmt.Sprintf("\n**Action:** %s | **Bonus Action:** %s", actionStatus, bonusActionStatus)
+
+			// Get available bonus actions
+			if char.Resources != nil {
+				availableBonusActions = char.GetAvailableBonusActions()
+				if len(availableBonusActions) > 0 && !char.Resources.ActionEconomy.BonusActionUsed {
+					actionEconomyInfo += "\n**Bonus Actions Available:**"
+					for _, ba := range availableBonusActions {
+						actionEconomyInfo += fmt.Sprintf("\n• %s", ba.Name)
+					}
+				}
+			}
+		}
+	}
 
 	// Add status as first field
 	statusField := &discordgo.MessageEmbedField{
 		Name:   "📊 Your Status",
-		Value:  statusValue,
+		Value:  statusValue + actionEconomyInfo,
 		Inline: false,
 	}
 	embed.Fields = append([]*discordgo.MessageEmbedField{statusField}, embed.Fields...)
@@ -816,6 +851,39 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 				},
 			},
 		},
+	}
+
+	// Add bonus action buttons if available
+	if len(availableBonusActions) > 0 {
+		bonusActionButtons := []discordgo.MessageComponent{}
+		for i, ba := range availableBonusActions {
+			if i >= 5 { // Discord has a 5-button limit per row
+				break
+			}
+
+			// Determine emoji based on action type
+			emoji := "🎯"
+			switch ba.ActionType {
+			case "unarmed_strike":
+				emoji = "👊"
+			case "weapon_attack":
+				emoji = "🗡️"
+			}
+
+			bonusActionButtons = append(bonusActionButtons, discordgo.Button{
+				Label:    ba.Name,
+				Style:    discordgo.SuccessButton,
+				CustomID: fmt.Sprintf("combat:bonus_action:%s:%s", encounterID, ba.Key),
+				Emoji:    &discordgo.ComponentEmoji{Name: emoji},
+				Disabled: enc.Status != entities.EncounterStatusActive,
+			})
+		}
+
+		if len(bonusActionButtons) > 0 {
+			components = append(components, discordgo.ActionsRow{
+				Components: bonusActionButtons,
+			})
+		}
 	}
 
 	// TODO: Add more action types in the future:
@@ -957,4 +1025,114 @@ func (h *Handler) handleAttackFromEphemeral(s *discordgo.Session, i *discordgo.I
 			},
 		},
 	})
+}
+
+// handleBonusAction handles bonus action button clicks
+func (h *Handler) handleBonusAction(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string) error {
+	// Extract the bonus action key from the custom ID
+	// Format: combat:bonus_action:encounterID:bonusActionKey
+	parts := strings.Split(i.MessageComponentData().CustomID, ":")
+	if len(parts) < 4 {
+		return respondError(s, i, "Invalid bonus action", nil)
+	}
+	bonusActionKey := parts[3]
+
+	// Get encounter
+	enc, err := h.encounterService.GetEncounter(context.Background(), encounterID)
+	if err != nil {
+		return respondError(s, i, "Failed to get encounter", err)
+	}
+
+	// Find the player's combatant
+	var playerCombatant *entities.Combatant
+	for _, c := range enc.Combatants {
+		if c.PlayerID == i.Member.User.ID && c.IsActive {
+			playerCombatant = c
+			break
+		}
+	}
+
+	if playerCombatant == nil {
+		return respondError(s, i, "You are not in this combat!", nil)
+	}
+
+	// Get the character
+	if playerCombatant.CharacterID == "" {
+		return respondError(s, i, "No character associated with combatant", nil)
+	}
+
+	char, err := h.characterService.GetByID(playerCombatant.CharacterID)
+	if err != nil {
+		return respondError(s, i, "Failed to get character", err)
+	}
+
+	// Check if the bonus action is available
+	availableBonusActions := char.GetAvailableBonusActions()
+	var selectedAction *entities.BonusActionOption
+	for _, ba := range availableBonusActions {
+		if ba.Key == bonusActionKey {
+			selectedAction = &ba
+			break
+		}
+	}
+
+	if selectedAction == nil {
+		return respondError(s, i, "Bonus action not available", nil)
+	}
+
+	// Execute the bonus action based on type
+	switch selectedAction.ActionType {
+	case "unarmed_strike":
+		// Martial Arts bonus unarmed strike
+		// TODO: Implement actual unarmed strike execution with target selection
+		log.Printf("[BONUS ACTION] %s uses Martial Arts unarmed strike", char.Name)
+	case "weapon_attack":
+		// Two-weapon fighting off-hand attack
+		// TODO: Implement actual off-hand weapon attack with target selection
+		log.Printf("[BONUS ACTION] %s uses off-hand weapon attack", char.Name)
+	default:
+		return respondError(s, i, fmt.Sprintf("Unknown bonus action type: %s", selectedAction.ActionType), nil)
+	}
+
+	// Mark the bonus action as used
+	if !char.UseBonusAction(bonusActionKey) {
+		return respondError(s, i, "Failed to use bonus action", nil)
+	}
+
+	// Save character to persist the bonus action usage
+	if err := h.characterService.UpdateEquipment(char); err != nil {
+		log.Printf("Failed to save character after bonus action: %v", err)
+		return respondError(s, i, "Failed to save character state after bonus action execution", err)
+		// Notify the user but don't fail the entire operation
+		embed := &discordgo.MessageEmbed{
+			Title:       "⚠️ Warning",
+			Description: "Bonus action was used but failed to save. It may not persist if the bot restarts.",
+			Color:       0xFFFF00, // Yellow
+			Footer: &discordgo.MessageEmbedFooter{
+				Text: "Please report this issue if it persists",
+			},
+		}
+
+		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseUpdateMessage,
+			Data: &discordgo.InteractionResponseData{
+				Embeds: []*discordgo.MessageEmbed{embed},
+				Components: []discordgo.MessageComponent{
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label:    "Back to Actions",
+								Style:    discordgo.PrimaryButton,
+								CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
+							},
+						},
+					},
+				},
+			},
+		})
+	}
+
+	// Update the action controller
+	return h.handleMyActions(s, i, encounterID)
 }
