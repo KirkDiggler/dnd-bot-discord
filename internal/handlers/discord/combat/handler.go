@@ -8,7 +8,7 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/ability"
-	charService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
 	"github.com/bwmarrin/discordgo"
 )
@@ -17,7 +17,7 @@ import (
 type Handler struct {
 	encounterService encounter.Service
 	abilityService   ability.Service
-	characterService charService.Service
+	characterService character.Service
 }
 
 // appendCombatEndMessage adds combat end information to an embed
@@ -50,7 +50,7 @@ func getCombatEndMessage(combatEnded, playersWon bool) string {
 }
 
 // NewHandler creates a new combat handler
-func NewHandler(encounterService encounter.Service, abilityService ability.Service, characterService charService.Service) *Handler {
+func NewHandler(encounterService encounter.Service, abilityService ability.Service, characterService character.Service) *Handler {
 	return &Handler{
 		encounterService: encounterService,
 		abilityService:   abilityService,
@@ -87,6 +87,8 @@ func (h *Handler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCre
 		return h.handleLayOnHandsAmount(s, i, encounterID)
 	case "bonus_action":
 		return h.handleBonusAction(s, i, encounterID)
+	case "bonus_target":
+		return h.handleBonusTarget(s, i, encounterID)
 	default:
 		return fmt.Errorf("unknown combat action: %s", action)
 	}
@@ -786,10 +788,12 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 	// Get character data to check available bonus actions and action economy
 	var actionEconomyInfo string
 	var availableBonusActions []entities.BonusActionOption
+	var char *entities.Character
 	if playerCombatant.CharacterID != "" && h.characterService != nil {
 		// Get the character
-		char, err := h.characterService.GetByID(playerCombatant.CharacterID)
-		if err == nil && char != nil {
+		ch, err := h.characterService.GetByID(playerCombatant.CharacterID)
+		if err == nil && ch != nil {
+			char = ch
 			// Get action economy status
 			actionStatus := "✅ Available"
 			if char.Resources != nil && char.Resources.ActionEconomy.ActionUsed {
@@ -824,7 +828,12 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 	}
 	embed.Fields = append([]*discordgo.MessageEmbedField{statusField}, embed.Fields...)
 
-	// Build action buttons - always enabled unless combat is not active
+	// Build action buttons - disable if action already used
+	attackDisabled := enc.Status != entities.EncounterStatusActive
+	if char != nil && char.Resources != nil && char.Resources.ActionEconomy.ActionUsed {
+		attackDisabled = true
+	}
+
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
@@ -833,7 +842,7 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 					Style:    discordgo.DangerButton,
 					CustomID: fmt.Sprintf("combat:attack:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
-					Disabled: enc.Status != entities.EncounterStatusActive,
+					Disabled: attackDisabled,
 				},
 				discordgo.Button{
 					Label:    "Abilities",
@@ -870,12 +879,18 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 				emoji = "🗡️"
 			}
 
+			// Disable bonus action buttons if bonus action already used
+			bonusActionDisabled := enc.Status != entities.EncounterStatusActive
+			if char != nil && char.Resources != nil && char.Resources.ActionEconomy.BonusActionUsed {
+				bonusActionDisabled = true
+			}
+
 			bonusActionButtons = append(bonusActionButtons, discordgo.Button{
 				Label:    ba.Name,
 				Style:    discordgo.SuccessButton,
 				CustomID: fmt.Sprintf("combat:bonus_action:%s:%s", encounterID, ba.Key),
 				Emoji:    &discordgo.ComponentEmoji{Name: emoji},
-				Disabled: enc.Status != entities.EncounterStatusActive,
+				Disabled: bonusActionDisabled,
 			})
 		}
 
@@ -1027,13 +1042,12 @@ func (h *Handler) handleAttackFromEphemeral(s *discordgo.Session, i *discordgo.I
 	})
 }
 
-// handleBonusAction handles bonus action button clicks
+// handleBonusAction handles bonus action button interactions
 func (h *Handler) handleBonusAction(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string) error {
-	// Extract the bonus action key from the custom ID
-	// Format: combat:bonus_action:encounterID:bonusActionKey
-	parts := strings.Split(i.MessageComponentData().CustomID, ":")
+	// Parse bonus action key from custom ID: combat:bonus_action:encounterID:bonusActionKey
+	parts := parseCustomID(i.MessageComponentData().CustomID)
 	if len(parts) < 4 {
-		return respondError(s, i, "Invalid bonus action", nil)
+		return respondError(s, i, "Invalid bonus action format", nil)
 	}
 	bonusActionKey := parts[3]
 
@@ -1056,83 +1070,588 @@ func (h *Handler) handleBonusAction(s *discordgo.Session, i *discordgo.Interacti
 		return respondError(s, i, "You are not in this combat!", nil)
 	}
 
-	// Get the character
-	if playerCombatant.CharacterID == "" {
-		return respondError(s, i, "No character associated with combatant", nil)
-	}
-
-	char, err := h.characterService.GetByID(playerCombatant.CharacterID)
-	if err != nil {
-		return respondError(s, i, "Failed to get character", err)
-	}
-
-	// Check if the bonus action is available
-	availableBonusActions := char.GetAvailableBonusActions()
-	var selectedAction *entities.BonusActionOption
-	for _, ba := range availableBonusActions {
-		if ba.Key == bonusActionKey {
-			selectedAction = &ba
-			break
-		}
-	}
-
-	if selectedAction == nil {
-		return respondError(s, i, "Bonus action not available", nil)
-	}
-
-	// Execute the bonus action based on type
-	switch selectedAction.ActionType {
-	case "unarmed_strike":
-		// Martial Arts bonus unarmed strike
-		// TODO: Implement actual unarmed strike execution with target selection
-		log.Printf("[BONUS ACTION] %s uses Martial Arts unarmed strike", char.Name)
-	case "weapon_attack":
-		// Two-weapon fighting off-hand attack
-		// TODO: Implement actual off-hand weapon attack with target selection
-		log.Printf("[BONUS ACTION] %s uses off-hand weapon attack", char.Name)
-	default:
-		return respondError(s, i, fmt.Sprintf("Unknown bonus action type: %s", selectedAction.ActionType), nil)
-	}
-
-	// Mark the bonus action as used
-	if !char.UseBonusAction(bonusActionKey) {
-		return respondError(s, i, "Failed to use bonus action", nil)
-	}
-
-	// Save character to persist the bonus action usage
-	if err := h.characterService.UpdateEquipment(char); err != nil {
-		log.Printf("Failed to save character after bonus action: %v", err)
-		return respondError(s, i, "Failed to save character state after bonus action execution", err)
-		// Notify the user but don't fail the entire operation
+	// Verify it's the player's turn
+	current := enc.GetCurrentCombatant()
+	if current == nil || current.ID != playerCombatant.ID {
 		embed := &discordgo.MessageEmbed{
-			Title:       "⚠️ Warning",
-			Description: "Bonus action was used but failed to save. It may not persist if the bot restarts.",
-			Color:       0xFFFF00, // Yellow
+			Title:       "⏳ Not Your Turn",
+			Description: fmt.Sprintf("It's currently **%s's** turn.", current.Name),
+			Color:       0xf39c12, // Orange
 			Footer: &discordgo.MessageEmbedFooter{
-				Text: "Please report this issue if it persists",
+				Text: "Wait for your turn to use bonus actions",
+			},
+		}
+
+		components := []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.Button{
+						Label:    "Back to Actions",
+						Style:    discordgo.PrimaryButton,
+						CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
+						Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
+					},
+				},
 			},
 		}
 
 		return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseUpdateMessage,
 			Data: &discordgo.InteractionResponseData{
-				Embeds: []*discordgo.MessageEmbed{embed},
-				Components: []discordgo.MessageComponent{
-					discordgo.ActionsRow{
-						Components: []discordgo.MessageComponent{
-							discordgo.Button{
-								Label:    "Back to Actions",
-								Style:    discordgo.PrimaryButton,
-								CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
-								Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
-							},
-						},
-					},
-				},
+				Embeds:     []*discordgo.MessageEmbed{embed},
+				Components: components,
 			},
 		})
 	}
 
-	// Update the action controller
-	return h.handleMyActions(s, i, encounterID)
+	// Handle different bonus action types
+	switch bonusActionKey {
+	case "martial_arts_strike":
+		return h.handleMartialArtsStrike(s, i, encounterID, playerCombatant)
+	case "two_weapon_attack":
+		return h.handleTwoWeaponAttack(s, i, encounterID, playerCombatant)
+	default:
+		return respondError(s, i, "Unknown bonus action type", nil)
+	}
+}
+
+// handleMartialArtsStrike shows target selection for unarmed strike bonus action
+func (h *Handler) handleMartialArtsStrike(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string, attacker *entities.Combatant) error {
+	// Get encounter for target list
+	enc, err := h.encounterService.GetEncounter(context.Background(), encounterID)
+	if err != nil {
+		return respondError(s, i, "Failed to get encounter", err)
+	}
+
+	// Build target buttons for unarmed strike
+	var buttons []discordgo.MessageComponent
+	for _, target := range enc.Combatants {
+		if target.ID == attacker.ID || !target.IsActive || target.CurrentHP <= 0 {
+			continue
+		}
+
+		// Players cannot attack other players
+		if attacker.Type == entities.CombatantTypePlayer && target.Type == entities.CombatantTypePlayer {
+			continue
+		}
+
+		emoji := "🧑"
+		if target.Type == entities.CombatantTypeMonster {
+			emoji = "👹"
+		}
+
+		// Note: We'll need a different custom ID pattern for bonus action targets
+		buttons = append(buttons, discordgo.Button{
+			Label:    fmt.Sprintf("%s (HP: %d/%d)", target.Name, target.CurrentHP, target.MaxHP),
+			Style:    discordgo.PrimaryButton,
+			CustomID: fmt.Sprintf("combat:bonus_target:%s:martial_arts_strike:%s", encounterID, target.ID),
+			Emoji:    &discordgo.ComponentEmoji{Name: emoji},
+		})
+
+		if len(buttons) >= 5 {
+			break // Discord limit
+		}
+	}
+
+	if len(buttons) == 0 {
+		return respondError(s, i, "No valid targets available", nil)
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Title:       fmt.Sprintf("👊 %s's Martial Arts Strike", attacker.Name),
+		Description: "Choose your target for the bonus unarmed strike:",
+		Color:       0x00aedb, // Blue for monk actions
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: "Bonus Action - Martial Arts",
+		},
+	}
+
+	// Add cancel button
+	buttons = append(buttons, discordgo.Button{
+		Label:    "Cancel",
+		Style:    discordgo.SecondaryButton,
+		CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
+		Emoji:    &discordgo.ComponentEmoji{Name: "❌"},
+	})
+
+	// Update the ephemeral message with target selection
+	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Embeds: []*discordgo.MessageEmbed{embed},
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{Components: buttons[:min(5, len(buttons))]},
+			},
+		},
+	})
+}
+
+// handleTwoWeaponAttack shows target selection for off-hand weapon attack
+func (h *Handler) handleTwoWeaponAttack(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string, attacker *entities.Combatant) error {
+	// Get encounter for target list
+	enc, err := h.encounterService.GetEncounter(context.Background(), encounterID)
+	if err != nil {
+		return respondError(s, i, "Failed to get encounter", err)
+	}
+
+	// Build target buttons for off-hand attack
+	var buttons []discordgo.MessageComponent
+	for _, target := range enc.Combatants {
+		if target.ID == attacker.ID || !target.IsActive || target.CurrentHP <= 0 {
+			continue
+		}
+
+		// Players cannot attack other players
+		if attacker.Type == entities.CombatantTypePlayer && target.Type == entities.CombatantTypePlayer {
+			continue
+		}
+
+		emoji := "🧑"
+		if target.Type == entities.CombatantTypeMonster {
+			emoji = "👹"
+		}
+
+		buttons = append(buttons, discordgo.Button{
+			Label:    fmt.Sprintf("%s (HP: %d/%d)", target.Name, target.CurrentHP, target.MaxHP),
+			Style:    discordgo.PrimaryButton,
+			CustomID: fmt.Sprintf("combat:bonus_target:%s:two_weapon_attack:%s", encounterID, target.ID),
+			Emoji:    &discordgo.ComponentEmoji{Name: emoji},
+		})
+
+		if len(buttons) >= 5 {
+			break // Discord limit
+		}
+	}
+
+	if len(buttons) == 0 {
+		return respondError(s, i, "No valid targets available", nil)
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Title:       fmt.Sprintf("🗡️ %s's Off-Hand Attack", attacker.Name),
+		Description: "Choose your target for the off-hand weapon attack:",
+		Color:       0xdc143c, // Crimson for dual wielding
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: "Bonus Action - Two-Weapon Fighting",
+		},
+	}
+
+	// Add cancel button
+	buttons = append(buttons, discordgo.Button{
+		Label:    "Cancel",
+		Style:    discordgo.SecondaryButton,
+		CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
+		Emoji:    &discordgo.ComponentEmoji{Name: "❌"},
+	})
+
+	// Update the ephemeral message with target selection
+	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Embeds: []*discordgo.MessageEmbed{embed},
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{Components: buttons[:min(5, len(buttons))]},
+			},
+		},
+	})
+}
+
+// handleBonusTarget executes the bonus action attack after target selection
+func (h *Handler) handleBonusTarget(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string) error {
+	// Parse custom ID format: combat:bonus_target:encounterID:targetID:bonusActionKey
+	parts := parseCustomID(i.MessageComponentData().CustomID)
+	if len(parts) < 5 {
+		return respondError(s, i, "Invalid bonus target format", nil)
+	}
+	targetID := parts[3]
+	bonusActionKey := parts[4]
+
+	// Defer with ephemeral flag since this comes from ephemeral message
+	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags: discordgo.MessageFlagsEphemeral,
+		},
+	}); err != nil {
+		log.Printf("Failed to defer ephemeral interaction response: %v", err)
+		return fmt.Errorf("failed to defer ephemeral: %w", err)
+	}
+
+	// Get encounter
+	enc, err := h.encounterService.GetEncounter(context.Background(), encounterID)
+	if err != nil {
+		return respondEditError(s, i, "Failed to get encounter", err)
+	}
+
+	// Find attacker combatant
+	var attacker *entities.Combatant
+	for _, c := range enc.Combatants {
+		if c.PlayerID == i.Member.User.ID && c.IsActive {
+			attacker = c
+			break
+		}
+	}
+
+	if attacker == nil {
+		return respondEditError(s, i, "No active character found", nil)
+	}
+
+	// Verify it's still the attacker's turn
+	current := enc.GetCurrentCombatant()
+	if current == nil || current.ID != attacker.ID {
+		return respondEditError(s, i, "No longer your turn", nil)
+	}
+
+	// Get target combatant
+	var target *entities.Combatant
+	for _, c := range enc.Combatants {
+		if c.ID == targetID {
+			target = c
+			break
+		}
+	}
+
+	if target == nil || !target.IsActive || target.CurrentHP <= 0 {
+		return respondEditError(s, i, "Invalid target", nil)
+	}
+
+	// Get character and mark bonus action as used
+	var char *entities.Character
+	if attacker.CharacterID != "" && h.characterService != nil {
+		ch, errGetChar := h.characterService.GetByID(attacker.CharacterID)
+		if errGetChar != nil {
+			return respondEditError(s, i, "Failed to get character", errGetChar)
+		}
+		char = ch
+
+		// Mark the bonus action as used
+		if !char.UseBonusAction(bonusActionKey) {
+			return respondEditError(s, i, "Bonus action no longer available", nil)
+		}
+
+		// Save character to persist the bonus action used state
+		if errUpdate := h.characterService.UpdateEquipment(char); errUpdate != nil {
+			log.Printf("Failed to update character after bonus action: %v", errUpdate)
+		}
+	}
+
+	// Execute the appropriate attack based on bonus action type
+	var result *encounter.AttackResult
+	switch bonusActionKey {
+	case "martial_arts_strike":
+		// Execute unarmed strike with martial arts damage
+		result, err = h.executeUnarmedStrike(enc, attacker, target, char, true)
+		if err != nil {
+			return respondEditError(s, i, "Failed to execute martial arts strike", err)
+		}
+
+	case "two_weapon_attack":
+		// Execute off-hand weapon attack
+		result, err = h.executeOffHandAttack(enc, attacker, target, char)
+		if err != nil {
+			return respondEditError(s, i, "Failed to execute off-hand attack", err)
+		}
+
+	default:
+		return respondEditError(s, i, "Unknown bonus action type", nil)
+	}
+
+	// Log the combat action
+	if errLog := h.encounterService.LogCombatAction(context.Background(), encounterID, result.LogEntry); errLog != nil {
+		log.Printf("Failed to log bonus action: %v", errLog)
+	}
+
+	// Get updated encounter for display
+	enc, err = h.encounterService.GetEncounter(context.Background(), encounterID)
+	if err != nil {
+		return respondEditError(s, i, "Failed to get updated encounter", err)
+	}
+
+	// Build success embed with attack results
+	actionName := "Bonus Action"
+	switch bonusActionKey {
+	case "martial_arts_strike":
+		actionName = "Martial Arts Strike"
+	case "two_weapon_attack":
+		actionName = "Off-Hand Attack"
+	}
+	attackSummary := fmt.Sprintf("**%s used %s on %s!**\n", attacker.Name, actionName, target.Name)
+	if result.Hit {
+		if result.Critical {
+			attackSummary += fmt.Sprintf("🎆 CRITICAL HIT! %d damage!", result.Damage)
+		} else {
+			attackSummary += fmt.Sprintf("✅ Hit for %d damage!", result.Damage)
+		}
+		if result.TargetDefeated {
+			attackSummary += " 💀 **DEFEATED!**"
+		}
+	} else {
+		attackSummary += "❌ **MISS!**"
+	}
+
+	// Check for combat end
+	combatEnded := false
+	playersWon := false
+	if shouldEnd, won := enc.CheckCombatEnd(); shouldEnd {
+		combatEnded = true
+		playersWon = won
+	}
+
+	// Build full combat status embed
+	embed := BuildCombatStatusEmbed(enc, nil)
+	embed.Description = attackSummary + "\n\n" + embed.Description
+
+	// Add combat end information if applicable
+	appendCombatEndMessage(embed, combatEnded, playersWon)
+
+	// Build components with option to end turn
+	components := []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.Button{
+					Label:    "End Turn",
+					Style:    discordgo.PrimaryButton,
+					CustomID: fmt.Sprintf("combat:next_turn:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
+					Disabled: enc.Status != entities.EncounterStatusActive,
+				},
+				discordgo.Button{
+					Label:    "Back to Actions",
+					Style:    discordgo.SecondaryButton,
+					CustomID: fmt.Sprintf("combat:my_actions:%s", encounterID),
+					Emoji:    &discordgo.ComponentEmoji{Name: "🎯"},
+				},
+			},
+		},
+	}
+
+	// Update the ephemeral message with result
+	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Embeds:     &[]*discordgo.MessageEmbed{embed},
+		Components: &components,
+	})
+	if err != nil {
+		log.Printf("Failed to update ephemeral message with bonus action result: %v", err)
+	}
+
+	// Update the main shared combat message
+	sharedComponents := BuildCombatComponents(encounterID, &encounter.ExecuteAttackResult{
+		CombatEnded: combatEnded,
+		PlayersWon:  playersWon,
+	})
+
+	if updateErr := updateSharedCombatMessage(s, encounterID, enc.MessageID, enc.ChannelID, embed, sharedComponents); updateErr != nil {
+		log.Printf("Failed to update shared combat message: %v", updateErr)
+	}
+
+	return nil
+}
+
+// executeUnarmedStrike executes an unarmed strike attack
+func (h *Handler) executeUnarmedStrike(enc *entities.Encounter, attacker, target *entities.Combatant, char *entities.Character, isMartialArts bool) (*encounter.AttackResult, error) {
+	result := &encounter.AttackResult{
+		AttackerName: attacker.Name,
+		TargetName:   target.Name,
+		TargetAC:     target.AC,
+		WeaponName:   "Unarmed Strike",
+	}
+
+	// Determine ability bonus - monks can use DEX instead of STR
+	abilityBonus := 0
+	if char != nil && char.Attributes != nil {
+		strBonus := 0
+		dexBonus := 0
+		if char.Attributes[entities.AttributeStrength] != nil {
+			strBonus = char.Attributes[entities.AttributeStrength].Bonus
+		}
+		if char.Attributes[entities.AttributeDexterity] != nil {
+			dexBonus = char.Attributes[entities.AttributeDexterity].Bonus
+		}
+
+		// Monks with martial arts can use DEX instead of STR
+		if isMartialArts && dexBonus > strBonus {
+			abilityBonus = dexBonus
+		} else {
+			abilityBonus = strBonus
+		}
+	}
+
+	// Calculate proficiency bonus (everyone is proficient with unarmed strikes)
+	proficiencyBonus := 0
+	if char != nil {
+		proficiencyBonus = 2 + ((char.Level - 1) / 4)
+	}
+
+	// Roll attack
+	attackBonus := abilityBonus + proficiencyBonus
+	// For now, we'll use a simple attack simulation since we don't have access to dice roller here
+	// In a real implementation, this should be handled by the encounter service
+	attackRoll := 10 + attackBonus // Simulated average roll
+	result.AttackRoll = 10
+	result.AttackBonus = attackBonus
+	result.TotalAttack = attackRoll
+	result.Critical = false // Simplified for now
+	result.Hit = result.TotalAttack >= target.AC
+
+	// Determine damage dice size based on monk level
+	diceSize := 4 // Default
+	if isMartialArts && char != nil {
+		switch {
+		case char.Level >= 17:
+			diceSize = 10
+		case char.Level >= 11:
+			diceSize = 8
+		case char.Level >= 5:
+			diceSize = 6
+		}
+	}
+
+	if result.Hit {
+		// Roll damage - using average for simulation
+		baseDamage := (diceSize / 2) + 1 // Average roll
+
+		result.Damage = baseDamage + abilityBonus
+		result.DamageType = "bludgeoning"
+
+		// Apply damage to target
+		target.CurrentHP -= result.Damage
+		if target.CurrentHP <= 0 {
+			target.CurrentHP = 0
+			target.IsActive = false
+			result.TargetDefeated = true
+		}
+
+		// Build log entry
+		if result.Critical {
+			result.LogEntry = fmt.Sprintf("👊 **%s** → **%s** | 💥 CRIT! 🩸 **%d** ||d20:**%d**%+d=%d vs AC:%d, dmg:1d%d+%d||",
+				result.AttackerName, result.TargetName, result.Damage,
+				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
+				diceSize, abilityBonus)
+		} else {
+			result.LogEntry = fmt.Sprintf("👊 **%s** → **%s** | HIT 🩸 **%d** ||d20:%d%+d=%d vs AC:%d, dmg:1d%d+%d||",
+				result.AttackerName, result.TargetName, result.Damage,
+				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
+				diceSize, abilityBonus)
+		}
+
+		if result.TargetDefeated {
+			result.LogEntry += " 💀"
+		}
+	} else {
+		result.LogEntry = fmt.Sprintf("👊 **%s** → **%s** | ❌ MISS ||d20:%d%+d=%d vs AC:%d||",
+			result.AttackerName, result.TargetName,
+			result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC)
+	}
+
+	return result, nil
+}
+
+// executeOffHandAttack executes an off-hand weapon attack
+func (h *Handler) executeOffHandAttack(enc *entities.Encounter, attacker, target *entities.Combatant, char *entities.Character) (*encounter.AttackResult, error) {
+	result := &encounter.AttackResult{
+		AttackerName: attacker.Name,
+		TargetName:   target.Name,
+		TargetAC:     target.AC,
+	}
+
+	// Get off-hand weapon
+	var offHandWeapon *entities.Weapon
+	if char != nil && char.EquippedSlots != nil {
+		if weapon, ok := char.EquippedSlots[entities.SlotOffHand].(*entities.Weapon); ok {
+			offHandWeapon = weapon
+			result.WeaponName = offHandWeapon.GetName()
+		}
+	}
+
+	if offHandWeapon == nil {
+		return nil, fmt.Errorf("no weapon equipped in off-hand")
+	}
+
+	// Calculate ability bonus (no ability modifier to damage for off-hand unless Two-Weapon Fighting style)
+	abilityBonus := 0
+	damageAbilityBonus := 0
+	if char != nil && char.Attributes != nil {
+		if char.Attributes[entities.AttributeDexterity] != nil && offHandWeapon.IsFinesse() {
+			abilityBonus = char.Attributes[entities.AttributeDexterity].Bonus
+		} else if char.Attributes[entities.AttributeStrength] != nil {
+			abilityBonus = char.Attributes[entities.AttributeStrength].Bonus
+		}
+
+		// Check for Two-Weapon Fighting style
+		// Note: getFightingStyle is not exported, so we'll check for the feature
+		hasTwoWeaponFighting := false
+		for _, feature := range char.Features {
+			if feature != nil && feature.Key == "fighting-style-two-weapon-fighting" {
+				hasTwoWeaponFighting = true
+				break
+			}
+		}
+		if hasTwoWeaponFighting {
+			damageAbilityBonus = abilityBonus
+		}
+	}
+
+	// Calculate proficiency bonus
+	proficiencyBonus := 0
+	if char != nil && char.HasWeaponProficiency(offHandWeapon.GetKey()) {
+		proficiencyBonus = 2 + ((char.Level - 1) / 4)
+	}
+
+	// Roll attack
+	attackBonus := abilityBonus + proficiencyBonus
+	// For now, we'll use a simple attack simulation
+	attackRoll := 10 + attackBonus // Simulated average roll
+	result.AttackRoll = 10
+	result.AttackBonus = attackBonus
+	result.TotalAttack = attackRoll
+	result.Critical = false // Simplified for now
+	result.Hit = result.TotalAttack >= target.AC
+
+	if result.Hit {
+		// Roll damage
+		damage := offHandWeapon.Damage
+		if damage == nil {
+			return nil, fmt.Errorf("weapon has no damage dice")
+		}
+
+		// Roll damage - using average for simulation
+		baseDamage := 0
+		for i := 0; i < damage.DiceCount; i++ {
+			baseDamage += (damage.DiceSize / 2) + 1 // Average roll per die
+		}
+
+		result.Damage = baseDamage + damageAbilityBonus
+		result.DamageType = string(damage.DamageType)
+
+		// Apply damage to target
+		target.CurrentHP -= result.Damage
+		if target.CurrentHP <= 0 {
+			target.CurrentHP = 0
+			target.IsActive = false
+			result.TargetDefeated = true
+		}
+
+		// Build log entry
+		if result.Critical {
+			result.LogEntry = fmt.Sprintf("🗡️ **%s** → **%s** | 💥 CRIT! 🩸 **%d** ||d20:**%d**%+d=%d vs AC:%d, dmg:%dd%d%+d||",
+				result.AttackerName, result.TargetName, result.Damage,
+				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
+				damage.DiceCount, damage.DiceSize, damageAbilityBonus)
+		} else {
+			result.LogEntry = fmt.Sprintf("🗡️ **%s** → **%s** | HIT 🩸 **%d** ||d20:%d%+d=%d vs AC:%d, dmg:%dd%d%+d||",
+				result.AttackerName, result.TargetName, result.Damage,
+				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
+				damage.DiceCount, damage.DiceSize, damageAbilityBonus)
+		}
+
+		if result.TargetDefeated {
+			result.LogEntry += " 💀"
+		}
+	} else {
+		result.LogEntry = fmt.Sprintf("🗡️ **%s** → **%s** | ❌ MISS ||d20:%d%+d=%d vs AC:%d||",
+			result.AttackerName, result.TargetName,
+			result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC)
+	}
+
+	return result, nil
 }

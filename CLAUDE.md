@@ -176,6 +176,7 @@ DISCORD_TOKEN=xxx REDIS_URL=redis://localhost:6379 ./bin/dnd-bot
 3. **Run pre-commit**: `make pre-commit` (never use --no-verify)
 4. **Update PR description** if scope changes
 5. **Use conventional commits**: feat:, fix:, refactor:, docs:, test:
+6. **Add QA Checklist**: Copy from `docs/qa-checklist-template.md` and check off manual verifications
 
 #### Pre-Commit Workflow
 **IMPORTANT**: Always run `make pre-commit` before committing code. This will:
