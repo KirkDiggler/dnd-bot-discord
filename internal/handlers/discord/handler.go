@@ -11,12 +11,11 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/admin"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
 	oldcombat "github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/combat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/dungeon"
-	encounterHandler "github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/encounter"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/help"
-	sessionHandler "github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/session"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/testcombat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/helpers"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
@@ -54,22 +53,9 @@ type Handler struct {
 	characterDetailsHandler               *character.CharacterDetailsHandler
 	characterListHandler                  *character.ListHandler
 	characterShowHandler                  *character.ShowHandler
-	characterEquipmentHandler             *character.EquipmentHandler
 	characterSheetHandler                 *character.SheetHandler
 	characterDeleteHandler                *character.DeleteHandler
 	characterClassFeaturesHandler         *character.ClassFeaturesHandler
-
-	// Session handlers
-	sessionCreateHandler *sessionHandler.CreateHandler
-	sessionListHandler   *sessionHandler.ListHandler
-	sessionJoinHandler   *sessionHandler.JoinHandler
-	sessionStartHandler  *sessionHandler.StartHandler
-	sessionEndHandler    *sessionHandler.EndHandler
-	sessionInfoHandler   *sessionHandler.InfoHandler
-	sessionLeaveHandler  *sessionHandler.LeaveHandler
-
-	// Encounter handlers
-	encounterAddMonsterHandler *encounterHandler.AddMonsterHandler
 
 	// Test combat handler
 	testCombatHandler *testcombat.TestCombatHandler
@@ -81,6 +67,9 @@ type Handler struct {
 
 	// Help handler
 	helpHandler *help.HelpHandler
+
+	// Admin handlers
+	adminInventoryHandler *admin.InventoryHandler
 
 	// Combat handlers
 	savingThrowHandler *oldcombat.SavingThrowHandler
@@ -147,26 +136,11 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		characterDetailsHandler: character.NewCharacterDetailsHandler(&character.CharacterDetailsHandlerConfig{
 			CharacterService: cfg.ServiceProvider.CharacterService,
 		}),
-		characterListHandler: character.NewListHandler(cfg.ServiceProvider),
-		characterShowHandler: character.NewShowHandler(cfg.ServiceProvider),
-		characterEquipmentHandler: character.NewEquipmentHandler(&character.EquipmentHandlerConfig{
-			ServiceProvider: cfg.ServiceProvider,
-		}),
+		characterListHandler:          character.NewListHandler(cfg.ServiceProvider),
+		characterShowHandler:          character.NewShowHandler(cfg.ServiceProvider),
 		characterSheetHandler:         character.NewSheetHandler(cfg.ServiceProvider),
 		characterDeleteHandler:        character.NewDeleteHandler(cfg.ServiceProvider),
 		characterClassFeaturesHandler: character.NewClassFeaturesHandler(cfg.ServiceProvider.CharacterService),
-
-		// Initialize session handlers
-		sessionCreateHandler: sessionHandler.NewCreateHandler(cfg.ServiceProvider),
-		sessionListHandler:   sessionHandler.NewListHandler(cfg.ServiceProvider),
-		sessionJoinHandler:   sessionHandler.NewJoinHandler(cfg.ServiceProvider),
-		sessionStartHandler:  sessionHandler.NewStartHandler(cfg.ServiceProvider),
-		sessionEndHandler:    sessionHandler.NewEndHandler(cfg.ServiceProvider),
-		sessionInfoHandler:   sessionHandler.NewInfoHandler(cfg.ServiceProvider),
-		sessionLeaveHandler:  sessionHandler.NewLeaveHandler(cfg.ServiceProvider),
-
-		// Initialize encounter handlers
-		encounterAddMonsterHandler: encounterHandler.NewAddMonsterHandler(cfg.ServiceProvider),
 
 		// Initialize test combat handler
 		testCombatHandler: testcombat.NewTestCombatHandler(cfg.ServiceProvider),
@@ -178,6 +152,9 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 
 		// Initialize help handler
 		helpHandler: help.NewHelpHandler(),
+
+		// Initialize admin handlers
+		adminInventoryHandler: admin.NewInventoryHandler(cfg.ServiceProvider),
 
 		// Initialize combat handlers
 		savingThrowHandler: oldcombat.NewSavingThrowHandler(&oldcombat.SavingThrowHandlerConfig{
@@ -193,6 +170,37 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 
 // RegisterCommands registers all slash commands with Discord
 func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
+	// First, clean up any existing commands
+	log.Println("Cleaning up existing commands...")
+
+	// Get all global commands
+	globalCommands, err := s.ApplicationCommands(s.State.User.ID, "")
+	if err != nil {
+		log.Printf("Failed to get global commands: %v", err)
+	} else {
+		for _, cmd := range globalCommands {
+			log.Printf("Deleting global command: %s", cmd.Name)
+			if deleteErr := s.ApplicationCommandDelete(s.State.User.ID, "", cmd.ID); deleteErr != nil {
+				log.Printf("Failed to delete global command %s: %v", cmd.Name, deleteErr)
+			}
+		}
+	}
+
+	// If we have a guild ID, also clean up guild-specific commands
+	if guildID != "" {
+		guildCommands, guildErr := s.ApplicationCommands(s.State.User.ID, guildID)
+		if guildErr != nil {
+			log.Printf("Failed to get guild commands: %v", guildErr)
+		} else {
+			for _, cmd := range guildCommands {
+				log.Printf("Deleting guild command: %s", cmd.Name)
+				if deleteErr := s.ApplicationCommandDelete(s.State.User.ID, guildID, cmd.ID); deleteErr != nil {
+					log.Printf("Failed to delete guild command %s: %v", cmd.Name, deleteErr)
+				}
+			}
+		}
+	}
+
 	commands := []*discordgo.ApplicationCommand{
 		{
 			Name:        "dnd",
@@ -217,162 +225,6 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 							Name:        "delete",
 							Description: "Delete one of your characters",
 							Type:        discordgo.ApplicationCommandOptionSubCommand,
-						},
-						{
-							Name:        "equip",
-							Description: "Equip a weapon or shield",
-							Type:        discordgo.ApplicationCommandOptionSubCommand,
-							Options: []*discordgo.ApplicationCommandOption{
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "character_id",
-									Description: "Character ID",
-									Required:    true,
-								},
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "item",
-									Description: "Weapon or shield key (e.g., 'longsword', 'shield')",
-									Required:    true,
-								},
-							},
-						},
-						{
-							Name:        "unequip",
-							Description: "Unequip an item from a slot",
-							Type:        discordgo.ApplicationCommandOptionSubCommand,
-							Options: []*discordgo.ApplicationCommandOption{
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "character_id",
-									Description: "Character ID",
-									Required:    true,
-								},
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "slot",
-									Description: "Slot to unequip (main-hand, off-hand, body)",
-									Required:    true,
-									Choices: []*discordgo.ApplicationCommandOptionChoice{
-										{Name: "Main Hand", Value: "main-hand"},
-										{Name: "Off Hand", Value: "off-hand"},
-										{Name: "Body", Value: "body"},
-									},
-								},
-							},
-						},
-						{
-							Name:        "inventory",
-							Description: "Show character's inventory",
-							Type:        discordgo.ApplicationCommandOptionSubCommand,
-							Options: []*discordgo.ApplicationCommandOption{
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "character_id",
-									Description: "Character ID",
-									Required:    true,
-								},
-							},
-						},
-					},
-				},
-				{
-					Name:        "session",
-					Description: "Session management commands",
-					Type:        discordgo.ApplicationCommandOptionSubCommandGroup,
-					Options: []*discordgo.ApplicationCommandOption{
-						{
-							Name:        "create",
-							Description: "Create a new game session",
-							Type:        discordgo.ApplicationCommandOptionSubCommand,
-							Options: []*discordgo.ApplicationCommandOption{
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "name",
-									Description: "Session name",
-									Required:    true,
-								},
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "description",
-									Description: "Session description (optional)",
-									Required:    false,
-								},
-							},
-						},
-						{
-							Name:        "list",
-							Description: "List all your sessions",
-							Type:        discordgo.ApplicationCommandOptionSubCommand,
-						},
-						{
-							Name:        "join",
-							Description: "Join a session with invite code",
-							Type:        discordgo.ApplicationCommandOptionSubCommand,
-							Options: []*discordgo.ApplicationCommandOption{
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "code",
-									Description: "Invite code",
-									Required:    true,
-								},
-							},
-						},
-						{
-							Name:        "info",
-							Description: "Show info about your current session",
-							Type:        discordgo.ApplicationCommandOptionSubCommand,
-						},
-						{
-							Name:        "start",
-							Description: "Start a session (DM only)",
-							Type:        discordgo.ApplicationCommandOptionSubCommand,
-							Options: []*discordgo.ApplicationCommandOption{
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "id",
-									Description: "Session ID (optional if you have only one session)",
-									Required:    false,
-								},
-							},
-						},
-						{
-							Name:        "end",
-							Description: "End a session (DM only)",
-							Type:        discordgo.ApplicationCommandOptionSubCommand,
-							Options: []*discordgo.ApplicationCommandOption{
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "id",
-									Description: "Session ID (optional if you have only one session)",
-									Required:    false,
-								},
-							},
-						},
-						{
-							Name:        "leave",
-							Description: "Leave all your active sessions",
-							Type:        discordgo.ApplicationCommandOptionSubCommand,
-						},
-					},
-				},
-				{
-					Name:        "encounter",
-					Description: "Encounter and combat management",
-					Type:        discordgo.ApplicationCommandOptionSubCommandGroup,
-					Options: []*discordgo.ApplicationCommandOption{
-						{
-							Name:        "add",
-							Description: "Add a monster to the encounter",
-							Type:        discordgo.ApplicationCommandOptionSubCommand,
-							Options: []*discordgo.ApplicationCommandOption{
-								{
-									Type:        discordgo.ApplicationCommandOptionString,
-									Name:        "monster",
-									Description: "Monster name to search for",
-									Required:    true,
-								},
-							},
 						},
 					},
 				},
@@ -420,13 +272,70 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 						},
 					},
 				},
+				{
+					Name:        "admin",
+					Description: "Admin commands for testing",
+					Type:        discordgo.ApplicationCommandOptionSubCommandGroup,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Name:        "give",
+							Description: "Give an item to a character (testing only)",
+							Type:        discordgo.ApplicationCommandOptionSubCommand,
+							Options: []*discordgo.ApplicationCommandOption{
+								{
+									Type:        discordgo.ApplicationCommandOptionString,
+									Name:        "character",
+									Description: "Character name",
+									Required:    true,
+								},
+								{
+									Type:        discordgo.ApplicationCommandOptionString,
+									Name:        "item",
+									Description: "Item key (e.g., 'longsword', 'shield', 'dagger')",
+									Required:    true,
+								},
+								{
+									Type:        discordgo.ApplicationCommandOptionInteger,
+									Name:        "quantity",
+									Description: "Quantity (default: 1)",
+									Required:    false,
+								},
+							},
+						},
+						{
+							Name:        "take",
+							Description: "Remove an item from a character (testing only)",
+							Type:        discordgo.ApplicationCommandOptionSubCommand,
+							Options: []*discordgo.ApplicationCommandOption{
+								{
+									Type:        discordgo.ApplicationCommandOptionString,
+									Name:        "character",
+									Description: "Character name",
+									Required:    true,
+								},
+								{
+									Type:        discordgo.ApplicationCommandOptionString,
+									Name:        "item",
+									Description: "Item key to remove",
+									Required:    true,
+								},
+								{
+									Type:        discordgo.ApplicationCommandOptionInteger,
+									Name:        "quantity",
+									Description: "Quantity to remove (default: all)",
+									Required:    false,
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
 
 	// Use BulkOverwrite to ensure clean command registration
 	// This replaces ALL commands, removing any outdated ones
-	_, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, guildID, commands)
+	_, err = s.ApplicationCommandBulkOverwrite(s.State.User.ID, guildID, commands)
 	if err != nil {
 		return fmt.Errorf("failed to register commands: %w", err)
 	}
@@ -551,183 +460,51 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 			if err := h.characterDeleteHandler.Handle(req); err != nil {
 				log.Printf("Error handling character delete: %v", err)
 			}
-		case "equip":
-			if err := h.characterEquipmentHandler.HandleEquip(s, i); err != nil {
-				log.Printf("Error handling character equip: %v", err)
-			}
-		case "unequip":
-			if err := h.characterEquipmentHandler.HandleUnequip(s, i); err != nil {
-				log.Printf("Error handling character unequip: %v", err)
-			}
-		case "inventory":
-			if err := h.characterEquipmentHandler.HandleInventory(s, i); err != nil {
-				log.Printf("Error handling character inventory: %v", err)
-			}
 		}
-	} else if subcommandGroup.Name == "session" && len(subcommandGroup.Options) > 0 {
+	} else if subcommandGroup.Name == "admin" && len(subcommandGroup.Options) > 0 {
 		subcommand := subcommandGroup.Options[0]
 
 		switch subcommand.Name {
-		case "create":
-			// Get name and description from options
-			var name, description string
+		case "give":
+			// Handle give item command
+			var characterName, itemKey string
+			var quantity int64 = 1 // default quantity
+
 			for _, opt := range subcommand.Options {
 				switch opt.Name {
-				case "name":
-					name = opt.StringValue()
-				case "description":
-					description = opt.StringValue()
-				}
-			}
-			req := &sessionHandler.CreateRequest{
-				Session:     s,
-				Interaction: i,
-				Name:        name,
-				Description: description,
-			}
-			if err := h.sessionCreateHandler.Handle(req); err != nil {
-				log.Printf("Error handling session create: %v", err)
-			}
-		case "list":
-			req := &sessionHandler.ListRequest{
-				Session:     s,
-				Interaction: i,
-			}
-			if err := h.sessionListHandler.Handle(req); err != nil {
-				log.Printf("Error handling session list: %v", err)
-			}
-		case "join":
-			// Get invite code from options
-			var code string
-			for _, opt := range subcommand.Options {
-				if opt.Name == "code" {
-					code = opt.StringValue()
-					break
-				}
-			}
-			req := &sessionHandler.JoinRequest{
-				Session:     s,
-				Interaction: i,
-				InviteCode:  code,
-			}
-			if err := h.sessionJoinHandler.Handle(req); err != nil {
-				log.Printf("Error handling session join: %v", err)
-			}
-		case "info":
-			req := &sessionHandler.InfoRequest{
-				Session:     s,
-				Interaction: i,
-			}
-			if err := h.sessionInfoHandler.Handle(req); err != nil {
-				log.Printf("Error handling session info: %v", err)
-			}
-		case "start":
-			// Get session ID from options (optional)
-			var sessionID string
-			for _, opt := range subcommand.Options {
-				if opt.Name == "id" {
-					sessionID = opt.StringValue()
-					break
+				case "character":
+					characterName = opt.StringValue()
+				case "item":
+					itemKey = opt.StringValue()
+				case "quantity":
+					quantity = opt.IntValue()
 				}
 			}
 
-			// If no session ID provided, try to find the user's session
-			if sessionID == "" {
-				sessions, err := h.ServiceProvider.SessionService.ListUserSessions(context.Background(), i.Member.User.ID)
-				if err == nil && len(sessions) == 1 {
-					sessionID = sessions[0].ID
-				} else if len(sessions) > 1 {
-					// User has multiple sessions, they need to specify
-					err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: "❌ You have multiple sessions. Please specify the session ID.",
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
-					if err != nil {
-						log.Printf("Error responding to start command: %v", err)
+			if err := h.adminInventoryHandler.HandleGive(s, i, characterName, itemKey, quantity); err != nil {
+				log.Printf("Error handling admin give: %v", err)
+			}
+
+		case "take":
+			// Handle take item command
+			var characterName, itemKey string
+			var quantity int64 = -1 // -1 means remove all
+
+			for _, opt := range subcommand.Options {
+				switch opt.Name {
+				case "character":
+					characterName = opt.StringValue()
+				case "item":
+					itemKey = opt.StringValue()
+				case "quantity":
+					if opt.IntValue() > 0 {
+						quantity = opt.IntValue()
 					}
-					return
 				}
 			}
 
-			req := &sessionHandler.StartRequest{
-				Session:     s,
-				Interaction: i,
-				SessionID:   sessionID,
-			}
-			if err := h.sessionStartHandler.Handle(req); err != nil {
-				log.Printf("Error handling session start: %v", err)
-			}
-		case "end":
-			// Get session ID from options (optional)
-			var sessionID string
-			for _, opt := range subcommand.Options {
-				if opt.Name == "id" {
-					sessionID = opt.StringValue()
-					break
-				}
-			}
-
-			// If no session ID provided, try to find the user's session
-			if sessionID == "" {
-				sessions, err := h.ServiceProvider.SessionService.ListUserSessions(context.Background(), i.Member.User.ID)
-				if err == nil && len(sessions) == 1 {
-					sessionID = sessions[0].ID
-				} else if len(sessions) > 1 {
-					// User has multiple sessions, they need to specify
-					err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: "❌ You have multiple sessions. Please specify the session ID.",
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
-					if err != nil {
-						log.Printf("Error responding to end command: %v", err)
-					}
-					return
-				}
-			}
-
-			req := &sessionHandler.EndRequest{
-				Session:     s,
-				Interaction: i,
-				SessionID:   sessionID,
-			}
-			if err := h.sessionEndHandler.Handle(req); err != nil {
-				log.Printf("Error handling session end: %v", err)
-			}
-		case "leave":
-			req := &sessionHandler.LeaveRequest{
-				Session:     s,
-				Interaction: i,
-			}
-			if err := h.sessionLeaveHandler.Handle(req); err != nil {
-				log.Printf("Error handling session leave: %v", err)
-			}
-		}
-	} else if subcommandGroup.Name == "encounter" && len(subcommandGroup.Options) > 0 {
-		subcommand := subcommandGroup.Options[0]
-
-		if subcommand.Name == "add" {
-			// Get monster name from options
-			var monsterQuery string
-			for _, opt := range subcommand.Options {
-				if opt.Name == "monster" {
-					monsterQuery = opt.StringValue()
-					break
-				}
-			}
-
-			req := &encounterHandler.AddMonsterRequest{
-				Session:     s,
-				Interaction: i,
-				Query:       monsterQuery,
-			}
-			if err := h.encounterAddMonsterHandler.Handle(req); err != nil {
-				log.Printf("Error handling add monster: %v", err)
+			if err := h.adminInventoryHandler.HandleTake(s, i, characterName, itemKey, quantity); err != nil {
+				log.Printf("Error handling admin take: %v", err)
 			}
 		}
 	}
@@ -2205,9 +1982,13 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					desc := ""
 					switch item := invItem.(type) {
 					case *entities.Weapon:
-						desc = fmt.Sprintf("Damage: %dd%d", item.Damage.DiceCount, item.Damage.DiceSize)
-						if item.Damage.Bonus > 0 {
-							desc += fmt.Sprintf("+%d", item.Damage.Bonus)
+						if item.Damage != nil {
+							desc = fmt.Sprintf("Damage: %dd%d", item.Damage.DiceCount, item.Damage.DiceSize)
+							if item.Damage.Bonus > 0 {
+								desc += fmt.Sprintf("+%d", item.Damage.Bonus)
+							}
+						} else {
+							desc = "No damage data"
 						}
 					case *entities.Armor:
 						if item.ArmorClass != nil {
@@ -2749,368 +2530,6 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 			})
 			if err != nil {
 				log.Printf("Error showing unequip success: %v", err)
-			}
-		}
-	} else if ctx == "session_manage" {
-		// Handle session management actions
-		if len(parts) >= 3 {
-			sessionID := parts[2]
-
-			switch action {
-			case "start":
-				// Start the session
-				err := h.ServiceProvider.SessionService.StartSession(context.Background(), sessionID, i.Member.User.ID)
-				if err != nil {
-					content := fmt.Sprintf("❌ Failed to start session: %v", err)
-					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: content,
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
-					if err != nil {
-						log.Printf("Error responding to start session: %v", err)
-					}
-					return
-				}
-
-				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "🎲 Session started! Let the adventure begin!",
-						Flags:   discordgo.MessageFlagsEphemeral,
-					},
-				})
-				if err != nil {
-					log.Printf("Error starting session: %v", err)
-				}
-			case "leave":
-				// Leave the session
-				err := h.ServiceProvider.SessionService.LeaveSession(context.Background(), sessionID, i.Member.User.ID)
-				if err != nil {
-					content := fmt.Sprintf("❌ Failed to leave session: %v", err)
-					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: content,
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
-					if err != nil {
-						log.Printf("Error responding to leave session: %v", err)
-					}
-					return
-				}
-
-				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "👋 You've left the session.",
-						Flags:   discordgo.MessageFlagsEphemeral,
-					},
-				})
-				if err != nil {
-					log.Printf("Error leaving session: %v", err)
-				}
-			case "select_character":
-				// Show character selection menu
-				// Get user's characters
-				chars, err := h.ServiceProvider.CharacterService.ListByOwner(i.Member.User.ID)
-				if err != nil || len(chars) == 0 {
-					content := "❌ You need to create a character first! Use `/dnd character create`"
-					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: content,
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
-					if err != nil {
-						log.Printf("Error responding with error: %v", err)
-					}
-					return
-				}
-
-				// Build character options
-				options := make([]discordgo.SelectMenuOption, 0, len(chars))
-				for _, char := range chars {
-					if char.Status == entities.CharacterStatusActive {
-						options = append(options, discordgo.SelectMenuOption{
-							Label:       fmt.Sprintf("%s - %s", char.Name, char.GetDisplayInfo()),
-							Description: fmt.Sprintf("Level %d | HP: %d/%d | AC: %d", char.Level, char.CurrentHitPoints, char.MaxHitPoints, char.AC),
-							Value:       char.ID,
-						})
-					}
-				}
-
-				if len(options) == 0 {
-					content := "❌ You don't have any active characters! Create or activate a character first."
-					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: content,
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
-					if err != nil {
-						log.Printf("Error responding with error: %v", err)
-					}
-					return
-				}
-
-				// Show character selection menu
-				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "🎭 Select your character for this session:",
-						Flags:   discordgo.MessageFlagsEphemeral,
-						Components: []discordgo.MessageComponent{
-							discordgo.ActionsRow{
-								Components: []discordgo.MessageComponent{
-									discordgo.SelectMenu{
-										CustomID:    fmt.Sprintf("session_manage:confirm_character:%s", sessionID),
-										Placeholder: "Choose your character...",
-										Options:     options,
-									},
-								},
-							},
-						},
-					},
-				})
-				if err != nil {
-					log.Printf("Error showing character selection: %v", err)
-				}
-			case "confirm_character":
-				// Set the selected character
-				if len(i.MessageComponentData().Values) > 0 {
-					characterID := i.MessageComponentData().Values[0]
-					err := h.ServiceProvider.SessionService.SelectCharacter(context.Background(), sessionID, i.Member.User.ID, characterID)
-					if err != nil {
-						content := fmt.Sprintf("❌ Failed to select character: %v", err)
-						err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseUpdateMessage,
-							Data: &discordgo.InteractionResponseData{
-								Content:    content,
-								Components: []discordgo.MessageComponent{},
-							},
-						})
-						if err != nil {
-							log.Printf("Error responding with error: %v", err)
-						}
-						return
-					}
-
-					// Get character details for confirmation
-					char, charErr := h.ServiceProvider.CharacterService.GetByID(characterID)
-					if charErr != nil {
-						content := fmt.Sprintf("❌ Failed to get character: %v", charErr)
-						err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-							Type: discordgo.InteractionResponseUpdateMessage,
-							Data: &discordgo.InteractionResponseData{
-								Content:    content,
-								Components: []discordgo.MessageComponent{},
-							},
-						})
-						if err != nil {
-							log.Printf("Error responding with error: %v", err)
-						}
-						return
-					}
-					content := fmt.Sprintf("✅ Character selected: **%s** the %s", char.Name, char.GetDisplayInfo())
-					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseUpdateMessage,
-						Data: &discordgo.InteractionResponseData{
-							Content:    content,
-							Components: []discordgo.MessageComponent{},
-						},
-					})
-					if err != nil {
-						log.Printf("Error confirming character selection: %v", err)
-					}
-
-					// Check if there's an active encounter in this session
-					// If so, we need to add the player to it and update the shared message
-					enc, encErr := h.ServiceProvider.EncounterService.GetActiveEncounter(context.Background(), sessionID)
-					if encErr != nil {
-						// Log the error but don't fail - there might not be an active encounter
-						log.Printf("No active encounter found for session %s: %v", sessionID, encErr)
-					} else if enc != nil {
-						log.Printf("Found active encounter %s, adding player %s with character %s", enc.ID, i.Member.User.ID, characterID)
-
-						// Check if player is already in the encounter with a different character
-						var existingCombatantID string
-						for id, combatant := range enc.Combatants {
-							if combatant.PlayerID == i.Member.User.ID {
-								log.Printf("Player %s is already in encounter as %s (combatant %s)", i.Member.User.ID, combatant.Name, id)
-								existingCombatantID = id
-								break
-							}
-						}
-
-						if existingCombatantID != "" {
-							// Remove the old combatant first
-							log.Printf("Removing old combatant %s to replace with new character", existingCombatantID)
-							removeErr := h.ServiceProvider.EncounterService.RemoveCombatant(context.Background(), enc.ID, existingCombatantID, i.Member.User.ID)
-							if removeErr != nil {
-								log.Printf("Failed to remove old combatant: %v", removeErr)
-							}
-						}
-
-						// Add the player with the new character
-						_, addErr := h.ServiceProvider.EncounterService.AddPlayer(context.Background(), enc.ID, i.Member.User.ID, characterID)
-						if addErr != nil {
-							log.Printf("Failed to add player to active encounter: %v", addErr)
-						} else {
-							log.Printf("Successfully added player %s to encounter %s with new character", i.Member.User.ID, enc.ID)
-						}
-
-						// Always try to update the shared combat message after character selection
-						// This ensures the display is current even if the player was already in the encounter
-						log.Printf("Updating shared combat message for encounter %s", enc.ID)
-
-						// Get fresh encounter data
-						updatedEnc, getErr := h.ServiceProvider.EncounterService.GetEncounter(context.Background(), enc.ID)
-						if getErr != nil {
-							log.Printf("Failed to get updated encounter: %v", getErr)
-						} else if updatedEnc != nil {
-							log.Printf("Got updated encounter. MessageID: %s, ChannelID: %s", updatedEnc.MessageID, updatedEnc.ChannelID)
-
-							if updatedEnc.MessageID != "" && updatedEnc.ChannelID != "" {
-								// Build the combat status embed
-								embed := combat.BuildCombatStatusEmbed(updatedEnc, nil)
-								components := combat.BuildCombatComponents(updatedEnc.ID, &encounter.ExecuteAttackResult{})
-
-								// Update the shared message
-								log.Printf("Attempting to update message %s in channel %s", updatedEnc.MessageID, updatedEnc.ChannelID)
-								_, err := s.ChannelMessageEditComplex(&discordgo.MessageEdit{
-									ID:         updatedEnc.MessageID,
-									Channel:    updatedEnc.ChannelID,
-									Embeds:     &[]*discordgo.MessageEmbed{embed},
-									Components: &components,
-								})
-								if err != nil {
-									log.Printf("Failed to update shared combat message: %v", err)
-								} else {
-									log.Printf("Successfully updated shared combat message")
-								}
-							} else {
-								log.Printf("Encounter %s has no message ID stored (MessageID: %s, ChannelID: %s)", updatedEnc.ID, updatedEnc.MessageID, updatedEnc.ChannelID)
-							}
-						}
-					}
-				}
-			case "pause":
-				// Pause the session
-				err := h.ServiceProvider.SessionService.PauseSession(context.Background(), sessionID, i.Member.User.ID)
-				if err != nil {
-					content := fmt.Sprintf("❌ Failed to pause session: %v", err)
-					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: content,
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
-					if err != nil {
-						log.Printf("Error responding with error: %v", err)
-					}
-					return
-				}
-
-				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "⏸️ Session paused. Use `/dnd session info` to see options.",
-						Flags:   discordgo.MessageFlagsEphemeral,
-					},
-				})
-				if err != nil {
-					log.Printf("Error pausing session: %v", err)
-				}
-			case "end":
-				// Use the end handler
-				req := &sessionHandler.EndRequest{
-					Session:     s,
-					Interaction: i,
-					SessionID:   sessionID,
-				}
-				if err := h.sessionEndHandler.Handle(req); err != nil {
-					log.Printf("Error handling session end button: %v", err)
-				}
-			case "resume":
-				// Resume the session
-				err := h.ServiceProvider.SessionService.ResumeSession(context.Background(), sessionID, i.Member.User.ID)
-				if err != nil {
-					content := fmt.Sprintf("❌ Failed to resume session: %v", err)
-					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: content,
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
-					if err != nil {
-						log.Printf("Error responding with error: %v", err)
-					}
-					return
-				}
-
-				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "▶️ Session resumed! The adventure continues!",
-						Flags:   discordgo.MessageFlagsEphemeral,
-					},
-				})
-				if err != nil {
-					log.Printf("Error resuming session: %v", err)
-				}
-			case "invite":
-				// Show invite interface
-				// Get session details
-				session, err := h.ServiceProvider.SessionService.GetSession(context.Background(), sessionID)
-				if err != nil {
-					content := fmt.Sprintf("❌ Failed to get session: %v", err)
-					err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: content,
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
-					if err != nil {
-						log.Printf("Error responding with error: %v", err)
-					}
-					return
-				}
-
-				// Show invite code and instructions
-				content := fmt.Sprintf("📨 **Invite Players to %s**\n\n🔑 Invite Code: `%s`\n\nPlayers can join using:\n```/dnd session join %s```",
-					session.Name, session.InviteCode, session.InviteCode)
-				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: content,
-						Flags:   discordgo.MessageFlagsEphemeral,
-					},
-				})
-				if err != nil {
-					log.Printf("Error showing invite: %v", err)
-				}
-			case "settings":
-				// TODO: Implement session settings modal
-				content := "🔧 Session settings coming soon!"
-				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: content,
-						Flags:   discordgo.MessageFlagsEphemeral,
-					},
-				})
-				if err != nil {
-					log.Printf("Error showing settings placeholder: %v", err)
-				}
 			}
 		}
 	} else if ctx == "combat" {
