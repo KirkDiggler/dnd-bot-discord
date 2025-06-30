@@ -1102,6 +1102,7 @@ func (h *Handler) handleBonusAction(s *discordgo.Session, i *discordgo.Interacti
 	// Save character to persist the bonus action usage
 	if err := h.characterService.UpdateEquipment(char); err != nil {
 		log.Printf("Failed to save character after bonus action: %v", err)
+		return respondError(s, i, "Failed to save character state after bonus action execution", err)
 		// Notify the user but don't fail the entire operation
 		embed := &discordgo.MessageEmbed{
 			Title:       "⚠️ Warning",
