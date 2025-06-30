@@ -71,6 +71,7 @@ func TestAbilityService_UseAbility(t *testing.T) {
 			},
 			character: func() *entities.Character {
 				char := createTestCharacter("fighter", 1, map[string]int{"CON": 14})
+				char.CurrentHitPoints = 5     // Damaged
 				char.Resources.HP.Current = 5 // Damaged
 				return char
 			}(),
@@ -118,6 +119,7 @@ func TestAbilityService_UseAbility(t *testing.T) {
 			},
 			character: func() *entities.Character {
 				char := createTestCharacter("paladin", 1, map[string]int{"CHA": 14})
+				char.CurrentHitPoints = 7     // Damaged
 				char.Resources.HP.Current = 7 // Damaged
 				return char
 			}(),

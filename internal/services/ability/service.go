@@ -208,10 +208,27 @@ func (s *service) handleSecondWind(character *entities.Character, result *UseAbi
 	}
 
 	resources := character.GetResources()
+
+	// Ensure resources HP is synced with character HP
+	resources.HP.Current = character.CurrentHitPoints
+	resources.HP.Max = character.MaxHitPoints
+
+	// Debug logging
+	log.Printf("Second Wind: Character %s - Current HP: %d/%d (char.CurrentHP: %d), Healing roll: %d",
+		character.Name, resources.HP.Current, resources.HP.Max, character.CurrentHitPoints, rollResult.Total)
+
 	healingDone := resources.HP.Heal(rollResult.Total)
 	character.CurrentHitPoints = resources.HP.Current
 
-	result.Message = fmt.Sprintf("Second Wind heals you for %d HP (rolled %d)", healingDone, rollResult.Total)
+	// More debug logging
+	log.Printf("Second Wind: After healing - HP: %d/%d, Healing done: %d",
+		resources.HP.Current, resources.HP.Max, healingDone)
+
+	if healingDone == 0 && resources.HP.Current == resources.HP.Max {
+		result.Message = fmt.Sprintf("Second Wind rolled %d healing, but you're already at full HP", rollResult.Total)
+	} else {
+		result.Message = fmt.Sprintf("Second Wind heals you for %d HP (rolled %d)", healingDone, rollResult.Total)
+	}
 	result.HealingDone = healingDone
 	result.TargetNewHP = resources.HP.Current
 
