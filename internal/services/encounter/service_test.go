@@ -222,6 +222,17 @@ func TestAddPlayer(t *testing.T) {
 		Return(nil).
 		AnyTimes()
 
+	// Default mock for session service - can be overridden in specific tests
+	mockSessionService.EXPECT().
+		GetSession(gomock.Any(), sessionID).
+		Return(&entities.Session{
+			ID: sessionID,
+			Metadata: map[string]interface{}{
+				"sessionType": "combat", // Not a dungeon by default
+			},
+		}, nil).
+		AnyTimes()
+
 	t.Run("Successfully adds player with correct character data", func(t *testing.T) {
 		playerID := "player-123"
 		characterID := "char-123"
@@ -250,16 +261,12 @@ func TestAddPlayer(t *testing.T) {
 			GetByID(characterID).
 			Return(testChar, nil)
 
-		// Mock session service - return non-dungeon session
-		mockSessionService.EXPECT().
-			GetSession(gomock.Any(), sessionID).
-			Return(&entities.Session{
-				ID: sessionID,
-				Metadata: map[string]interface{}{
-					"sessionType": "combat", // Not a dungeon
-				},
-			}, nil).
-			AnyTimes()
+		// Expect the character to be saved after action economy reset
+		mockCharService.EXPECT().
+			UpdateEquipment(gomock.Any()).
+			Return(nil)
+
+		// Using default session mock from parent test setup
 
 		// Add player
 		combatant, err := svc.AddPlayer(context.Background(), encounterID, playerID, characterID)
@@ -328,6 +335,11 @@ func TestAddPlayer(t *testing.T) {
 			GetByID(characterID).
 			Return(testChar, nil)
 
+		// Expect the character to be saved after action economy reset
+		mockCharService.EXPECT().
+			UpdateEquipment(gomock.Any()).
+			Return(nil)
+
 		// Add player
 		_, err := svc.AddPlayer(context.Background(), encounterID, playerID, characterID)
 		require.NoError(t, err)
@@ -395,6 +407,11 @@ func TestAddPlayer(t *testing.T) {
 			GetByID(characterID).
 			Return(testChar, nil)
 
+		// Expect the character to be saved after action economy reset
+		mockCharService.EXPECT().
+			UpdateEquipment(gomock.Any()).
+			Return(nil)
+
 		// Add player
 		_, err := svc.AddPlayer(context.Background(), encounterID, playerID, characterID)
 		require.NoError(t, err)
@@ -437,6 +454,14 @@ func TestAddPlayer(t *testing.T) {
 			GetByID(characterID).
 			Return(testChar, nil)
 
+		// Using default session mock from parent test setup
+
+		// Expect the character to be saved after action economy reset
+		// (happens before ownership check)
+		mockCharService.EXPECT().
+			UpdateEquipment(gomock.Any()).
+			Return(nil)
+
 		// Try to add player with someone else's character
 		combatant, err := svc.AddPlayer(context.Background(), encounterID, playerID, characterID)
 
@@ -456,8 +481,6 @@ func TestAddPlayer(t *testing.T) {
 			PlayerID: "player-123", // This player is already in
 		}
 		testEncounter.AddCombatant(existingCombatant)
-		err := mockRepo.Update(context.Background(), testEncounter)
-		require.NoError(t, err)
 
 		// Try to add same player again
 		characterID := "char-new"
@@ -470,6 +493,14 @@ func TestAddPlayer(t *testing.T) {
 		mockCharService.EXPECT().
 			GetByID(characterID).
 			Return(testChar, nil)
+
+		// Using default session mock from parent test setup
+
+		// Expect the character to be saved after action economy reset
+		// (happens before duplicate player check)
+		mockCharService.EXPECT().
+			UpdateEquipment(gomock.Any()).
+			Return(nil)
 
 		combatant, err := svc.AddPlayer(context.Background(), encounterID, "player-123", characterID)
 
