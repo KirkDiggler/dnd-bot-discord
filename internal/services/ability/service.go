@@ -128,7 +128,7 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 	case "rage":
 		result = s.handleRage(character, ability, result)
 	case "second-wind":
-		result = s.handleSecondWind(character, result)
+		result = s.handleSecondWind(character, input, result)
 	case "bardic-inspiration":
 		result = s.handleBardicInspiration(character, input.TargetID, ability, result)
 	case "divine-sense":
@@ -198,7 +198,7 @@ func (s *service) handleRage(character *entities.Character, ability *entities.Ac
 }
 
 // handleSecondWind handles the Fighter's Second Wind ability
-func (s *service) handleSecondWind(character *entities.Character, result *UseAbilityResult) *UseAbilityResult {
+func (s *service) handleSecondWind(character *entities.Character, input *UseAbilityInput, result *UseAbilityResult) *UseAbilityResult {
 	// Roll 1d10 + fighter level
 	rollResult, err := s.diceRoller.Roll(1, 10, character.Level)
 	if err != nil {
@@ -209,16 +209,52 @@ func (s *service) handleSecondWind(character *entities.Character, result *UseAbi
 
 	resources := character.GetResources()
 
-	// Ensure resources HP is synced with character HP
-	resources.HP.Current = character.CurrentHitPoints
+	// Check if we have encounter context to get combatant HP
+	foundCombatant := false
+	if input.EncounterID != "" && s.encounterService != nil {
+		// Try to get current HP from encounter
+		enc, err := s.encounterService.GetEncounter(context.Background(), input.EncounterID)
+		if err == nil && enc != nil {
+			// Find the player's combatant
+			for _, c := range enc.Combatants {
+				if c.CharacterID == character.ID && c.IsActive {
+					resources.HP.Current = c.CurrentHP
+					log.Printf("Second Wind: Using combatant HP: %d/%d", c.CurrentHP, c.MaxHP)
+					foundCombatant = true
+					break
+				}
+			}
+		}
+	}
+
+	// Fall back to character HP if no encounter context
+	if !foundCombatant {
+		resources.HP.Current = character.CurrentHitPoints
+	}
 	resources.HP.Max = character.MaxHitPoints
 
 	// Debug logging
-	log.Printf("Second Wind: Character %s - Current HP: %d/%d (char.CurrentHP: %d), Healing roll: %d",
-		character.Name, resources.HP.Current, resources.HP.Max, character.CurrentHitPoints, rollResult.Total)
+	log.Printf("Second Wind: Character %s - Current HP: %d/%d, Healing roll: %d",
+		character.Name, resources.HP.Current, resources.HP.Max, rollResult.Total)
 
 	healingDone := resources.HP.Heal(rollResult.Total)
 	character.CurrentHitPoints = resources.HP.Current
+
+	// Update combatant HP in encounter if applicable
+	if input.EncounterID != "" && s.encounterService != nil && healingDone > 0 {
+		enc, err := s.encounterService.GetEncounter(context.Background(), input.EncounterID)
+		if err == nil && enc != nil {
+			for _, c := range enc.Combatants {
+				if c.CharacterID == character.ID && c.IsActive {
+					// Use the encounter service to heal the combatant
+					if healErr := s.encounterService.HealCombatant(context.Background(), input.EncounterID, c.ID, "", healingDone); healErr == nil {
+						log.Printf("Second Wind: Updated combatant HP by %d", healingDone)
+					}
+					break
+				}
+			}
+		}
+	}
 
 	// More debug logging
 	log.Printf("Second Wind: After healing - HP: %d/%d, Healing done: %d",
