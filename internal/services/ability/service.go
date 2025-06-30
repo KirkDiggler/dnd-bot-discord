@@ -109,7 +109,12 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 		case entities.AbilityTypeReaction:
 			character.Resources.ActionEconomy.ReactionUsed = true
 			character.Resources.ActionEconomy.RecordAction("reaction", "ability", ability.Key)
-			// AbilityTypeFree doesn't consume any actions
+		case entities.AbilityTypeFree:
+			// Free actions don't consume any action economy resources
+			character.Resources.ActionEconomy.RecordAction("free", "ability", ability.Key)
+		default:
+			// Log unexpected action types for debugging
+			log.Printf("Unexpected ability action type: %s for ability %s", ability.ActionType, ability.Key)
 		}
 	}
 
