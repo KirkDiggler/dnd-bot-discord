@@ -76,7 +76,7 @@ func (s *AbilityServiceIntegrationSuite) TestRageAbilityFullCycle() {
 			shared.AttributeWisdom:       {Score: 12},
 			shared.AttributeCharisma:     {Score: 10},
 		},
-		Resources: &shared.CharacterResources{
+		Resources: &character2.CharacterResources{
 			Abilities: map[string]*shared.ActiveAbility{
 				"rage": {
 					Name:          "Rage",
@@ -171,7 +171,7 @@ func (s *AbilityServiceIntegrationSuite) TestSecondWindHealing() {
 			shared.AttributeWisdom:       {Score: 12},
 			shared.AttributeCharisma:     {Score: 8},
 		},
-		Resources: &shared.CharacterResources{
+		Resources: &character2.CharacterResources{
 			Abilities: map[string]*shared.ActiveAbility{
 				"second_wind": {
 					Name:          "Second Wind",
@@ -232,7 +232,7 @@ func (s *AbilityServiceIntegrationSuite) TestMultipleRageUses() {
 			shared.AttributeWisdom:       {Score: 12},
 			shared.AttributeCharisma:     {Score: 10},
 		},
-		Resources: &shared.CharacterResources{
+		Resources: &character2.CharacterResources{
 			Abilities: map[string]*shared.ActiveAbility{
 				"rage": {
 					Name:          "Rage",
@@ -305,7 +305,7 @@ func (s *AbilityServiceIntegrationSuite) TestConcurrentAbilityUse() {
 		Status:           shared.CharacterStatusActive,
 		CurrentHitPoints: 12,
 		MaxHitPoints:     12,
-		Resources: &shared.CharacterResources{
+		Resources: &character2.CharacterResources{
 			Abilities: map[string]*shared.ActiveAbility{
 				"rage": {
 					Name:          "Rage",

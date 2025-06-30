@@ -47,7 +47,7 @@ type CharacterData struct {
 	Features           []*rulebook.CharacterFeature                         `json:"features"`
 	Inventory          map[equipment.EquipmentType][]EquipmentData          `json:"inventory"`
 	EquippedSlots      map[shared.Slot]EquipmentData                        `json:"equipped_slots"`
-	Resources          *shared.CharacterResources                           `json:"resources"`
+	Resources          *character.CharacterResources                        `json:"resources"`
 	CreatedAt          time.Time                                            `json:"created_at"`
 	UpdatedAt          time.Time                                            `json:"updated_at"`
 }

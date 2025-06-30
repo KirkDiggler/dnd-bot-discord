@@ -34,7 +34,7 @@ func TestBasicRedisIntegration(t *testing.T) {
 		Status:           shared.CharacterStatusActive,
 		CurrentHitPoints: 10,
 		MaxHitPoints:     10,
-		Resources: &shared.CharacterResources{
+		Resources: &character.CharacterResources{
 			Abilities: map[string]*shared.ActiveAbility{
 				"test_ability": {
 					Name:          "Test Ability",

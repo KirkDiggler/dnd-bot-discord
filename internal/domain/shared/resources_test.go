@@ -137,7 +137,7 @@ func TestHPResource_Heal(t *testing.T) {
 func TestCharacterResources_Initialize(t *testing.T) {
 	t.Run("initialize cleric resources", func(t *testing.T) {
 		class := testutils.CreateTestClass("cleric", "Cleric", 8)
-		resources := &shared.CharacterResources{}
+		resources := &character.CharacterResources{}
 		resources.Initialize(class, 1)
 
 		// Check HP initialization
@@ -157,7 +157,7 @@ func TestCharacterResources_Initialize(t *testing.T) {
 
 	t.Run("initialize fighter resources", func(t *testing.T) {
 		class := testutils.CreateTestClass("fighter", "Fighter", 10)
-		resources := &shared.CharacterResources{}
+		resources := &character.CharacterResources{}
 		resources.Initialize(class, 1)
 
 		// Check HP initialization
@@ -171,7 +171,7 @@ func TestCharacterResources_Initialize(t *testing.T) {
 	t.Run("initialize ranger at level 1", func(t *testing.T) {
 		class := testutils.CreateTestClass("ranger", "Ranger", 10)
 
-		resources := &shared.CharacterResources{}
+		resources := &character.CharacterResources{}
 		resources.Initialize(class, 1)
 
 		// Rangers don't get spell slots until level 2
@@ -181,7 +181,7 @@ func TestCharacterResources_Initialize(t *testing.T) {
 	t.Run("initialize ranger at level 2", func(t *testing.T) {
 		class := testutils.CreateTestClass("ranger", "Ranger", 10)
 
-		resources := &shared.CharacterResources{}
+		resources := &character.CharacterResources{}
 		resources.Initialize(class, 2)
 
 		// Rangers get spell slots at level 2
@@ -194,7 +194,7 @@ func TestCharacterResources_Initialize(t *testing.T) {
 	t.Run("initialize warlock resources", func(t *testing.T) {
 		class := testutils.CreateTestClass("warlock", "Warlock", 8)
 
-		resources := &shared.CharacterResources{}
+		resources := &character.CharacterResources{}
 		resources.Initialize(class, 1)
 
 		// Warlocks get pact magic at level 1
@@ -206,7 +206,7 @@ func TestCharacterResources_Initialize(t *testing.T) {
 }
 
 func TestCharacterResources_UseSpellSlot(t *testing.T) {
-	resources := &shared.CharacterResources{
+	resources := &character.CharacterResources{
 		SpellSlots: map[int]shared.SpellSlotInfo{
 			1: {Max: 2, Remaining: 2, Source: "spellcasting"},
 			2: {Max: 1, Remaining: 1, Source: "pact_magic"},
@@ -241,7 +241,7 @@ func TestCharacterResources_UseSpellSlot(t *testing.T) {
 
 func TestCharacterResources_Rest(t *testing.T) {
 	t.Run("short rest", func(t *testing.T) {
-		resources := &shared.CharacterResources{
+		resources := &character.CharacterResources{
 			HP: shared.HPResource{
 				Current: 5,
 				Max:     10,
@@ -285,7 +285,7 @@ func TestCharacterResources_Rest(t *testing.T) {
 	})
 
 	t.Run("long rest", func(t *testing.T) {
-		resources := &shared.CharacterResources{
+		resources := &character.CharacterResources{
 			HP: shared.HPResource{
 				Current:   5,
 				Max:       10,
@@ -349,7 +349,7 @@ func TestCharacterResources_Rest(t *testing.T) {
 
 func TestCharacterResources_Effects(t *testing.T) {
 	t.Run("add concentration effect", func(t *testing.T) {
-		resources := &shared.CharacterResources{
+		resources := &character.CharacterResources{
 			ActiveEffects: []*shared.ActiveEffect{
 				{
 					ID:                    "1",
@@ -373,7 +373,7 @@ func TestCharacterResources_Effects(t *testing.T) {
 	})
 
 	t.Run("tick effect durations", func(t *testing.T) {
-		resources := &shared.CharacterResources{
+		resources := &character.CharacterResources{
 			ActiveEffects: []*shared.ActiveEffect{
 				{
 					Name:         "Shield",
@@ -397,7 +397,7 @@ func TestCharacterResources_Effects(t *testing.T) {
 	})
 
 	t.Run("calculate bonuses", func(t *testing.T) {
-		resources := &shared.CharacterResources{
+		resources := &character.CharacterResources{
 			ActiveEffects: []*shared.ActiveEffect{
 				{
 					Name: "Shield of Faith",
@@ -589,7 +589,7 @@ func TestCharacter_GetResources(t *testing.T) {
 
 	t.Run("returns existing resources", func(t *testing.T) {
 		char := &character.Character{
-			Resources: &shared.CharacterResources{
+			Resources: &character.CharacterResources{
 				HP: shared.HPResource{
 					Current: 5,
 					Max:     10,

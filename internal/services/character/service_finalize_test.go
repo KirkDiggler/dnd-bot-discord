@@ -41,7 +41,7 @@ func TestService_FinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T)
 		Race: &rulebook.Race{
 			Key:  "elf",
 			Name: "Elf",
-			AbilityBonuses: []*character2.AbilityBonus{
+			AbilityBonuses: []*shared.AbilityBonus{
 				{Attribute: shared.AttributeDexterity, Bonus: 2},
 				{Attribute: shared.AttributeIntelligence, Bonus: 1},
 			},

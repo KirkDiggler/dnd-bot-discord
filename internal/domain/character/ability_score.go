@@ -10,11 +10,6 @@ type AbilityScore struct {
 	Bonus int
 }
 
-type AbilityBonus struct {
-	Attribute shared.Attribute
-	Bonus     int
-}
-
 func (a *AbilityScore) AddBonus(bonus int) *AbilityScore {
 	// Add the bonus to the score
 	a.Score += bonus

@@ -15,7 +15,7 @@ func CreateTestRace(key, name string) *rulebook.Race {
 		Key:   key,
 		Name:  name,
 		Speed: 30,
-		AbilityBonuses: []*character.AbilityBonus{
+		AbilityBonuses: []*shared.AbilityBonus{
 			{
 				Attribute: shared.AttributeStrength,
 				Bonus:     2,

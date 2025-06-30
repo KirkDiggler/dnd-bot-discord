@@ -56,7 +56,7 @@ func TestAbilityAssignmentFlow_Integration(t *testing.T) {
 	mockClient.EXPECT().GetRace("elf").Return(&rulebook.Race{
 		Key:  "elf",
 		Name: "Elf",
-		AbilityBonuses: []*character2.AbilityBonus{
+		AbilityBonuses: []*shared.AbilityBonus{
 			{Attribute: shared.AttributeDexterity, Bonus: 2},
 			{Attribute: shared.AttributeIntelligence, Bonus: 1},
 		},
@@ -173,7 +173,7 @@ func TestUpdateDraftCharacter_AbilityAssignmentConversion(t *testing.T) {
 		Race: &rulebook.Race{
 			Key:  "elf",
 			Name: "Elf",
-			AbilityBonuses: []*character2.AbilityBonus{
+			AbilityBonuses: []*shared.AbilityBonus{
 				{Attribute: shared.AttributeDexterity, Bonus: 2},
 			},
 		},

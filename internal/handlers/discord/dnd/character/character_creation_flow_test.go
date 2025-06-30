@@ -63,7 +63,7 @@ func TestCharacterCreation_AbilityAssignmentFlow(t *testing.T) {
 	mockDNDClient.EXPECT().GetRace("half-orc").Return(&rulebook.Race{
 		Key:  "half-orc",
 		Name: "Half-Orc",
-		AbilityBonuses: []*character2.AbilityBonus{
+		AbilityBonuses: []*shared.AbilityBonus{
 			{Attribute: shared.AttributeStrength, Bonus: 2},
 			{Attribute: shared.AttributeConstitution, Bonus: 1},
 		},

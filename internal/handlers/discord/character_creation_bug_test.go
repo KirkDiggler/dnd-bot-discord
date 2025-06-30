@@ -73,7 +73,7 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 	mockClient.EXPECT().GetRace("elf").Return(&rulebook.Race{
 		Key:  "elf",
 		Name: "Elf",
-		AbilityBonuses: []*character.AbilityBonus{
+		AbilityBonuses: []*shared.AbilityBonus{
 			{Attribute: shared.AttributeDexterity, Bonus: 2},
 		},
 	}, nil).AnyTimes()
@@ -96,7 +96,7 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 		Race: &rulebook.Race{
 			Key:  "elf",
 			Name: "Elf",
-			AbilityBonuses: []*character.AbilityBonus{
+			AbilityBonuses: []*shared.AbilityBonus{
 				{Attribute: shared.AttributeDexterity, Bonus: 2},
 			},
 		},

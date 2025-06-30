@@ -50,7 +50,7 @@ type Character struct {
 	Status shared.CharacterStatus `json:"status"`
 
 	// Resources tracks HP, abilities, spell slots, etc
-	Resources *shared.CharacterResources `json:"resources"`
+	Resources *CharacterResources `json:"resources"`
 
 	// EffectManager tracks all active status effects
 	EffectManager *effects.Manager `json:"-"`
@@ -337,7 +337,7 @@ func (c *Character) AddAttribute(attr shared.Attribute, score int) {
 
 	c.Attributes[attr] = abilityScore
 }
-func (c *Character) AddAbilityBonus(ab *AbilityBonus) {
+func (c *Character) AddAbilityBonus(ab *shared.AbilityBonus) {
 	if c.Attributes == nil {
 		c.Attributes = make(map[shared.Attribute]*AbilityScore)
 	}
@@ -640,7 +640,7 @@ func (c *Character) Clone() *Character {
 
 	// Deep copy Resources
 	if c.Resources != nil {
-		clone.Resources = &shared.CharacterResources{
+		clone.Resources = &CharacterResources{
 			HP:      c.Resources.HP,      // HPResource is a value type
 			HitDice: c.Resources.HitDice, // Also a value type
 		}

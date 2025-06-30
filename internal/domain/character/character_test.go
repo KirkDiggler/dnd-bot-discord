@@ -15,7 +15,7 @@ func TestCharacter_AddAbilityBonus(t *testing.T) {
 		AbilityScores map[shared.Attribute]*AbilityScore
 	}
 	type args struct {
-		abilityBonus  *AbilityBonus
+		abilityBonus  *shared.AbilityBonus
 		expectedScore int
 		expectedBonus int
 	}
@@ -37,7 +37,7 @@ func TestCharacter_AddAbilityBonus(t *testing.T) {
 				},
 			},
 			args: args{
-				abilityBonus: &AbilityBonus{
+				abilityBonus: &shared.AbilityBonus{
 					Attribute: shared.AttributeStrength,
 					Bonus:     2,
 				},
@@ -58,7 +58,7 @@ func TestCharacter_AddAbilityBonus(t *testing.T) {
 				},
 			},
 			args: args{
-				abilityBonus: &AbilityBonus{
+				abilityBonus: &shared.AbilityBonus{
 					Attribute: shared.AttributeStrength,
 					Bonus:     2,
 				},
@@ -78,7 +78,7 @@ func TestCharacter_AddAbilityBonus(t *testing.T) {
 				},
 			},
 			args: args{
-				abilityBonus: &AbilityBonus{
+				abilityBonus: &shared.AbilityBonus{
 					Attribute: shared.AttributeStrength,
 					Bonus:     2,
 				},

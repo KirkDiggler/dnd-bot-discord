@@ -99,7 +99,7 @@ func TestCharacter_StartNewTurn(t *testing.T) {
 	char := &character.Character{
 		Name:  "Test Character",
 		Level: 1,
-		Resources: &CharacterResources{
+		Resources: &character.CharacterResources{
 			ActionEconomy: ActionEconomy{
 				ActionUsed:      true,
 				BonusActionUsed: true,
@@ -127,7 +127,7 @@ func TestCharacter_MartialArtsBonusAction(t *testing.T) {
 		Features: []*rulebook.CharacterFeature{
 			{Key: "martial-arts", Name: "Martial Arts"},
 		},
-		Resources: &CharacterResources{},
+		Resources: &character.CharacterResources{},
 		EquippedSlots: map[Slot]equipment.Equipment{
 			SlotMainHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: equipment.WeaponKeyShortsword},
@@ -165,7 +165,7 @@ func TestCharacter_TwoWeaponFightingBonusAction(t *testing.T) {
 	char := &character.Character{
 		Name:      "Dual Wielder",
 		Level:     1,
-		Resources: &CharacterResources{},
+		Resources: &character.CharacterResources{},
 		EquippedSlots: map[Slot]equipment.Equipment{
 			SlotMainHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: "shortsword"},
@@ -209,7 +209,7 @@ func TestCharacter_NoTwoWeaponWithoutLight(t *testing.T) {
 	char := &character.Character{
 		Name:      "Fighter",
 		Level:     1,
-		Resources: &CharacterResources{},
+		Resources: &character.CharacterResources{},
 		EquippedSlots: map[Slot]equipment.Equipment{
 			SlotMainHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: "longsword"},
@@ -242,7 +242,7 @@ func TestCharacter_ActionAvailability(t *testing.T) {
 	char := &character.Character{
 		Name:      "Test",
 		Level:     1,
-		Resources: &CharacterResources{},
+		Resources: &character.CharacterResources{},
 	}
 
 	// Initially has action available
@@ -261,7 +261,7 @@ func TestCharacter_GetActionsTaken(t *testing.T) {
 	char := &character.Character{
 		Name:      "Test",
 		Level:     1,
-		Resources: &CharacterResources{},
+		Resources: &character.CharacterResources{},
 	}
 
 	// Take some actions
@@ -284,7 +284,7 @@ func TestCharacter_NonMonkNoMartialArts(t *testing.T) {
 		Features: []*rulebook.CharacterFeature{
 			{Key: "second_wind", Name: "Second Wind"},
 		},
-		Resources: &CharacterResources{},
+		Resources: &character.CharacterResources{},
 		EquippedSlots: map[Slot]equipment.Equipment{
 			SlotMainHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: equipment.WeaponKeyShortsword},

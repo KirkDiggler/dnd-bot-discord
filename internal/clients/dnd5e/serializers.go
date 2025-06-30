@@ -1,7 +1,6 @@
 package dnd5e
 
 import (
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
@@ -57,8 +56,8 @@ func apiRaceToRace(input *apiEntities.Race) *rulebook.Race {
 	}
 }
 
-func apiAbilityBonusesToAbilityBonuses(input []*apiEntities.AbilityBonus) []*character.AbilityBonus {
-	output := make([]*character.AbilityBonus, len(input))
+func apiAbilityBonusesToAbilityBonuses(input []*apiEntities.AbilityBonus) []*shared.AbilityBonus {
+	output := make([]*shared.AbilityBonus, len(input))
 	for i, apiAbilityBonus := range input {
 		output[i] = apiAbilityBonusToAbilityBonus(apiAbilityBonus)
 	}
@@ -66,7 +65,7 @@ func apiAbilityBonusesToAbilityBonuses(input []*apiEntities.AbilityBonus) []*cha
 	return output
 }
 
-func apiAbilityBonusToAbilityBonus(input *apiEntities.AbilityBonus) *character.AbilityBonus {
+func apiAbilityBonusToAbilityBonus(input *apiEntities.AbilityBonus) *shared.AbilityBonus {
 	if input == nil {
 		return nil
 	}
@@ -74,7 +73,7 @@ func apiAbilityBonusToAbilityBonus(input *apiEntities.AbilityBonus) *character.A
 		return nil
 	}
 
-	return &character.AbilityBonus{
+	return &shared.AbilityBonus{
 		Attribute: referenceItemKeyToAttribute(input.AbilityScore.Key),
 		Bonus:     input.Bonus,
 	}

@@ -5,7 +5,7 @@ import (
 )
 
 // GetResources returns the character's resources, initializing if needed
-func (c *Character) GetResources() *shared.CharacterResources {
+func (c *Character) GetResources() *CharacterResources {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -25,7 +25,7 @@ func (c *Character) InitializeResources() {
 // initializeResourcesInternal is the internal resource initialization (caller must hold lock)
 func (c *Character) initializeResourcesInternal() {
 	if c.Resources == nil {
-		c.Resources = &shared.CharacterResources{}
+		c.Resources = &CharacterResources{}
 	}
 
 	// Initialize basic resources

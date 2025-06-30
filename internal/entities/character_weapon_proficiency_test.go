@@ -91,7 +91,7 @@ func TestCharacter_Attack_WithCategoryProficiency(t *testing.T) {
 			},
 		},
 		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
-		Resources:     &shared.CharacterResources{},
+		Resources:     &character.CharacterResources{},
 	}
 
 	// Equip a martial weapon (longsword)
@@ -142,7 +142,7 @@ func TestCharacter_Attack_WithoutCategoryProficiency(t *testing.T) {
 			},
 		},
 		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
-		Resources:     &shared.CharacterResources{},
+		Resources:     &character.CharacterResources{},
 	}
 
 	// Equip a martial weapon (longsword) - wizard is NOT proficient

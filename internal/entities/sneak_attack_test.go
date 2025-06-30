@@ -172,7 +172,7 @@ func TestCharacter_ApplySneakAttackDamage(t *testing.T) {
 		Name:  "Shadowblade",
 		Class: &rulebook.Class{Key: "rogue", Name: "Rogue"},
 		Level: 5, // 3d6 sneak attack
-		Resources: &shared.CharacterResources{
+		Resources: &character2.CharacterResources{
 			SneakAttackUsedThisTurn: false,
 		},
 	}
@@ -206,7 +206,7 @@ func TestCharacter_SneakAttackCritical(t *testing.T) {
 		Name:  "Shadowblade",
 		Class: &rulebook.Class{Key: "rogue", Name: "Rogue"},
 		Level: 1, // 1d6 sneak attack
-		Resources: &shared.CharacterResources{
+		Resources: &character2.CharacterResources{
 			SneakAttackUsedThisTurn: false,
 		},
 	}
@@ -233,7 +233,7 @@ func TestCharacter_ResetSneakAttackOnNewTurn(t *testing.T) {
 		ID:    "rogue_123",
 		Class: &rulebook.Class{Key: "rogue", Name: "Rogue"},
 		Level: 1,
-		Resources: &shared.CharacterResources{
+		Resources: &character2.CharacterResources{
 			SneakAttackUsedThisTurn: true,
 		},
 	}

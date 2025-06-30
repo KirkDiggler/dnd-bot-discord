@@ -69,7 +69,7 @@ func TestCharacterAbilityAssignment_RedisIntegration(t *testing.T) {
 	mockClient.EXPECT().GetRace("elf").Return(&rulebook.Race{
 		Key:  "elf",
 		Name: "Elf",
-		AbilityBonuses: []*character2.AbilityBonus{
+		AbilityBonuses: []*shared.AbilityBonus{
 			{Attribute: shared.AttributeDexterity, Bonus: 2},
 		},
 		Speed: 30,

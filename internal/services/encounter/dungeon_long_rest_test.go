@@ -57,7 +57,7 @@ func TestAddPlayer_DungeonLongRest(t *testing.T) {
 		Attributes: map[shared.Attribute]*character.AbilityScore{
 			shared.AttributeDexterity: {Score: 14, Bonus: 2},
 		},
-		Resources: &shared.CharacterResources{
+		Resources: &character.CharacterResources{
 			HP: shared.HPResource{
 				Current: 20,
 				Max:     30,
@@ -158,7 +158,7 @@ func TestAddPlayer_NonDungeonNoLongRest(t *testing.T) {
 		Attributes: map[shared.Attribute]*character.AbilityScore{
 			shared.AttributeDexterity: {Score: 14, Bonus: 2},
 		},
-		Resources: &shared.CharacterResources{
+		Resources: &character.CharacterResources{
 			HP: shared.HPResource{
 				Current: 20,
 				Max:     30,
