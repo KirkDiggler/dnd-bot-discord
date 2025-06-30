@@ -110,7 +110,26 @@
   - Changed button label from "Join Party" to "Select Character" for clarity
   - Added comprehensive unit tests for workflow validation
 
-#### Known Issues (Fix as we touch the code)
+#### Architectural Learning Process (Event-Driven Exploration)
+
+**Philosophy**: Instead of jumping straight into a new architecture, we implement features while thinking about how they would work in an event-driven system. This allows us to:
+- Learn what we actually need vs what we think we need
+- Validate the architecture idea through real implementation experience  
+- Make informed decisions based on concrete examples
+- Avoid building something that doesn't fit our actual requirements
+
+**Process**:
+1. Implement features normally but think about event-driven integration
+2. Create issues with `prototype` and `event-driven` labels documenting learnings
+3. Review after implementation to see if event-driven would be easier
+4. Either continue developing the idea or drop it based on evidence
+
+**Example**: When implementing Monk Martial Arts:
+- Current: Direct method calls and state modifications
+- Event-Driven: Would emit "AttackComplete" event, Martial Arts feature listens and enables bonus action
+- Document the friction points and benefits we discover
+
+### Known Issues (Fix as we touch the code)
 - ~10 unchecked errors (errcheck)
 - Shadow variable declarations
 - Some unused parameters

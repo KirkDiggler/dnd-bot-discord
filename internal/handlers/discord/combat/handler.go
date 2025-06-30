@@ -785,27 +785,45 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 	// Add player status field showing HP, AC, and active effects
 	statusValue := fmt.Sprintf("**HP:** %d/%d | **AC:** %d", playerCombatant.CurrentHP, playerCombatant.MaxHP, playerCombatant.AC)
 
-	// Get character for bonus action info
+	// Get character data to check available bonus actions and action economy
+	var actionEconomyInfo string
+	var availableBonusActions []entities.BonusActionOption
 	var char *entities.Character
-	if h.characterService != nil {
-		if ch, err := h.characterService.GetByID(playerCombatant.CharacterID); err == nil {
+	if playerCombatant.CharacterID != "" && h.characterService != nil {
+		// Get the character
+		ch, err := h.characterService.GetByID(playerCombatant.CharacterID)
+		if err == nil && ch != nil {
 			char = ch
-		}
-	}
+			// Get action economy status
+			actionStatus := "✅ Available"
+			if char.Resources != nil && char.Resources.ActionEconomy.ActionUsed {
+				actionStatus = "❌ Used"
+			}
 
-	// Add bonus action info if we have character data
-	if char != nil && len(char.GetAvailableBonusActions()) > 0 {
-		var bonusActionsList []string
-		for _, ba := range char.GetAvailableBonusActions() {
-			bonusActionsList = append(bonusActionsList, fmt.Sprintf("• **%s**: %s", ba.Name, ba.Description))
+			bonusActionStatus := "✅ Available"
+			if char.Resources != nil && char.Resources.ActionEconomy.BonusActionUsed {
+				bonusActionStatus = "❌ Used"
+			}
+
+			actionEconomyInfo = fmt.Sprintf("\n**Action:** %s | **Bonus Action:** %s", actionStatus, bonusActionStatus)
+
+			// Get available bonus actions
+			if char.Resources != nil {
+				availableBonusActions = char.GetAvailableBonusActions()
+				if len(availableBonusActions) > 0 && !char.Resources.ActionEconomy.BonusActionUsed {
+					actionEconomyInfo += "\n**Bonus Actions Available:**"
+					for _, ba := range availableBonusActions {
+						actionEconomyInfo += fmt.Sprintf("\n• %s", ba.Name)
+					}
+				}
+			}
 		}
-		statusValue += fmt.Sprintf("\n\n**🎯 Available Bonus Actions:**\n%s", strings.Join(bonusActionsList, "\n"))
 	}
 
 	// Add status as first field
 	statusField := &discordgo.MessageEmbedField{
 		Name:   "📊 Your Status",
-		Value:  statusValue,
+		Value:  statusValue + actionEconomyInfo,
 		Inline: false,
 	}
 	embed.Fields = append([]*discordgo.MessageEmbedField{statusField}, embed.Fields...)
@@ -840,12 +858,20 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 	}
 
 	// Add bonus action buttons if available
-	if char != nil && len(char.GetAvailableBonusActions()) > 0 {
-		var bonusActionButtons []discordgo.MessageComponent
-		for _, ba := range char.GetAvailableBonusActions() {
-			emoji := "👊" // Default for unarmed strike
-			if ba.ActionType == "weapon_attack" {
-				emoji = "🗡️" // For off-hand attack
+	if len(availableBonusActions) > 0 {
+		bonusActionButtons := []discordgo.MessageComponent{}
+		for i, ba := range availableBonusActions {
+			if i >= 5 { // Discord has a 5-button limit per row
+				break
+			}
+
+			// Determine emoji based on action type
+			emoji := "🎯"
+			switch ba.ActionType {
+			case "unarmed_strike":
+				emoji = "👊"
+			case "weapon_attack":
+				emoji = "🗡️"
 			}
 
 			bonusActionButtons = append(bonusActionButtons, discordgo.Button{
@@ -858,11 +884,9 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 		}
 
 		if len(bonusActionButtons) > 0 {
-			components = append([]discordgo.MessageComponent{
-				discordgo.ActionsRow{
-					Components: bonusActionButtons,
-				},
-			}, components...)
+			components = append(components, discordgo.ActionsRow{
+				Components: bonusActionButtons,
+			})
 		}
 	}
 
