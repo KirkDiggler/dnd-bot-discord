@@ -828,7 +828,12 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 	}
 	embed.Fields = append([]*discordgo.MessageEmbedField{statusField}, embed.Fields...)
 
-	// Build action buttons - always enabled unless combat is not active
+	// Build action buttons - disable if action already used
+	attackDisabled := enc.Status != entities.EncounterStatusActive
+	if char != nil && char.Resources != nil && char.Resources.ActionEconomy.ActionUsed {
+		attackDisabled = true
+	}
+
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
@@ -837,7 +842,7 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 					Style:    discordgo.DangerButton,
 					CustomID: fmt.Sprintf("combat:attack:%s", encounterID),
 					Emoji:    &discordgo.ComponentEmoji{Name: "⚔️"},
-					Disabled: enc.Status != entities.EncounterStatusActive,
+					Disabled: attackDisabled,
 				},
 				discordgo.Button{
 					Label:    "Abilities",
@@ -874,12 +879,18 @@ func (h *Handler) handleMyActions(s *discordgo.Session, i *discordgo.Interaction
 				emoji = "🗡️"
 			}
 
+			// Disable bonus action buttons if bonus action already used
+			bonusActionDisabled := enc.Status != entities.EncounterStatusActive
+			if char != nil && char.Resources != nil && char.Resources.ActionEconomy.BonusActionUsed {
+				bonusActionDisabled = true
+			}
+
 			bonusActionButtons = append(bonusActionButtons, discordgo.Button{
 				Label:    ba.Name,
 				Style:    discordgo.SuccessButton,
 				CustomID: fmt.Sprintf("combat:bonus_action:%s:%s", encounterID, ba.Key),
 				Emoji:    &discordgo.ComponentEmoji{Name: emoji},
-				Disabled: enc.Status != entities.EncounterStatusActive,
+				Disabled: bonusActionDisabled,
 			})
 		}
 

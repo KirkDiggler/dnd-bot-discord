@@ -788,6 +788,11 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		}
 		char.RecordAction("attack", "weapon", weaponKey)
 
+		// Save character to persist action economy changes
+		if err := s.characterService.UpdateEquipment(char); err != nil {
+			log.Printf("Failed to save character after attack action: %v", err)
+		}
+
 		// Log action economy state for debugging
 		log.Printf("[ACTION ECONOMY] %s attacked with %s - Actions taken: %d, Bonus actions available: %d",
 			char.Name, weaponKey, len(char.GetActionsTaken()), len(char.GetAvailableBonusActions()))
