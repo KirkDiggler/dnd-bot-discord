@@ -247,8 +247,13 @@ func (s *service) handleSecondWind(character *entities.Character, input *UseAbil
 			for _, c := range enc.Combatants {
 				if c.CharacterID == character.ID && c.IsActive {
 					// Use the encounter service to heal the combatant
-					if healErr := s.encounterService.HealCombatant(context.Background(), input.EncounterID, c.ID, "", healingDone); healErr == nil {
-						log.Printf("Second Wind: Updated combatant HP by %d", healingDone)
+					if healErr := s.encounterService.HealCombatant(context.Background(), input.EncounterID, c.ID, "", healingDone); healErr != nil {
+						log.Printf("Second Wind: Failed to update combatant HP: %v", healErr)
+						// Try direct update as fallback
+						c.CurrentHP = resources.HP.Current
+						log.Printf("Second Wind: Directly set combatant HP to %d", c.CurrentHP)
+					} else {
+						log.Printf("Second Wind: Successfully updated combatant HP by %d", healingDone)
 					}
 					break
 				}
