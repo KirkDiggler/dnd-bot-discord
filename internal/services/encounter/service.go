@@ -10,6 +10,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat/attack"
+	gameSession "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"sort"
@@ -259,7 +260,7 @@ func (s *service) CreateEncounter(ctx context.Context, input *CreateEncounterInp
 			return nil, dnderr.PermissionDenied("only the DM can create encounters")
 		}
 		// For dungeon sessions, bot/system can create encounters
-	} else if member.Role != session.SessionRoleDM {
+	} else if member.Role != gameSession.SessionRoleDM {
 		return nil, dnderr.PermissionDenied("only the DM can create encounters")
 	}
 
@@ -349,7 +350,7 @@ func (s *service) AddMonster(ctx context.Context, encounterID, userID string, in
 			if !session.IsDungeon() {
 				return nil, dnderr.PermissionDenied("only the DM can add monsters")
 			}
-		} else if member.Role != session.SessionRoleDM {
+		} else if member.Role != gameSession.SessionRoleDM {
 			return nil, dnderr.PermissionDenied("only the DM can add monsters")
 		}
 	}
@@ -449,7 +450,7 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 
 	// Get dexterity modifier for initiative
 	dexBonus := 0
-	if dexScore, exists := character.Attributes[character.AttributeDexterity]; exists {
+	if dexScore, exists := character.Attributes[shared.AttributeDexterity]; exists {
 		dexBonus = dexScore.Bonus
 	}
 

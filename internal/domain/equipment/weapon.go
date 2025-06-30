@@ -1,9 +1,7 @@
 package equipment
 
 import (
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat/attack"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 )
 
@@ -21,37 +19,6 @@ type Weapon struct {
 	CategoryRange   string                  `json:"category_range"`
 	Properties      []*shared.ReferenceItem `json:"properties"`
 	TwoHandedDamage *damage.Damage          `json:"two_handed_damage"`
-}
-
-func (w *Weapon) Attack(char *character.Character) (*attack.Result, error) {
-	var abilityBonus int
-
-	switch w.WeaponRange {
-	case "Ranged":
-		abilityBonus = char.Attributes[shared.AttributeDexterity].Bonus
-	case "Melee":
-		abilityBonus = char.Attributes[shared.AttributeStrength].Bonus
-	}
-
-	// Check for weapon proficiency
-	proficiencyBonus := 0
-	if char.HasWeaponProficiency(w.Base.Key) {
-		// Base proficiency bonus is +2 at level 1-4, +3 at 5-8, +4 at 9-12, etc.
-		proficiencyBonus = 2 + ((char.Level - 1) / 4)
-	}
-
-	attackBonus := abilityBonus + proficiencyBonus
-	damageBonus := abilityBonus // Only ability modifier applies to damage
-
-	if w.IsTwoHanded() {
-		if w.TwoHandedDamage == nil {
-			return attack.RollAttack(char.getDiceRoller(), attackBonus, damageBonus, w.Damage)
-		}
-
-		return attack.RollAttack(char.getDiceRoller(), attackBonus, damageBonus, w.TwoHandedDamage)
-	}
-
-	return attack.RollAttack(char.getDiceRoller(), attackBonus, damageBonus, w.Damage)
 }
 
 func (w *Weapon) IsRanged() bool {

@@ -47,7 +47,7 @@ func (h *InventoryHandler) HandleGive(s *discordgo.Session, i *discordgo.Interac
 
 	// For testing purposes, create a simple weapon based on the item key
 	// In a real implementation, this would fetch from the D&D API
-	var equipment equipment.Equipment
+	var equipmentValue equipment.Equipment
 
 	switch itemKey {
 	case "longsword", "shortsword", "dagger", "rapier", "greatsword":
@@ -82,15 +82,15 @@ func (h *InventoryHandler) HandleGive(s *discordgo.Session, i *discordgo.Interac
 			}
 		}
 
-		equipment = weapon
+		equipmentValue = weapon
 	case "shield":
-		equipment = &equipment.BasicEquipment{
+		equipmentValue = &equipment.BasicEquipment{
 			Key:  itemKey,
 			Name: "Shield",
 		}
 	default:
 		// Generic item
-		equipment = &equipment.BasicEquipment{
+		equipmentValue = &equipment.BasicEquipment{
 			Key:  itemKey,
 			Name: cases.Title(language.English).String(strings.ReplaceAll(itemKey, "-", " ")),
 		}
@@ -102,7 +102,7 @@ func (h *InventoryHandler) HandleGive(s *discordgo.Session, i *discordgo.Interac
 	}
 
 	// Determine equipment type
-	equipType := equipment.GetEquipmentType()
+	equipType := equipmentValue.GetEquipmentType()
 	if equipType == "BasicEquipment" {
 		// Try to determine type from key
 		if itemKey == "shield" {
@@ -114,7 +114,7 @@ func (h *InventoryHandler) HandleGive(s *discordgo.Session, i *discordgo.Interac
 
 	// Add the item to the character's inventory
 	for j := int64(0); j < quantity; j++ {
-		targetChar.Inventory[equipType] = append(targetChar.Inventory[equipType], equipment)
+		targetChar.Inventory[equipType] = append(targetChar.Inventory[equipType], equipmentValue)
 	}
 
 	// Save the character - use UpdateEquipment method
@@ -131,7 +131,7 @@ func (h *InventoryHandler) HandleGive(s *discordgo.Session, i *discordgo.Interac
 	// Send success response
 	embed := &discordgo.MessageEmbed{
 		Title:       "✅ Item Added",
-		Description: fmt.Sprintf("Added %d x **%s** to %s's inventory", quantity, equipment.GetName(), targetChar.Name),
+		Description: fmt.Sprintf("Added %d x **%s** to %s's inventory", quantity, equipmentValue.GetName(), targetChar.Name),
 		Color:       0x00ff00,
 		Fields: []*discordgo.MessageEmbedField{
 			{

@@ -5,7 +5,7 @@ package character
 import (
 	"context"
 	"fmt"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	charDomain "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	features2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/features"
@@ -29,10 +29,10 @@ type Service interface {
 	CreateCharacter(ctx context.Context, input *CreateCharacterInput) (*CreateCharacterOutput, error)
 
 	// GetCharacter retrieves a character by ID
-	GetCharacter(ctx context.Context, characterID string) (*character.Character, error)
+	GetCharacter(ctx context.Context, characterID string) (*charDomain.Character, error)
 
 	// ListCharacters lists all characters for a user
-	ListCharacters(ctx context.Context, userID string) ([]*character.Character, error)
+	ListCharacters(ctx context.Context, userID string) ([]*charDomain.Character, error)
 
 	// ValidateCharacterCreation validates character creation choices
 	ValidateCharacterCreation(ctx context.Context, input *ValidateCharacterInput) error
@@ -53,13 +53,13 @@ type Service interface {
 	GetClasses(ctx context.Context) ([]*rulebook.Class, error)
 
 	// GetOrCreateDraftCharacter gets an existing draft or creates a new one
-	GetOrCreateDraftCharacter(ctx context.Context, userID, realmID string) (*character.Character, error)
+	GetOrCreateDraftCharacter(ctx context.Context, userID, realmID string) (*charDomain.Character, error)
 
 	// UpdateDraftCharacter updates a draft character
-	UpdateDraftCharacter(ctx context.Context, characterID string, updates *UpdateDraftInput) (*character.Character, error)
+	UpdateDraftCharacter(ctx context.Context, characterID string, updates *UpdateDraftInput) (*charDomain.Character, error)
 
 	// FinalizeDraftCharacter marks a draft as active
-	FinalizeDraftCharacter(ctx context.Context, characterID string) (*character.Character, error)
+	FinalizeDraftCharacter(ctx context.Context, characterID string) (*charDomain.Character, error)
 
 	// GetEquipmentByCategory retrieves equipment by category (e.g., "martial-weapons")
 	GetEquipmentByCategory(ctx context.Context, category string) ([]equipment.Equipment, error)
@@ -68,38 +68,38 @@ type Service interface {
 	UpdateStatus(characterID string, status shared.CharacterStatus) error
 
 	// UpdateEquipment saves equipment changes for a character
-	UpdateEquipment(character *character.Character) error
+	UpdateEquipment(character *charDomain.Character) error
 
 	// Delete deletes a character
 	Delete(characterID string) error
 
 	// ListByOwner lists all characters for a specific owner
-	ListByOwner(ownerID string) ([]*character.Character, error)
+	ListByOwner(ownerID string) ([]*charDomain.Character, error)
 
 	// GetByID retrieves a character by ID
-	GetByID(characterID string) (*character.Character, error)
+	GetByID(characterID string) (*charDomain.Character, error)
 
 	// FixCharacterAttributes fixes characters that have AbilityAssignments but no Attributes
-	FixCharacterAttributes(ctx context.Context, characterID string) (*character.Character, error)
+	FixCharacterAttributes(ctx context.Context, characterID string) (*charDomain.Character, error)
 
 	// FinalizeCharacterWithName sets the name and finalizes a draft character in one operation
-	FinalizeCharacterWithName(ctx context.Context, characterID, name, raceKey, classKey string) (*character.Character, error)
+	FinalizeCharacterWithName(ctx context.Context, characterID, name, raceKey, classKey string) (*charDomain.Character, error)
 
 	// Character Creation Session methods
 	// StartCharacterCreation starts a new character creation session
-	StartCharacterCreation(ctx context.Context, userID, guildID string) (*character.CharacterCreationSession, error)
+	StartCharacterCreation(ctx context.Context, userID, guildID string) (*charDomain.CharacterCreationSession, error)
 
 	// GetCharacterCreationSession retrieves an active session
-	GetCharacterCreationSession(ctx context.Context, sessionID string) (*character.CharacterCreationSession, error)
+	GetCharacterCreationSession(ctx context.Context, sessionID string) (*charDomain.CharacterCreationSession, error)
 
 	// UpdateCharacterCreationSession updates the session step
 	UpdateCharacterCreationSession(ctx context.Context, sessionID, step string) error
 
 	// GetCharacterFromSession gets the character associated with a session
-	GetCharacterFromSession(ctx context.Context, sessionID string) (*character.Character, error)
+	GetCharacterFromSession(ctx context.Context, sessionID string) (*charDomain.Character, error)
 
 	// StartFreshCharacterCreation gets or creates a draft and clears ability rolls
-	StartFreshCharacterCreation(ctx context.Context, userID, realmID string) (*character.Character, error)
+	StartFreshCharacterCreation(ctx context.Context, userID, realmID string) (*charDomain.Character, error)
 }
 
 // CreateCharacterInput contains all data needed to create a character
@@ -116,7 +116,7 @@ type CreateCharacterInput struct {
 
 // CreateCharacterOutput contains the created character
 type CreateCharacterOutput struct {
-	Character *character.Character
+	Character *charDomain.Character
 }
 
 // ValidateCharacterInput contains character data to validate
@@ -143,9 +143,9 @@ type ResolveChoicesOutput struct {
 type UpdateDraftInput struct {
 	RaceKey            *string
 	ClassKey           *string
-	AbilityScores      map[string]int          // Legacy: direct ability -> score mapping
-	AbilityRolls       []character.AbilityRoll // New: rolls with IDs
-	AbilityAssignments map[string]string       // New: ability -> roll ID mapping
+	AbilityScores      map[string]int           // Legacy: direct ability -> score mapping
+	AbilityRolls       []charDomain.AbilityRoll // New: rolls with IDs
+	AbilityAssignments map[string]string        // New: ability -> roll ID mapping
 	Proficiencies      []string
 	Equipment          []string
 	Name               *string
@@ -175,7 +175,7 @@ type service struct {
 	choiceResolver ChoiceResolver
 	repository     Repository
 	// Temporary in-memory session store (should be Redis in production)
-	sessions map[string]*character.CharacterCreationSession
+	sessions map[string]*charDomain.CharacterCreationSession
 	// Later we'll add:
 	// validator  Validator
 }
@@ -196,7 +196,7 @@ func NewService(cfg *ServiceConfig) Service {
 	svc := &service{
 		dndClient:  cfg.DNDClient,
 		repository: cfg.Repository,
-		sessions:   make(map[string]*character.CharacterCreationSession),
+		sessions:   make(map[string]*charDomain.CharacterCreationSession),
 	}
 
 	// Use provided choice resolver or create default
@@ -231,7 +231,7 @@ func (s *service) CreateCharacter(ctx context.Context, input *CreateCharacterInp
 	}
 
 	// Create the character entity
-	character := &character.Character{
+	character := &charDomain.Character{
 		ID:      generateID(),
 		OwnerID: input.UserID,
 		RealmID: input.RealmID,
@@ -245,7 +245,7 @@ func (s *service) CreateCharacter(ctx context.Context, input *CreateCharacterInp
 	}
 
 	// Set ability scores
-	character.Attributes = make(map[character.Attribute]*character.AbilityScore)
+	character.Attributes = make(map[shared.Attribute]*charDomain.AbilityScore)
 	for ability, score := range input.AbilityScores {
 		attr := stringToAttribute(ability)
 		character.AddAttribute(attr, score)
@@ -321,7 +321,7 @@ func (s *service) CreateCharacter(ctx context.Context, input *CreateCharacterInp
 }
 
 // GetCharacter retrieves a character by ID
-func (s *service) GetCharacter(ctx context.Context, characterID string) (*character.Character, error) {
+func (s *service) GetCharacter(ctx context.Context, characterID string) (*charDomain.Character, error) {
 	if strings.TrimSpace(characterID) == "" {
 		return nil, dnderr.InvalidArgument("character ID is required")
 	}
@@ -336,7 +336,7 @@ func (s *service) GetCharacter(ctx context.Context, characterID string) (*charac
 }
 
 // ListCharacters lists all characters for a user
-func (s *service) ListCharacters(ctx context.Context, userID string) ([]*character.Character, error) {
+func (s *service) ListCharacters(ctx context.Context, userID string) ([]*charDomain.Character, error) {
 	if strings.TrimSpace(userID) == "" {
 		return nil, dnderr.InvalidArgument("user ID is required")
 	}
@@ -455,7 +455,7 @@ func (s *service) GetClasses(ctx context.Context) ([]*rulebook.Class, error) {
 }
 
 // GetOrCreateDraftCharacter gets an existing draft or creates a new one
-func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID string) (*character.Character, error) {
+func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID string) (*charDomain.Character, error) {
 	if strings.TrimSpace(userID) == "" {
 		return nil, dnderr.InvalidArgument("user ID is required")
 	}
@@ -475,7 +475,7 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 	}
 
 	// Find all draft characters
-	var drafts []*character.Character
+	var drafts []*charDomain.Character
 	for _, char := range chars {
 		if char.Status == shared.CharacterStatusDraft {
 			drafts = append(drafts, char)
@@ -502,7 +502,7 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 	}
 
 	// No draft found, create a new one
-	character := &character.Character{
+	character := &charDomain.Character{
 		ID:      generateID(),
 		OwnerID: userID,
 		RealmID: realmID,
@@ -510,7 +510,7 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 		Status:  shared.CharacterStatusDraft,
 		Level:   1,
 		// Initialize empty maps
-		Attributes:    make(map[shared.Attribute]*character.AbilityScore),
+		Attributes:    make(map[shared.Attribute]*charDomain.AbilityScore),
 		Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
 		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
@@ -527,7 +527,7 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 }
 
 // UpdateDraftCharacter updates a draft character
-func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, updates *UpdateDraftInput) (*character.Character, error) {
+func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, updates *UpdateDraftInput) (*charDomain.Character, error) {
 	if strings.TrimSpace(characterID) == "" {
 		return nil, dnderr.InvalidArgument("character ID is required")
 	}
@@ -651,7 +651,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 			}
 
 			// Clear existing scores
-			char.Attributes = make(map[shared.Attribute]*character.AbilityScore)
+			char.Attributes = make(map[shared.Attribute]*charDomain.AbilityScore)
 
 			// Set new scores based on assignments
 			for ability, rollID := range char.AbilityAssignments {
@@ -679,7 +679,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 	// Legacy: Update ability scores if provided directly
 	if len(updates.AbilityScores) > 0 && updates.AbilityAssignments == nil {
 		// Clear existing scores
-		char.Attributes = make(map[shared.Attribute]*character.AbilityScore)
+		char.Attributes = make(map[shared.Attribute]*charDomain.AbilityScore)
 
 		// Set new scores
 		for ability, score := range updates.AbilityScores {
@@ -772,7 +772,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 }
 
 // FinalizeDraftCharacter marks a draft as active
-func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string) (*character.Character, error) {
+func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string) (*charDomain.Character, error) {
 	if strings.TrimSpace(characterID) == "" {
 		return nil, dnderr.InvalidArgument("character ID is required")
 	}
@@ -801,7 +801,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 		}
 
 		// Initialize attributes map
-		char.Attributes = make(map[shared.Attribute]*character.AbilityScore)
+		char.Attributes = make(map[shared.Attribute]*charDomain.AbilityScore)
 
 		// Convert assignments to attributes
 		for abilityStr, rollID := range char.AbilityAssignments {
@@ -842,7 +842,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 				modifier := (score - 10) / 2
 
 				// Create ability score
-				char.Attributes[attr] = &character.AbilityScore{
+				char.Attributes[attr] = &charDomain.AbilityScore{
 					Score: score,
 					Bonus: modifier,
 				}
@@ -1031,7 +1031,7 @@ func (s *service) UpdateStatus(characterID string, status shared.CharacterStatus
 }
 
 // UpdateEquipment saves equipment changes for a character
-func (s *service) UpdateEquipment(character *character.Character) error {
+func (s *service) UpdateEquipment(character *charDomain.Character) error {
 	if character == nil {
 		return dnderr.InvalidArgument("character is required")
 	}
@@ -1071,7 +1071,7 @@ func (s *service) Delete(characterID string) error {
 }
 
 // ListByOwner lists all characters for a specific owner
-func (s *service) ListByOwner(ownerID string) ([]*character.Character, error) {
+func (s *service) ListByOwner(ownerID string) ([]*charDomain.Character, error) {
 	if strings.TrimSpace(ownerID) == "" {
 		return nil, dnderr.InvalidArgument("owner ID is required")
 	}
@@ -1088,7 +1088,7 @@ func (s *service) ListByOwner(ownerID string) ([]*character.Character, error) {
 }
 
 // GetByID retrieves a character by ID
-func (s *service) GetByID(characterID string) (*character.Character, error) {
+func (s *service) GetByID(characterID string) (*charDomain.Character, error) {
 	if strings.TrimSpace(characterID) == "" {
 		return nil, dnderr.InvalidArgument("character ID is required")
 	}
@@ -1131,7 +1131,7 @@ func stringToAttribute(s string) shared.Attribute {
 }
 
 // StartFreshCharacterCreation gets or creates a draft and clears ability rolls
-func (s *service) StartFreshCharacterCreation(ctx context.Context, userID, realmID string) (*character.Character, error) {
+func (s *service) StartFreshCharacterCreation(ctx context.Context, userID, realmID string) (*charDomain.Character, error) {
 	draft, err := s.GetOrCreateDraftCharacter(ctx, userID, realmID)
 	if err != nil {
 		return nil, err
@@ -1140,7 +1140,7 @@ func (s *service) StartFreshCharacterCreation(ctx context.Context, userID, realm
 	// Clear ability rolls and assignments if they exist
 	if len(draft.AbilityRolls) > 0 || len(draft.AbilityAssignments) > 0 {
 		_, err = s.UpdateDraftCharacter(ctx, draft.ID, &UpdateDraftInput{
-			AbilityRolls:       []character.AbilityRoll{},
+			AbilityRolls:       []charDomain.AbilityRoll{},
 			AbilityAssignments: map[string]string{},
 		})
 		if err != nil {

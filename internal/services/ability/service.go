@@ -3,9 +3,10 @@ package ability
 import (
 	"context"
 	"fmt"
+	"log"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
-	"log"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
@@ -53,13 +54,13 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 	}
 
 	// Get the character
-	character, err := s.characterService.GetByID(input.CharacterID)
+	char, err := s.characterService.GetByID(input.CharacterID)
 	if err != nil {
 		return nil, dnderr.Wrap(err, "failed to get character")
 	}
 
 	// Get character resources
-	resources := character.GetResources()
+	resources := char.GetResources()
 	if resources == nil {
 		return nil, dnderr.InvalidArgument("character has no resources")
 	}
@@ -86,7 +87,7 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 			Success:       true,
 			UsesRemaining: ability.UsesRemaining,
 		}
-		return s.handleLayOnHands(character, input.TargetID, input.Value, result), nil
+		return s.handleLayOnHands(char, input.TargetID, input.Value, result), nil
 	}
 
 	// Use the ability
@@ -99,20 +100,20 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 	}
 
 	// Update action economy based on ability type
-	if character.Resources != nil {
+	if char.Resources != nil {
 		switch ability.ActionType {
-		case character.AbilityTypeAction:
-			character.Resources.ActionEconomy.ActionUsed = true
-			character.Resources.ActionEconomy.RecordAction("action", "ability", ability.Key)
-		case character.AbilityTypeBonusAction:
-			character.Resources.ActionEconomy.BonusActionUsed = true
-			character.Resources.ActionEconomy.RecordAction("bonus_action", "ability", ability.Key)
-		case character.AbilityTypeReaction:
-			character.Resources.ActionEconomy.ReactionUsed = true
-			character.Resources.ActionEconomy.RecordAction("reaction", "ability", ability.Key)
-		case character.AbilityTypeFree:
+		case shared.AbilityTypeAction:
+			char.Resources.ActionEconomy.ActionUsed = true
+			char.Resources.ActionEconomy.RecordAction("action", "ability", ability.Key)
+		case shared.AbilityTypeBonusAction:
+			char.Resources.ActionEconomy.BonusActionUsed = true
+			char.Resources.ActionEconomy.RecordAction("bonus_action", "ability", ability.Key)
+		case shared.AbilityTypeReaction:
+			char.Resources.ActionEconomy.ReactionUsed = true
+			char.Resources.ActionEconomy.RecordAction("reaction", "ability", ability.Key)
+		case shared.AbilityTypeFree:
 			// Free actions don't consume any action economy resources
-			character.Resources.ActionEconomy.RecordAction("free", "ability", ability.Key)
+			char.Resources.ActionEconomy.RecordAction("free", "ability", ability.Key)
 		default:
 			// Log unexpected action types for debugging
 			log.Printf("Unexpected ability action type: %s for ability %s", ability.ActionType, ability.Key)
@@ -127,25 +128,25 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 
 	switch input.AbilityKey {
 	case "rage":
-		result = s.handleRage(character, ability, result)
+		result = s.handleRage(char, ability, result)
 	case "second-wind":
-		result = s.handleSecondWind(character, result)
+		result = s.handleSecondWind(char, result)
 	case "bardic-inspiration":
-		result = s.handleBardicInspiration(character, input.TargetID, ability, result)
+		result = s.handleBardicInspiration(char, input.TargetID, ability, result)
 	case "divine-sense":
-		result = s.handleDivineSense(character, result)
+		result = s.handleDivineSense(char, result)
 	default:
 		result.Message = fmt.Sprintf("Used %s", ability.Name)
 	}
 
 	// Save character state
 	log.Printf("=== SAVING CHARACTER AFTER ABILITY USE ===")
-	log.Printf("Character: %s", character.Name)
-	if character.Resources != nil {
-		log.Printf("Active effects before save: %d", len(character.Resources.ActiveEffects))
+	log.Printf("Character: %s", char.Name)
+	if char.Resources != nil {
+		log.Printf("Active effects before save: %d", len(char.Resources.ActiveEffects))
 	}
 
-	if err := s.characterService.UpdateEquipment(character); err != nil {
+	if err := s.characterService.UpdateEquipment(char); err != nil {
 		log.Printf("Failed to save character state after ability use: %v", err)
 	} else {
 		log.Printf("Character saved successfully")

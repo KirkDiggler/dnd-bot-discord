@@ -100,8 +100,8 @@ func (c *Character) Equip(key string) bool {
 	defer c.mu.Unlock()
 	defer c.calculateAC()
 
-	equipment := c.getEquipment(key)
-	if equipment == nil {
+	equipmentValue := c.getEquipment(key)
+	if equipmentValue == nil {
 		return false
 	}
 
@@ -111,7 +111,7 @@ func (c *Character) Equip(key string) bool {
 
 	c.EquippedSlots[shared.SlotTwoHanded] = nil
 
-	switch equipment.GetSlot() {
+	switch equipmentValue.GetSlot() {
 	case shared.SlotMainHand:
 		if c.EquippedSlots[shared.SlotMainHand] != nil {
 			c.EquippedSlots[shared.SlotOffHand] = c.EquippedSlots[shared.SlotMainHand]
@@ -121,7 +121,7 @@ func (c *Character) Equip(key string) bool {
 		c.EquippedSlots[shared.SlotOffHand] = nil
 	}
 
-	c.EquippedSlots[equipment.GetSlot()] = equipment
+	c.EquippedSlots[equipmentValue.GetSlot()] = equipmentValue
 
 	return true
 }

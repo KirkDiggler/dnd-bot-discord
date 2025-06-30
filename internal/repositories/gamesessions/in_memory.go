@@ -184,12 +184,12 @@ func (r *inMemoryRepository) GetActiveByRealm(ctx context.Context, realmID strin
 	defer r.mu.RUnlock()
 
 	var sessions []*session.Session
-	for _, session := range r.sessions {
-		if session.RealmID == realmID &&
-			(session.Status == session.SessionStatusPlanning ||
-				session.Status == session.SessionStatusActive ||
-				session.Status == session.SessionStatusPaused) {
-			sessionCopy := *session
+	for _, sessionValue := range r.sessions {
+		if sessionValue.RealmID == realmID &&
+			(sessionValue.Status == session.SessionStatusPlanning ||
+				sessionValue.Status == session.SessionStatusActive ||
+				sessionValue.Status == session.SessionStatusPaused) {
+			sessionCopy := *sessionValue
 			sessions = append(sessions, &sessionCopy)
 		}
 	}
@@ -203,12 +203,12 @@ func (r *inMemoryRepository) GetActiveByUser(ctx context.Context, userID string)
 	defer r.mu.RUnlock()
 
 	var sessions []*session.Session
-	for _, session := range r.sessions {
-		if _, exists := session.Members[userID]; exists &&
-			(session.Status == session.SessionStatusPlanning ||
-				session.Status == session.SessionStatusActive ||
-				session.Status == session.SessionStatusPaused) {
-			sessionCopy := *session
+	for _, sessionValue := range r.sessions {
+		if _, exists := sessionValue.Members[userID]; exists &&
+			(sessionValue.Status == session.SessionStatusPlanning ||
+				sessionValue.Status == session.SessionStatusActive ||
+				sessionValue.Status == session.SessionStatusPaused) {
+			sessionCopy := *sessionValue
 			sessions = append(sessions, &sessionCopy)
 		}
 	}

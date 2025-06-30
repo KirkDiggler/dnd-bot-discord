@@ -13,3 +13,7 @@ const (
 	AttributeWisdom       Attribute = "Wis"
 	AttributeCharisma     Attribute = "Cha"
 )
+
+func (a Attribute) Short() string {
+	return string(a)
+}

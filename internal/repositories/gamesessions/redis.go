@@ -294,11 +294,11 @@ func (r *redisRepository) GetActiveByRealm(ctx context.Context, realmID string) 
 
 	// Filter active sessions
 	var activeSessions []*session.Session
-	for _, session := range sessions {
-		if session.Status == session.SessionStatusPlanning ||
-			session.Status == session.SessionStatusActive ||
-			session.Status == session.SessionStatusPaused {
-			activeSessions = append(activeSessions, session)
+	for _, sessionValue := range sessions {
+		if sessionValue.Status == session.SessionStatusPlanning ||
+			sessionValue.Status == session.SessionStatusActive ||
+			sessionValue.Status == session.SessionStatusPaused {
+			activeSessions = append(activeSessions, sessionValue)
 		}
 	}
 
@@ -314,11 +314,11 @@ func (r *redisRepository) GetActiveByUser(ctx context.Context, userID string) ([
 
 	// Filter active sessions
 	var activeSessions []*session.Session
-	for _, session := range sessions {
-		if session.Status == session.SessionStatusPlanning ||
-			session.Status == session.SessionStatusActive ||
-			session.Status == session.SessionStatusPaused {
-			activeSessions = append(activeSessions, session)
+	for _, sessionValue := range sessions {
+		if sessionValue.Status == session.SessionStatusPlanning ||
+			sessionValue.Status == session.SessionStatusActive ||
+			sessionValue.Status == session.SessionStatusPaused {
+			activeSessions = append(activeSessions, sessionValue)
 		}
 	}
 

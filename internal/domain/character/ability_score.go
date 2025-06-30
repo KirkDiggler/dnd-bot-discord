@@ -2,7 +2,6 @@ package character
 
 import (
 	"fmt"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 )
 
 type AbilityScore struct {
@@ -22,8 +21,4 @@ func (a *AbilityScore) AddBonus(bonus int) *AbilityScore {
 
 func (a *AbilityScore) String() string {
 	return fmt.Sprintf("%d (%+d)", a.Score, a.Bonus)
-}
-
-func (a shared.Attribute) Short() string {
-	return string(a)
 }

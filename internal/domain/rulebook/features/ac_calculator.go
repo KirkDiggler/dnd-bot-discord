@@ -4,6 +4,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 )
 
 // CalculateAC calculates AC based on class features, armor, and abilities
@@ -17,13 +18,13 @@ func CalculateAC(character *character.Character) int {
 	wisMod := 0
 	conMod := 0
 
-	if dexScore, exists := character.Attributes[character.AttributeDexterity]; exists && dexScore != nil {
+	if dexScore, exists := character.Attributes[shared.AttributeDexterity]; exists && dexScore != nil {
 		dexMod = dexScore.Bonus
 	}
-	if wisScore, exists := character.Attributes[character.AttributeWisdom]; exists && wisScore != nil {
+	if wisScore, exists := character.Attributes[shared.AttributeWisdom]; exists && wisScore != nil {
 		wisMod = wisScore.Bonus
 	}
-	if conScore, exists := character.Attributes[character.AttributeConstitution]; exists && conScore != nil {
+	if conScore, exists := character.Attributes[shared.AttributeConstitution]; exists && conScore != nil {
 		conMod = conScore.Bonus
 	}
 
@@ -34,7 +35,7 @@ func CalculateAC(character *character.Character) int {
 	// Check equipped slots for armor
 	if character.EquippedSlots != nil {
 		for slot, item := range character.EquippedSlots {
-			if item != nil && slot == character.SlotBody && item.GetEquipmentType() == equipment.EquipmentTypeArmor {
+			if item != nil && slot == shared.SlotBody && item.GetEquipmentType() == equipment.EquipmentTypeArmor {
 				hasArmor = true
 				// Try to cast to Armor type to get AC values
 				if armor, ok := item.(*equipment.Armor); ok && armor.ArmorClass != nil {
@@ -149,7 +150,7 @@ func CalculateInitiativeBonus(character *character.Character) int {
 	}
 
 	dexMod := 0
-	if dexScore, exists := character.Attributes[character.AttributeDexterity]; exists && dexScore != nil {
+	if dexScore, exists := character.Attributes[shared.AttributeDexterity]; exists && dexScore != nil {
 		dexMod = dexScore.Bonus
 	}
 
