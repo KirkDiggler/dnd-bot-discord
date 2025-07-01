@@ -1,7 +1,7 @@
 package features
 
 import (
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 )
 
 // ClassFeatures defines the special features for each class

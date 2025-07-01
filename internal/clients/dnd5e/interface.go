@@ -5,7 +5,7 @@ package dnd5e
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 )
 
 type Client interface {

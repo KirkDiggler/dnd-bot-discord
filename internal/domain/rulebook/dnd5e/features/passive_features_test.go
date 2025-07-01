@@ -2,8 +2,8 @@ package features_test
 
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/features"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e/features"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

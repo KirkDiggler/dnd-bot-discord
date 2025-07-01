@@ -5,7 +5,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat/attack"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"strings"

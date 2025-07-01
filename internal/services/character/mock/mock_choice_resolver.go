@@ -6,7 +6,7 @@ package mockcharacters
 
 import (
 	context "context"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 	reflect "reflect"
 
 	character "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"

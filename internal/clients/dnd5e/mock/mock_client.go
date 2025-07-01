@@ -12,7 +12,7 @@ package mockdnd5e
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	entities "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
