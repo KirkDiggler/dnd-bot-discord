@@ -1,7 +1,6 @@
 package events
 
-//go:generate mockgen -destination=mock/mock_event_listener.go -package=mockevents -source=interfaces.go EventListener
-//go:generate mockgen -destination=mock/mock_modifier.go -package=mockevents -source=interfaces.go Modifier
+//go:generate mockgen -destination=mock/mock_events.go -package=mockevents -source=interfaces.go
 
 // EventListener handles game events
 type EventListener interface {
