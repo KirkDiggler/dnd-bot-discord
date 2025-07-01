@@ -175,6 +175,7 @@ type service struct {
 	dndClient      dnd5e.Client
 	choiceResolver ChoiceResolver
 	repository     Repository
+	acCalculator   charDomain.ACCalculator
 	// Temporary in-memory session store (should be Redis in production)
 	sessions map[string]*charDomain.CharacterCreationSession
 	// Later we'll add:
@@ -184,8 +185,9 @@ type service struct {
 // ServiceConfig holds configuration for the service
 type ServiceConfig struct {
 	DNDClient      dnd5e.Client
-	ChoiceResolver ChoiceResolver // Optional, will create default if nil
-	Repository     Repository     // Required
+	ChoiceResolver ChoiceResolver          // Optional, will create default if nil
+	Repository     Repository              // Required
+	ACCalculator   charDomain.ACCalculator // Optional, will use default if nil
 }
 
 // NewService creates a new character service
@@ -205,6 +207,15 @@ func NewService(cfg *ServiceConfig) Service {
 		svc.choiceResolver = cfg.ChoiceResolver
 	} else {
 		svc.choiceResolver = NewChoiceResolver(cfg.DNDClient)
+	}
+
+	// Use provided AC calculator or create default
+	if cfg.ACCalculator != nil {
+		svc.acCalculator = cfg.ACCalculator
+	} else {
+		// For now, we'll use a wrapper around the existing function
+		// This will be replaced with the proper D&D 5e calculator
+		svc.acCalculator = &defaultACCalculator{}
 	}
 
 	return svc
@@ -653,7 +664,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		char.Features = newFeatures
 
 		// Recalculate AC with new class features
-		char.AC = features2.CalculateAC(char)
+		char.AC = s.acCalculator.Calculate(char)
 	}
 
 	// Update ability rolls if provided (including clearing with empty slice)
@@ -695,7 +706,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 			char.SetHitpoints()
 
 			// Recalculate AC with new ability scores
-			char.AC = features2.CalculateAC(char)
+			char.AC = s.acCalculator.Calculate(char)
 		}
 	}
 
@@ -721,7 +732,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		char.SetHitpoints()
 
 		// Recalculate AC with new ability scores
-		char.AC = features2.CalculateAC(char)
+		char.AC = s.acCalculator.Calculate(char)
 	}
 
 	// Update name if provided
@@ -781,7 +792,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		}
 
 		// Recalculate AC in case equipment affects it
-		char.AC = features2.CalculateAC(char)
+		char.AC = s.acCalculator.Calculate(char)
 
 	}
 
@@ -936,7 +947,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 	}
 
 	// Calculate AC using the features package
-	char.AC = features2.CalculateAC(char)
+	char.AC = s.acCalculator.Calculate(char)
 
 	// Add starting proficiencies from class if not already present
 	if s.dndClient != nil && char.Class != nil && char.Class.Proficiencies != nil {
@@ -1066,7 +1077,7 @@ func (s *service) UpdateEquipment(character *charDomain.Character) error {
 	ctx := context.Background()
 
 	// Recalculate AC with the features calculator
-	character.AC = features2.CalculateAC(character)
+	character.AC = s.acCalculator.Calculate(character)
 
 	// Save the character with updated equipment
 	if err := s.repository.Update(ctx, character); err != nil {
