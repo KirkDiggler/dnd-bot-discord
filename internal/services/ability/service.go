@@ -22,6 +22,7 @@ type service struct {
 	encounterService encounterService.Service
 	diceRoller       dice.Roller
 	eventBus         *events.EventBus
+	activeListeners  map[string]events.EventListener // Track active listeners by character ID
 }
 
 // ServiceConfig holds configuration for the ability service
@@ -43,10 +44,16 @@ func NewService(cfg *ServiceConfig) Service {
 		encounterService: cfg.EncounterService,
 		diceRoller:       cfg.DiceRoller,
 		eventBus:         cfg.EventBus,
+		activeListeners:  make(map[string]events.EventListener),
 	}
 
 	if svc.diceRoller == nil {
 		svc.diceRoller = dice.NewRandomRoller()
+	}
+
+	// Subscribe to turn start events to update effect durations
+	if svc.eventBus != nil {
+		svc.eventBus.Subscribe(events.OnTurnStart, &turnStartListener{service: svc})
 	}
 
 	return svc
@@ -200,6 +207,21 @@ func (s *service) handleRage(char *character.Character, ability *shared.ActiveAb
 	s.eventBus.Subscribe(events.OnDamageRoll, rageListener)
 	s.eventBus.Subscribe(events.BeforeTakeDamage, rageListener)
 
+	// Track the active listener
+	s.activeListeners[char.ID] = rageListener
+
+	// Also add rage to the old effect system for UI display
+	// This ensures the character sheet shows rage as active
+	rageEffect := effects.BuildRageEffect(char.Level)
+	// Update the duration to match what we're tracking
+	rageEffect.Duration = effects.Duration{
+		Type:   effects.DurationRounds,
+		Rounds: 10,
+	}
+	if err := char.AddStatusEffect(rageEffect); err != nil {
+		log.Printf("Failed to add rage status effect for UI: %v", err)
+	}
+
 	// Mark ability as active
 	ability.IsActive = true
 	ability.Duration = 10
@@ -348,6 +370,10 @@ func (s *service) GetAvailableAbilities(ctx context.Context, characterID string)
 			}
 		}
 
+		// Note: Duration for active abilities (like rage) is tracked in the turnStartListener
+		// and updated on the status effect which is what the UI shows.
+		// The ability definition always shows the max duration.
+
 		abilities = append(abilities, available)
 	}
 
@@ -359,4 +385,72 @@ func (s *service) ApplyAbilityEffects(ctx context.Context, input *ApplyEffectsIn
 	// This would handle applying effects in combat context
 	// For now, it's a placeholder
 	return nil
+}
+
+// turnStartListener handles turn start events to update ability durations
+type turnStartListener struct {
+	service *service
+}
+
+func (t *turnStartListener) HandleEvent(event *events.GameEvent) error {
+	if event.Actor == nil {
+		return nil
+	}
+
+	// Check if this character has active rage
+	if listener, exists := t.service.activeListeners[event.Actor.ID]; exists {
+		// Check if rage has expired
+		if rageListener, ok := listener.(*features.RageListener); ok {
+			duration := rageListener.Duration()
+			if roundsDuration, ok := duration.(*events.RoundsDuration); ok {
+				currentTurn, _ := event.GetIntContext("turn_count")
+				remainingRounds := roundsDuration.Rounds - (currentTurn - roundsDuration.StartTurn)
+
+				if remainingRounds <= 0 {
+					// Rage has expired - unsubscribe and remove
+					t.service.eventBus.Unsubscribe(events.OnDamageRoll, rageListener)
+					t.service.eventBus.Unsubscribe(events.BeforeTakeDamage, rageListener)
+					delete(t.service.activeListeners, event.Actor.ID)
+
+					// Remove rage effect from character
+					activeEffects := event.Actor.GetActiveStatusEffects()
+					for _, effect := range activeEffects {
+						if effect.Name == "Rage" {
+							event.Actor.RemoveStatusEffect(effect.ID)
+							break
+						}
+					}
+
+					// Mark ability as inactive
+					if resources := event.Actor.GetResources(); resources != nil {
+						if rage, exists := resources.Abilities["rage"]; exists {
+							rage.IsActive = false
+						}
+					}
+
+					// Save character
+					if t.service.characterService != nil {
+						if err := t.service.characterService.UpdateEquipment(event.Actor); err != nil {
+							log.Printf("Failed to save character after rage expiry: %v", err)
+						}
+					}
+				} else {
+					// Update the UI effect duration
+					activeEffects := event.Actor.GetActiveStatusEffects()
+					for _, effect := range activeEffects {
+						if effect.Name == "Rage" {
+							effect.Duration.Rounds = remainingRounds
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (t *turnStartListener) Priority() int {
+	return 200 // Lower priority, runs after other effects
 }

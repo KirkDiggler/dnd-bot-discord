@@ -161,3 +161,8 @@ func (rl *RageListener) Priority() int {
 func (rl *RageListener) ID() string {
 	return rl.modifier.ID()
 }
+
+// Duration returns the modifier's duration
+func (rl *RageListener) Duration() events.ModifierDuration {
+	return rl.modifier.Duration()
+}
