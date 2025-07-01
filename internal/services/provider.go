@@ -4,6 +4,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e/abilities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/dungeons"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
@@ -109,9 +110,14 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 	// Create ability service
 	abilService := abilityService.NewService(&abilityService.ServiceConfig{
 		CharacterService: charService,
-		EncounterService: encService,
 		DiceRoller:       cfg.DiceRoller,
 		EventBus:         eventBus,
+	})
+
+	// Register D&D 5e abilities
+	abilities.RegisterAll(abilService, &abilities.RegistryConfig{
+		EventBus:   eventBus,
+		DiceRoller: cfg.DiceRoller,
 	})
 
 	return &Provider{

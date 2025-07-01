@@ -15,6 +15,9 @@ type Service interface {
 
 	// ApplyAbilityEffects applies the effects of an ability
 	ApplyAbilityEffects(ctx context.Context, input *ApplyEffectsInput) error
+
+	// RegisterHandler allows external packages to register ability handlers
+	RegisterHandler(handler Handler)
 }
 
 // UseAbilityInput contains data for using an ability
