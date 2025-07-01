@@ -5,6 +5,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e/abilities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e/calculators"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/dungeons"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
@@ -67,10 +68,14 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 		dungeonRepo = dungeons.NewInMemoryRepository()
 	}
 
+	// Create AC calculator for D&D 5e
+	acCalculator := calculators.NewDnD5eACCalculator()
+
 	// Create character service
 	charService := characterService.NewService(&characterService.ServiceConfig{
-		DNDClient:  cfg.DNDClient,
-		Repository: charRepo,
+		DNDClient:    cfg.DNDClient,
+		Repository:   charRepo,
+		ACCalculator: acCalculator,
 	})
 
 	// Create session service
