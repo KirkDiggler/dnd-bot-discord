@@ -2,7 +2,7 @@ package character
 
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 	"testing"
 
 	mockchar "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"

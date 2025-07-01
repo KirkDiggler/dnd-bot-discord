@@ -12,8 +12,8 @@ import (
 
 	charDomain "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
-	features2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/features"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
+	features2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e/features"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
