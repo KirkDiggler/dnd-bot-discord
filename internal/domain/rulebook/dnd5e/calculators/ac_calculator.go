@@ -37,14 +37,25 @@ func (c *DnD5eACCalculator) Calculate(char *character.Character) int {
 		conMod = conScore.Bonus
 	}
 
-	// Check for armor
+	// Check for armor and shield in a single pass
 	hasArmor := false
+	hasShield := false
 	baseAC := 10
 
-	// Check equipped slots for armor
+	// Check equipped slots for armor and shield
 	if char.EquippedSlots != nil {
 		for slot, item := range char.EquippedSlots {
-			if item != nil && slot == shared.SlotBody && item.GetEquipmentType() == equipment.EquipmentTypeArmor {
+			if item == nil {
+				continue
+			}
+
+			// Check for shield
+			if item.GetKey() == "shield" {
+				hasShield = true
+			}
+
+			// Check for body armor
+			if slot == shared.SlotBody && item.GetEquipmentType() == equipment.EquipmentTypeArmor {
 				hasArmor = true
 				// Check if it implements ACProvider interface
 				if acProvider, ok := item.(equipment.ACProvider); ok {
@@ -71,7 +82,6 @@ func (c *DnD5eACCalculator) Calculate(char *character.Character) int {
 					// Fallback for equipment that doesn't implement ACProvider
 					baseAC = c.getArmorACFallback(item.GetKey(), &dexMod)
 				}
-				break
 			}
 		}
 	}
@@ -101,17 +111,7 @@ func (c *DnD5eACCalculator) Calculate(char *character.Character) int {
 		ac = baseAC + dexMod
 	}
 
-	// Check for shield (works with any AC calculation including unarmored defense)
-	hasShield := false
-	if char.EquippedSlots != nil {
-		for _, item := range char.EquippedSlots {
-			if item != nil && item.GetKey() == "shield" {
-				hasShield = true
-				break
-			}
-		}
-	}
-
+	// Apply shield bonus if equipped
 	if hasShield {
 		ac += 2
 	}
@@ -171,6 +171,8 @@ func (c *DnD5eACCalculator) getArmorACFallback(key string, dexMod *int) int {
 		*dexMod = 0 // Heavy armor doesn't use DEX
 		return 18
 	default:
+		// Unknown armor type - assume no DEX bonus for safety
+		*dexMod = 0
 		return 10
 	}
 }

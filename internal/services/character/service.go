@@ -1191,11 +1191,3 @@ func (s *service) StartFreshCharacterCreation(ctx context.Context, userID, realm
 
 	return draft, nil
 }
-
-// defaultACCalculator is a temporary wrapper around the existing CalculateAC function
-type defaultACCalculator struct{}
-
-// Calculate implements the ACCalculator interface
-func (d *defaultACCalculator) Calculate(char *charDomain.Character) int {
-	return features2.CalculateAC(char)
-}
