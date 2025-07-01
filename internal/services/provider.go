@@ -116,8 +116,10 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 
 	// Register D&D 5e abilities
 	abilities.RegisterAll(abilService, &abilities.RegistryConfig{
-		EventBus:   eventBus,
-		DiceRoller: cfg.DiceRoller,
+		EventBus:         eventBus,
+		DiceRoller:       cfg.DiceRoller,
+		EncounterService: encService,
+		CharacterService: charService,
 	})
 
 	return &Provider{

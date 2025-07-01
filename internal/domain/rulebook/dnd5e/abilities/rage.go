@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"reflect"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
@@ -40,17 +41,76 @@ func NewRageHandler(eventBus *events.EventBus) *RageHandler {
 }
 
 // SetEncounterService sets the encounter service dependency
-func (r *RageHandler) SetEncounterService(service interface {
-	GetEncounter(ctx context.Context, id string) (*Encounter, error)
-}) {
-	r.encounterService = service
+// The service should have a GetEncounter method that returns an object with Round, Turn, and TurnOrder fields
+func (r *RageHandler) SetEncounterService(service interface{}) {
+	// Type assert to check if it has the method we need
+	if svc, ok := service.(interface {
+		GetEncounter(ctx context.Context, id string) (interface{}, error)
+	}); ok {
+		r.encounterService = &encounterServiceAdapter{service: svc}
+	}
+}
+
+// encounterServiceAdapter adapts the actual encounter service to our minimal interface
+type encounterServiceAdapter struct {
+	service interface {
+		GetEncounter(ctx context.Context, id string) (interface{}, error)
+	}
+}
+
+func (a *encounterServiceAdapter) GetEncounter(ctx context.Context, id string) (*Encounter, error) {
+	enc, err := a.service.GetEncounter(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Use reflection to extract the fields we need
+	val := reflect.ValueOf(enc)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
+	if val.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("encounter is not a struct")
+	}
+
+	// Extract fields using reflection
+	roundField := val.FieldByName("Round")
+	turnField := val.FieldByName("Turn")
+	turnOrderField := val.FieldByName("TurnOrder")
+
+	if !roundField.IsValid() || !turnField.IsValid() || !turnOrderField.IsValid() {
+		return nil, fmt.Errorf("encounter missing required fields")
+	}
+
+	round := int(roundField.Int())
+	turn := int(turnField.Int())
+
+	// TurnOrder is []string in combat.Encounter
+	var turnOrder []string
+	if turnOrderField.Kind() == reflect.Slice {
+		for i := 0; i < turnOrderField.Len(); i++ {
+			if id := turnOrderField.Index(i).String(); id != "" {
+				turnOrder = append(turnOrder, id)
+			}
+		}
+	}
+
+	return &Encounter{
+		Round:     round,
+		Turn:      turn,
+		TurnOrder: turnOrder,
+	}, nil
 }
 
 // SetCharacterService sets the character service dependency
-func (r *RageHandler) SetCharacterService(service interface {
-	UpdateEquipment(char *character.Character) error
-}) {
-	r.characterService = service
+func (r *RageHandler) SetCharacterService(service interface{}) {
+	// Type assert to check if it has the method we need
+	if svc, ok := service.(interface {
+		UpdateEquipment(char *character.Character) error
+	}); ok {
+		r.characterService = svc
+	}
 }
 
 // Key returns the ability key
