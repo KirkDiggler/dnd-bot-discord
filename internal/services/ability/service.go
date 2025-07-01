@@ -21,6 +21,7 @@ type service struct {
 	diceRoller       dice.Roller
 	eventBus         *events.EventBus
 	activeListeners  map[string]events.EventListener // Track active listeners by character ID
+	executorRegistry *ExecutorRegistry
 }
 
 // ServiceConfig holds configuration for the ability service
@@ -43,6 +44,7 @@ func NewService(cfg *ServiceConfig) Service {
 		diceRoller:       cfg.DiceRoller,
 		eventBus:         cfg.EventBus,
 		activeListeners:  make(map[string]events.EventListener),
+		executorRegistry: NewExecutorRegistry(),
 	}
 
 	if svc.diceRoller == nil {
@@ -53,6 +55,14 @@ func NewService(cfg *ServiceConfig) Service {
 	if svc.eventBus != nil {
 		svc.eventBus.Subscribe(events.OnTurnStart, &turnStartListener{service: svc})
 	}
+
+	// Register D&D 5e ability executors
+	// TODO: This should be moved to a rulebook registration system (#242)
+	svc.executorRegistry.Register(newRageExecutor(svc))
+	svc.executorRegistry.Register(newSecondWindExecutor(svc))
+	svc.executorRegistry.Register(newBardicInspirationExecutor())
+	svc.executorRegistry.Register(newLayOnHandsExecutor(svc))
+	svc.executorRegistry.Register(newDivineSenseExecutor())
 
 	return svc
 }
@@ -90,23 +100,20 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 		}, nil
 	}
 
-	// Special handling for lay on hands which uses a pool
-	if input.AbilityKey == "lay-on-hands" {
-		// Don't use the standard Use() method for lay on hands
-		result := &UseAbilityResult{
-			Success:       true,
-			UsesRemaining: ability.UsesRemaining,
-		}
-		return s.handleLayOnHands(char, input.TargetID, input.Value, result), nil
-	}
+	// Check if we have a custom executor for this ability
+	executor, hasExecutor := s.executorRegistry.Get(input.AbilityKey)
 
-	// Use the ability
-	if !ability.Use() {
-		return &UseAbilityResult{
-			Success:       false,
-			Message:       "Failed to use ability",
-			UsesRemaining: ability.UsesRemaining,
-		}, nil
+	// For abilities with custom executors that manage their own resources,
+	// don't use the standard Use() method
+	if !hasExecutor || input.AbilityKey != "lay-on-hands" {
+		// Use the ability for standard abilities
+		if !ability.Use() {
+			return &UseAbilityResult{
+				Success:       false,
+				Message:       "Failed to use ability",
+				UsesRemaining: ability.UsesRemaining,
+			}, nil
+		}
 	}
 
 	// Update action economy based on ability type
@@ -136,17 +143,17 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 		UsesRemaining: ability.UsesRemaining,
 	}
 
-	switch input.AbilityKey {
-	case "rage":
-		result = s.handleRage(char, ability, result, input.EncounterID)
-	case "second-wind":
-		result = s.handleSecondWind(char, result)
-	case "bardic-inspiration":
-		result = s.handleBardicInspiration(char, input.TargetID, ability, result)
-	case "divine-sense":
-		result = s.handleDivineSense(char, result)
-	default:
+	// Execute using the registered executor if available
+	if !hasExecutor {
+		// If no specific executor, just mark as used with generic message
 		result.Message = fmt.Sprintf("Used %s", ability.Name)
+	} else {
+		// Execute the ability using its specific executor
+		executorResult, err := executor.Execute(ctx, char, ability, input)
+		if err != nil {
+			return nil, dnderr.Wrap(err, "failed to execute ability")
+		}
+		result = executorResult
 	}
 
 	// Save character state
@@ -210,6 +217,11 @@ func (s *service) ApplyAbilityEffects(ctx context.Context, input *ApplyEffectsIn
 	return nil
 }
 
+// GetExecutorRegistry returns the executor registry for registration
+func (s *service) GetExecutorRegistry() *ExecutorRegistry {
+	return s.executorRegistry
+}
+
 // turnStartListener handles turn start events to update ability durations
 type turnStartListener struct {
 	service *service
@@ -220,9 +232,10 @@ func (t *turnStartListener) HandleEvent(event *events.GameEvent) error {
 		return nil
 	}
 
-	// Check if this character has active rage
+	// Check if this character has an active listener
+	// TODO: This is currently rage-specific and needs to be made generic
 	if listener, exists := t.service.activeListeners[event.Actor.ID]; exists {
-		// Check if rage has expired
+		// Check if listener has expired
 		if rageListener, ok := listener.(*features.RageListener); ok {
 			duration := rageListener.Duration()
 			if roundsDuration, ok := duration.(*events.RoundsDuration); ok {

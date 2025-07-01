@@ -15,6 +15,9 @@ type Service interface {
 
 	// ApplyAbilityEffects applies the effects of an ability
 	ApplyAbilityEffects(ctx context.Context, input *ApplyEffectsInput) error
+
+	// GetExecutorRegistry returns the executor registry for registration
+	GetExecutorRegistry() *ExecutorRegistry
 }
 
 // UseAbilityInput contains data for using an ability
