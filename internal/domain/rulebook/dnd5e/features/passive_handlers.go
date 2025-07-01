@@ -2,7 +2,7 @@ package features
 
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 )
 
 // KeenSensesHandler implements the Elf "Keen Senses" feature

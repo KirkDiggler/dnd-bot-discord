@@ -2,7 +2,7 @@ package character_test
 
 import (
 	"context"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 	"net/http"
 	"testing"
 	"time"

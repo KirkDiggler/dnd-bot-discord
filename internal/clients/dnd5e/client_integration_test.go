@@ -4,7 +4,7 @@
 package dnd5e_test
 
 import (
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 	"net/http"
 	"testing"
 

@@ -3,7 +3,7 @@ package character
 import (
 	"context"
 	"fmt"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 	"strings"
 
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
