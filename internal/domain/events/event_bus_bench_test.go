@@ -6,12 +6,25 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
 )
 
+// benchmarkListener is a simple listener for benchmarks
+type benchmarkListener struct {
+	priority int
+}
+
+func (b *benchmarkListener) HandleEvent(event *events.GameEvent) error {
+	return nil
+}
+
+func (b *benchmarkListener) Priority() int {
+	return b.priority
+}
+
 func BenchmarkEventBusEmit(b *testing.B) {
 	bus := events.NewEventBus()
 
 	// Add some listeners
 	for i := 0; i < 10; i++ {
-		listener := &mockListener{priority: i}
+		listener := &benchmarkListener{priority: i}
 		bus.Subscribe(events.BeforeAttackRoll, listener)
 	}
 
@@ -25,7 +38,7 @@ func BenchmarkEventBusEmit(b *testing.B) {
 
 func BenchmarkEventBusEmitSingleListener(b *testing.B) {
 	bus := events.NewEventBus()
-	listener := &mockListener{priority: 10}
+	listener := &benchmarkListener{priority: 10}
 	bus.Subscribe(events.BeforeAttackRoll, listener)
 
 	event := events.NewGameEvent(events.BeforeAttackRoll)
@@ -51,7 +64,7 @@ func BenchmarkEventBusSubscribe(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		listener := &mockListener{priority: i}
+		listener := &benchmarkListener{priority: i}
 		bus.Subscribe(events.BeforeAttackRoll, listener)
 	}
 }
