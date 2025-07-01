@@ -195,12 +195,16 @@ func (s *service) handleRage(char *character.Character, ability *shared.ActiveAb
 	currentTurn := 0
 	if encounterID != "" && s.encounterService != nil {
 		if encounter, err := s.encounterService.GetEncounter(context.Background(), encounterID); err == nil {
-			currentTurn = encounter.Turn
-			log.Printf("=== RAGE ACTIVATION TURN INFO ===")
+			// Calculate total turns (rounds * combatants + current turn index)
+			if len(encounter.TurnOrder) > 0 {
+				currentTurn = (encounter.Round-1)*len(encounter.TurnOrder) + encounter.Turn
+			}
+			log.Printf("=== RAGE ACTIVATION INFO ===")
 			log.Printf("Encounter ID: %s", encounterID)
-			log.Printf("Current turn: %d", currentTurn)
-			log.Printf("Current round: %d", encounter.Round)
-			log.Printf("Rage will expire at turn: %d", currentTurn+10)
+			log.Printf("Current Round: %d, Turn index: %d, Combatants: %d", encounter.Round, encounter.Turn, len(encounter.TurnOrder))
+			log.Printf("Starting at turn count: %d", currentTurn)
+			log.Printf("Rage lasts 10 rounds (with %d combatants, that's %d turns)", len(encounter.TurnOrder), 10*len(encounter.TurnOrder))
+			log.Printf("Rage will expire after turn: %d", currentTurn+(10*len(encounter.TurnOrder)))
 		} else {
 			log.Printf("Failed to get encounter for rage activation: %v", err)
 		}
@@ -412,7 +416,15 @@ func (t *turnStartListener) HandleEvent(event *events.GameEvent) error {
 			duration := rageListener.Duration()
 			if roundsDuration, ok := duration.(*events.RoundsDuration); ok {
 				currentTurn, _ := event.GetIntContext("turn_count")
-				remainingRounds := roundsDuration.Rounds - (currentTurn - roundsDuration.StartTurn)
+				numCombatants, _ := event.GetIntContext("num_combatants")
+
+				// Calculate rounds elapsed (turns / combatants)
+				turnsElapsed := currentTurn - roundsDuration.StartTurn
+				roundsElapsed := 0
+				if numCombatants > 0 {
+					roundsElapsed = turnsElapsed / numCombatants
+				}
+				remainingRounds := roundsDuration.Rounds - roundsElapsed
 
 				if remainingRounds <= 0 {
 					// Rage has expired - unsubscribe and remove
@@ -436,6 +448,9 @@ func (t *turnStartListener) HandleEvent(event *events.GameEvent) error {
 						}
 					}
 
+					// Sync effects to ensure persistence layer is updated
+					event.Actor.SyncEffects()
+
 					// Save character
 					if t.service.characterService != nil {
 						if err := t.service.characterService.UpdateEquipment(event.Actor); err != nil {
@@ -453,9 +468,13 @@ func (t *turnStartListener) HandleEvent(event *events.GameEvent) error {
 						log.Printf("=== RAGE DURATION UPDATE ===")
 						log.Printf("Character: %s", event.Actor.Name)
 						log.Printf("Current turn: %d, Start turn: %d", currentTurn, roundsDuration.StartTurn)
-						log.Printf("Remaining rounds: %d", remainingRounds)
+						log.Printf("Turns elapsed: %d, Combatants: %d", turnsElapsed, numCombatants)
+						log.Printf("Rounds elapsed: %d, Remaining rounds: %d", roundsElapsed, remainingRounds)
 						break
 					}
+
+					// Sync effects to ensure persistence layer is updated
+					event.Actor.SyncEffects()
 
 					// Save character to persist the updated duration
 					if t.service.characterService != nil {

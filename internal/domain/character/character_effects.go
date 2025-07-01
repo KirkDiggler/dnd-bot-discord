@@ -1,9 +1,9 @@
 package character
 
 import (
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
 )
 
@@ -57,6 +57,13 @@ func (c *Character) syncEffectManagerToResources() {
 			Modifiers:    []shared.Modifier{},       // TODO: Convert modifiers if needed
 		}
 
+		// Debug logging for rage sync
+		if effect.Name == "Rage" {
+			log.Printf("=== SYNCING RAGE EFFECT TO RESOURCES ===")
+			log.Printf("Effect Duration Type: %s, Rounds: %d", effect.Duration.Type, effect.Duration.Rounds)
+			log.Printf("Old Effect Duration: %d", oldEffect.Duration)
+		}
+
 		// Set duration type based on new system
 		switch effect.Duration.Type {
 		case effects.DurationPermanent:
@@ -83,6 +90,14 @@ func (c *Character) RemoveStatusEffect(effectID string) {
 // GetActiveStatusEffects returns all active status effects
 func (c *Character) GetActiveStatusEffects() []*effects.StatusEffect {
 	return c.GetEffectManager().GetActiveEffects()
+}
+
+// SyncEffects ensures effect manager state is synced to persisted resources
+func (c *Character) SyncEffects() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.syncEffectManagerToResources()
 }
 
 // GetEffectManager returns the character's effect manager, initializing it if needed

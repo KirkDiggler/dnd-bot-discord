@@ -19,6 +19,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
 	charService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
@@ -684,10 +685,13 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 		newCurrent := encounter.GetCurrentCombatant()
 		if newCurrent != nil && newCurrent.Type == combat.CombatantTypePlayer && newCurrent.CharacterID != "" {
 			if char, err := s.characterService.GetByID(newCurrent.CharacterID); err == nil {
+				// Calculate total turns (rounds * combatants + current turn index)
+				totalTurns := (encounter.Round-1)*len(encounter.TurnOrder) + encounter.Turn
 				turnEvent := events.NewGameEvent(events.OnTurnStart).
 					WithActor(char).
-					WithContext("turn_count", encounter.Turn).
-					WithContext("round", encounter.Round)
+					WithContext("turn_count", totalTurns).
+					WithContext("round", encounter.Round).
+					WithContext("num_combatants", len(encounter.TurnOrder))
 
 				if err := s.eventBus.Emit(turnEvent); err != nil {
 					log.Printf("Failed to emit OnTurnStart event: %v", err)
@@ -1236,10 +1240,28 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			if result.DamageBonus != 0 {
 				damageRollStr += fmt.Sprintf("%+d", result.DamageBonus)
 
-				// Add note if damage bonus seems higher than just ability modifier
-				// This helps indicate rage or other effects
-				if attacker.Type == combat.CombatantTypePlayer && result.DamageBonus > 5 {
-					damageRollStr += " (includes effects)"
+				// Check if there are active damage effects like rage
+				if attacker.Type == combat.CombatantTypePlayer && attacker.CharacterID != "" {
+					if char, err := s.characterService.GetByID(attacker.CharacterID); err == nil {
+						// Check if character has any active damage-modifying effects
+						activeEffects := char.GetActiveStatusEffects()
+						hasEffects := false
+						for _, effect := range activeEffects {
+							// Check if this effect modifies damage (like rage)
+							for _, mod := range effect.Modifiers {
+								if mod.Target == effects.TargetDamage {
+									hasEffects = true
+									break
+								}
+							}
+							if hasEffects {
+								break
+							}
+						}
+						if hasEffects {
+							damageRollStr += " (includes effects)"
+						}
+					}
 				}
 			}
 		}
