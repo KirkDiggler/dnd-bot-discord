@@ -81,8 +81,12 @@ func (r *rageExecutor) Execute(ctx context.Context, char *character.Character, a
 	r.service.eventBus.Subscribe(events.OnDamageRoll, rageListener)
 	r.service.eventBus.Subscribe(events.BeforeTakeDamage, rageListener)
 
-	// Track the active listener
-	r.service.activeListeners[char.ID] = rageListener
+	// Track the active ability with duration
+	r.service.trackedAbilities[char.ID] = &TrackedAbility{
+		CharacterID: char.ID,
+		Listener:    rageListener,
+		Tracker:     newRageDurationTracker(rageListener),
+	}
 
 	// Also add rage to the old effect system for UI display
 	// This ensures the character sheet shows rage as active

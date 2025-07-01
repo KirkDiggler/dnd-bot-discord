@@ -6,7 +6,6 @@ import (
 	"log"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e/features"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
@@ -20,7 +19,7 @@ type service struct {
 	encounterService encounterService.Service
 	diceRoller       dice.Roller
 	eventBus         *events.EventBus
-	activeListeners  map[string]events.EventListener // Track active listeners by character ID
+	trackedAbilities map[string]*TrackedAbility // Track active abilities with duration by character ID
 	executorRegistry *ExecutorRegistry
 }
 
@@ -43,7 +42,7 @@ func NewService(cfg *ServiceConfig) Service {
 		encounterService: cfg.EncounterService,
 		diceRoller:       cfg.DiceRoller,
 		eventBus:         cfg.EventBus,
-		activeListeners:  make(map[string]events.EventListener),
+		trackedAbilities: make(map[string]*TrackedAbility),
 		executorRegistry: NewExecutorRegistry(),
 	}
 
@@ -232,82 +231,66 @@ func (t *turnStartListener) HandleEvent(event *events.GameEvent) error {
 		return nil
 	}
 
-	// Check if this character has an active listener
-	// TODO: This is currently rage-specific and needs to be made generic
-	if listener, exists := t.service.activeListeners[event.Actor.ID]; exists {
-		// Check if listener has expired
-		if rageListener, ok := listener.(*features.RageListener); ok {
-			duration := rageListener.Duration()
-			if roundsDuration, ok := duration.(*events.RoundsDuration); ok {
-				currentTurn, _ := event.GetIntContext("turn_count")       // TODO: Use constant
-				numCombatants, _ := event.GetIntContext("num_combatants") // TODO: Use constant
+	// Check if this character has an active tracked ability
+	if tracked, exists := t.service.trackedAbilities[event.Actor.ID]; exists {
+		currentTurn, _ := event.GetIntContext("turn_count")       // TODO: Use constant
+		numCombatants, _ := event.GetIntContext("num_combatants") // TODO: Use constant
 
-				// Calculate rounds elapsed (turns / combatants)
-				turnsElapsed := currentTurn - roundsDuration.StartTurn
-				roundsElapsed := 0
-				if numCombatants > 0 {
-					roundsElapsed = turnsElapsed / numCombatants
+		// Check if the tracked ability has expired
+		if tracked.Tracker.IsExpired(currentTurn, numCombatants) {
+			// Handle expiration
+			tracked.Tracker.OnExpire(t.service.eventBus)
+			delete(t.service.trackedAbilities, event.Actor.ID)
+
+			// Remove effect from character
+			activeEffects := event.Actor.GetActiveStatusEffects()
+			for _, effect := range activeEffects {
+				if effect.Name == tracked.Tracker.GetEffectName() {
+					event.Actor.RemoveStatusEffect(effect.ID)
+					break
 				}
-				remainingRounds := roundsDuration.Rounds - roundsElapsed
+			}
 
-				if remainingRounds <= 0 {
-					// Rage has expired - unsubscribe and remove
-					t.service.eventBus.Unsubscribe(events.OnDamageRoll, rageListener)
-					t.service.eventBus.Unsubscribe(events.BeforeTakeDamage, rageListener)
-					delete(t.service.activeListeners, event.Actor.ID)
+			// Mark ability as inactive
+			if resources := event.Actor.GetResources(); resources != nil {
+				if ability, exists := resources.Abilities[tracked.Tracker.GetAbilityKey()]; exists {
+					ability.IsActive = false
+				}
+			}
 
-					// Remove rage effect from character
-					activeEffects := event.Actor.GetActiveStatusEffects()
-					for _, effect := range activeEffects {
-						if effect.Name == "Rage" {
-							event.Actor.RemoveStatusEffect(effect.ID)
-							break
-						}
-					}
+			// Sync effects to ensure persistence layer is updated
+			event.Actor.SyncEffects()
 
-					// Mark ability as inactive
-					if resources := event.Actor.GetResources(); resources != nil {
-						if rage, exists := resources.Abilities["rage"]; exists {
-							rage.IsActive = false
-						}
-					}
+			// Save character
+			if t.service.characterService != nil {
+				if err := t.service.characterService.UpdateEquipment(event.Actor); err != nil {
+					log.Printf("Failed to save character after %s expiry: %v", tracked.Tracker.GetEffectName(), err)
+				}
+			}
+		} else {
+			// Update the UI effect duration
+			remainingRounds := tracked.Tracker.GetRemainingRounds(currentTurn, numCombatants)
+			activeEffects := event.Actor.GetActiveStatusEffects()
+			for _, effect := range activeEffects {
+				if effect.Name != tracked.Tracker.GetEffectName() {
+					continue
+				}
+				effect.Duration.Rounds = remainingRounds
+				log.Printf("=== %s DURATION UPDATE ===", tracked.Tracker.GetEffectName())
+				log.Printf("Character: %s", event.Actor.Name)
+				log.Printf("Remaining rounds: %d", remainingRounds)
+				break
+			}
 
-					// Sync effects to ensure persistence layer is updated
-					event.Actor.SyncEffects()
+			// Sync effects to ensure persistence layer is updated
+			event.Actor.SyncEffects()
 
-					// Save character
-					if t.service.characterService != nil {
-						if err := t.service.characterService.UpdateEquipment(event.Actor); err != nil {
-							log.Printf("Failed to save character after rage expiry: %v", err)
-						}
-					}
+			// Save character to persist the updated duration
+			if t.service.characterService != nil {
+				if err := t.service.characterService.UpdateEquipment(event.Actor); err != nil {
+					log.Printf("Failed to save character after %s duration update: %v", tracked.Tracker.GetEffectName(), err)
 				} else {
-					// Update the UI effect duration
-					activeEffects := event.Actor.GetActiveStatusEffects()
-					for _, effect := range activeEffects {
-						if effect.Name != "Rage" {
-							continue
-						}
-						effect.Duration.Rounds = remainingRounds
-						log.Printf("=== RAGE DURATION UPDATE ===")
-						log.Printf("Character: %s", event.Actor.Name)
-						log.Printf("Current turn: %d, Start turn: %d", currentTurn, roundsDuration.StartTurn)
-						log.Printf("Turns elapsed: %d, Combatants: %d", turnsElapsed, numCombatants)
-						log.Printf("Rounds elapsed: %d, Remaining rounds: %d", roundsElapsed, remainingRounds)
-						break
-					}
-
-					// Sync effects to ensure persistence layer is updated
-					event.Actor.SyncEffects()
-
-					// Save character to persist the updated duration
-					if t.service.characterService != nil {
-						if err := t.service.characterService.UpdateEquipment(event.Actor); err != nil {
-							log.Printf("Failed to save character after rage duration update: %v", err)
-						} else {
-							log.Printf("Character saved with updated rage duration")
-						}
-					}
+					log.Printf("Character saved with updated %s duration", tracked.Tracker.GetEffectName())
 				}
 			}
 		}
