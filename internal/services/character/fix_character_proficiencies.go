@@ -2,14 +2,15 @@ package character
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
-
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 )
 
 // FixCharacterProficiencies adds missing class and racial proficiencies to existing characters
 // This fixes characters created before the proficiency fix was implemented
-func (s *service) FixCharacterProficiencies(ctx context.Context, characterID string) (*entities.Character, error) {
+func (s *service) FixCharacterProficiencies(ctx context.Context, characterID string) (*character.Character, error) {
 	// Get the character
 	char, err := s.repository.Get(ctx, characterID)
 	if err != nil {
@@ -17,12 +18,12 @@ func (s *service) FixCharacterProficiencies(ctx context.Context, characterID str
 	}
 
 	// Only fix active characters with a class
-	if char.Status != entities.CharacterStatusActive || char.Class == nil {
+	if char.Status != shared.CharacterStatusActive || char.Class == nil {
 		return char, nil
 	}
 
 	// Check if character already has weapon proficiencies (indicator that fix was applied)
-	if weaponProfs, exists := char.Proficiencies[entities.ProficiencyTypeWeapon]; exists && len(weaponProfs) > 0 {
+	if weaponProfs, exists := char.Proficiencies[rulebook.ProficiencyTypeWeapon]; exists && len(weaponProfs) > 0 {
 		log.Printf("Character %s (ID: %s) already has weapon proficiencies, skipping fix", char.Name, char.ID)
 		return char, nil
 	}

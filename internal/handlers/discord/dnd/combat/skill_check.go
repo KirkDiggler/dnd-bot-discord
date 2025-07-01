@@ -2,10 +2,11 @@ package combat
 
 import (
 	"fmt"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
 	"golang.org/x/text/cases"
@@ -13,25 +14,25 @@ import (
 )
 
 // Common skill mappings to attributes
-var SkillToAttribute = map[string]entities.Attribute{
-	"skill-acrobatics":      entities.AttributeDexterity,
-	"skill-animal-handling": entities.AttributeWisdom,
-	"skill-arcana":          entities.AttributeIntelligence,
-	"skill-athletics":       entities.AttributeStrength,
-	"skill-deception":       entities.AttributeCharisma,
-	"skill-history":         entities.AttributeIntelligence,
-	"skill-insight":         entities.AttributeWisdom,
-	"skill-intimidation":    entities.AttributeCharisma,
-	"skill-investigation":   entities.AttributeIntelligence,
-	"skill-medicine":        entities.AttributeWisdom,
-	"skill-nature":          entities.AttributeIntelligence,
-	"skill-perception":      entities.AttributeWisdom,
-	"skill-performance":     entities.AttributeCharisma,
-	"skill-persuasion":      entities.AttributeCharisma,
-	"skill-religion":        entities.AttributeIntelligence,
-	"skill-sleight-of-hand": entities.AttributeDexterity,
-	"skill-stealth":         entities.AttributeDexterity,
-	"skill-survival":        entities.AttributeWisdom,
+var SkillToAttribute = map[string]shared.Attribute{
+	"skill-acrobatics":      shared.AttributeDexterity,
+	"skill-animal-handling": shared.AttributeWisdom,
+	"skill-arcana":          shared.AttributeIntelligence,
+	"skill-athletics":       shared.AttributeStrength,
+	"skill-deception":       shared.AttributeCharisma,
+	"skill-history":         shared.AttributeIntelligence,
+	"skill-insight":         shared.AttributeWisdom,
+	"skill-intimidation":    shared.AttributeCharisma,
+	"skill-investigation":   shared.AttributeIntelligence,
+	"skill-medicine":        shared.AttributeWisdom,
+	"skill-nature":          shared.AttributeIntelligence,
+	"skill-perception":      shared.AttributeWisdom,
+	"skill-performance":     shared.AttributeCharisma,
+	"skill-persuasion":      shared.AttributeCharisma,
+	"skill-religion":        shared.AttributeIntelligence,
+	"skill-sleight-of-hand": shared.AttributeDexterity,
+	"skill-stealth":         shared.AttributeDexterity,
+	"skill-survival":        shared.AttributeWisdom,
 }
 
 // SkillCheckHandler handles skill check interactions
@@ -53,7 +54,7 @@ func NewSkillCheckHandler(cfg *SkillCheckHandlerConfig) *SkillCheckHandler {
 
 // ShowSkillCheckPrompt displays a prompt for a player to make a skill check
 func (h *SkillCheckHandler) ShowSkillCheckPrompt(s *discordgo.Session, i *discordgo.InteractionCreate,
-	char *entities.Character, skillKey string, dc int, reason string) error {
+	char *character2.Character, skillKey string, dc int, reason string) error {
 
 	// Get the attribute for this skill
 	attribute, ok := SkillToAttribute[skillKey]

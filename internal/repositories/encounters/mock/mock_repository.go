@@ -6,9 +6,9 @@ package mockencrepo
 
 import (
 	context "context"
+	entities "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	reflect "reflect"
 
-	entities "github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	gomock "go.uber.org/mock/gomock"
 )
 

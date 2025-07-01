@@ -3,10 +3,12 @@ package character_test
 import (
 	"context"
 	"fmt"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
@@ -58,17 +60,17 @@ func TestCharacterCreation_AbilityAssignmentFlow(t *testing.T) {
 	mockDNDClient := mockdnd5e.NewMockClient(ctrl)
 
 	// Setup expectations for race and class
-	mockDNDClient.EXPECT().GetRace("half-orc").Return(&entities.Race{
+	mockDNDClient.EXPECT().GetRace("half-orc").Return(&rulebook.Race{
 		Key:  "half-orc",
 		Name: "Half-Orc",
-		AbilityBonuses: []*entities.AbilityBonus{
-			{Attribute: entities.AttributeStrength, Bonus: 2},
-			{Attribute: entities.AttributeConstitution, Bonus: 1},
+		AbilityBonuses: []*shared.AbilityBonus{
+			{Attribute: shared.AttributeStrength, Bonus: 2},
+			{Attribute: shared.AttributeConstitution, Bonus: 1},
 		},
 		Speed: 30,
 	}, nil).AnyTimes()
 
-	mockDNDClient.EXPECT().GetClass("barbarian").Return(&entities.Class{
+	mockDNDClient.EXPECT().GetClass("barbarian").Return(&rulebook.Class{
 		Key:    "barbarian",
 		Name:   "Barbarian",
 		HitDie: 12,
@@ -98,7 +100,7 @@ func TestCharacterCreation_AbilityAssignmentFlow(t *testing.T) {
 	_, err = charService.UpdateDraftCharacter(ctx, draft.ID, &characterService.UpdateDraftInput{
 		RaceKey:  &raceKey,
 		ClassKey: &classKey,
-		AbilityRolls: []entities.AbilityRoll{
+		AbilityRolls: []character2.AbilityRoll{
 			{ID: "roll_1", Value: 18},
 			{ID: "roll_2", Value: 16},
 			{ID: "roll_3", Value: 14},
@@ -190,20 +192,20 @@ func TestCharacterCreation_AbilityAssignmentFlow(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify final attributes (half-orc gets +2 STR, +1 CON)
-	assert.Equal(t, 20, finalChar.Attributes[entities.AttributeStrength].Score)     // 18 + 2
-	assert.Equal(t, 17, finalChar.Attributes[entities.AttributeConstitution].Score) // 16 + 1
-	assert.Equal(t, 14, finalChar.Attributes[entities.AttributeDexterity].Score)
-	assert.Equal(t, 12, finalChar.Attributes[entities.AttributeWisdom].Score)
-	assert.Equal(t, 11, finalChar.Attributes[entities.AttributeIntelligence].Score)
-	assert.Equal(t, 9, finalChar.Attributes[entities.AttributeCharisma].Score)
+	assert.Equal(t, 20, finalChar.Attributes[shared.AttributeStrength].Score)     // 18 + 2
+	assert.Equal(t, 17, finalChar.Attributes[shared.AttributeConstitution].Score) // 16 + 1
+	assert.Equal(t, 14, finalChar.Attributes[shared.AttributeDexterity].Score)
+	assert.Equal(t, 12, finalChar.Attributes[shared.AttributeWisdom].Score)
+	assert.Equal(t, 11, finalChar.Attributes[shared.AttributeIntelligence].Score)
+	assert.Equal(t, 9, finalChar.Attributes[shared.AttributeCharisma].Score)
 
 	// Verify modifiers
-	assert.Equal(t, 5, finalChar.Attributes[entities.AttributeStrength].Bonus)
-	assert.Equal(t, 3, finalChar.Attributes[entities.AttributeConstitution].Bonus)
+	assert.Equal(t, 5, finalChar.Attributes[shared.AttributeStrength].Bonus)
+	assert.Equal(t, 3, finalChar.Attributes[shared.AttributeConstitution].Bonus)
 
 	// Verify character is complete
 	assert.True(t, finalChar.IsComplete())
-	assert.Equal(t, entities.CharacterStatusActive, finalChar.Status)
+	assert.Equal(t, shared.CharacterStatusActive, finalChar.Status)
 }
 
 // TODO: This test needs to be refactored to properly mock Discord interactions
@@ -240,7 +242,7 @@ func TestCharacterCreation_AutoAssign(t *testing.T) {
 	_, err = charService.UpdateDraftCharacter(ctx, draft.ID, &characterService.UpdateDraftInput{
 		RaceKey:  &raceKey,
 		ClassKey: &classKey,
-		AbilityRolls: []entities.AbilityRoll{
+		AbilityRolls: []character2.AbilityRoll{
 			{ID: "roll_1", Value: 17},
 			{ID: "roll_2", Value: 15},
 			{ID: "roll_3", Value: 13},
@@ -289,7 +291,7 @@ func TestCharacterCreation_AutoAssign(t *testing.T) {
 
 	// Check that WIS got the highest roll
 	wisRollID := updatedDraft.AbilityAssignments["WIS"]
-	var wisRoll *entities.AbilityRoll
+	var wisRoll *character2.AbilityRoll
 	for _, roll := range updatedDraft.AbilityRolls {
 		if roll.ID == wisRollID {
 			wisRoll = &roll

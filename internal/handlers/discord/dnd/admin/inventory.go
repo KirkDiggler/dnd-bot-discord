@@ -3,11 +3,13 @@ package admin
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
@@ -45,12 +47,12 @@ func (h *InventoryHandler) HandleGive(s *discordgo.Session, i *discordgo.Interac
 
 	// For testing purposes, create a simple weapon based on the item key
 	// In a real implementation, this would fetch from the D&D API
-	var equipment entities.Equipment
+	var equipmentValue equipment.Equipment
 
 	switch itemKey {
 	case "longsword", "shortsword", "dagger", "rapier", "greatsword":
-		weapon := &entities.Weapon{
-			Base: entities.BasicEquipment{
+		weapon := &equipment.Weapon{
+			Base: equipment.BasicEquipment{
 				Key:  itemKey,
 				Name: cases.Title(language.English).String(itemKey),
 			},
@@ -74,21 +76,21 @@ func (h *InventoryHandler) HandleGive(s *discordgo.Session, i *discordgo.Interac
 			weapon.Damage = &damage.Damage{DiceCount: 2, DiceSize: 6, DamageType: "slashing"}
 			weapon.TwoHandedDamage = weapon.Damage // Greatsword is always two-handed
 			weapon.WeaponCategory = "Martial"
-			weapon.Properties = []*entities.ReferenceItem{
+			weapon.Properties = []*shared.ReferenceItem{
 				{Key: "two-handed", Name: "Two-Handed"},
 				{Key: "heavy", Name: "Heavy"},
 			}
 		}
 
-		equipment = weapon
+		equipmentValue = weapon
 	case "shield":
-		equipment = &entities.BasicEquipment{
+		equipmentValue = &equipment.BasicEquipment{
 			Key:  itemKey,
 			Name: "Shield",
 		}
 	default:
 		// Generic item
-		equipment = &entities.BasicEquipment{
+		equipmentValue = &equipment.BasicEquipment{
 			Key:  itemKey,
 			Name: cases.Title(language.English).String(strings.ReplaceAll(itemKey, "-", " ")),
 		}
@@ -96,23 +98,23 @@ func (h *InventoryHandler) HandleGive(s *discordgo.Session, i *discordgo.Interac
 
 	// Initialize inventory map if needed
 	if targetChar.Inventory == nil {
-		targetChar.Inventory = make(map[entities.EquipmentType][]entities.Equipment)
+		targetChar.Inventory = make(map[equipment.EquipmentType][]equipment.Equipment)
 	}
 
 	// Determine equipment type
-	equipType := equipment.GetEquipmentType()
+	equipType := equipmentValue.GetEquipmentType()
 	if equipType == "BasicEquipment" {
 		// Try to determine type from key
 		if itemKey == "shield" {
-			equipType = entities.EquipmentTypeArmor
+			equipType = equipment.EquipmentTypeArmor
 		} else {
-			equipType = entities.EquipmentTypeOther
+			equipType = equipment.EquipmentTypeOther
 		}
 	}
 
 	// Add the item to the character's inventory
 	for j := int64(0); j < quantity; j++ {
-		targetChar.Inventory[equipType] = append(targetChar.Inventory[equipType], equipment)
+		targetChar.Inventory[equipType] = append(targetChar.Inventory[equipType], equipmentValue)
 	}
 
 	// Save the character - use UpdateEquipment method
@@ -129,7 +131,7 @@ func (h *InventoryHandler) HandleGive(s *discordgo.Session, i *discordgo.Interac
 	// Send success response
 	embed := &discordgo.MessageEmbed{
 		Title:       "✅ Item Added",
-		Description: fmt.Sprintf("Added %d x **%s** to %s's inventory", quantity, equipment.GetName(), targetChar.Name),
+		Description: fmt.Sprintf("Added %d x **%s** to %s's inventory", quantity, equipmentValue.GetName(), targetChar.Name),
 		Color:       0x00ff00,
 		Fields: []*discordgo.MessageEmbedField{
 			{
@@ -189,7 +191,7 @@ func (h *InventoryHandler) HandleTake(s *discordgo.Session, i *discordgo.Interac
 	// Remove the items
 	removed := 0
 	for equipType, items := range targetChar.Inventory {
-		newItems := []entities.Equipment{}
+		newItems := []equipment.Equipment{}
 		for _, item := range items {
 			if item.GetKey() == itemKey && removed < removeCount {
 				removed++
@@ -281,7 +283,7 @@ func (h *InventoryHandler) deferResponse(s *discordgo.Session, i *discordgo.Inte
 }
 
 // findCharacterByName finds a character by name for a given user
-func (h *InventoryHandler) findCharacterByName(userID, characterName string) (*entities.Character, error) {
+func (h *InventoryHandler) findCharacterByName(userID, characterName string) (*character.Character, error) {
 	characters, err := h.characterService.ListCharacters(context.Background(), userID)
 	if err != nil {
 		return nil, err

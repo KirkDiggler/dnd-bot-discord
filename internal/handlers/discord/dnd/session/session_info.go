@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
+
+	gameSession "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 )
 
 type InfoRequest struct {
@@ -56,7 +57,7 @@ func (h *InfoHandler) Handle(req *InfoRequest) error {
 	}
 
 	// If user has only one active session, show that one
-	var session *entities.Session
+	var session *gameSession.Session
 	if len(sessions) == 1 {
 		session = sessions[0]
 	} else {
@@ -94,7 +95,7 @@ func (h *InfoHandler) Handle(req *InfoRequest) error {
 
 	// Add invite code if user is DM and session is planning
 	member, exists := session.Members[req.Interaction.Member.User.ID]
-	if exists && member.Role == entities.SessionRoleDM && session.Status == entities.SessionStatusPlanning {
+	if exists && member.Role == gameSession.SessionRoleDM && session.Status == gameSession.SessionStatusPlanning {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   "🔑 Invite Code",
 			Value:  fmt.Sprintf("```%s```", session.InviteCode),
@@ -129,7 +130,7 @@ func (h *InfoHandler) Handle(req *InfoRequest) error {
 	}
 
 	// Add session timing info
-	if session.Status == entities.SessionStatusActive && session.StartedAt != nil {
+	if session.Status == gameSession.SessionStatusActive && session.StartedAt != nil {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   "⏱️ Started",
 			Value:  fmt.Sprintf("<t:%d:R>", session.StartedAt.Unix()),
@@ -176,37 +177,37 @@ func (h *InfoHandler) Handle(req *InfoRequest) error {
 	return err
 }
 
-func (h *InfoHandler) getColorForStatus(status entities.SessionStatus) int {
+func (h *InfoHandler) getColorForStatus(status gameSession.SessionStatus) int {
 	switch status {
-	case entities.SessionStatusActive:
+	case gameSession.SessionStatusActive:
 		return 0x2ecc71 // Green
-	case entities.SessionStatusPlanning:
+	case gameSession.SessionStatusPlanning:
 		return 0x3498db // Blue
-	case entities.SessionStatusPaused:
+	case gameSession.SessionStatusPaused:
 		return 0xf39c12 // Orange
-	case entities.SessionStatusEnded:
+	case gameSession.SessionStatusEnded:
 		return 0x95a5a6 // Gray
 	default:
 		return 0x7289da // Discord blue
 	}
 }
 
-func (h *InfoHandler) getStatusDisplay(status entities.SessionStatus) string {
+func (h *InfoHandler) getStatusDisplay(status gameSession.SessionStatus) string {
 	switch status {
-	case entities.SessionStatusActive:
+	case gameSession.SessionStatusActive:
 		return "🟢 Active"
-	case entities.SessionStatusPlanning:
+	case gameSession.SessionStatusPlanning:
 		return "📋 Planning"
-	case entities.SessionStatusPaused:
+	case gameSession.SessionStatusPaused:
 		return "⏸️ Paused"
-	case entities.SessionStatusEnded:
+	case gameSession.SessionStatusEnded:
 		return "🏁 Ended"
 	default:
 		return string(status)
 	}
 }
 
-func (h *InfoHandler) getActionButtons(session *entities.Session, member *entities.SessionMember) []discordgo.MessageComponent {
+func (h *InfoHandler) getActionButtons(session *gameSession.Session, member *gameSession.SessionMember) []discordgo.MessageComponent {
 	if member == nil {
 		return nil
 	}
@@ -215,9 +216,9 @@ func (h *InfoHandler) getActionButtons(session *entities.Session, member *entiti
 	buttons := []discordgo.MessageComponent{}
 
 	// DM actions
-	if member.Role == entities.SessionRoleDM {
+	if member.Role == gameSession.SessionRoleDM {
 		switch session.Status {
-		case entities.SessionStatusPlanning:
+		case gameSession.SessionStatusPlanning:
 			buttons = append(buttons, discordgo.Button{
 				Label:    "Start Session",
 				Style:    discordgo.SuccessButton,
@@ -229,7 +230,7 @@ func (h *InfoHandler) getActionButtons(session *entities.Session, member *entiti
 				CustomID: fmt.Sprintf("session_manage:invite:%s", session.ID),
 				Emoji:    &discordgo.ComponentEmoji{Name: "📨"},
 			})
-		case entities.SessionStatusActive:
+		case gameSession.SessionStatusActive:
 			buttons = append(buttons, discordgo.Button{
 				Label:    "Pause Session",
 				Style:    discordgo.SecondaryButton,
@@ -241,7 +242,7 @@ func (h *InfoHandler) getActionButtons(session *entities.Session, member *entiti
 				CustomID: fmt.Sprintf("session_manage:end:%s", session.ID),
 				Emoji:    &discordgo.ComponentEmoji{Name: "🏁"},
 			})
-		case entities.SessionStatusPaused:
+		case gameSession.SessionStatusPaused:
 			buttons = append(buttons, discordgo.Button{
 				Label:    "Resume Session",
 				Style:    discordgo.SuccessButton,
@@ -256,7 +257,7 @@ func (h *InfoHandler) getActionButtons(session *entities.Session, member *entiti
 		}
 
 		// Session settings button (always available for DM)
-		if session.Status != entities.SessionStatusEnded {
+		if session.Status != gameSession.SessionStatusEnded {
 			buttons = append(buttons, discordgo.Button{
 				Label:    "Settings",
 				Style:    discordgo.SecondaryButton,
@@ -267,7 +268,7 @@ func (h *InfoHandler) getActionButtons(session *entities.Session, member *entiti
 	}
 
 	// Player actions
-	if member.Role == entities.SessionRolePlayer && session.Status != entities.SessionStatusEnded {
+	if member.Role == gameSession.SessionRolePlayer && session.Status != gameSession.SessionStatusEnded {
 		if member.CharacterID == "" {
 			buttons = append(buttons, discordgo.Button{
 				Label:    "Select Character",

@@ -2,13 +2,16 @@ package encounter_test
 
 import (
 	"context"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	session2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/gamesessions"
@@ -43,17 +46,17 @@ func TestCombatEndIntegration_MonstersDefeatPlayer(t *testing.T) {
 	})
 
 	// Create session
-	sess := &entities.Session{
+	sess := &session2.Session{
 		ID:        "test-session",
 		Name:      "Test Session",
 		ChannelID: "channel-1",
 		CreatorID: "dm-user",
 		DMID:      "dm-user",
-		Members: map[string]*entities.SessionMember{
-			"dm-user":     {UserID: "dm-user", Role: entities.SessionRoleDM},
-			"player-user": {UserID: "player-user", Role: entities.SessionRolePlayer, CharacterID: "char1"},
+		Members: map[string]*session2.SessionMember{
+			"dm-user":     {UserID: "dm-user", Role: session2.SessionRoleDM},
+			"player-user": {UserID: "player-user", Role: session2.SessionRolePlayer, CharacterID: "char1"},
 		},
-		Status:     entities.SessionStatusActive,
+		Status:     session2.SessionStatusActive,
 		CreatedAt:  time.Now(),
 		LastActive: time.Now(),
 	}
@@ -61,17 +64,17 @@ func TestCombatEndIntegration_MonstersDefeatPlayer(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create weakened character (1 HP)
-	char := &entities.Character{
+	char := &character2.Character{
 		ID:               "char1",
 		Name:             "Doomed Hero",
 		Level:            1,
 		OwnerID:          "player-user",
-		Status:           entities.CharacterStatusActive,
+		Status:           shared.CharacterStatusActive,
 		CurrentHitPoints: 1, // Very low HP
 		MaxHitPoints:     10,
 		AC:               10, // Low AC
-		Attributes: map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeStrength: {Score: 10},
+		Attributes: map[shared.Attribute]*character2.AbilityScore{
+			shared.AttributeStrength: {Score: 10},
 		},
 	}
 	err = charRepo.Create(ctx, char)
@@ -96,7 +99,7 @@ func TestCombatEndIntegration_MonstersDefeatPlayer(t *testing.T) {
 		AC:              15,
 		MaxHP:           7,
 		InitiativeBonus: 2,
-		Actions: []*entities.MonsterAction{
+		Actions: []*combat.MonsterAction{
 			{
 				Name:        "Scimitar",
 				AttackBonus: 4,
@@ -116,7 +119,7 @@ func TestCombatEndIntegration_MonstersDefeatPlayer(t *testing.T) {
 	// Set up combat - monster's turn
 	enc, err = encounterService.GetEncounter(ctx, enc.ID)
 	require.NoError(t, err)
-	enc.Status = entities.EncounterStatusActive
+	enc.Status = combat.EncounterStatusActive
 	enc.Turn = 1 // Monster's turn
 	enc.TurnOrder = []string{player.ID, monster.ID}
 
@@ -145,7 +148,7 @@ func TestCombatEndIntegration_MonstersDefeatPlayer(t *testing.T) {
 	// Verify encounter status
 	enc, err = encounterService.GetEncounter(ctx, enc.ID)
 	require.NoError(t, err)
-	assert.Equal(t, entities.EncounterStatusCompleted, enc.Status)
+	assert.Equal(t, combat.EncounterStatusCompleted, enc.Status)
 	// Check that combat log contains defeat message
 	// The defeat message might not be the last entry
 	require.Greater(t, len(enc.CombatLog), 0, "Combat log should have entries")
@@ -188,17 +191,17 @@ func TestCombatEndIntegration_PlayerDefeatsLastMonster(t *testing.T) {
 		})
 
 		// Create session
-		sess := &entities.Session{
+		sess := &session2.Session{
 			ID:        "test-session",
 			Name:      "Victory Test",
 			ChannelID: "channel-1",
 			CreatorID: "dm-user",
 			DMID:      "dm-user",
-			Members: map[string]*entities.SessionMember{
-				"dm-user":     {UserID: "dm-user", Role: entities.SessionRoleDM},
-				"player-user": {UserID: "player-user", Role: entities.SessionRolePlayer, CharacterID: "char1"},
+			Members: map[string]*session2.SessionMember{
+				"dm-user":     {UserID: "dm-user", Role: session2.SessionRoleDM},
+				"player-user": {UserID: "player-user", Role: session2.SessionRolePlayer, CharacterID: "char1"},
 			},
-			Status:     entities.SessionStatusActive,
+			Status:     session2.SessionStatusActive,
 			CreatedAt:  time.Now(),
 			LastActive: time.Now(),
 			Metadata: map[string]interface{}{
@@ -209,17 +212,17 @@ func TestCombatEndIntegration_PlayerDefeatsLastMonster(t *testing.T) {
 		require.NoError(t, err)
 
 		// Create strong character
-		char := &entities.Character{
+		char := &character2.Character{
 			ID:               "char1",
 			Name:             "Mighty Hero",
 			Level:            5,
 			OwnerID:          "player-user",
-			Status:           entities.CharacterStatusActive,
+			Status:           shared.CharacterStatusActive,
 			CurrentHitPoints: 50,
 			MaxHitPoints:     50,
 			AC:               18,
-			Attributes: map[entities.Attribute]*entities.AbilityScore{
-				entities.AttributeStrength: {Score: 18}, // +4
+			Attributes: map[shared.Attribute]*character2.AbilityScore{
+				shared.AttributeStrength: {Score: 18}, // +4
 			},
 		}
 		err = charRepo.Create(ctx, char)
@@ -247,7 +250,7 @@ func TestCombatEndIntegration_PlayerDefeatsLastMonster(t *testing.T) {
 			AC:              15,
 			MaxHP:           20,
 			InitiativeBonus: 3,
-			Actions: []*entities.MonsterAction{
+			Actions: []*combat.MonsterAction{
 				{
 					Name:        "Scimitar",
 					AttackBonus: 5,
@@ -271,7 +274,7 @@ func TestCombatEndIntegration_PlayerDefeatsLastMonster(t *testing.T) {
 		// Setup: Monster2 defeats Monster1 to demonstrate monster-on-monster combat
 		enc, err = encounterService.GetEncounter(ctx, enc.ID)
 		require.NoError(t, err)
-		enc.Status = entities.EncounterStatusActive
+		enc.Status = combat.EncounterStatusActive
 		enc.Turn = 2 // Monster2's turn
 		enc.TurnOrder = []string{player.ID, monster1.ID, monster2.ID}
 

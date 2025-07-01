@@ -5,16 +5,19 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDataToEquipmentWithMigration(t *testing.T) {
 	// Create test weapon data
-	weaponJSON, err := json.Marshal(&entities.Weapon{
-		Base: entities.BasicEquipment{
+	weaponJSON, err := json.Marshal(&equipment.Weapon{
+		Base: equipment.BasicEquipment{
 			Key:    "greataxe",
 			Name:   "Greataxe",
 			Weight: 7,
@@ -33,7 +36,7 @@ func TestDataToEquipmentWithMigration(t *testing.T) {
 		name         string
 		data         EquipmentData
 		expectedType string
-		validate     func(t *testing.T, eq entities.Equipment)
+		validate     func(t *testing.T, eq equipment.Equipment)
 	}{
 		{
 			name: "weapon with correct type",
@@ -41,9 +44,9 @@ func TestDataToEquipmentWithMigration(t *testing.T) {
 				Type:      "weapon",
 				Equipment: weaponJSON,
 			},
-			expectedType: "*entities.Weapon",
-			validate: func(t *testing.T, eq entities.Equipment) {
-				weapon, ok := eq.(*entities.Weapon)
+			expectedType: "*equipment.Weapon",
+			validate: func(t *testing.T, eq equipment.Equipment) {
+				weapon, ok := eq.(*equipment.Weapon)
 				require.True(t, ok)
 				assert.Equal(t, "greataxe", weapon.GetKey())
 				assert.Equal(t, "Greataxe", weapon.GetName())
@@ -56,9 +59,9 @@ func TestDataToEquipmentWithMigration(t *testing.T) {
 				Type:      "",
 				Equipment: weaponJSON,
 			},
-			expectedType: "*entities.Weapon",
-			validate: func(t *testing.T, eq entities.Equipment) {
-				weapon, ok := eq.(*entities.Weapon)
+			expectedType: "*equipment.Weapon",
+			validate: func(t *testing.T, eq equipment.Equipment) {
+				weapon, ok := eq.(*equipment.Weapon)
 				require.True(t, ok)
 				assert.Equal(t, "greataxe", weapon.GetKey())
 				assert.Equal(t, "martial", weapon.WeaponCategory)
@@ -70,9 +73,9 @@ func TestDataToEquipmentWithMigration(t *testing.T) {
 				Type:      "unknown",
 				Equipment: weaponJSON,
 			},
-			expectedType: "*entities.Weapon",
-			validate: func(t *testing.T, eq entities.Equipment) {
-				weapon, ok := eq.(*entities.Weapon)
+			expectedType: "*equipment.Weapon",
+			validate: func(t *testing.T, eq equipment.Equipment) {
+				weapon, ok := eq.(*equipment.Weapon)
 				require.True(t, ok)
 				assert.Equal(t, "greataxe", weapon.GetKey())
 			},
@@ -83,9 +86,9 @@ func TestDataToEquipmentWithMigration(t *testing.T) {
 				Type:      "WEAPON",
 				Equipment: weaponJSON,
 			},
-			expectedType: "*entities.Weapon",
-			validate: func(t *testing.T, eq entities.Equipment) {
-				weapon, ok := eq.(*entities.Weapon)
+			expectedType: "*equipment.Weapon",
+			validate: func(t *testing.T, eq equipment.Equipment) {
+				weapon, ok := eq.(*equipment.Weapon)
 				require.True(t, ok)
 				assert.Equal(t, "greataxe", weapon.GetKey())
 			},
@@ -114,16 +117,16 @@ func TestEquipmentNilHandling(t *testing.T) {
 	// This test verifies that nil equipment is properly handled
 	// in the toCharacterData function
 
-	char := &entities.Character{
+	char := &character.Character{
 		ID:      "test-char",
 		OwnerID: "test-user",
 		RealmID: "test-realm",
 		Name:    "Test Character",
-		EquippedSlots: map[entities.Slot]entities.Equipment{
-			entities.SlotMainHand: nil, // Nil equipment
-			entities.SlotOffHand:  nil,
-			entities.SlotTwoHanded: &entities.Weapon{
-				Base: entities.BasicEquipment{
+		EquippedSlots: map[shared.Slot]equipment.Equipment{
+			shared.SlotMainHand: nil, // Nil equipment
+			shared.SlotOffHand:  nil,
+			shared.SlotTwoHanded: &equipment.Weapon{
+				Base: equipment.BasicEquipment{
 					Key:  "longsword",
 					Name: "Longsword",
 				},
@@ -138,8 +141,8 @@ func TestEquipmentNilHandling(t *testing.T) {
 
 	// Verify that nil equipment slots are not included in the data
 	assert.Len(t, data.EquippedSlots, 1, "Only non-nil equipment should be included")
-	_, hasMainHand := data.EquippedSlots[entities.SlotMainHand]
+	_, hasMainHand := data.EquippedSlots[shared.SlotMainHand]
 	assert.False(t, hasMainHand, "Nil MainHand slot should not be included")
-	_, hasTwoHanded := data.EquippedSlots[entities.SlotTwoHanded]
+	_, hasTwoHanded := data.EquippedSlots[shared.SlotTwoHanded]
 	assert.True(t, hasTwoHanded, "Non-nil TwoHanded slot should be included")
 }

@@ -3,10 +3,12 @@ package character
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"sort"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
 )
@@ -156,22 +158,22 @@ func (h *AssignAbilitiesHandler) Handle(req *AssignAbilitiesRequest) error {
 }
 
 // getRacialBonus gets the racial bonus for a specific ability
-func (h *AssignAbilitiesHandler) getRacialBonus(race *entities.Race, ability string) int {
+func (h *AssignAbilitiesHandler) getRacialBonus(race *rulebook.Race, ability string) int {
 	// Convert ability string to Attribute type
-	var attr entities.Attribute
+	var attr shared.Attribute
 	switch ability {
 	case "STR":
-		attr = entities.AttributeStrength
+		attr = shared.AttributeStrength
 	case "DEX":
-		attr = entities.AttributeDexterity
+		attr = shared.AttributeDexterity
 	case "CON":
-		attr = entities.AttributeConstitution
+		attr = shared.AttributeConstitution
 	case "INT":
-		attr = entities.AttributeIntelligence
+		attr = shared.AttributeIntelligence
 	case "WIS":
-		attr = entities.AttributeWisdom
+		attr = shared.AttributeWisdom
 	case "CHA":
-		attr = entities.AttributeCharisma
+		attr = shared.AttributeCharisma
 	}
 
 	for _, bonus := range race.AbilityBonuses {
@@ -217,9 +219,9 @@ func (h *AssignAbilitiesHandler) respondWithError(req *AssignAbilitiesRequest, m
 }
 
 // autoAssignAbilitiesWithIDs assigns rolls to abilities based on class priorities
-func (h *AssignAbilitiesHandler) autoAssignAbilitiesWithIDs(className string, rolls []entities.AbilityRoll) map[string]string {
+func (h *AssignAbilitiesHandler) autoAssignAbilitiesWithIDs(className string, rolls []character.AbilityRoll) map[string]string {
 	// Sort rolls by value (highest to lowest)
-	sortedRolls := make([]entities.AbilityRoll, len(rolls))
+	sortedRolls := make([]character.AbilityRoll, len(rolls))
 	copy(sortedRolls, rolls)
 	sort.Slice(sortedRolls, func(i, j int) bool {
 		return sortedRolls[i].Value > sortedRolls[j].Value
@@ -259,7 +261,7 @@ func (h *AssignAbilitiesHandler) autoAssignAbilitiesWithIDs(className string, ro
 }
 
 // buildAssignmentUI builds the assignment interface
-func (h *AssignAbilitiesHandler) buildAssignmentUI(req *AssignAbilitiesRequest, char *entities.Character, race *entities.Race, class *entities.Class) error {
+func (h *AssignAbilitiesHandler) buildAssignmentUI(req *AssignAbilitiesRequest, char *character.Character, race *rulebook.Race, class *rulebook.Class) error {
 	// Create a map of roll ID to value for easy lookup
 	rollValues := make(map[string]int)
 	for _, roll := range char.AbilityRolls {
@@ -384,7 +386,7 @@ func (h *AssignAbilitiesHandler) buildAssignmentUI(req *AssignAbilitiesRequest, 
 }
 
 // buildComponents creates the UI components for assignment
-func (h *AssignAbilitiesHandler) buildComponents(req *AssignAbilitiesRequest, char *entities.Character, abilities []string) []discordgo.MessageComponent {
+func (h *AssignAbilitiesHandler) buildComponents(req *AssignAbilitiesRequest, char *character.Character, abilities []string) []discordgo.MessageComponent {
 	components := []discordgo.MessageComponent{}
 
 	// Check if we're showing a dropdown for a specific ability

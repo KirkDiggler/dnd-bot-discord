@@ -1,9 +1,9 @@
 package discord
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -11,18 +11,18 @@ import (
 func TestDeadMonsterShouldNotAct(t *testing.T) {
 	tests := []struct {
 		name      string
-		combatant *entities.Combatant
+		combatant *combat.Combatant
 		shouldAct bool
 		reason    string
 	}{
 		{
 			name: "Alive monster should act",
-			combatant: &entities.Combatant{
+			combatant: &combat.Combatant{
 				Name:      "Goblin",
-				Type:      entities.CombatantTypeMonster,
+				Type:      combat.CombatantTypeMonster,
 				CurrentHP: 7,
 				MaxHP:     7,
-				Actions: []*entities.MonsterAction{
+				Actions: []*combat.MonsterAction{
 					{Name: "Scimitar", AttackBonus: 4},
 				},
 			},
@@ -31,12 +31,12 @@ func TestDeadMonsterShouldNotAct(t *testing.T) {
 		},
 		{
 			name: "Dead monster should not act",
-			combatant: &entities.Combatant{
+			combatant: &combat.Combatant{
 				Name:      "Skeleton",
-				Type:      entities.CombatantTypeMonster,
+				Type:      combat.CombatantTypeMonster,
 				CurrentHP: 0,
 				MaxHP:     13,
-				Actions: []*entities.MonsterAction{
+				Actions: []*combat.MonsterAction{
 					{Name: "Shortsword", AttackBonus: 4},
 				},
 			},
@@ -45,12 +45,12 @@ func TestDeadMonsterShouldNotAct(t *testing.T) {
 		},
 		{
 			name: "Monster with negative HP should not act",
-			combatant: &entities.Combatant{
+			combatant: &combat.Combatant{
 				Name:      "Zombie",
-				Type:      entities.CombatantTypeMonster,
+				Type:      combat.CombatantTypeMonster,
 				CurrentHP: -5,
 				MaxHP:     22,
-				Actions: []*entities.MonsterAction{
+				Actions: []*combat.MonsterAction{
 					{Name: "Slam", AttackBonus: 3},
 				},
 			},
@@ -59,12 +59,12 @@ func TestDeadMonsterShouldNotAct(t *testing.T) {
 		},
 		{
 			name: "Monster at 1 HP should still act",
-			combatant: &entities.Combatant{
+			combatant: &combat.Combatant{
 				Name:      "Orc",
-				Type:      entities.CombatantTypeMonster,
+				Type:      combat.CombatantTypeMonster,
 				CurrentHP: 1,
 				MaxHP:     15,
-				Actions: []*entities.MonsterAction{
+				Actions: []*combat.MonsterAction{
 					{Name: "Greataxe", AttackBonus: 5},
 				},
 			},
@@ -73,9 +73,9 @@ func TestDeadMonsterShouldNotAct(t *testing.T) {
 		},
 		{
 			name: "Player combatant check (should not affect logic)",
-			combatant: &entities.Combatant{
+			combatant: &combat.Combatant{
 				Name:      "Gandalf",
-				Type:      entities.CombatantTypePlayer,
+				Type:      combat.CombatantTypePlayer,
 				CurrentHP: 0,
 				MaxHP:     50,
 			},
@@ -88,7 +88,7 @@ func TestDeadMonsterShouldNotAct(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Check the condition we use in the handler
 			canAct := false
-			if tt.combatant != nil && tt.combatant.Type == entities.CombatantTypeMonster {
+			if tt.combatant != nil && tt.combatant.Type == combat.CombatantTypeMonster {
 				canAct = tt.combatant.CanAct()
 			}
 
@@ -100,27 +100,27 @@ func TestDeadMonsterShouldNotAct(t *testing.T) {
 // TestDeadMonsterInEncounter tests that dead monsters are properly handled in encounter flow
 func TestDeadMonsterInEncounter(t *testing.T) {
 	// Create a test encounter
-	encounter := &entities.Encounter{
+	encounter := &combat.Encounter{
 		ID:     "test-encounter",
-		Status: entities.EncounterStatusActive,
+		Status: combat.EncounterStatusActive,
 		Round:  1,
 		Turn:   0,
-		Combatants: map[string]*entities.Combatant{
+		Combatants: map[string]*combat.Combatant{
 			"skeleton-1": {
 				ID:        "skeleton-1",
 				Name:      "Skeleton",
-				Type:      entities.CombatantTypeMonster,
+				Type:      combat.CombatantTypeMonster,
 				CurrentHP: 0, // Dead
 				MaxHP:     13,
 				IsActive:  true,
-				Actions: []*entities.MonsterAction{
+				Actions: []*combat.MonsterAction{
 					{Name: "Shortsword", AttackBonus: 4},
 				},
 			},
 			"player-1": {
 				ID:        "player-1",
 				Name:      "Hero",
-				Type:      entities.CombatantTypePlayer,
+				Type:      combat.CombatantTypePlayer,
 				CurrentHP: 25,
 				MaxHP:     30,
 				IsActive:  true,
@@ -135,7 +135,7 @@ func TestDeadMonsterInEncounter(t *testing.T) {
 	assert.Equal(t, "skeleton-1", current.ID)
 
 	// Verify dead monster check
-	shouldProcessTurn := current.Type == entities.CombatantTypeMonster && current.CanAct()
+	shouldProcessTurn := current.Type == combat.CombatantTypeMonster && current.CanAct()
 
 	assert.False(t, shouldProcessTurn, "Dead skeleton should not process turn")
 
@@ -146,5 +146,5 @@ func TestDeadMonsterInEncounter(t *testing.T) {
 	current = encounter.GetCurrentCombatant()
 	assert.NotNil(t, current)
 	assert.Equal(t, "player-1", current.ID)
-	assert.Equal(t, entities.CombatantTypePlayer, current.Type)
+	assert.Equal(t, combat.CombatantTypePlayer, current.Type)
 }

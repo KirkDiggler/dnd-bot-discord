@@ -9,8 +9,9 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 )
 
@@ -27,7 +28,7 @@ type Service interface {
 type LootTable struct {
 	Gold      GoldRange
 	Items     []LootItem
-	MagicItem *entities.Equipment // Optional magic item
+	MagicItem *equipment.Equipment // Optional magic item
 }
 
 // GoldRange represents a range of gold pieces
@@ -95,9 +96,9 @@ func (s *service) GenerateTreasure(ctx context.Context, difficulty string, roomN
 	// Equipment from API if available
 	if s.dndClient != nil && roomNumber%5 == 0 {
 		// Try to get equipment from API
-		equipment, err := s.getRandomEquipment(ctx)
-		if err == nil && equipment != nil {
-			treasure = append(treasure, equipment.GetName())
+		equipmentValue, err := s.getRandomEquipment(ctx)
+		if err == nil && equipmentValue != nil {
+			treasure = append(treasure, equipmentValue.GetName())
 		}
 	}
 
@@ -186,23 +187,23 @@ func (s *service) getGoldRangeForCR(cr float64) GoldRange {
 }
 
 // getRandomEquipment tries to get a random equipment item from the API
-func (s *service) getRandomEquipment(ctx context.Context) (entities.Equipment, error) {
+func (s *service) getRandomEquipment(ctx context.Context) (equipment.Equipment, error) {
 	if s.dndClient == nil {
 		return nil, dnderr.NotFound("DND client not available")
 	}
 
 	// Try to get equipment list
-	equipment, err := s.dndClient.ListEquipment()
+	equipmentSlice, err := s.dndClient.ListEquipment()
 	if err != nil {
 		return nil, err
 	}
 
-	if len(equipment) == 0 {
+	if len(equipmentSlice) == 0 {
 		return nil, dnderr.NotFound("no equipment available")
 	}
 
 	// Return random equipment
-	return equipment[s.random.Intn(len(equipment))], nil
+	return equipmentSlice[s.random.Intn(len(equipmentSlice))], nil
 }
 
 // getSpecialItems returns special items based on room progression

@@ -2,15 +2,15 @@ package character
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/features"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
-
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/features"
 )
 
 // FixCharacterAttributes fixes characters that were finalized without proper attribute conversion
 // This is a utility method to fix the bug where characters have AbilityAssignments but no Attributes
-func (s *service) FixCharacterAttributes(ctx context.Context, characterID string) (*entities.Character, error) {
+func (s *service) FixCharacterAttributes(ctx context.Context, characterID string) (*character.Character, error) {
 	// Get the character
 	char, err := s.repository.Get(ctx, characterID)
 	if err != nil {
@@ -33,7 +33,7 @@ func (s *service) FixCharacterAttributes(ctx context.Context, characterID string
 	}
 
 	// Initialize attributes map
-	char.Attributes = make(map[entities.Attribute]*entities.AbilityScore)
+	char.Attributes = make(map[shared.Attribute]*character.AbilityScore)
 
 	// Convert assignments to attributes
 	for abilityStr, rollID := range char.AbilityAssignments {
@@ -43,20 +43,20 @@ func (s *service) FixCharacterAttributes(ctx context.Context, characterID string
 		}
 		rollValue := rollValues[rollID]
 		// Parse ability string to Attribute type
-		var attr entities.Attribute
+		var attr shared.Attribute
 		switch abilityStr {
 		case "STR":
-			attr = entities.AttributeStrength
+			attr = shared.AttributeStrength
 		case "DEX":
-			attr = entities.AttributeDexterity
+			attr = shared.AttributeDexterity
 		case "CON":
-			attr = entities.AttributeConstitution
+			attr = shared.AttributeConstitution
 		case "INT":
-			attr = entities.AttributeIntelligence
+			attr = shared.AttributeIntelligence
 		case "WIS":
-			attr = entities.AttributeWisdom
+			attr = shared.AttributeWisdom
 		case "CHA":
-			attr = entities.AttributeCharisma
+			attr = shared.AttributeCharisma
 		default:
 			log.Printf("Unknown ability string: %s", abilityStr)
 			continue
@@ -78,7 +78,7 @@ func (s *service) FixCharacterAttributes(ctx context.Context, characterID string
 		modifier := (score - 10) / 2
 
 		// Create ability score
-		char.Attributes[attr] = &entities.AbilityScore{
+		char.Attributes[attr] = &character.AbilityScore{
 			Score: score,
 			Bonus: modifier,
 		}
@@ -91,7 +91,7 @@ func (s *service) FixCharacterAttributes(ctx context.Context, characterID string
 	// Recalculate HP if needed
 	if char.MaxHitPoints == 0 && char.Class != nil {
 		conMod := 0
-		if con, ok := char.Attributes[entities.AttributeConstitution]; ok && con != nil {
+		if con, ok := char.Attributes[shared.AttributeConstitution]; ok && con != nil {
 			conMod = con.Bonus
 		}
 		char.MaxHitPoints = char.Class.HitDie + conMod

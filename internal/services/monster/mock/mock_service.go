@@ -6,9 +6,9 @@ package mockmonster
 
 import (
 	context "context"
+	entities "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	reflect "reflect"
 
-	entities "github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	monster "github.com/KirkDiggler/dnd-bot-discord/internal/services/monster"
 	gomock "go.uber.org/mock/gomock"
 )

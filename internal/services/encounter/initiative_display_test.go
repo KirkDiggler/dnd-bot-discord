@@ -5,7 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+
 	mockencrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters/mock"
 	mockcharacter "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
@@ -35,16 +37,16 @@ func TestInitiativeRollDisplay(t *testing.T) {
 		userID := "dm-user"
 
 		// Create encounter with combatants
-		enc := &entities.Encounter{
+		enc := &combat.Encounter{
 			ID:        encounterID,
 			CreatedBy: userID,
 			SessionID: "test-session",
-			Status:    entities.EncounterStatusSetup,
-			Combatants: map[string]*entities.Combatant{
+			Status:    combat.EncounterStatusSetup,
+			Combatants: map[string]*combat.Combatant{
 				"goblin1": {
 					ID:              "goblin1",
 					Name:            "Goblin",
-					Type:            entities.CombatantTypeMonster,
+					Type:            combat.CombatantTypeMonster,
 					InitiativeBonus: 2,
 					MaxHP:           7,
 					CurrentHP:       7,
@@ -54,7 +56,7 @@ func TestInitiativeRollDisplay(t *testing.T) {
 				"player1": {
 					ID:              "player1",
 					Name:            "Aragorn",
-					Type:            entities.CombatantTypePlayer,
+					Type:            combat.CombatantTypePlayer,
 					InitiativeBonus: 3,
 					MaxHP:           20,
 					CurrentHP:       20,
@@ -64,7 +66,7 @@ func TestInitiativeRollDisplay(t *testing.T) {
 				"goblin2": {
 					ID:              "goblin2",
 					Name:            "Goblin Archer",
-					Type:            entities.CombatantTypeMonster,
+					Type:            combat.CombatantTypeMonster,
 					InitiativeBonus: 2,
 					MaxHP:           7,
 					CurrentHP:       7,
@@ -78,7 +80,7 @@ func TestInitiativeRollDisplay(t *testing.T) {
 
 		// Mock repository calls
 		mockRepo.EXPECT().Get(ctx, encounterID).Return(enc, nil)
-		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, e *entities.Encounter) error {
+		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, e *combat.Encounter) error {
 			// Verify combat log contains expected entries
 			assert.NotEmpty(t, e.CombatLog)
 			assert.Equal(t, "🎲 **Rolling Initiative**", e.CombatLog[0])
@@ -134,16 +136,16 @@ func TestInitiativeRollDisplay(t *testing.T) {
 		dmID := "dm-user"
 
 		// Create dungeon encounter (created by a different user to trigger permission check)
-		enc := &entities.Encounter{
+		enc := &combat.Encounter{
 			ID:        encounterID,
 			CreatedBy: dmID,
 			SessionID: "dungeon-session",
-			Status:    entities.EncounterStatusSetup,
-			Combatants: map[string]*entities.Combatant{
+			Status:    combat.EncounterStatusSetup,
+			Combatants: map[string]*combat.Combatant{
 				"skeleton1": {
 					ID:              "skeleton1",
 					Name:            "Skeleton",
-					Type:            entities.CombatantTypeMonster,
+					Type:            combat.CombatantTypeMonster,
 					InitiativeBonus: 2,
 					MaxHP:           13,
 					CurrentHP:       13,
@@ -153,7 +155,7 @@ func TestInitiativeRollDisplay(t *testing.T) {
 				"player1": {
 					ID:              "player1",
 					Name:            "Legolas",
-					Type:            entities.CombatantTypePlayer,
+					Type:            combat.CombatantTypePlayer,
 					InitiativeBonus: 4,
 					MaxHP:           18,
 					CurrentHP:       18,
@@ -165,18 +167,18 @@ func TestInitiativeRollDisplay(t *testing.T) {
 			CombatLog: []string{},
 		}
 
-		// Mock session service for dungeon check (called during permission check)
-		session := &entities.Session{
+		// Mock sess service for dungeon check (called during permission check)
+		sess := &session.Session{
 			ID: "dungeon-session",
 			Metadata: map[string]interface{}{
 				"sessionType": "dungeon",
 			},
 		}
-		mockSessionService.EXPECT().GetSession(ctx, "dungeon-session").Return(session, nil).Times(1)
+		mockSessionService.EXPECT().GetSession(ctx, "dungeon-session").Return(sess, nil).Times(1)
 
 		// Mock repository calls
 		mockRepo.EXPECT().Get(ctx, encounterID).Return(enc, nil)
-		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, e *entities.Encounter) error {
+		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, e *combat.Encounter) error {
 			// Verify combat log for dungeon encounter
 			assert.NotEmpty(t, e.CombatLog)
 

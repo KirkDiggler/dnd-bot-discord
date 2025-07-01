@@ -3,10 +3,12 @@ package testcombat
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
 	sessService "github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
@@ -68,9 +70,9 @@ func (h *TestCombatHandler) Handle(req *TestCombatRequest) error {
 	}
 
 	// Find first active character
-	var playerChar *entities.Character
+	var playerChar *character.Character
 	for _, char := range chars {
-		if char.Status == entities.CharacterStatusActive {
+		if char.Status == shared.CharacterStatusActive {
 			playerChar = char
 			break
 		}
@@ -291,7 +293,7 @@ func (h *TestCombatHandler) getMonster(name string) *encounter.AddMonsterInput {
 				"wisdom":       8,
 				"charisma":     8,
 			},
-			Actions: []*entities.MonsterAction{
+			Actions: []*combat.MonsterAction{
 				{
 					Name:        "Scimitar",
 					AttackBonus: 4,
@@ -319,7 +321,7 @@ func (h *TestCombatHandler) getMonster(name string) *encounter.AddMonsterInput {
 				"wisdom":       11,
 				"charisma":     10,
 			},
-			Actions: []*entities.MonsterAction{
+			Actions: []*combat.MonsterAction{
 				{
 					Name:        "Greataxe",
 					AttackBonus: 5,

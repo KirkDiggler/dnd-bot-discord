@@ -2,13 +2,13 @@ package character
 
 import (
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/bwmarrin/discordgo"
 )
 
 // BuildCreationSuccessResponse builds a simple success message with a button to view the character sheet
-func BuildCreationSuccessResponse(char *entities.Character) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+func BuildCreationSuccessResponse(char *character.Character) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	// Build a simple success embed
 	embed := &discordgo.MessageEmbed{
 		Title:       "✅ Character Created Successfully!",

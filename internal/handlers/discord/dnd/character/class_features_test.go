@@ -1,9 +1,10 @@
 package character
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	mockchar "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stretchr/testify/assert"
@@ -18,18 +19,18 @@ func TestClassFeaturesHandler_HandleFavoredEnemy(t *testing.T) {
 	handler := NewClassFeaturesHandler(mockService)
 
 	// Create a test ranger character
-	char := &entities.Character{
+	char := &character.Character{
 		ID:   "test-ranger",
 		Name: "Test Ranger",
-		Class: &entities.Class{
+		Class: &rulebook.Class{
 			Key:  "ranger",
 			Name: "Ranger",
 		},
-		Features: []*entities.CharacterFeature{
+		Features: []*rulebook.CharacterFeature{
 			{
 				Key:      "favored_enemy",
 				Name:     "Favored Enemy",
-				Type:     entities.FeatureTypeClass,
+				Type:     rulebook.FeatureTypeClass,
 				Source:   "Ranger",
 				Metadata: nil,
 			},
@@ -66,18 +67,18 @@ func TestClassFeaturesHandler_HandleNaturalExplorer(t *testing.T) {
 	handler := NewClassFeaturesHandler(mockService)
 
 	// Create a test ranger character
-	char := &entities.Character{
+	char := &character.Character{
 		ID:   "test-ranger",
 		Name: "Test Ranger",
-		Class: &entities.Class{
+		Class: &rulebook.Class{
 			Key:  "ranger",
 			Name: "Ranger",
 		},
-		Features: []*entities.CharacterFeature{
+		Features: []*rulebook.CharacterFeature{
 			{
 				Key:      "natural_explorer",
 				Name:     "Natural Explorer",
-				Type:     entities.FeatureTypeClass,
+				Type:     rulebook.FeatureTypeClass,
 				Source:   "Ranger",
 				Metadata: nil,
 			},

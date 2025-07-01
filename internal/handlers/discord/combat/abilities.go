@@ -3,10 +3,11 @@ package combat
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"strconv"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/ability"
 	"github.com/bwmarrin/discordgo"
 )
@@ -20,7 +21,7 @@ func (h *Handler) handleShowAbilities(s *discordgo.Session, i *discordgo.Interac
 	}
 
 	// Find the player's combatant
-	var playerCombatant *entities.Combatant
+	var playerCombatant *combat.Combatant
 	for _, c := range enc.Combatants {
 		if c.PlayerID == i.Member.User.ID && c.IsActive {
 			playerCombatant = c
@@ -141,7 +142,7 @@ func (h *Handler) handleUseAbility(s *discordgo.Session, i *discordgo.Interactio
 	}
 
 	// Find the player's combatant
-	var playerCombatant *entities.Combatant
+	var playerCombatant *combat.Combatant
 	for _, c := range enc.Combatants {
 		if c.PlayerID == i.Member.User.ID && c.IsActive {
 			playerCombatant = c
@@ -322,15 +323,15 @@ func (h *Handler) handleUseAbility(s *discordgo.Session, i *discordgo.Interactio
 
 // Helper functions
 
-func formatActionType(actionType entities.AbilityType) string {
+func formatActionType(actionType shared.AbilityType) string {
 	switch actionType {
-	case entities.AbilityTypeAction:
+	case shared.AbilityTypeAction:
 		return "Action"
-	case entities.AbilityTypeBonusAction:
+	case shared.AbilityTypeBonusAction:
 		return "Bonus Action"
-	case entities.AbilityTypeReaction:
+	case shared.AbilityTypeReaction:
 		return "Reaction"
-	case entities.AbilityTypeFree:
+	case shared.AbilityTypeFree:
 		return "Free Action"
 	default:
 		return string(actionType)
@@ -397,7 +398,7 @@ func isHealingAbility(abilityKey string) bool {
 }
 
 // showLayOnHandsAmountSelection shows UI for selecting heal amount
-func (h *Handler) showLayOnHandsAmountSelection(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string, playerCombatant *entities.Combatant) error {
+func (h *Handler) showLayOnHandsAmountSelection(s *discordgo.Session, i *discordgo.InteractionCreate, encounterID string, playerCombatant *combat.Combatant) error {
 	// Get character to check available healing pool
 	char, err := h.abilityService.GetAvailableAbilities(context.Background(), playerCombatant.CharacterID)
 	if err != nil {
@@ -405,7 +406,7 @@ func (h *Handler) showLayOnHandsAmountSelection(s *discordgo.Session, i *discord
 	}
 
 	// Find lay on hands ability to check remaining pool
-	var layOnHands *entities.ActiveAbility
+	var layOnHands *shared.ActiveAbility
 	for _, avail := range char {
 		if avail.Ability.Key == "lay-on-hands" {
 			layOnHands = avail.Ability
@@ -494,7 +495,7 @@ func (h *Handler) handleLayOnHandsAmount(s *discordgo.Session, i *discordgo.Inte
 	}
 
 	// Find the player's combatant
-	var playerCombatant *entities.Combatant
+	var playerCombatant *combat.Combatant
 	for _, c := range enc.Combatants {
 		if c.PlayerID == i.Member.User.ID && c.IsActive {
 			playerCombatant = c

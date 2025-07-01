@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
+
+	gameSession "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 )
 
 type ListRequest struct {
@@ -62,20 +63,20 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 	}
 
 	// Group sessions by status
-	activeSessions := make([]*entities.Session, 0)
-	planningSessions := make([]*entities.Session, 0)
-	pausedSessions := make([]*entities.Session, 0)
-	endedSessions := make([]*entities.Session, 0)
+	activeSessions := make([]*gameSession.Session, 0)
+	planningSessions := make([]*gameSession.Session, 0)
+	pausedSessions := make([]*gameSession.Session, 0)
+	endedSessions := make([]*gameSession.Session, 0)
 
 	for _, session := range sessions {
 		switch session.Status {
-		case entities.SessionStatusActive:
+		case gameSession.SessionStatusActive:
 			activeSessions = append(activeSessions, session)
-		case entities.SessionStatusPlanning:
+		case gameSession.SessionStatusPlanning:
 			planningSessions = append(planningSessions, session)
-		case entities.SessionStatusPaused:
+		case gameSession.SessionStatusPaused:
 			pausedSessions = append(pausedSessions, session)
-		case entities.SessionStatusEnded:
+		case gameSession.SessionStatusEnded:
 			endedSessions = append(endedSessions, session)
 		}
 	}
@@ -162,14 +163,14 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 	return err
 }
 
-func (h *ListHandler) getUserRole(session *entities.Session, userID string) string {
+func (h *ListHandler) getUserRole(session *gameSession.Session, userID string) string {
 	if member, exists := session.Members[userID]; exists {
 		switch member.Role {
-		case entities.SessionRoleDM:
+		case gameSession.SessionRoleDM:
 			return "DM"
-		case entities.SessionRolePlayer:
+		case gameSession.SessionRolePlayer:
 			return "Player"
-		case entities.SessionRoleSpectator:
+		case gameSession.SessionRoleSpectator:
 			return "Spectator"
 		}
 	}

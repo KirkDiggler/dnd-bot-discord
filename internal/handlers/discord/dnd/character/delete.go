@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
 )
@@ -107,7 +109,7 @@ func (h *DeleteHandler) showCharacterSelection(req *DeleteRequest) error {
 	return err
 }
 
-func (h *DeleteHandler) buildButtonComponents(characters []*entities.Character) []discordgo.MessageComponent {
+func (h *DeleteHandler) buildButtonComponents(characters []*character.Character) []discordgo.MessageComponent {
 	var components []discordgo.MessageComponent
 	var currentRow []discordgo.MessageComponent
 
@@ -150,7 +152,7 @@ func (h *DeleteHandler) buildButtonComponents(characters []*entities.Character) 
 	return components
 }
 
-func (h *DeleteHandler) buildSelectMenuComponents(characters []*entities.Character) []discordgo.MessageComponent {
+func (h *DeleteHandler) buildSelectMenuComponents(characters []*character.Character) []discordgo.MessageComponent {
 	var options []discordgo.SelectMenuOption
 
 	for _, char := range characters {
@@ -212,7 +214,7 @@ func (h *DeleteHandler) showDeleteConfirmation(req *DeleteRequest, characterID s
 	}
 
 	// Get the character
-	character, err := h.services.CharacterService.GetByID(characterID)
+	char, err := h.services.CharacterService.GetByID(characterID)
 	if err != nil {
 		content := fmt.Sprintf("Character not found with ID: %s", characterID)
 		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
@@ -222,7 +224,7 @@ func (h *DeleteHandler) showDeleteConfirmation(req *DeleteRequest, characterID s
 	}
 
 	// Verify ownership
-	if character.OwnerID != req.Interaction.Member.User.ID {
+	if char.OwnerID != req.Interaction.Member.User.ID {
 		content := "You can only delete your own characters!"
 		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
 			Content: &content,
@@ -238,22 +240,22 @@ func (h *DeleteHandler) showDeleteConfirmation(req *DeleteRequest, characterID s
 		Fields: []*discordgo.MessageEmbedField{
 			{
 				Name:   "Character",
-				Value:  character.NameString(),
+				Value:  char.NameString(),
 				Inline: true,
 			},
 			{
 				Name:   "Status",
-				Value:  string(character.Status),
+				Value:  string(char.Status),
 				Inline: true,
 			},
 		},
 	}
 
 	// Add more details if available
-	if character.Race != nil && character.Class != nil {
+	if char.Race != nil && char.Class != nil {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:   "Details",
-			Value:  fmt.Sprintf("%s %s (Level %d)", character.Race.Name, character.Class.Name, character.Level),
+			Value:  fmt.Sprintf("%s %s (Level %d)", char.Race.Name, char.Class.Name, char.Level),
 			Inline: false,
 		})
 	}
@@ -265,7 +267,7 @@ func (h *DeleteHandler) showDeleteConfirmation(req *DeleteRequest, characterID s
 				discordgo.Button{
 					Label:    "Delete Forever",
 					Style:    discordgo.DangerButton,
-					CustomID: fmt.Sprintf("character:delete_confirm:%s", character.ID),
+					CustomID: fmt.Sprintf("character:delete_confirm:%s", char.ID),
 					Emoji: &discordgo.ComponentEmoji{
 						Name: "🗑️",
 					},
@@ -318,7 +320,7 @@ func (h *DeleteHandler) HandleDeleteConfirm(req *DeleteRequest) error {
 	characterID := parts[2]
 
 	// Verify ownership one more time
-	character, err := h.services.CharacterService.GetByID(characterID)
+	char, err := h.services.CharacterService.GetByID(characterID)
 	if err != nil {
 		content := fmt.Sprintf("Character not found with ID: %s", characterID)
 		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
@@ -327,7 +329,7 @@ func (h *DeleteHandler) HandleDeleteConfirm(req *DeleteRequest) error {
 		return err
 	}
 
-	if character.OwnerID != req.Interaction.Member.User.ID {
+	if char.OwnerID != req.Interaction.Member.User.ID {
 		content := "You can only delete your own characters!"
 		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
 			Content: &content,
@@ -348,7 +350,7 @@ func (h *DeleteHandler) HandleDeleteConfirm(req *DeleteRequest) error {
 	// Success message
 	embed := &discordgo.MessageEmbed{
 		Title:       "Character Deleted",
-		Description: fmt.Sprintf("**%s** has been permanently deleted.", character.NameString()),
+		Description: fmt.Sprintf("**%s** has been permanently deleted.", char.NameString()),
 		Color:       0x2ecc71, // Green color for success
 		Footer: &discordgo.MessageEmbedFooter{
 			Text: "This action cannot be undone",
@@ -388,13 +390,13 @@ func (h *DeleteHandler) HandleSelectMenu(req *DeleteRequest) error {
 	return h.showDeleteConfirmation(req, characterID)
 }
 
-func (h *DeleteHandler) getStatusEmoji(status entities.CharacterStatus) string {
+func (h *DeleteHandler) getStatusEmoji(status shared.CharacterStatus) string {
 	switch status {
-	case entities.CharacterStatusActive:
+	case shared.CharacterStatusActive:
 		return "✅"
-	case entities.CharacterStatusDraft:
+	case shared.CharacterStatusDraft:
 		return "📝"
-	case entities.CharacterStatusArchived:
+	case shared.CharacterStatusArchived:
 		return "🗄️"
 	default:
 		return "❓"

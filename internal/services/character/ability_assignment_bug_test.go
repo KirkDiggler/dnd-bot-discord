@@ -2,10 +2,13 @@ package character_test
 
 import (
 	"context"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -32,28 +35,28 @@ func TestAbilityAssignmentBug_CharacterShowsZeroAttributes(t *testing.T) {
 	characterID := "char_123"
 
 	// Character state after ability assignment but before finalization
-	charAfterAssignment := &entities.Character{
+	charAfterAssignment := &character2.Character{
 		ID:      characterID,
 		Name:    "NotGonnaWorkHere",
 		OwnerID: "user_123",
 		RealmID: "test_realm",
-		Status:  entities.CharacterStatusDraft,
+		Status:  shared.CharacterStatusDraft,
 		Level:   1,
-		Race: &entities.Race{
+		Race: &rulebook.Race{
 			Key:  "elf",
 			Name: "Elf",
-			AbilityBonuses: []*entities.AbilityBonus{
-				{Attribute: entities.AttributeDexterity, Bonus: 2},
-				{Attribute: entities.AttributeIntelligence, Bonus: 1},
+			AbilityBonuses: []*shared.AbilityBonus{
+				{Attribute: shared.AttributeDexterity, Bonus: 2},
+				{Attribute: shared.AttributeIntelligence, Bonus: 1},
 			},
 		},
-		Class: &entities.Class{
+		Class: &rulebook.Class{
 			Key:    "monk",
 			Name:   "Monk",
 			HitDie: 8,
 		},
 		// THIS IS THE KEY: Character has AbilityAssignments but NO Attributes
-		AbilityRolls: []entities.AbilityRoll{
+		AbilityRolls: []character2.AbilityRoll{
 			{ID: "roll_1", Value: 15},
 			{ID: "roll_2", Value: 14},
 			{ID: "roll_3", Value: 13},
@@ -69,11 +72,11 @@ func TestAbilityAssignmentBug_CharacterShowsZeroAttributes(t *testing.T) {
 			"WIS": "roll_5", // Wisdom is roll 5 and has a score of 11
 			"CHA": "roll_6", // Charisma is roll 6 and has a score of 10
 		},
-		Attributes:    map[entities.Attribute]*entities.AbilityScore{}, // Empty!
-		Proficiencies: make(map[entities.ProficiencyType][]*entities.Proficiency),
-		Inventory:     make(map[entities.EquipmentType][]entities.Equipment),
-		EquippedSlots: make(map[entities.Slot]entities.Equipment),
-		Features:      []*entities.CharacterFeature{},
+		Attributes:    map[shared.Attribute]*character2.AbilityScore{}, // Empty!
+		Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
+		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
+		Features:      []*rulebook.CharacterFeature{},
 	}
 
 	// Mock the repository Get to return our test character
@@ -83,10 +86,10 @@ func TestAbilityAssignmentBug_CharacterShowsZeroAttributes(t *testing.T) {
 	mockRepo.EXPECT().Update(ctx, gomock.Any()).Return(nil).Times(1)
 
 	// Mock getting class features
-	mockClient.EXPECT().GetClassFeatures("monk", 1).Return([]*entities.CharacterFeature{
+	mockClient.EXPECT().GetClassFeatures("monk", 1).Return([]*rulebook.CharacterFeature{
 		{
 			Name: "Unarmored Defense",
-			Type: entities.FeatureTypeClass,
+			Type: rulebook.FeatureTypeClass,
 		},
 	}, nil).AnyTimes()
 
@@ -105,8 +108,8 @@ func TestAbilityAssignmentBug_CharacterShowsZeroAttributes(t *testing.T) {
 
 	// Verify specific conversions with racial bonuses
 	if len(finalChar.Attributes) > 0 {
-		assert.Equal(t, 16, finalChar.Attributes[entities.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
-		assert.Equal(t, 16, finalChar.Attributes[entities.AttributeIntelligence].Score, "INT should be 15 + 1 racial")
+		assert.Equal(t, 16, finalChar.Attributes[shared.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
+		assert.Equal(t, 16, finalChar.Attributes[shared.AttributeIntelligence].Score, "INT should be 15 + 1 racial")
 	}
 
 	// Verify the character shows as complete

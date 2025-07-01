@@ -2,17 +2,17 @@ package characters
 
 import (
 	"encoding/json"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestEquipmentDataMarshaling(t *testing.T) {
 	// Test weapon marshaling
-	weapon := &entities.Weapon{
-		Base: entities.BasicEquipment{
+	weapon := &equipment.Weapon{
+		Base: equipment.BasicEquipment{
 			Key:  "longsword",
 			Name: "Longsword",
 		},
@@ -35,11 +35,11 @@ func TestEquipmentDataMarshaling(t *testing.T) {
 	require.NoError(t, err)
 
 	// Convert back to Equipment
-	equipment, err := dataToEquipment(unmarshaledData)
+	eq, err := dataToEquipment(unmarshaledData)
 	require.NoError(t, err)
 
 	// Verify it's still a weapon
-	weaponBack, ok := equipment.(*entities.Weapon)
+	weaponBack, ok := eq.(*equipment.Weapon)
 	require.True(t, ok)
 	assert.Equal(t, "longsword", weaponBack.Base.Key)
 	assert.Equal(t, "Longsword", weaponBack.Base.Name)
@@ -47,13 +47,13 @@ func TestEquipmentDataMarshaling(t *testing.T) {
 
 func TestEquipmentDataArmor(t *testing.T) {
 	// Test armor marshaling
-	armor := &entities.Armor{
-		Base: entities.BasicEquipment{
+	armor := &equipment.Armor{
+		Base: equipment.BasicEquipment{
 			Key:  "chainmail",
 			Name: "Chainmail",
 		},
 		ArmorCategory: "Heavy",
-		ArmorClass: &entities.ArmorClass{
+		ArmorClass: &equipment.ArmorClass{
 			Base: 16,
 		},
 	}
@@ -73,11 +73,11 @@ func TestEquipmentDataArmor(t *testing.T) {
 	require.NoError(t, err)
 
 	// Convert back to Equipment
-	equipment, err := dataToEquipment(unmarshaledData)
+	eq, err := dataToEquipment(unmarshaledData)
 	require.NoError(t, err)
 
 	// Verify it's still armor
-	armorBack, ok := equipment.(*entities.Armor)
+	armorBack, ok := eq.(*equipment.Armor)
 	require.True(t, ok)
 	assert.Equal(t, "chainmail", armorBack.Base.Key)
 	assert.Equal(t, "Chainmail", armorBack.Base.Name)

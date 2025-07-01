@@ -2,10 +2,13 @@ package character_test
 
 import (
 	"context"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -33,27 +36,27 @@ func TestDiscordCharacterCreationFlow(t *testing.T) {
 	characterID := "char_123"
 
 	// Simulate the exact state after ability assignment
-	charState := &entities.Character{
+	charState := &character2.Character{
 		ID:      characterID,
 		OwnerID: userID,
 		RealmID: realmID,
 		Name:    "NotGonnaWorkHere",
-		Status:  entities.CharacterStatusActive, // Already finalized
+		Status:  shared.CharacterStatusActive, // Already finalized
 		Level:   1,
-		Race: &entities.Race{
+		Race: &rulebook.Race{
 			Key:  "elf",
 			Name: "Elf",
-			AbilityBonuses: []*entities.AbilityBonus{
-				{Attribute: entities.AttributeDexterity, Bonus: 2},
+			AbilityBonuses: []*shared.AbilityBonus{
+				{Attribute: shared.AttributeDexterity, Bonus: 2},
 			},
 		},
-		Class: &entities.Class{
+		Class: &rulebook.Class{
 			Key:    "monk",
 			Name:   "Monk",
 			HitDie: 8,
 		},
 		// This is what might be happening - character was finalized but attributes weren't saved
-		AbilityRolls: []entities.AbilityRoll{
+		AbilityRolls: []character2.AbilityRoll{
 			{ID: "roll_1", Value: 15},
 			{ID: "roll_2", Value: 14},
 			{ID: "roll_3", Value: 13},
@@ -69,17 +72,17 @@ func TestDiscordCharacterCreationFlow(t *testing.T) {
 			"WIS": "roll_5",
 			"CHA": "roll_6",
 		},
-		Attributes:       map[entities.Attribute]*entities.AbilityScore{}, // Empty!
-		Proficiencies:    make(map[entities.ProficiencyType][]*entities.Proficiency),
-		Inventory:        make(map[entities.EquipmentType][]entities.Equipment),
-		EquippedSlots:    make(map[entities.Slot]entities.Equipment),
+		Attributes:       map[shared.Attribute]*character2.AbilityScore{}, // Empty!
+		Proficiencies:    make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
+		Inventory:        make(map[equipment.EquipmentType][]equipment.Equipment),
+		EquippedSlots:    make(map[shared.Slot]equipment.Equipment),
 		MaxHitPoints:     9,
 		CurrentHitPoints: 9,
 		AC:               13,
 	}
 
 	// Test 1: ListByOwner returns character with empty attributes
-	mockRepo.EXPECT().GetByOwner(ctx, userID).Return([]*entities.Character{charState}, nil)
+	mockRepo.EXPECT().GetByOwner(ctx, userID).Return([]*character2.Character{charState}, nil)
 
 	chars, err := svc.ListByOwner(userID)
 	require.NoError(t, err)

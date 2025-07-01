@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	charService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	encounterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
@@ -52,13 +54,13 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 	}
 
 	// Get the character
-	character, err := s.characterService.GetByID(input.CharacterID)
+	char, err := s.characterService.GetByID(input.CharacterID)
 	if err != nil {
 		return nil, dnderr.Wrap(err, "failed to get character")
 	}
 
 	// Get character resources
-	resources := character.GetResources()
+	resources := char.GetResources()
 	if resources == nil {
 		return nil, dnderr.InvalidArgument("character has no resources")
 	}
@@ -85,7 +87,7 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 			Success:       true,
 			UsesRemaining: ability.UsesRemaining,
 		}
-		return s.handleLayOnHands(character, input.TargetID, input.Value, result), nil
+		return s.handleLayOnHands(char, input.TargetID, input.Value, result), nil
 	}
 
 	// Use the ability
@@ -98,20 +100,20 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 	}
 
 	// Update action economy based on ability type
-	if character.Resources != nil {
+	if char.Resources != nil {
 		switch ability.ActionType {
-		case entities.AbilityTypeAction:
-			character.Resources.ActionEconomy.ActionUsed = true
-			character.Resources.ActionEconomy.RecordAction("action", "ability", ability.Key)
-		case entities.AbilityTypeBonusAction:
-			character.Resources.ActionEconomy.BonusActionUsed = true
-			character.Resources.ActionEconomy.RecordAction("bonus_action", "ability", ability.Key)
-		case entities.AbilityTypeReaction:
-			character.Resources.ActionEconomy.ReactionUsed = true
-			character.Resources.ActionEconomy.RecordAction("reaction", "ability", ability.Key)
-		case entities.AbilityTypeFree:
+		case shared.AbilityTypeAction:
+			char.Resources.ActionEconomy.ActionUsed = true
+			char.Resources.ActionEconomy.RecordAction("action", "ability", ability.Key)
+		case shared.AbilityTypeBonusAction:
+			char.Resources.ActionEconomy.BonusActionUsed = true
+			char.Resources.ActionEconomy.RecordAction("bonus_action", "ability", ability.Key)
+		case shared.AbilityTypeReaction:
+			char.Resources.ActionEconomy.ReactionUsed = true
+			char.Resources.ActionEconomy.RecordAction("reaction", "ability", ability.Key)
+		case shared.AbilityTypeFree:
 			// Free actions don't consume any action economy resources
-			character.Resources.ActionEconomy.RecordAction("free", "ability", ability.Key)
+			char.Resources.ActionEconomy.RecordAction("free", "ability", ability.Key)
 		default:
 			// Log unexpected action types for debugging
 			log.Printf("Unexpected ability action type: %s for ability %s", ability.ActionType, ability.Key)
@@ -126,25 +128,25 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 
 	switch input.AbilityKey {
 	case "rage":
-		result = s.handleRage(character, ability, result)
+		result = s.handleRage(char, ability, result)
 	case "second-wind":
-		result = s.handleSecondWind(character, result)
+		result = s.handleSecondWind(char, result)
 	case "bardic-inspiration":
-		result = s.handleBardicInspiration(character, input.TargetID, ability, result)
+		result = s.handleBardicInspiration(char, input.TargetID, ability, result)
 	case "divine-sense":
-		result = s.handleDivineSense(character, result)
+		result = s.handleDivineSense(char, result)
 	default:
 		result.Message = fmt.Sprintf("Used %s", ability.Name)
 	}
 
 	// Save character state
 	log.Printf("=== SAVING CHARACTER AFTER ABILITY USE ===")
-	log.Printf("Character: %s", character.Name)
-	if character.Resources != nil {
-		log.Printf("Active effects before save: %d", len(character.Resources.ActiveEffects))
+	log.Printf("Character: %s", char.Name)
+	if char.Resources != nil {
+		log.Printf("Active effects before save: %d", len(char.Resources.ActiveEffects))
 	}
 
-	if err := s.characterService.UpdateEquipment(character); err != nil {
+	if err := s.characterService.UpdateEquipment(char); err != nil {
 		log.Printf("Failed to save character state after ability use: %v", err)
 	} else {
 		log.Printf("Character saved successfully")
@@ -154,12 +156,12 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 }
 
 // handleRage handles the Barbarian's Rage ability
-func (s *service) handleRage(character *entities.Character, ability *entities.ActiveAbility, result *UseAbilityResult) *UseAbilityResult {
+func (s *service) handleRage(char *character.Character, ability *shared.ActiveAbility, result *UseAbilityResult) *UseAbilityResult {
 	// Create rage effect using the new status effect system
-	rageEffect := effects.BuildRageEffect(character.Level)
+	rageEffect := effects.BuildRageEffect(char.Level)
 
 	// Add the effect to the character
-	err := character.AddStatusEffect(rageEffect)
+	err := char.AddStatusEffect(rageEffect)
 	if err != nil {
 		log.Printf("Failed to add rage effect: %v", err)
 		result.Success = false
@@ -174,17 +176,17 @@ func (s *service) handleRage(character *entities.Character, ability *entities.Ac
 	ability.Duration = 10
 
 	log.Printf("=== RAGE ACTIVATION DEBUG ===")
-	log.Printf("Character: %s", character.Name)
+	log.Printf("Character: %s", char.Name)
 	log.Printf("Effect added: %s (ID: %s)", rageEffect.Name, rageEffect.ID)
-	log.Printf("Active effects after adding rage: %d", len(character.GetActiveStatusEffects()))
+	log.Printf("Active effects after adding rage: %d", len(char.GetActiveStatusEffects()))
 	log.Printf("Rage uses remaining: %d/%d", ability.UsesRemaining, ability.UsesMax)
 	log.Printf("Rage is active: %v", ability.IsActive)
 
 	// Calculate damage bonus based on level
 	damageBonus := "+2"
-	if character.Level >= 16 {
+	if char.Level >= 16 {
 		damageBonus = "+4"
-	} else if character.Level >= 9 {
+	} else if char.Level >= 9 {
 		damageBonus = "+3"
 	}
 
@@ -198,18 +200,18 @@ func (s *service) handleRage(character *entities.Character, ability *entities.Ac
 }
 
 // handleSecondWind handles the Fighter's Second Wind ability
-func (s *service) handleSecondWind(character *entities.Character, result *UseAbilityResult) *UseAbilityResult {
+func (s *service) handleSecondWind(char *character.Character, result *UseAbilityResult) *UseAbilityResult {
 	// Roll 1d10 + fighter level
-	rollResult, err := s.diceRoller.Roll(1, 10, character.Level)
+	rollResult, err := s.diceRoller.Roll(1, 10, char.Level)
 	if err != nil {
 		result.Success = false
 		result.Message = "Failed to roll healing"
 		return result
 	}
 
-	resources := character.GetResources()
+	resources := char.GetResources()
 	healingDone := resources.HP.Heal(rollResult.Total)
-	character.CurrentHitPoints = resources.HP.Current
+	char.CurrentHitPoints = resources.HP.Current
 
 	result.Message = fmt.Sprintf("Second Wind heals you for %d HP (rolled %d)", healingDone, rollResult.Total)
 	result.HealingDone = healingDone
@@ -219,7 +221,7 @@ func (s *service) handleSecondWind(character *entities.Character, result *UseAbi
 }
 
 // handleBardicInspiration handles the Bard's Bardic Inspiration ability
-func (s *service) handleBardicInspiration(character *entities.Character, targetID string, ability *entities.ActiveAbility, result *UseAbilityResult) *UseAbilityResult {
+func (s *service) handleBardicInspiration(char *character.Character, targetID string, ability *shared.ActiveAbility, result *UseAbilityResult) *UseAbilityResult {
 	if targetID == "" {
 		result.Success = false
 		result.Message = "Bardic Inspiration requires a target"
@@ -238,8 +240,8 @@ func (s *service) handleBardicInspiration(character *entities.Character, targetI
 }
 
 // handleLayOnHands handles the Paladin's Lay on Hands ability
-func (s *service) handleLayOnHands(character *entities.Character, targetID string, healAmount int, result *UseAbilityResult) *UseAbilityResult {
-	resources := character.GetResources()
+func (s *service) handleLayOnHands(char *character.Character, targetID string, healAmount int, result *UseAbilityResult) *UseAbilityResult {
+	resources := char.GetResources()
 	ability := resources.Abilities["lay-on-hands"]
 
 	// Validate heal amount
@@ -256,10 +258,10 @@ func (s *service) handleLayOnHands(character *entities.Character, targetID strin
 	}
 
 	// For now, assume self-healing if no target specified
-	if targetID == "" || targetID == character.ID {
+	if targetID == "" || targetID == char.ID {
 		// Self heal
 		healingDone := resources.HP.Heal(healAmount)
-		character.CurrentHitPoints = resources.HP.Current
+		char.CurrentHitPoints = resources.HP.Current
 
 		// Deduct from pool
 		ability.UsesRemaining -= healAmount
@@ -280,7 +282,7 @@ func (s *service) handleLayOnHands(character *entities.Character, targetID strin
 }
 
 // handleDivineSense handles the Paladin's Divine Sense ability
-func (s *service) handleDivineSense(character *entities.Character, result *UseAbilityResult) *UseAbilityResult {
+func (s *service) handleDivineSense(char *character.Character, result *UseAbilityResult) *UseAbilityResult {
 	result.Message = "You open your awareness to detect celestials, fiends, and undead within 60 feet"
 	result.EffectApplied = true
 	result.EffectName = "Divine Sense"
@@ -292,12 +294,12 @@ func (s *service) handleDivineSense(character *entities.Character, result *UseAb
 // GetAvailableAbilities returns all abilities a character can currently use
 func (s *service) GetAvailableAbilities(ctx context.Context, characterID string) ([]*AvailableAbility, error) {
 	// Get the character
-	character, err := s.characterService.GetByID(characterID)
+	char, err := s.characterService.GetByID(characterID)
 	if err != nil {
 		return nil, dnderr.Wrap(err, "failed to get character")
 	}
 
-	resources := character.GetResources()
+	resources := char.GetResources()
 	if resources == nil || resources.Abilities == nil {
 		return []*AvailableAbility{}, nil
 	}

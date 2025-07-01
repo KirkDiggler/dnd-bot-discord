@@ -5,6 +5,8 @@ package character_test
 
 import (
 	"context"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"net/http"
 	"os"
@@ -12,7 +14,6 @@ import (
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	charactersRepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/redis/go-redis/v9"
@@ -76,7 +77,7 @@ func TestCharacterCreationFlow_FullIntegration(t *testing.T) {
 		// Step 1: Initial GetOrCreateDraftCharacter (simulating race selection)
 		char1, err := svc.GetOrCreateDraftCharacter(ctx, userID, realmID)
 		require.NoError(t, err)
-		assert.Equal(t, entities.CharacterStatusDraft, char1.Status)
+		assert.Equal(t, shared.CharacterStatusDraft, char1.Status)
 		assert.NotEmpty(t, char1.ID)
 
 		originalID := char1.ID
@@ -108,7 +109,7 @@ func TestCharacterCreationFlow_FullIntegration(t *testing.T) {
 		assert.Equal(t, "Monk", classUpdated.Class.Name)
 
 		// Step 4: Roll abilities and update
-		rolls := []entities.AbilityRoll{
+		rolls := []character2.AbilityRoll{
 			{ID: "roll_1", Value: 16},
 			{ID: "roll_2", Value: 15},
 			{ID: "roll_3", Value: 14},
@@ -180,13 +181,13 @@ func TestCharacterCreationFlow_FullIntegration(t *testing.T) {
 		char5, err := svc.GetOrCreateDraftCharacter(ctx, userID, realmID)
 		require.NoError(t, err)
 		assert.Equal(t, originalID, char5.ID, "Should STILL return same draft character after second equipment")
-		assert.Equal(t, entities.CharacterStatusDraft, char5.Status, "Should still be draft status")
+		assert.Equal(t, shared.CharacterStatusDraft, char5.Status, "Should still be draft status")
 
 		// Step 9: Finalize with name
 		finalChar, err := svc.FinalizeCharacterWithName(ctx, originalID, "Test Monk", "elf", "monk")
 		require.NoError(t, err)
 		assert.Equal(t, originalID, finalChar.ID)
-		assert.Equal(t, entities.CharacterStatusActive, finalChar.Status)
+		assert.Equal(t, shared.CharacterStatusActive, finalChar.Status)
 		assert.Equal(t, "Test Monk", finalChar.Name)
 		assert.Equal(t, 6, len(finalChar.Attributes), "Should have attributes after finalization")
 		assert.True(t, finalChar.IsComplete(), "Character should be complete")

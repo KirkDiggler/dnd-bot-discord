@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
+
 	mockencrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters/mock"
 	mockcharacter "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
@@ -39,10 +43,10 @@ func TestCreateEncounter_DungeonSession(t *testing.T) {
 		channelID := "channel-123"
 
 		// Create a session with sessionType=dungeon in metadata
-		dungeonSession := &entities.Session{
+		dungeonSession := &session.Session{
 			ID:      sessionID,
 			Name:    "Test Dungeon",
-			Members: map[string]*entities.SessionMember{
+			Members: map[string]*session.SessionMember{
 				// Bot is not a member or DM
 			},
 			Metadata: map[string]interface{}{
@@ -68,7 +72,7 @@ func TestCreateEncounter_DungeonSession(t *testing.T) {
 		// Mock repository - expect Create to be called
 		mockRepo.EXPECT().
 			Create(gomock.Any(), gomock.Any()).
-			DoAndReturn(func(_ context.Context, enc *entities.Encounter) error {
+			DoAndReturn(func(_ context.Context, enc *combat.Encounter) error {
 				// Validate the encounter being created
 				assert.Equal(t, "enc-1", enc.ID)
 				assert.Equal(t, sessionID, enc.SessionID)
@@ -102,13 +106,13 @@ func TestCreateEncounter_DungeonSession(t *testing.T) {
 		channelID := "channel-456"
 
 		// Create a regular session without dungeon metadata
-		regularSession := &entities.Session{
+		regularSession := &session.Session{
 			ID:   sessionID,
 			Name: "Regular Campaign",
-			Members: map[string]*entities.SessionMember{
+			Members: map[string]*session.SessionMember{
 				playerUserID: {
 					UserID: playerUserID,
-					Role:   entities.SessionRolePlayer,
+					Role:   session.SessionRolePlayer,
 				},
 			},
 			Metadata: map[string]interface{}{},
@@ -140,13 +144,13 @@ func TestCreateEncounter_DungeonSession(t *testing.T) {
 		channelID := "channel-789"
 
 		// Create a regular session with DM
-		regularSession := &entities.Session{
+		regularSession := &session.Session{
 			ID:   sessionID,
 			Name: "DM Campaign",
-			Members: map[string]*entities.SessionMember{
+			Members: map[string]*session.SessionMember{
 				dmUserID: {
 					UserID: dmUserID,
-					Role:   entities.SessionRoleDM,
+					Role:   session.SessionRoleDM,
 				},
 			},
 			Metadata: map[string]interface{}{},
@@ -208,8 +212,8 @@ func TestAddPlayer(t *testing.T) {
 	// Create a test encounter
 	encounterID := "enc-123"
 	sessionID := "session-123"
-	testEncounter := entities.NewEncounter(encounterID, sessionID, "channel-123", "Test Encounter", "dm-123")
-	testEncounter.Status = entities.EncounterStatusSetup
+	testEncounter := combat.NewEncounter(encounterID, sessionID, "channel-123", "Test Encounter", "dm-123")
+	testEncounter.Status = combat.EncounterStatusSetup
 
 	// Mock repository expectations for Get and Update calls
 	mockRepo.EXPECT().
@@ -225,7 +229,7 @@ func TestAddPlayer(t *testing.T) {
 	// Default mock for session service - can be overridden in specific tests
 	mockSessionService.EXPECT().
 		GetSession(gomock.Any(), sessionID).
-		Return(&entities.Session{
+		Return(&session.Session{
 			ID: sessionID,
 			Metadata: map[string]interface{}{
 				"sessionType": "combat", // Not a dungeon by default
@@ -244,15 +248,15 @@ func TestAddPlayer(t *testing.T) {
 			Times(1)
 
 		// Create test character
-		testChar := &entities.Character{
+		testChar := &character.Character{
 			ID:               characterID,
 			Name:             "Legolas",
 			OwnerID:          playerID,
 			CurrentHitPoints: 45,
 			MaxHitPoints:     45,
 			AC:               16,
-			Attributes: map[entities.Attribute]*entities.AbilityScore{
-				entities.AttributeDexterity: {Score: 18, Bonus: 4},
+			Attributes: map[shared.Attribute]*character.AbilityScore{
+				shared.AttributeDexterity: {Score: 18, Bonus: 4},
 			},
 		}
 
@@ -277,7 +281,7 @@ func TestAddPlayer(t *testing.T) {
 
 		// Verify combatant has correct data from character
 		assert.Equal(t, "Legolas", combatant.Name)
-		assert.Equal(t, entities.CombatantTypePlayer, combatant.Type)
+		assert.Equal(t, combat.CombatantTypePlayer, combatant.Type)
 		assert.Equal(t, playerID, combatant.PlayerID)
 		assert.Equal(t, characterID, combatant.CharacterID)
 		assert.Equal(t, 45, combatant.CurrentHP)
@@ -301,13 +305,13 @@ func TestAddPlayer(t *testing.T) {
 			Times(1)
 
 		// Reset encounter
-		testEncounter.Combatants = make(map[string]*entities.Combatant)
+		testEncounter.Combatants = make(map[string]*combat.Combatant)
 
 		// Add an Orc monster first
-		orcCombatant := &entities.Combatant{
+		orcCombatant := &combat.Combatant{
 			ID:        "orc-1",
 			Name:      "Orc",
-			Type:      entities.CombatantTypeMonster,
+			Type:      combat.CombatantTypeMonster,
 			CurrentHP: 15,
 			MaxHP:     15,
 			AC:        13,
@@ -319,15 +323,15 @@ func TestAddPlayer(t *testing.T) {
 		playerID := "player-456"
 		characterID := "char-456"
 
-		testChar := &entities.Character{
+		testChar := &character.Character{
 			ID:               characterID,
 			Name:             "Aragorn", // Not "Orc"
 			OwnerID:          playerID,
 			CurrentHitPoints: 50,
 			MaxHitPoints:     50,
 			AC:               17,
-			Attributes: map[entities.Attribute]*entities.AbilityScore{
-				entities.AttributeDexterity: {Score: 14, Bonus: 2},
+			Attributes: map[shared.Attribute]*character.AbilityScore{
+				shared.AttributeDexterity: {Score: 14, Bonus: 2},
 			},
 		}
 
@@ -352,10 +356,10 @@ func TestAddPlayer(t *testing.T) {
 		// Find each combatant and verify
 		var foundOrc, foundPlayer bool
 		for _, c := range updatedEnc.Combatants {
-			if c.Type == entities.CombatantTypeMonster && c.Name == "Orc" {
+			if c.Type == combat.CombatantTypeMonster && c.Name == "Orc" {
 				foundOrc = true
 			}
-			if c.Type == entities.CombatantTypePlayer && c.Name == "Aragorn" {
+			if c.Type == combat.CombatantTypePlayer && c.Name == "Aragorn" {
 				foundPlayer = true
 				// Verify it's our player
 				assert.Equal(t, playerID, c.PlayerID)
@@ -373,13 +377,13 @@ func TestAddPlayer(t *testing.T) {
 			Times(1)
 
 		// Reset encounter
-		testEncounter.Combatants = make(map[string]*entities.Combatant)
+		testEncounter.Combatants = make(map[string]*combat.Combatant)
 
 		// Add a Goblin monster
-		goblinMonster := &entities.Combatant{
+		goblinMonster := &combat.Combatant{
 			ID:        "goblin-1",
 			Name:      "Goblin",
-			Type:      entities.CombatantTypeMonster,
+			Type:      combat.CombatantTypeMonster,
 			CurrentHP: 7,
 			MaxHP:     7,
 			AC:        15,
@@ -391,15 +395,15 @@ func TestAddPlayer(t *testing.T) {
 		playerID := "player-789"
 		characterID := "char-789"
 
-		testChar := &entities.Character{
+		testChar := &character.Character{
 			ID:               characterID,
 			Name:             "Goblin", // Same name as monster!
 			OwnerID:          playerID,
 			CurrentHitPoints: 25,
 			MaxHitPoints:     25,
 			AC:               14,
-			Attributes: map[entities.Attribute]*entities.AbilityScore{
-				entities.AttributeDexterity: {Score: 16, Bonus: 3},
+			Attributes: map[shared.Attribute]*character.AbilityScore{
+				shared.AttributeDexterity: {Score: 16, Bonus: 3},
 			},
 		}
 
@@ -426,10 +430,10 @@ func TestAddPlayer(t *testing.T) {
 		for _, c := range updatedEnc.Combatants {
 			if c.Name == "Goblin" {
 				switch c.Type {
-				case entities.CombatantTypeMonster:
+				case combat.CombatantTypeMonster:
 					monsterGoblins++
 					assert.Empty(t, c.PlayerID) // Monsters don't have PlayerID
-				case entities.CombatantTypePlayer:
+				case combat.CombatantTypePlayer:
 					playerGoblins++
 					assert.Equal(t, playerID, c.PlayerID) // Players have PlayerID
 					assert.Equal(t, characterID, c.CharacterID)
@@ -444,7 +448,7 @@ func TestAddPlayer(t *testing.T) {
 		playerID := "player-999"
 		characterID := "char-999"
 
-		testChar := &entities.Character{
+		testChar := &character.Character{
 			ID:      characterID,
 			Name:    "Gimli",
 			OwnerID: "different-player", // Not the requesting player!
@@ -473,18 +477,18 @@ func TestAddPlayer(t *testing.T) {
 
 	t.Run("Fails when player already in encounter", func(t *testing.T) {
 		// Reset encounter and add a player
-		testEncounter.Combatants = make(map[string]*entities.Combatant)
-		existingCombatant := &entities.Combatant{
+		testEncounter.Combatants = make(map[string]*combat.Combatant)
+		existingCombatant := &combat.Combatant{
 			ID:       "existing-1",
 			Name:     "Existing Player",
-			Type:     entities.CombatantTypePlayer,
+			Type:     combat.CombatantTypePlayer,
 			PlayerID: "player-123", // This player is already in
 		}
 		testEncounter.AddCombatant(existingCombatant)
 
 		// Try to add same player again
 		characterID := "char-new"
-		testChar := &entities.Character{
+		testChar := &character.Character{
 			ID:      characterID,
 			Name:    "New Character",
 			OwnerID: "player-123", // Same player!
@@ -513,36 +517,36 @@ func TestAddPlayer(t *testing.T) {
 
 func TestEncounterCombatantFiltering(t *testing.T) {
 	// Test that we can properly filter combatants by type
-	encounterResult := entities.NewEncounter("enc-1", "session-1", "channel-1", "Mixed Combat", "dm-1")
+	encounterResult := combat.NewEncounter("enc-1", "session-1", "channel-1", "Mixed Combat", "dm-1")
 
 	// Add various combatants
-	player1 := &entities.Combatant{
+	player1 := &combat.Combatant{
 		ID:       "p1",
 		Name:     "Aragorn",
-		Type:     entities.CombatantTypePlayer,
+		Type:     combat.CombatantTypePlayer,
 		PlayerID: "player-1",
 		IsActive: true,
 	}
 
-	player2 := &entities.Combatant{
+	player2 := &combat.Combatant{
 		ID:       "p2",
 		Name:     "Orc", // Player named Orc!
-		Type:     entities.CombatantTypePlayer,
+		Type:     combat.CombatantTypePlayer,
 		PlayerID: "player-2",
 		IsActive: true,
 	}
 
-	monster1 := &entities.Combatant{
+	monster1 := &combat.Combatant{
 		ID:       "m1",
 		Name:     "Orc",
-		Type:     entities.CombatantTypeMonster,
+		Type:     combat.CombatantTypeMonster,
 		IsActive: true,
 	}
 
-	monster2 := &entities.Combatant{
+	monster2 := &combat.Combatant{
 		ID:       "m2",
 		Name:     "Goblin",
-		Type:     entities.CombatantTypeMonster,
+		Type:     combat.CombatantTypeMonster,
 		IsActive: true,
 	}
 
@@ -552,9 +556,9 @@ func TestEncounterCombatantFiltering(t *testing.T) {
 	encounterResult.AddCombatant(monster2)
 
 	t.Run("Can filter for monsters only", func(t *testing.T) {
-		var monsters []*entities.Combatant
+		var monsters []*combat.Combatant
 		for _, c := range encounterResult.Combatants {
-			if c.Type == entities.CombatantTypeMonster {
+			if c.Type == combat.CombatantTypeMonster {
 				monsters = append(monsters, c)
 			}
 		}
@@ -562,15 +566,15 @@ func TestEncounterCombatantFiltering(t *testing.T) {
 		assert.Len(t, monsters, 2)
 		// Both should be monsters
 		for _, m := range monsters {
-			assert.Equal(t, entities.CombatantTypeMonster, m.Type)
+			assert.Equal(t, combat.CombatantTypeMonster, m.Type)
 			assert.Empty(t, m.PlayerID)
 		}
 	})
 
 	t.Run("Can filter for players only", func(t *testing.T) {
-		var players []*entities.Combatant
+		var players []*combat.Combatant
 		for _, c := range encounterResult.Combatants {
-			if c.Type == entities.CombatantTypePlayer {
+			if c.Type == combat.CombatantTypePlayer {
 				players = append(players, c)
 			}
 		}
@@ -578,13 +582,13 @@ func TestEncounterCombatantFiltering(t *testing.T) {
 		assert.Len(t, players, 2)
 		// Both should be players
 		for _, p := range players {
-			assert.Equal(t, entities.CombatantTypePlayer, p.Type)
+			assert.Equal(t, combat.CombatantTypePlayer, p.Type)
 			assert.NotEmpty(t, p.PlayerID)
 		}
 	})
 
 	t.Run("Can distinguish same-named player and monster", func(t *testing.T) {
-		var orcs []*entities.Combatant
+		var orcs []*combat.Combatant
 		for _, c := range encounterResult.Combatants {
 			if c.Name == "Orc" {
 				orcs = append(orcs, c)
@@ -596,11 +600,11 @@ func TestEncounterCombatantFiltering(t *testing.T) {
 		// One should be player, one should be monster
 		var foundPlayer, foundMonster bool
 		for _, orc := range orcs {
-			if orc.Type == entities.CombatantTypePlayer {
+			if orc.Type == combat.CombatantTypePlayer {
 				foundPlayer = true
 				assert.Equal(t, "player-2", orc.PlayerID)
 			}
-			if orc.Type == entities.CombatantTypeMonster {
+			if orc.Type == combat.CombatantTypeMonster {
 				foundMonster = true
 				assert.Empty(t, orc.PlayerID)
 			}
@@ -627,15 +631,15 @@ func TestUpdateMessageID(t *testing.T) {
 		UUIDGenerator:    mockUUID,
 	})
 
-	// Create test session
-	session := &entities.Session{
+	// Create test sess
+	sess := &session.Session{
 		ID: "session-1",
-		Members: map[string]*entities.SessionMember{
-			"dm-1": {Role: entities.SessionRoleDM},
+		Members: map[string]*session.SessionMember{
+			"dm-1": {Role: session.SessionRoleDM},
 		},
 	}
 
-	mockSessionSvc.EXPECT().GetSession(ctx, "session-1").Return(session, nil).AnyTimes()
+	mockSessionSvc.EXPECT().GetSession(ctx, "session-1").Return(sess, nil).AnyTimes()
 
 	// Mock UUID generation
 	mockUUID.EXPECT().New().Return("enc-1")
@@ -673,7 +677,7 @@ func TestUpdateMessageID(t *testing.T) {
 		// Mock Update to save changes
 		mockRepo.EXPECT().
 			Update(gomock.Any(), gomock.Any()).
-			DoAndReturn(func(_ context.Context, e *entities.Encounter) error {
+			DoAndReturn(func(_ context.Context, e *combat.Encounter) error {
 				// Update the local encounter object to simulate repository behavior
 				enc.MessageID = e.MessageID
 				enc.ChannelID = e.ChannelID

@@ -1,9 +1,12 @@
 package character
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -11,62 +14,62 @@ import (
 
 func TestBuildCharacterSheetEmbed(t *testing.T) {
 	// Create a test character
-	char := &entities.Character{
+	char := &character.Character{
 		ID:               "test-char-1",
 		Name:             "Aragorn",
 		Level:            5,
 		CurrentHitPoints: 45,
 		MaxHitPoints:     45,
 		AC:               16,
-		Class: &entities.Class{
+		Class: &rulebook.Class{
 			Name: "Ranger",
 		},
-		Race: &entities.Race{
+		Race: &rulebook.Race{
 			Name: "Human",
 		},
-		Attributes: map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeStrength:     {Score: 16, Bonus: 3},
-			entities.AttributeDexterity:    {Score: 14, Bonus: 2},
-			entities.AttributeConstitution: {Score: 14, Bonus: 2},
-			entities.AttributeIntelligence: {Score: 12, Bonus: 1},
-			entities.AttributeWisdom:       {Score: 13, Bonus: 1},
-			entities.AttributeCharisma:     {Score: 10, Bonus: 0},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength:     {Score: 16, Bonus: 3},
+			shared.AttributeDexterity:    {Score: 14, Bonus: 2},
+			shared.AttributeConstitution: {Score: 14, Bonus: 2},
+			shared.AttributeIntelligence: {Score: 12, Bonus: 1},
+			shared.AttributeWisdom:       {Score: 13, Bonus: 1},
+			shared.AttributeCharisma:     {Score: 10, Bonus: 0},
 		},
-		EquippedSlots: map[entities.Slot]entities.Equipment{
-			entities.SlotMainHand: &entities.Weapon{
-				Base: entities.BasicEquipment{
+		EquippedSlots: map[shared.Slot]equipment.Equipment{
+			shared.SlotMainHand: &equipment.Weapon{
+				Base: equipment.BasicEquipment{
 					Key:  "longsword",
 					Name: "Longsword",
 				},
 			},
-			entities.SlotBody: &entities.Armor{
-				Base: entities.BasicEquipment{
+			shared.SlotBody: &equipment.Armor{
+				Base: equipment.BasicEquipment{
 					Key:  "chain_mail",
 					Name: "Chain Mail",
 				},
 			},
 		},
-		Proficiencies: map[entities.ProficiencyType][]*entities.Proficiency{
-			entities.ProficiencyTypeWeapon: {
+		Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+			rulebook.ProficiencyTypeWeapon: {
 				{Key: "simple-weapons", Name: "Simple Weapons"},
 				{Key: "martial-weapons", Name: "Martial Weapons"},
 			},
-			entities.ProficiencyTypeArmor: {
+			rulebook.ProficiencyTypeArmor: {
 				{Key: "light-armor", Name: "Light Armor"},
 				{Key: "medium-armor", Name: "Medium Armor"},
 				{Key: "shields", Name: "Shields"},
 			},
-			entities.ProficiencyTypeSkill: {
+			rulebook.ProficiencyTypeSkill: {
 				{Key: "survival", Name: "Survival"},
 				{Key: "perception", Name: "Perception"},
 			},
 		},
-		Features: []*entities.CharacterFeature{
+		Features: []*rulebook.CharacterFeature{
 			{
 				Key:         "favored_enemy",
 				Name:        "Favored Enemy",
 				Description: "You have advantage on Wisdom (Survival) checks to track your favored enemies.",
-				Type:        entities.FeatureTypeClass,
+				Type:        rulebook.FeatureTypeClass,
 				Level:       1,
 				Source:      "Ranger",
 				Metadata: map[string]any{
@@ -77,7 +80,7 @@ func TestBuildCharacterSheetEmbed(t *testing.T) {
 				Key:         "natural_explorer",
 				Name:        "Natural Explorer",
 				Description: "You are particularly familiar with one type of natural environment.",
-				Type:        entities.FeatureTypeClass,
+				Type:        rulebook.FeatureTypeClass,
 				Level:       1,
 				Source:      "Ranger",
 			},

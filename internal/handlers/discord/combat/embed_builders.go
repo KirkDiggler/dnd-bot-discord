@@ -2,21 +2,21 @@ package combat
 
 import (
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
 	"github.com/bwmarrin/discordgo"
 )
 
 // buildCombatStatusEmbed creates a status embed with optional monster actions
 // BuildCombatStatusEmbed creates the main combat status embed
-func BuildCombatStatusEmbed(enc *entities.Encounter, monsterActions []*encounter.AttackResult) *discordgo.MessageEmbed {
+func BuildCombatStatusEmbed(enc *combat.Encounter, monsterActions []*encounter.AttackResult) *discordgo.MessageEmbed {
 	return BuildCombatStatusEmbedForPlayer(enc, monsterActions, "")
 }
 
 // BuildCombatStatusEmbedForPlayer creates a player-focused combat status embed
-func BuildCombatStatusEmbedForPlayer(enc *entities.Encounter, monsterActions []*encounter.AttackResult, playerName string) *discordgo.MessageEmbed {
+func BuildCombatStatusEmbedForPlayer(enc *combat.Encounter, monsterActions []*encounter.AttackResult, playerName string) *discordgo.MessageEmbed {
 	embed := &discordgo.MessageEmbed{
 		Title:  fmt.Sprintf("⚔️ Combat - Round %d", enc.Round),
 		Color:  0x3498db,
@@ -93,7 +93,7 @@ func BuildCombatStatusEmbedForPlayer(enc *entities.Encounter, monsterActions []*
 }
 
 // buildDetailedCombatEmbed creates a detailed view of combat
-func buildDetailedCombatEmbed(enc *entities.Encounter) *discordgo.MessageEmbed {
+func buildDetailedCombatEmbed(enc *combat.Encounter) *discordgo.MessageEmbed {
 	embed := &discordgo.MessageEmbed{
 		Title:       enc.Name,
 		Description: fmt.Sprintf("**Status:** %s | **Round:** %d", enc.Status, enc.Round),
@@ -127,7 +127,7 @@ func buildDetailedCombatEmbed(enc *entities.Encounter) *discordgo.MessageEmbed {
 		status := "💀 Defeated"
 		if c.IsActive {
 			hpBar := getHPBar(c.CurrentHP, c.MaxHP)
-			if c.Type == entities.CombatantTypePlayer && c.Class != "" {
+			if c.Type == combat.CombatantTypePlayer && c.Class != "" {
 				classIcon := getClassIcon(c.Class)
 				status = fmt.Sprintf("%s %s %d/%d HP | AC %d | %s", classIcon, hpBar, c.CurrentHP, c.MaxHP, c.AC, c.Class)
 			} else {

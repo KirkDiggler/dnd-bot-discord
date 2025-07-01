@@ -3,10 +3,13 @@ package character_test
 import (
 	"context"
 	"errors"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/require"
@@ -17,21 +20,21 @@ import (
 
 func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 	// Create test fixtures
-	fighterClass := &entities.Class{
+	fighterClass := &rulebook.Class{
 		Key:    "fighter",
 		Name:   "Fighter",
 		HitDie: 10,
-		StartingEquipment: []*entities.StartingEquipment{
+		StartingEquipment: []*rulebook.StartingEquipment{
 			{
 				Quantity: 1,
-				Equipment: &entities.ReferenceItem{
+				Equipment: &shared.ReferenceItem{
 					Key:  "chain-mail",
 					Name: "Chain Mail",
 				},
 			},
 			{
 				Quantity: 5,
-				Equipment: &entities.ReferenceItem{
+				Equipment: &shared.ReferenceItem{
 					Key:  "javelin",
 					Name: "Javelin",
 				},
@@ -39,28 +42,28 @@ func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 		},
 	}
 
-	rangerClass := &entities.Class{
+	rangerClass := &rulebook.Class{
 		Key:    "ranger",
 		Name:   "Ranger",
 		HitDie: 10,
-		StartingEquipment: []*entities.StartingEquipment{
+		StartingEquipment: []*rulebook.StartingEquipment{
 			{
 				Quantity: 1,
-				Equipment: &entities.ReferenceItem{
+				Equipment: &shared.ReferenceItem{
 					Key:  "scale-mail",
 					Name: "Scale Mail",
 				},
 			},
 			{
 				Quantity: 1,
-				Equipment: &entities.ReferenceItem{
+				Equipment: &shared.ReferenceItem{
 					Key:  "shortbow",
 					Name: "Shortbow",
 				},
 			},
 			{
 				Quantity: 20,
-				Equipment: &entities.ReferenceItem{
+				Equipment: &shared.ReferenceItem{
 					Key:  "arrow",
 					Name: "Arrow",
 				},
@@ -69,33 +72,33 @@ func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 	}
 
 	// Create equipment
-	chainMail := &entities.Armor{
-		Base: entities.BasicEquipment{
+	chainMail := &equipment.Armor{
+		Base: equipment.BasicEquipment{
 			Key:  "chain-mail",
 			Name: "Chain Mail",
-			Cost: &entities.Cost{
+			Cost: &shared.Cost{
 				Quantity: 75,
 				Unit:     "gp",
 			},
 		},
-		ArmorClass: &entities.ArmorClass{
+		ArmorClass: &equipment.ArmorClass{
 			Base:     16,
 			DexBonus: false,
 		},
-		ArmorCategory: entities.ArmorCategoryHeavy,
+		ArmorCategory: equipment.ArmorCategoryHeavy,
 	}
 
-	javelin := &entities.Weapon{
-		Base: entities.BasicEquipment{
+	javelin := &equipment.Weapon{
+		Base: equipment.BasicEquipment{
 			Key:  "javelin",
 			Name: "Javelin",
-			Cost: &entities.Cost{
+			Cost: &shared.Cost{
 				Quantity: 5,
 				Unit:     "sp",
 			},
 		},
 		WeaponRange: "Melee",
-		Properties: []*entities.ReferenceItem{
+		Properties: []*shared.ReferenceItem{
 			{Key: "thrown", Name: "Thrown"},
 		},
 		Damage: &damage.Damage{
@@ -106,34 +109,34 @@ func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 		},
 	}
 
-	scaleMail := &entities.Armor{
-		Base: entities.BasicEquipment{
+	scaleMail := &equipment.Armor{
+		Base: equipment.BasicEquipment{
 			Key:  "scale-mail",
 			Name: "Scale Mail",
-			Cost: &entities.Cost{
+			Cost: &shared.Cost{
 				Quantity: 50,
 				Unit:     "gp",
 			},
 		},
-		ArmorClass: &entities.ArmorClass{
+		ArmorClass: &equipment.ArmorClass{
 			Base:     14,
 			DexBonus: true,
 			MaxBonus: 2,
 		},
-		ArmorCategory: entities.ArmorCategoryMedium,
+		ArmorCategory: equipment.ArmorCategoryMedium,
 	}
 
-	shortbow := &entities.Weapon{
-		Base: entities.BasicEquipment{
+	shortbow := &equipment.Weapon{
+		Base: equipment.BasicEquipment{
 			Key:  "shortbow",
 			Name: "Shortbow",
-			Cost: &entities.Cost{
+			Cost: &shared.Cost{
 				Quantity: 25,
 				Unit:     "gp",
 			},
 		},
 		WeaponRange: "Ranged",
-		Properties: []*entities.ReferenceItem{
+		Properties: []*shared.ReferenceItem{
 			{Key: "ammunition", Name: "Ammunition"},
 		},
 		Damage: &damage.Damage{
@@ -145,10 +148,10 @@ func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 		Range: 80,
 	}
 
-	arrow := &entities.BasicEquipment{
+	arrow := &equipment.BasicEquipment{
 		Key:  "arrow",
 		Name: "Arrow",
-		Cost: &entities.Cost{
+		Cost: &shared.Cost{
 			Quantity: 1,
 			Unit:     "gp",
 		},
@@ -156,25 +159,25 @@ func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 
 	tests := []struct {
 		name                  string
-		character             *entities.Character
-		class                 *entities.Class
+		character             *character2.Character
+		class                 *rulebook.Class
 		expectedEquipmentKeys map[string]int // key -> expected quantity
 	}{
 		{
 			name: "Fighter gets chain mail and javelins",
-			character: &entities.Character{
+			character: &character2.Character{
 				ID:     "test-fighter",
 				Name:   "Test Fighter",
-				Status: entities.CharacterStatusDraft,
+				Status: shared.CharacterStatusDraft,
 				Level:  1,
 				Class:  fighterClass,
-				Attributes: map[entities.Attribute]*entities.AbilityScore{
-					entities.AttributeStrength:     {Score: 16, Bonus: 3},
-					entities.AttributeDexterity:    {Score: 12, Bonus: 1},
-					entities.AttributeConstitution: {Score: 14, Bonus: 2},
-					entities.AttributeIntelligence: {Score: 10, Bonus: 0},
-					entities.AttributeWisdom:       {Score: 12, Bonus: 1},
-					entities.AttributeCharisma:     {Score: 8, Bonus: -1},
+				Attributes: map[shared.Attribute]*character2.AbilityScore{
+					shared.AttributeStrength:     {Score: 16, Bonus: 3},
+					shared.AttributeDexterity:    {Score: 12, Bonus: 1},
+					shared.AttributeConstitution: {Score: 14, Bonus: 2},
+					shared.AttributeIntelligence: {Score: 10, Bonus: 0},
+					shared.AttributeWisdom:       {Score: 12, Bonus: 1},
+					shared.AttributeCharisma:     {Score: 8, Bonus: -1},
 				},
 			},
 			class: fighterClass,
@@ -185,19 +188,19 @@ func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 		},
 		{
 			name: "Ranger gets scale mail, shortbow and arrows",
-			character: &entities.Character{
+			character: &character2.Character{
 				ID:     "test-ranger",
 				Name:   "Test Ranger",
-				Status: entities.CharacterStatusDraft,
+				Status: shared.CharacterStatusDraft,
 				Level:  1,
 				Class:  rangerClass,
-				Attributes: map[entities.Attribute]*entities.AbilityScore{
-					entities.AttributeStrength:     {Score: 14, Bonus: 2},
-					entities.AttributeDexterity:    {Score: 16, Bonus: 3},
-					entities.AttributeConstitution: {Score: 13, Bonus: 1},
-					entities.AttributeIntelligence: {Score: 10, Bonus: 0},
-					entities.AttributeWisdom:       {Score: 14, Bonus: 2},
-					entities.AttributeCharisma:     {Score: 10, Bonus: 0},
+				Attributes: map[shared.Attribute]*character2.AbilityScore{
+					shared.AttributeStrength:     {Score: 14, Bonus: 2},
+					shared.AttributeDexterity:    {Score: 16, Bonus: 3},
+					shared.AttributeConstitution: {Score: 13, Bonus: 1},
+					shared.AttributeIntelligence: {Score: 10, Bonus: 0},
+					shared.AttributeWisdom:       {Score: 14, Bonus: 2},
+					shared.AttributeCharisma:     {Score: 10, Bonus: 0},
 				},
 			},
 			class: rangerClass,
@@ -209,16 +212,16 @@ func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 		},
 		{
 			name: "Character with existing equipment still gets starting equipment",
-			character: &entities.Character{
+			character: &character2.Character{
 				ID:     "test-with-equipment",
 				Name:   "Test With Equipment",
-				Status: entities.CharacterStatusDraft,
+				Status: shared.CharacterStatusDraft,
 				Level:  1,
 				Class:  fighterClass,
-				Inventory: map[entities.EquipmentType][]entities.Equipment{
-					entities.EquipmentTypeWeapon: []entities.Equipment{
-						&entities.Weapon{
-							Base: entities.BasicEquipment{
+				Inventory: map[equipment.EquipmentType][]equipment.Equipment{
+					equipment.EquipmentTypeWeapon: []equipment.Equipment{
+						&equipment.Weapon{
+							Base: equipment.BasicEquipment{
 								Key:  "longsword",
 								Name: "Longsword",
 							},
@@ -232,13 +235,13 @@ func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 						},
 					},
 				},
-				Attributes: map[entities.Attribute]*entities.AbilityScore{
-					entities.AttributeStrength:     {Score: 16, Bonus: 3},
-					entities.AttributeDexterity:    {Score: 12, Bonus: 1},
-					entities.AttributeConstitution: {Score: 14, Bonus: 2},
-					entities.AttributeIntelligence: {Score: 10, Bonus: 0},
-					entities.AttributeWisdom:       {Score: 12, Bonus: 1},
-					entities.AttributeCharisma:     {Score: 8, Bonus: -1},
+				Attributes: map[shared.Attribute]*character2.AbilityScore{
+					shared.AttributeStrength:     {Score: 16, Bonus: 3},
+					shared.AttributeDexterity:    {Score: 12, Bonus: 1},
+					shared.AttributeConstitution: {Score: 14, Bonus: 2},
+					shared.AttributeIntelligence: {Score: 10, Bonus: 0},
+					shared.AttributeWisdom:       {Score: 12, Bonus: 1},
+					shared.AttributeCharisma:     {Score: 8, Bonus: -1},
 				},
 			},
 			class: fighterClass,
@@ -281,7 +284,7 @@ func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 			require.NotNil(t, finalizedChar)
 
 			// Verify status changed to active
-			require.Equal(t, entities.CharacterStatusActive, finalizedChar.Status)
+			require.Equal(t, shared.CharacterStatusActive, finalizedChar.Status)
 
 			// Count all equipment by key
 			actualEquipmentCounts := make(map[string]int)
@@ -316,21 +319,21 @@ func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 
 func TestFinalizeDraftCharacter_HandlesEquipmentErrors(t *testing.T) {
 	// Create test class with equipment that will fail to load
-	testClass := &entities.Class{
+	testClass := &rulebook.Class{
 		Key:    "test-class",
 		Name:   "Test Class",
 		HitDie: 8,
-		StartingEquipment: []*entities.StartingEquipment{
+		StartingEquipment: []*rulebook.StartingEquipment{
 			{
 				Quantity: 1,
-				Equipment: &entities.ReferenceItem{
+				Equipment: &shared.ReferenceItem{
 					Key:  "valid-equipment",
 					Name: "Valid Equipment",
 				},
 			},
 			{
 				Quantity: 1,
-				Equipment: &entities.ReferenceItem{
+				Equipment: &shared.ReferenceItem{
 					Key:  "missing-equipment",
 					Name: "Missing Equipment",
 				},
@@ -338,25 +341,25 @@ func TestFinalizeDraftCharacter_HandlesEquipmentErrors(t *testing.T) {
 		},
 	}
 
-	validEquipment := &entities.BasicEquipment{
+	validEquipment := &equipment.BasicEquipment{
 		Key:  "valid-equipment",
 		Name: "Valid Equipment",
 	}
 
 	// Create character
-	testChar := &entities.Character{
+	testChar := &character2.Character{
 		ID:     "test-char",
 		Name:   "Test Character",
-		Status: entities.CharacterStatusDraft,
+		Status: shared.CharacterStatusDraft,
 		Level:  1,
 		Class:  testClass,
-		Attributes: map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeStrength:     {Score: 10, Bonus: 0},
-			entities.AttributeDexterity:    {Score: 10, Bonus: 0},
-			entities.AttributeConstitution: {Score: 10, Bonus: 0},
-			entities.AttributeIntelligence: {Score: 10, Bonus: 0},
-			entities.AttributeWisdom:       {Score: 10, Bonus: 0},
-			entities.AttributeCharisma:     {Score: 10, Bonus: 0},
+		Attributes: map[shared.Attribute]*character2.AbilityScore{
+			shared.AttributeStrength:     {Score: 10, Bonus: 0},
+			shared.AttributeDexterity:    {Score: 10, Bonus: 0},
+			shared.AttributeConstitution: {Score: 10, Bonus: 0},
+			shared.AttributeIntelligence: {Score: 10, Bonus: 0},
+			shared.AttributeWisdom:       {Score: 10, Bonus: 0},
+			shared.AttributeCharisma:     {Score: 10, Bonus: 0},
 		},
 	}
 
@@ -384,7 +387,7 @@ func TestFinalizeDraftCharacter_HandlesEquipmentErrors(t *testing.T) {
 	require.NotNil(t, finalizedChar)
 
 	// Verify status changed to active
-	require.Equal(t, entities.CharacterStatusActive, finalizedChar.Status)
+	require.Equal(t, shared.CharacterStatusActive, finalizedChar.Status)
 
 	// Verify only valid equipment was added
 	totalEquipment := 0

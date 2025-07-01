@@ -2,13 +2,14 @@ package character_test
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 )
 
@@ -42,25 +43,25 @@ func TestAllClassesEquipmentSuite(t *testing.T) {
 // Barbarian Tests
 
 func (s *AllClassesEquipmentTestSuite) TestBarbarianEquipmentChoices() {
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "barbarian",
 		Name: "Barbarian",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "(a) a greataxe or (b) any martial melee weapon",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "greataxe",
 							Name: "Greataxe",
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:    "any martial melee weapon",
 						Count:   1,
-						Type:    entities.ChoiceTypeEquipment,
+						Type:    shared.ChoiceTypeEquipment,
 						Options: createMartialMeleeWeaponOptions(),
 					},
 				},
@@ -68,19 +69,19 @@ func (s *AllClassesEquipmentTestSuite) TestBarbarianEquipmentChoices() {
 			{
 				Name:  "(a) two handaxes or (b) any simple weapon",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.CountedReferenceOption{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.CountedReferenceOption{
 						Count: 2,
-						Reference: &entities.ReferenceItem{
+						Reference: &shared.ReferenceItem{
 							Key:  "handaxe",
 							Name: "Handaxe",
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:    "any simple weapon",
 						Count:   1,
-						Type:    entities.ChoiceTypeEquipment,
+						Type:    shared.ChoiceTypeEquipment,
 						Options: createSimpleWeaponOptions(),
 					},
 				},
@@ -107,31 +108,31 @@ func (s *AllClassesEquipmentTestSuite) TestBarbarianEquipmentChoices() {
 // Bard Tests
 
 func (s *AllClassesEquipmentTestSuite) TestBardEquipmentChoices() {
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "bard",
 		Name: "Bard",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "(a) a rapier, (b) a longsword, or (c) any simple weapon",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "rapier",
 							Name: "Rapier",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "longsword",
 							Name: "Longsword",
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:    "any simple weapon",
 						Count:   1,
-						Type:    entities.ChoiceTypeEquipment,
+						Type:    shared.ChoiceTypeEquipment,
 						Options: createSimpleWeaponOptions(),
 					},
 				},
@@ -139,16 +140,16 @@ func (s *AllClassesEquipmentTestSuite) TestBardEquipmentChoices() {
 			{
 				Name:  "(a) a diplomat's pack or (b) an entertainer's pack",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "diplomats-pack",
 							Name: "Diplomat's Pack",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "entertainers-pack",
 							Name: "Entertainer's Pack",
 						},
@@ -158,18 +159,18 @@ func (s *AllClassesEquipmentTestSuite) TestBardEquipmentChoices() {
 			{
 				Name:  "(a) a lute or (b) any other musical instrument",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "lute",
 							Name: "Lute",
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:    "any other musical instrument",
 						Count:   1,
-						Type:    entities.ChoiceTypeEquipment,
+						Type:    shared.ChoiceTypeEquipment,
 						Options: createMusicalInstrumentOptions(),
 					},
 				},
@@ -198,25 +199,25 @@ func (s *AllClassesEquipmentTestSuite) TestBardEquipmentChoices() {
 // Druid Tests
 
 func (s *AllClassesEquipmentTestSuite) TestDruidEquipmentChoices() {
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "druid",
 		Name: "Druid",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "(a) a wooden shield or (b) any simple weapon",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "shield",
 							Name: "Shield",
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:    "any simple weapon",
 						Count:   1,
-						Type:    entities.ChoiceTypeEquipment,
+						Type:    shared.ChoiceTypeEquipment,
 						Options: createSimpleWeaponOptions(),
 					},
 				},
@@ -224,18 +225,18 @@ func (s *AllClassesEquipmentTestSuite) TestDruidEquipmentChoices() {
 			{
 				Name:  "(a) a scimitar or (b) any simple melee weapon",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "scimitar",
 							Name: "Scimitar",
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:    "any simple melee weapon",
 						Count:   1,
-						Type:    entities.ChoiceTypeEquipment,
+						Type:    shared.ChoiceTypeEquipment,
 						Options: createSimpleMeleeWeaponOptions(),
 					},
 				},
@@ -261,37 +262,37 @@ func (s *AllClassesEquipmentTestSuite) TestDruidEquipmentChoices() {
 // Paladin Tests
 
 func (s *AllClassesEquipmentTestSuite) TestPaladinEquipmentChoices() {
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "paladin",
 		Name: "Paladin",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "(a) a martial weapon and a shield or (b) two martial weapons",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.MultipleOption{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.MultipleOption{
 						Key:  "weapon-shield",
 						Name: "a martial weapon and a shield",
-						Items: []entities.Option{
-							&entities.Choice{
+						Items: []shared.Option{
+							&shared.Choice{
 								Name:    "martial weapon",
 								Count:   1,
-								Type:    entities.ChoiceTypeEquipment,
+								Type:    shared.ChoiceTypeEquipment,
 								Options: createMartialWeaponOptions(),
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "shield",
 									Name: "Shield",
 								},
 							},
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:    "two martial weapons",
 						Count:   2,
-						Type:    entities.ChoiceTypeEquipment,
+						Type:    shared.ChoiceTypeEquipment,
 						Options: createMartialWeaponOptions(),
 					},
 				},
@@ -299,19 +300,19 @@ func (s *AllClassesEquipmentTestSuite) TestPaladinEquipmentChoices() {
 			{
 				Name:  "(a) five javelins or (b) any simple melee weapon",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.CountedReferenceOption{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.CountedReferenceOption{
 						Count: 5,
-						Reference: &entities.ReferenceItem{
+						Reference: &shared.ReferenceItem{
 							Key:  "javelin",
 							Name: "Javelin",
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:    "any simple melee weapon",
 						Count:   1,
-						Type:    entities.ChoiceTypeEquipment,
+						Type:    shared.ChoiceTypeEquipment,
 						Options: createSimpleMeleeWeaponOptions(),
 					},
 				},
@@ -319,16 +320,16 @@ func (s *AllClassesEquipmentTestSuite) TestPaladinEquipmentChoices() {
 			{
 				Name:  "(a) a priest's pack or (b) an explorer's pack",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "priests-pack",
 							Name: "Priest's Pack",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "explorers-pack",
 							Name: "Explorer's Pack",
 						},
@@ -354,38 +355,38 @@ func (s *AllClassesEquipmentTestSuite) TestPaladinEquipmentChoices() {
 // Sorcerer Tests
 
 func (s *AllClassesEquipmentTestSuite) TestSorcererEquipmentChoices() {
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "sorcerer",
 		Name: "Sorcerer",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "(a) a light crossbow and 20 bolts or (b) any simple weapon",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.MultipleOption{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.MultipleOption{
 						Key:  "crossbow-bundle",
 						Name: "a light crossbow and 20 bolts",
-						Items: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Items: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "light-crossbow",
 									Name: "Light Crossbow",
 								},
 							},
-							&entities.CountedReferenceOption{
+							&shared.CountedReferenceOption{
 								Count: 20,
-								Reference: &entities.ReferenceItem{
+								Reference: &shared.ReferenceItem{
 									Key:  "crossbow-bolt",
 									Name: "Crossbow Bolt",
 								},
 							},
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:    "any simple weapon",
 						Count:   1,
-						Type:    entities.ChoiceTypeEquipment,
+						Type:    shared.ChoiceTypeEquipment,
 						Options: createSimpleWeaponOptions(),
 					},
 				},
@@ -393,18 +394,18 @@ func (s *AllClassesEquipmentTestSuite) TestSorcererEquipmentChoices() {
 			{
 				Name:  "(a) a component pouch or (b) an arcane focus",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "component-pouch",
 							Name: "Component Pouch",
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:    "arcane focus",
 						Count:   1,
-						Type:    entities.ChoiceTypeEquipment,
+						Type:    shared.ChoiceTypeEquipment,
 						Options: createArcaneFocusOptions(),
 					},
 				},
@@ -428,38 +429,38 @@ func (s *AllClassesEquipmentTestSuite) TestSorcererEquipmentChoices() {
 // Warlock Tests
 
 func (s *AllClassesEquipmentTestSuite) TestWarlockEquipmentChoices() {
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "warlock",
 		Name: "Warlock",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "(a) a light crossbow and 20 bolts or (b) any simple weapon",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.MultipleOption{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.MultipleOption{
 						Key:  "crossbow-bundle",
 						Name: "a light crossbow and 20 bolts",
-						Items: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Items: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "light-crossbow",
 									Name: "Light Crossbow",
 								},
 							},
-							&entities.CountedReferenceOption{
+							&shared.CountedReferenceOption{
 								Count: 20,
-								Reference: &entities.ReferenceItem{
+								Reference: &shared.ReferenceItem{
 									Key:  "crossbow-bolt",
 									Name: "Crossbow Bolt",
 								},
 							},
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:    "any simple weapon",
 						Count:   1,
-						Type:    entities.ChoiceTypeEquipment,
+						Type:    shared.ChoiceTypeEquipment,
 						Options: createSimpleWeaponOptions(),
 					},
 				},
@@ -467,18 +468,18 @@ func (s *AllClassesEquipmentTestSuite) TestWarlockEquipmentChoices() {
 			{
 				Name:  "(a) a component pouch or (b) an arcane focus",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "component-pouch",
 							Name: "Component Pouch",
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:    "arcane focus",
 						Count:   1,
-						Type:    entities.ChoiceTypeEquipment,
+						Type:    shared.ChoiceTypeEquipment,
 						Options: createArcaneFocusOptions(),
 					},
 				},
@@ -486,16 +487,16 @@ func (s *AllClassesEquipmentTestSuite) TestWarlockEquipmentChoices() {
 			{
 				Name:  "(a) a scholar's pack or (b) a dungeoneer's pack",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "scholars-pack",
 							Name: "Scholar's Pack",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "dungeoneers-pack",
 							Name: "Dungeoneer's Pack",
 						},
@@ -512,7 +513,7 @@ func (s *AllClassesEquipmentTestSuite) TestWarlockEquipmentChoices() {
 
 // Helper functions for creating weapon/item options
 
-func createMartialMeleeWeaponOptions() []entities.Option {
+func createMartialMeleeWeaponOptions() []shared.Option {
 	weapons := []string{
 		"battleaxe", "flail", "glaive", "greataxe", "greatsword",
 		"halberd", "lance", "longsword", "maul", "morningstar",
@@ -520,10 +521,10 @@ func createMartialMeleeWeaponOptions() []entities.Option {
 		"war-pick", "warhammer", "whip",
 	}
 
-	options := []entities.Option{}
+	options := []shared.Option{}
 	for _, weapon := range weapons {
-		options = append(options, &entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		options = append(options, &shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  weapon,
 				Name: capitalize(weapon),
 			},
@@ -532,17 +533,17 @@ func createMartialMeleeWeaponOptions() []entities.Option {
 	return options
 }
 
-func createSimpleWeaponOptions() []entities.Option {
+func createSimpleWeaponOptions() []shared.Option {
 	weapons := []string{
 		"club", "dagger", "greatclub", "handaxe", "javelin",
 		"light-hammer", "mace", "quarterstaff", "sickle", "spear",
 		"light-crossbow", "dart", "shortbow", "sling",
 	}
 
-	options := []entities.Option{}
+	options := []shared.Option{}
 	for _, weapon := range weapons {
-		options = append(options, &entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		options = append(options, &shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  weapon,
 				Name: capitalize(weapon),
 			},
@@ -551,16 +552,16 @@ func createSimpleWeaponOptions() []entities.Option {
 	return options
 }
 
-func createSimpleMeleeWeaponOptions() []entities.Option {
+func createSimpleMeleeWeaponOptions() []shared.Option {
 	weapons := []string{
 		"club", "dagger", "greatclub", "handaxe", "javelin",
 		"light-hammer", "mace", "quarterstaff", "sickle", "spear",
 	}
 
-	options := []entities.Option{}
+	options := []shared.Option{}
 	for _, weapon := range weapons {
-		options = append(options, &entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		options = append(options, &shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  weapon,
 				Name: capitalize(weapon),
 			},
@@ -569,16 +570,16 @@ func createSimpleMeleeWeaponOptions() []entities.Option {
 	return options
 }
 
-func createMusicalInstrumentOptions() []entities.Option {
+func createMusicalInstrumentOptions() []shared.Option {
 	instruments := []string{
 		"bagpipes", "drum", "dulcimer", "flute", "horn",
 		"lyre", "pan-flute", "shawm", "viol",
 	}
 
-	options := []entities.Option{}
+	options := []shared.Option{}
 	for _, instrument := range instruments {
-		options = append(options, &entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		options = append(options, &shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  instrument,
 				Name: capitalize(instrument),
 			},
@@ -587,15 +588,15 @@ func createMusicalInstrumentOptions() []entities.Option {
 	return options
 }
 
-func createArcaneFocusOptions() []entities.Option {
+func createArcaneFocusOptions() []shared.Option {
 	focuses := []string{
 		"crystal", "orb", "rod", "staff", "wand",
 	}
 
-	options := []entities.Option{}
+	options := []shared.Option{}
 	for _, focus := range focuses {
-		options = append(options, &entities.ReferenceOption{
-			Reference: &entities.ReferenceItem{
+		options = append(options, &shared.ReferenceOption{
+			Reference: &shared.ReferenceItem{
 				Key:  focus,
 				Name: capitalize(focus),
 			},

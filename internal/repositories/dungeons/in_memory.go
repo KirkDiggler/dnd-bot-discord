@@ -3,26 +3,25 @@ package dungeons
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/exploration"
 	"sync"
-
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 )
 
 // inMemoryRepository implements Repository using in-memory storage
 type inMemoryRepository struct {
 	mu       sync.RWMutex
-	dungeons map[string]*entities.Dungeon
+	dungeons map[string]*exploration.Dungeon
 }
 
 // NewInMemoryRepository creates a new in-memory dungeon repository
 func NewInMemoryRepository() Repository {
 	return &inMemoryRepository{
-		dungeons: make(map[string]*entities.Dungeon),
+		dungeons: make(map[string]*exploration.Dungeon),
 	}
 }
 
 // Create creates a new dungeon
-func (r *inMemoryRepository) Create(ctx context.Context, dungeon *entities.Dungeon) error {
+func (r *inMemoryRepository) Create(ctx context.Context, dungeon *exploration.Dungeon) error {
 	if dungeon == nil {
 		return fmt.Errorf("dungeon cannot be nil")
 	}
@@ -45,7 +44,7 @@ func (r *inMemoryRepository) Create(ctx context.Context, dungeon *entities.Dunge
 }
 
 // Get retrieves a dungeon by ID
-func (r *inMemoryRepository) Get(ctx context.Context, id string) (*entities.Dungeon, error) {
+func (r *inMemoryRepository) Get(ctx context.Context, id string) (*exploration.Dungeon, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -60,7 +59,7 @@ func (r *inMemoryRepository) Get(ctx context.Context, id string) (*entities.Dung
 }
 
 // Update updates an existing dungeon
-func (r *inMemoryRepository) Update(ctx context.Context, dungeon *entities.Dungeon) error {
+func (r *inMemoryRepository) Update(ctx context.Context, dungeon *exploration.Dungeon) error {
 	if dungeon == nil {
 		return fmt.Errorf("dungeon cannot be nil")
 	}
@@ -96,7 +95,7 @@ func (r *inMemoryRepository) Delete(ctx context.Context, id string) error {
 }
 
 // GetBySession retrieves a dungeon by session ID
-func (r *inMemoryRepository) GetBySession(ctx context.Context, sessionID string) (*entities.Dungeon, error) {
+func (r *inMemoryRepository) GetBySession(ctx context.Context, sessionID string) (*exploration.Dungeon, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -112,11 +111,11 @@ func (r *inMemoryRepository) GetBySession(ctx context.Context, sessionID string)
 }
 
 // ListActive retrieves all active dungeons
-func (r *inMemoryRepository) ListActive(ctx context.Context) ([]*entities.Dungeon, error) {
+func (r *inMemoryRepository) ListActive(ctx context.Context) ([]*exploration.Dungeon, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	var active []*entities.Dungeon
+	var active []*exploration.Dungeon
 	for _, dungeon := range r.dungeons {
 		if dungeon.IsActive() {
 			// Add a copy

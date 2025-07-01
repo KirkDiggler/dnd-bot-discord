@@ -1,9 +1,11 @@
 package character
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -15,18 +17,18 @@ func TestFightingStyleMetadataLostDuringFinalization(t *testing.T) {
 
 	t.Run("Reproduce finalization bug - metadata gets wiped", func(t *testing.T) {
 		// Create a draft character that simulates the state at 18:01:46
-		draftChar := &entities.Character{
+		draftChar := &character.Character{
 			ID:     "char_test_draft",
 			Name:   "Draft Character",
-			Status: entities.CharacterStatusDraft,
-			Race:   &entities.Race{Key: "human", Name: "Human"},
-			Class:  &entities.Class{Key: "fighter", Name: "Fighter"},
+			Status: shared.CharacterStatusDraft,
+			Race:   &rulebook.Race{Key: "human", Name: "Human"},
+			Class:  &rulebook.Class{Key: "fighter", Name: "Fighter"},
 			Level:  1,
-			Features: []*entities.CharacterFeature{
+			Features: []*rulebook.CharacterFeature{
 				{
 					Key:      "human_versatility",
 					Name:     "Versatility",
-					Type:     entities.FeatureTypeRacial,
+					Type:     rulebook.FeatureTypeRacial,
 					Level:    0,
 					Source:   "Human",
 					Metadata: map[string]any{}, // Empty as expected
@@ -34,7 +36,7 @@ func TestFightingStyleMetadataLostDuringFinalization(t *testing.T) {
 				{
 					Key:    "fighting_style",
 					Name:   "Fighting Style",
-					Type:   entities.FeatureTypeClass,
+					Type:   rulebook.FeatureTypeClass,
 					Level:  1,
 					Source: "Fighter",
 					Metadata: map[string]any{
@@ -44,7 +46,7 @@ func TestFightingStyleMetadataLostDuringFinalization(t *testing.T) {
 				{
 					Key:      "second_wind",
 					Name:     "Second Wind",
-					Type:     entities.FeatureTypeClass,
+					Type:     rulebook.FeatureTypeClass,
 					Level:    1,
 					Source:   "Fighter",
 					Metadata: map[string]any{}, // Empty as expected
@@ -85,24 +87,24 @@ func TestFightingStyleMetadataPreservedAfterFix(t *testing.T) {
 
 	t.Run("Fixed finalization preserves fighting style metadata", func(t *testing.T) {
 		// Create the same draft character as above
-		draftChar := &entities.Character{
+		draftChar := &character.Character{
 			ID:     "char_test_draft_fixed",
 			Name:   "Draft Character",
-			Status: entities.CharacterStatusDraft,
-			Race:   &entities.Race{Key: "human", Name: "Human"},
-			Class:  &entities.Class{Key: "fighter", Name: "Fighter"},
+			Status: shared.CharacterStatusDraft,
+			Race:   &rulebook.Race{Key: "human", Name: "Human"},
+			Class:  &rulebook.Class{Key: "fighter", Name: "Fighter"},
 			Level:  1,
-			Features: []*entities.CharacterFeature{
+			Features: []*rulebook.CharacterFeature{
 				{
 					Key:      "human_versatility",
 					Name:     "Versatility",
-					Type:     entities.FeatureTypeRacial,
+					Type:     rulebook.FeatureTypeRacial,
 					Metadata: map[string]any{},
 				},
 				{
 					Key:  "fighting_style",
 					Name: "Fighting Style",
-					Type: entities.FeatureTypeClass,
+					Type: rulebook.FeatureTypeClass,
 					Metadata: map[string]any{
 						"style": "dueling", // User selection should be preserved!
 					},
@@ -110,7 +112,7 @@ func TestFightingStyleMetadataPreservedAfterFix(t *testing.T) {
 				{
 					Key:      "second_wind",
 					Name:     "Second Wind",
-					Type:     entities.FeatureTypeClass,
+					Type:     rulebook.FeatureTypeClass,
 					Metadata: map[string]any{},
 				},
 			},
@@ -132,7 +134,7 @@ func TestFightingStyleMetadataPreservedAfterFix(t *testing.T) {
 
 // Helper functions
 
-func findFeatureByKey(features []*entities.CharacterFeature, key string) *entities.CharacterFeature {
+func findFeatureByKey(features []*rulebook.CharacterFeature, key string) *rulebook.CharacterFeature {
 	for _, feature := range features {
 		if feature.Key == key {
 			return feature
@@ -142,38 +144,38 @@ func findFeatureByKey(features []*entities.CharacterFeature, key string) *entiti
 }
 
 // simulateBuggyFinalization simulates the current buggy behavior that wipes out metadata
-func simulateBuggyFinalization(draftChar *entities.Character) *entities.Character {
+func simulateBuggyFinalization(draftChar *character.Character) *character.Character {
 	// This simulates what the buggy FinalizeDraftCharacter currently does:
 	// 1. Creates a new character
 	// 2. Regenerates features from templates (losing user metadata)
 
-	finalizedChar := &entities.Character{
+	finalizedChar := &character.Character{
 		ID:     draftChar.ID,
 		Name:   "Stanthony Hopkins", // Name updated during finalization
-		Status: entities.CharacterStatusActive,
+		Status: shared.CharacterStatusActive,
 		Race:   draftChar.Race,
 		Class:  draftChar.Class,
 		Level:  draftChar.Level,
 	}
 
 	// BUGGY BEHAVIOR: Regenerate features from templates, losing metadata
-	finalizedChar.Features = []*entities.CharacterFeature{
+	finalizedChar.Features = []*rulebook.CharacterFeature{
 		{
 			Key:      "human_versatility",
 			Name:     "Versatility",
-			Type:     entities.FeatureTypeRacial,
+			Type:     rulebook.FeatureTypeRacial,
 			Metadata: map[string]any{}, // Fresh from template
 		},
 		{
 			Key:      "fighting_style",
 			Name:     "Fighting Style",
-			Type:     entities.FeatureTypeClass,
+			Type:     rulebook.FeatureTypeClass,
 			Metadata: map[string]any{}, // BUG: User selection lost!
 		},
 		{
 			Key:      "second_wind",
 			Name:     "Second Wind",
-			Type:     entities.FeatureTypeClass,
+			Type:     rulebook.FeatureTypeClass,
 			Metadata: map[string]any{}, // Fresh from template
 		},
 	}
@@ -182,23 +184,23 @@ func simulateBuggyFinalization(draftChar *entities.Character) *entities.Characte
 }
 
 // simulateFixedFinalization simulates the FIXED behavior that preserves metadata
-func simulateFixedFinalization(draftChar *entities.Character) *entities.Character {
+func simulateFixedFinalization(draftChar *character.Character) *character.Character {
 	// This simulates what the FIXED FinalizeDraftCharacter should do:
 	// 1. Creates a new character
 	// 2. PRESERVES existing features with their metadata
 	// 3. Only adds missing features from templates
 
-	finalizedChar := &entities.Character{
+	finalizedChar := &character.Character{
 		ID:     draftChar.ID,
 		Name:   "Stanthony Hopkins", // Name updated during finalization
-		Status: entities.CharacterStatusActive,
+		Status: shared.CharacterStatusActive,
 		Race:   draftChar.Race,
 		Class:  draftChar.Class,
 		Level:  draftChar.Level,
 	}
 
 	// FIXED BEHAVIOR: Preserve existing features with metadata
-	finalizedChar.Features = make([]*entities.CharacterFeature, len(draftChar.Features))
+	finalizedChar.Features = make([]*rulebook.CharacterFeature, len(draftChar.Features))
 	for i, feature := range draftChar.Features {
 		// Create a copy but preserve the metadata
 		featCopy := *feature

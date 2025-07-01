@@ -5,8 +5,11 @@ import (
 	"log"
 	"strings"
 
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/utils"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
@@ -35,19 +38,19 @@ func (h *SheetHandler) Handle(s *discordgo.Session, i *discordgo.InteractionCrea
 	}
 
 	// Get the character from service (all business logic is in the service)
-	character, err := h.services.CharacterService.GetByID(characterID)
+	char, err := h.services.CharacterService.GetByID(characterID)
 	if err != nil {
 		log.Printf("Error getting character %s: %v", characterID, err)
 		return respondWithError(s, i, "Character not found")
 	}
 
 	// Verify ownership
-	if character.OwnerID != i.Member.User.ID {
+	if char.OwnerID != i.Member.User.ID {
 		return respondWithError(s, i, "You can only view your own characters!")
 	}
 
 	// Build the character sheet embed (pure presentation logic)
-	embed := BuildCharacterSheetEmbed(character)
+	embed := BuildCharacterSheetEmbed(char)
 
 	// Build interactive components
 	components := BuildCharacterSheetComponents(characterID)
@@ -64,7 +67,7 @@ func (h *SheetHandler) Handle(s *discordgo.Session, i *discordgo.InteractionCrea
 }
 
 // BuildCharacterSheetEmbed creates the main character sheet embed
-func BuildCharacterSheetEmbed(char *entities.Character) *discordgo.MessageEmbed {
+func BuildCharacterSheetEmbed(char *character.Character) *discordgo.MessageEmbed {
 	// Build title
 	title := fmt.Sprintf("%s - Level %d %s", char.Name, char.Level, char.Class.Name)
 	if char.Race != nil {
@@ -77,7 +80,7 @@ func BuildCharacterSheetEmbed(char *entities.Character) *discordgo.MessageEmbed 
 
 	// Calculate initiative bonus
 	initiativeBonus := 0
-	if dex, exists := char.Attributes[entities.AttributeDexterity]; exists {
+	if dex, exists := char.Attributes[shared.AttributeDexterity]; exists {
 		initiativeBonus = dex.Bonus
 	}
 	hpAcLine += fmt.Sprintf(" | **Initiative:** %+d", initiativeBonus)
@@ -85,14 +88,14 @@ func BuildCharacterSheetEmbed(char *entities.Character) *discordgo.MessageEmbed 
 	// Build ability scores
 	abilityLines := []string{
 		"**Physical:**",
-		buildAbilityLine("STR", char.Attributes[entities.AttributeStrength]),
-		buildAbilityLine("DEX", char.Attributes[entities.AttributeDexterity]),
-		buildAbilityLine("CON", char.Attributes[entities.AttributeConstitution]),
+		buildAbilityLine("STR", char.Attributes[shared.AttributeStrength]),
+		buildAbilityLine("DEX", char.Attributes[shared.AttributeDexterity]),
+		buildAbilityLine("CON", char.Attributes[shared.AttributeConstitution]),
 		"",
 		"**Mental:**",
-		buildAbilityLine("INT", char.Attributes[entities.AttributeIntelligence]),
-		buildAbilityLine("WIS", char.Attributes[entities.AttributeWisdom]),
-		buildAbilityLine("CHA", char.Attributes[entities.AttributeCharisma]),
+		buildAbilityLine("INT", char.Attributes[shared.AttributeIntelligence]),
+		buildAbilityLine("WIS", char.Attributes[shared.AttributeWisdom]),
+		buildAbilityLine("CHA", char.Attributes[shared.AttributeCharisma]),
 	}
 
 	// Build equipment display
@@ -147,7 +150,7 @@ func BuildCharacterSheetEmbed(char *entities.Character) *discordgo.MessageEmbed 
 }
 
 // buildAbilityLine formats a single ability score line
-func buildAbilityLine(name string, score *entities.AbilityScore) string {
+func buildAbilityLine(name string, score *character.AbilityScore) string {
 	if score == nil {
 		return fmt.Sprintf("**%s:** 10 (+0)", name)
 	}
@@ -155,32 +158,32 @@ func buildAbilityLine(name string, score *entities.AbilityScore) string {
 }
 
 // buildEquipmentDisplay builds the equipment section
-func buildEquipmentDisplay(char *entities.Character) []string {
+func buildEquipmentDisplay(char *character.Character) []string {
 	lines := []string{}
 
 	// Main hand
-	if weapon := char.EquippedSlots[entities.SlotMainHand]; weapon != nil {
+	if weapon := char.EquippedSlots[shared.SlotMainHand]; weapon != nil {
 		lines = append(lines, fmt.Sprintf("**Main Hand:** %s", weapon.GetName()))
 	} else {
 		lines = append(lines, "**Main Hand:** Empty")
 	}
 
 	// Off hand
-	if item := char.EquippedSlots[entities.SlotOffHand]; item != nil {
+	if item := char.EquippedSlots[shared.SlotOffHand]; item != nil {
 		lines = append(lines, fmt.Sprintf("**Off Hand:** %s", item.GetName()))
 	} else {
 		lines = append(lines, "**Off Hand:** Empty")
 	}
 
 	// Two-handed (only show if no main/off hand)
-	if char.EquippedSlots[entities.SlotMainHand] == nil && char.EquippedSlots[entities.SlotOffHand] == nil {
-		if weapon := char.EquippedSlots[entities.SlotTwoHanded]; weapon != nil {
+	if char.EquippedSlots[shared.SlotMainHand] == nil && char.EquippedSlots[shared.SlotOffHand] == nil {
+		if weapon := char.EquippedSlots[shared.SlotTwoHanded]; weapon != nil {
 			lines = append(lines, fmt.Sprintf("**Two-Handed:** %s", weapon.GetName()))
 		}
 	}
 
 	// Armor
-	if armor := char.EquippedSlots[entities.SlotBody]; armor != nil {
+	if armor := char.EquippedSlots[shared.SlotBody]; armor != nil {
 		lines = append(lines, fmt.Sprintf("**Armor:** %s", armor.GetName()))
 	} else {
 		lines = append(lines, "**Armor:** Empty")
@@ -190,11 +193,11 @@ func buildEquipmentDisplay(char *entities.Character) []string {
 }
 
 // buildProficiencySummary builds a summary of proficiencies
-func buildProficiencySummary(char *entities.Character) []string {
+func buildProficiencySummary(char *character.Character) []string {
 	lines := []string{}
 
 	// Weapon proficiencies
-	if weapons, exists := char.Proficiencies[entities.ProficiencyTypeWeapon]; exists && len(weapons) > 0 {
+	if weapons, exists := char.Proficiencies[rulebook.ProficiencyTypeWeapon]; exists && len(weapons) > 0 {
 		weaponNames := []string{}
 		for _, prof := range weapons {
 			weaponNames = append(weaponNames, prof.Name)
@@ -203,7 +206,7 @@ func buildProficiencySummary(char *entities.Character) []string {
 	}
 
 	// Armor proficiencies
-	if armors, exists := char.Proficiencies[entities.ProficiencyTypeArmor]; exists && len(armors) > 0 {
+	if armors, exists := char.Proficiencies[rulebook.ProficiencyTypeArmor]; exists && len(armors) > 0 {
 		armorNames := []string{}
 		for _, prof := range armors {
 			armorNames = append(armorNames, prof.Name)
@@ -212,7 +215,7 @@ func buildProficiencySummary(char *entities.Character) []string {
 	}
 
 	// Skill proficiencies
-	if skills, exists := char.Proficiencies[entities.ProficiencyTypeSkill]; exists && len(skills) > 0 {
+	if skills, exists := char.Proficiencies[rulebook.ProficiencyTypeSkill]; exists && len(skills) > 0 {
 		skillNames := []string{}
 		for _, prof := range skills {
 			skillNames = append(skillNames, prof.Name)
@@ -256,7 +259,7 @@ func BuildCharacterSheetComponents(characterID string) []discordgo.MessageCompon
 }
 
 // buildFeatureSummary builds a summary of character features
-func buildFeatureSummary(char *entities.Character) []string {
+func buildFeatureSummary(char *character.Character) []string {
 	lines := []string{}
 
 	if len(char.Features) == 0 {
@@ -265,18 +268,18 @@ func buildFeatureSummary(char *entities.Character) []string {
 	}
 
 	// Group features by type
-	classFeatures := []*entities.CharacterFeature{}
-	racialFeatures := []*entities.CharacterFeature{}
-	otherFeatures := []*entities.CharacterFeature{}
+	classFeatures := []*rulebook.CharacterFeature{}
+	racialFeatures := []*rulebook.CharacterFeature{}
+	otherFeatures := []*rulebook.CharacterFeature{}
 
 	for _, feature := range char.Features {
 		if feature == nil {
 			continue
 		}
 		switch feature.Type {
-		case entities.FeatureTypeClass:
+		case rulebook.FeatureTypeClass:
 			classFeatures = append(classFeatures, feature)
-		case entities.FeatureTypeRacial:
+		case rulebook.FeatureTypeRacial:
 			racialFeatures = append(racialFeatures, feature)
 		default:
 			otherFeatures = append(otherFeatures, feature)
@@ -358,7 +361,7 @@ func buildFeatureSummary(char *entities.Character) []string {
 }
 
 // buildActiveEffectsDisplay builds the active effects section
-func buildActiveEffectsDisplay(char *entities.Character) []string {
+func buildActiveEffectsDisplay(char *character.Character) []string {
 	lines := []string{}
 
 	// Get active status effects

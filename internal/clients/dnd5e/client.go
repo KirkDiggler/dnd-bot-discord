@@ -6,9 +6,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	apiEntities "github.com/fadedpez/dnd5e-api/entities"
 
 	internal "github.com/KirkDiggler/dnd-bot-discord/internal"
@@ -41,7 +43,7 @@ func New(cfg *Config) (Client, error) {
 	}, nil
 }
 
-func (c *client) ListClasses() ([]*entities.Class, error) {
+func (c *client) ListClasses() ([]*rulebook.Class, error) {
 	response, err := c.client.ListClasses()
 	if err != nil {
 		return nil, err
@@ -50,7 +52,7 @@ func (c *client) ListClasses() ([]*entities.Class, error) {
 	return apiReferenceItemsToClasses(response), nil
 }
 
-func (c *client) ListRaces() ([]*entities.Race, error) {
+func (c *client) ListRaces() ([]*rulebook.Race, error) {
 	response, err := c.client.ListRaces()
 	if err != nil {
 		return nil, err
@@ -59,7 +61,7 @@ func (c *client) ListRaces() ([]*entities.Race, error) {
 	return apiReferenceItemsToRaces(response), nil
 }
 
-func (c *client) GetRace(key string) (*entities.Race, error) {
+func (c *client) GetRace(key string) (*rulebook.Race, error) {
 	response, err := c.client.GetRace(key)
 	if err != nil {
 		return nil, err
@@ -70,7 +72,7 @@ func (c *client) GetRace(key string) (*entities.Race, error) {
 	return race, nil
 }
 
-func (c *client) GetClass(key string) (*entities.Class, error) {
+func (c *client) GetClass(key string) (*rulebook.Class, error) {
 	response, err := c.client.GetClass(key)
 	if err != nil {
 		return nil, err
@@ -79,7 +81,7 @@ func (c *client) GetClass(key string) (*entities.Class, error) {
 	return apiClassToClass(response), nil
 }
 
-func (c *client) GetProficiency(key string) (*entities.Proficiency, error) {
+func (c *client) GetProficiency(key string) (*rulebook.Proficiency, error) {
 	if key == "" {
 		return nil, internal.NewMissingParamError("GetProficiency.key")
 	}
@@ -92,7 +94,7 @@ func (c *client) GetProficiency(key string) (*entities.Proficiency, error) {
 	return apiProficiencyToProficiency(response), nil
 }
 
-func (c *client) GetEquipment(key string) (entities.Equipment, error) {
+func (c *client) GetEquipment(key string) (equipment.Equipment, error) {
 	if key == "" {
 		return nil, internal.NewMissingParamError("GetEquipment.key")
 	}
@@ -114,7 +116,7 @@ func (c *client) doGetProficiency(key string) (*apiEntities.Proficiency, error) 
 	return response, nil
 }
 
-func (c *client) GetMonster(key string) (*entities.MonsterTemplate, error) {
+func (c *client) GetMonster(key string) (*combat.MonsterTemplate, error) {
 	monsterTemplate, err := c.client.GetMonster(key)
 	if err != nil {
 		return nil, err
@@ -123,7 +125,7 @@ func (c *client) GetMonster(key string) (*entities.MonsterTemplate, error) {
 	return apiToMonsterTemplate(monsterTemplate), nil
 }
 
-func (c *client) GetEquipmentByCategory(category string) ([]entities.Equipment, error) {
+func (c *client) GetEquipmentByCategory(category string) ([]equipment.Equipment, error) {
 	// Get equipment category data
 	categoryData, err := c.client.GetEquipmentCategory(category)
 	if err != nil {
@@ -131,7 +133,7 @@ func (c *client) GetEquipmentByCategory(category string) ([]entities.Equipment, 
 	}
 
 	// Fetch each piece of equipment
-	equipment := make([]entities.Equipment, 0, len(categoryData.Equipment))
+	equipmentSlice := make([]equipment.Equipment, 0, len(categoryData.Equipment))
 	for _, ref := range categoryData.Equipment {
 		if ref.Key != "" {
 			equip, err := c.GetEquipment(ref.Key)
@@ -139,15 +141,15 @@ func (c *client) GetEquipmentByCategory(category string) ([]entities.Equipment, 
 				// Log error but continue with other equipment
 				continue
 			}
-			equipment = append(equipment, equip)
+			equipmentSlice = append(equipmentSlice, equip)
 		}
 	}
 
-	return equipment, nil
+	return equipmentSlice, nil
 }
 
 // GetClassFeatures returns features for a class at a specific level
-func (c *client) GetClassFeatures(classKey string, level int) ([]*entities.CharacterFeature, error) {
+func (c *client) GetClassFeatures(classKey string, level int) ([]*rulebook.CharacterFeature, error) {
 	// Get the class level data which includes features
 	classLevel, err := c.client.GetClassLevel(classKey, level)
 	if err != nil {
@@ -155,16 +157,16 @@ func (c *client) GetClassFeatures(classKey string, level int) ([]*entities.Chara
 	}
 
 	// Convert feature references to CharacterFeatures
-	features := make([]*entities.CharacterFeature, 0, len(classLevel.Features))
+	features := make([]*rulebook.CharacterFeature, 0, len(classLevel.Features))
 	for _, featureRef := range classLevel.Features {
 		if featureRef.Key != "" {
 			// For now, we just create basic features from the reference
 			// In the future, we might want to fetch full feature details
-			feature := &entities.CharacterFeature{
+			feature := &rulebook.CharacterFeature{
 				Key:         featureRef.Key,
 				Name:        featureRef.Name,
 				Description: "", // Would need to fetch full feature for description
-				Type:        entities.FeatureTypeClass,
+				Type:        rulebook.FeatureTypeClass,
 				Level:       level,
 				Source:      classKey,
 			}
@@ -176,12 +178,12 @@ func (c *client) GetClassFeatures(classKey string, level int) ([]*entities.Chara
 }
 
 // ListMonstersByCR returns monsters within a challenge rating range
-func (c *client) ListMonstersByCR(minCR, maxCR float32) ([]*entities.MonsterTemplate, error) {
+func (c *client) ListMonstersByCR(minCR, maxCR float32) ([]*combat.MonsterTemplate, error) {
 	// The API only supports filtering by exact CR, not range
 	// So we need to fetch monsters for each CR value in the range
 	crValues := getCRValuesInRange(minCR, maxCR)
 
-	monsters := make([]*entities.MonsterTemplate, 0)
+	monsters := make([]*combat.MonsterTemplate, 0)
 	processedKeys := make(map[string]bool) // Track processed monsters to avoid duplicates
 
 	for _, cr := range crValues {
@@ -235,7 +237,7 @@ func getCRValuesInRange(minCR, maxCR float32) []float32 {
 }
 
 // ListEquipment returns all equipment
-func (c *client) ListEquipment() ([]entities.Equipment, error) {
+func (c *client) ListEquipment() ([]equipment.Equipment, error) {
 	// Get list of all equipment references
 	equipmentRefs, err := c.client.ListEquipment()
 	if err != nil {
@@ -243,7 +245,7 @@ func (c *client) ListEquipment() ([]entities.Equipment, error) {
 	}
 
 	// Fetch each piece of equipment
-	equipment := make([]entities.Equipment, 0, len(equipmentRefs))
+	equipmentValue := make([]equipment.Equipment, 0, len(equipmentRefs))
 	for _, ref := range equipmentRefs {
 		if ref.Key != "" {
 			equip, err := c.GetEquipment(ref.Key)
@@ -253,20 +255,20 @@ func (c *client) ListEquipment() ([]entities.Equipment, error) {
 				continue
 			}
 			if equip != nil {
-				equipment = append(equipment, equip)
+				equipmentValue = append(equipmentValue, equip)
 			}
 		}
 	}
 
-	return equipment, nil
+	return equipmentValue, nil
 }
 
-func apiToMonsterTemplate(input *apiEntities.Monster) *entities.MonsterTemplate {
+func apiToMonsterTemplate(input *apiEntities.Monster) *combat.MonsterTemplate {
 	if input == nil {
 		return nil
 	}
 
-	return &entities.MonsterTemplate{
+	return &combat.MonsterTemplate{
 		Key:             input.Key,
 		Name:            input.Name,
 		Type:            input.Type,
@@ -327,12 +329,12 @@ func apisToDamages(input []*apiEntities.Damage) []*damage.Damage {
 	return damages
 }
 
-func apisToMonsterActions(input []*apiEntities.MonsterAction) []*entities.MonsterAction {
+func apisToMonsterActions(input []*apiEntities.MonsterAction) []*combat.MonsterAction {
 	if input == nil {
 		return nil
 	}
 
-	var monsterActions []*entities.MonsterAction
+	var monsterActions []*combat.MonsterAction
 	for _, ma := range input {
 		monsterActions = append(monsterActions, apiToMonsterAction(ma))
 	}
@@ -340,12 +342,12 @@ func apisToMonsterActions(input []*apiEntities.MonsterAction) []*entities.Monste
 	return monsterActions
 }
 
-func apiToMonsterAction(input *apiEntities.MonsterAction) *entities.MonsterAction {
+func apiToMonsterAction(input *apiEntities.MonsterAction) *combat.MonsterAction {
 	if input == nil {
 		return nil
 	}
 
-	return &entities.MonsterAction{
+	return &combat.MonsterAction{
 		Name:        input.Name,
 		Description: input.Description,
 		AttackBonus: input.AttackBonus,

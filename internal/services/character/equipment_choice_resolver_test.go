@@ -2,10 +2,11 @@ package character_test
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -42,41 +43,41 @@ func TestEquipmentChoiceResolverSuite(t *testing.T) {
 
 func (s *EquipmentChoiceResolverTestSuite) TestFighterEquipmentChoices_Complete() {
 	// Setup - Fighter with all typical equipment choices
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "fighter",
 		Name: "Fighter",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			// Choice 1: (a) chain mail or (b) leather armor, longbow, and 20 arrows
 			{
 				Name:  "(a) chain mail or (b) leather armor, longbow, and 20 arrows",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "chain-mail",
 							Name: "Chain Mail",
 						},
 					},
-					&entities.MultipleOption{
+					&shared.MultipleOption{
 						Key:  "armor-bow-bundle",
 						Name: "leather armor, longbow, and 20 arrows",
-						Items: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Items: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "leather-armor",
 									Name: "Leather Armor",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "longbow",
 									Name: "Longbow",
 								},
 							},
-							&entities.CountedReferenceOption{
+							&shared.CountedReferenceOption{
 								Count: 20,
-								Reference: &entities.ReferenceItem{
+								Reference: &shared.ReferenceItem{
 									Key:  "arrow",
 									Name: "Arrow",
 								},
@@ -89,58 +90,58 @@ func (s *EquipmentChoiceResolverTestSuite) TestFighterEquipmentChoices_Complete(
 			{
 				Name:  "(a) a martial weapon and a shield or (b) two martial weapons",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.MultipleOption{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.MultipleOption{
 						Key:  "weapon-shield",
 						Name: "a martial weapon and a shield",
-						Items: []entities.Option{
-							&entities.Choice{
+						Items: []shared.Option{
+							&shared.Choice{
 								Name:  "martial weapon",
 								Count: 1,
-								Type:  entities.ChoiceTypeEquipment,
-								Options: []entities.Option{
-									&entities.ReferenceOption{
-										Reference: &entities.ReferenceItem{
+								Type:  shared.ChoiceTypeEquipment,
+								Options: []shared.Option{
+									&shared.ReferenceOption{
+										Reference: &shared.ReferenceItem{
 											Key:  "longsword",
 											Name: "Longsword",
 										},
 									},
-									&entities.ReferenceOption{
-										Reference: &entities.ReferenceItem{
+									&shared.ReferenceOption{
+										Reference: &shared.ReferenceItem{
 											Key:  "battleaxe",
 											Name: "Battleaxe",
 										},
 									},
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "shield",
 									Name: "Shield",
 								},
 							},
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:  "two martial weapons",
 						Count: 2,
-						Type:  entities.ChoiceTypeEquipment,
-						Options: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Type:  shared.ChoiceTypeEquipment,
+						Options: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "longsword",
 									Name: "Longsword",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "shortsword",
 									Name: "Shortsword",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "rapier",
 									Name: "Rapier",
 								},
@@ -153,30 +154,30 @@ func (s *EquipmentChoiceResolverTestSuite) TestFighterEquipmentChoices_Complete(
 			{
 				Name:  "(a) a light crossbow and 20 bolts or (b) two handaxes",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.MultipleOption{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.MultipleOption{
 						Key:  "crossbow-bundle",
 						Name: "a light crossbow and 20 bolts",
-						Items: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Items: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "light-crossbow",
 									Name: "Light Crossbow",
 								},
 							},
-							&entities.CountedReferenceOption{
+							&shared.CountedReferenceOption{
 								Count: 20,
-								Reference: &entities.ReferenceItem{
+								Reference: &shared.ReferenceItem{
 									Key:  "crossbow-bolt",
 									Name: "Crossbow Bolt",
 								},
 							},
 						},
 					},
-					&entities.CountedReferenceOption{
+					&shared.CountedReferenceOption{
 						Count: 2,
-						Reference: &entities.ReferenceItem{
+						Reference: &shared.ReferenceItem{
 							Key:  "handaxe",
 							Name: "Handaxe",
 						},
@@ -187,16 +188,16 @@ func (s *EquipmentChoiceResolverTestSuite) TestFighterEquipmentChoices_Complete(
 			{
 				Name:  "(a) a dungeoneer's pack or (b) an explorer's pack",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "dungeoneers-pack",
 							Name: "Dungeoneer's Pack",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "explorers-pack",
 							Name: "Explorer's Pack",
 						},
@@ -257,41 +258,41 @@ func (s *EquipmentChoiceResolverTestSuite) TestFighterEquipmentChoices_Complete(
 
 func (s *EquipmentChoiceResolverTestSuite) TestMonkEquipmentChoices_SimpleWeapons() {
 	// Setup - Monk with simple weapon choices
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "monk",
 		Name: "Monk",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			// Choice 1: (a) a shortsword or (b) any simple weapon
 			{
 				Name:  "(a) a shortsword or (b) any simple weapon",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "shortsword",
 							Name: "Shortsword",
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:  "any simple weapon",
 						Count: 1,
-						Type:  entities.ChoiceTypeEquipment,
-						Options: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Type:  shared.ChoiceTypeEquipment,
+						Options: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "club",
 									Name: "Club",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "quarterstaff",
 									Name: "Quarterstaff",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "dagger",
 									Name: "Dagger",
 								},
@@ -304,16 +305,16 @@ func (s *EquipmentChoiceResolverTestSuite) TestMonkEquipmentChoices_SimpleWeapon
 			{
 				Name:  "(a) a dungeoneer's pack or (b) an explorer's pack",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "dungeoneers-pack",
 							Name: "Dungeoneer's Pack",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "explorers-pack",
 							Name: "Explorer's Pack",
 						},
@@ -350,24 +351,24 @@ func (s *EquipmentChoiceResolverTestSuite) TestMonkEquipmentChoices_SimpleWeapon
 
 func (s *EquipmentChoiceResolverTestSuite) TestWizardEquipmentChoices_WithFocus() {
 	// Setup - Wizard with component pouch/focus choice
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "wizard",
 		Name: "Wizard",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			// Choice 1: (a) a quarterstaff or (b) a dagger
 			{
 				Name:  "(a) a quarterstaff or (b) a dagger",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "quarterstaff",
 							Name: "Quarterstaff",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "dagger",
 							Name: "Dagger",
 						},
@@ -378,45 +379,45 @@ func (s *EquipmentChoiceResolverTestSuite) TestWizardEquipmentChoices_WithFocus(
 			{
 				Name:  "(a) a component pouch or (b) an arcane focus",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "component-pouch",
 							Name: "Component Pouch",
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:  "arcane focus",
 						Count: 1,
-						Type:  entities.ChoiceTypeEquipment,
-						Options: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Type:  shared.ChoiceTypeEquipment,
+						Options: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "crystal",
 									Name: "Crystal",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "orb",
 									Name: "Orb",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "rod",
 									Name: "Rod",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "staff",
 									Name: "Staff",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "wand",
 									Name: "Wand",
 								},
@@ -429,16 +430,16 @@ func (s *EquipmentChoiceResolverTestSuite) TestWizardEquipmentChoices_WithFocus(
 			{
 				Name:  "(a) a scholar's pack or (b) an explorer's pack",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "scholars-pack",
 							Name: "Scholar's Pack",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "explorers-pack",
 							Name: "Explorer's Pack",
 						},
@@ -469,24 +470,24 @@ func (s *EquipmentChoiceResolverTestSuite) TestWizardEquipmentChoices_WithFocus(
 
 func (s *EquipmentChoiceResolverTestSuite) TestRogueEquipmentChoices_WithBundles() {
 	// Setup - Rogue with weapon bundles
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "rogue",
 		Name: "Rogue",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			// Choice 1: (a) a rapier or (b) a shortsword
 			{
 				Name:  "(a) a rapier or (b) a shortsword",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "rapier",
 							Name: "Rapier",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "shortsword",
 							Name: "Shortsword",
 						},
@@ -497,29 +498,29 @@ func (s *EquipmentChoiceResolverTestSuite) TestRogueEquipmentChoices_WithBundles
 			{
 				Name:  "(a) a shortbow and 20 arrows or (b) a shortsword",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.MultipleOption{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.MultipleOption{
 						Key:  "bow-bundle",
 						Name: "a shortbow and 20 arrows",
-						Items: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Items: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "shortbow",
 									Name: "Shortbow",
 								},
 							},
-							&entities.CountedReferenceOption{
+							&shared.CountedReferenceOption{
 								Count: 20,
-								Reference: &entities.ReferenceItem{
+								Reference: &shared.ReferenceItem{
 									Key:  "arrow",
 									Name: "Arrow",
 								},
 							},
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "shortsword",
 							Name: "Shortsword",
 						},
@@ -548,10 +549,10 @@ func (s *EquipmentChoiceResolverTestSuite) TestRogueEquipmentChoices_WithBundles
 
 func (s *EquipmentChoiceResolverTestSuite) TestResolveEquipmentChoices_EmptyChoices() {
 	// Setup - Class with no equipment choices
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:                      "custom",
 		Name:                     "Custom Class",
-		StartingEquipmentChoices: []*entities.Choice{},
+		StartingEquipmentChoices: []*shared.Choice{},
 	}
 
 	// Execute
@@ -564,7 +565,7 @@ func (s *EquipmentChoiceResolverTestSuite) TestResolveEquipmentChoices_EmptyChoi
 
 func (s *EquipmentChoiceResolverTestSuite) TestResolveEquipmentChoices_NilChoices() {
 	// Setup - Class with nil equipment choices
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:                      "custom",
 		Name:                     "Custom Class",
 		StartingEquipmentChoices: nil,
@@ -580,29 +581,29 @@ func (s *EquipmentChoiceResolverTestSuite) TestResolveEquipmentChoices_NilChoice
 
 func (s *EquipmentChoiceResolverTestSuite) TestResolveEquipmentChoices_ChoicesWithNilOptions() {
 	// Setup - Choices with nil or empty options
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "custom",
 		Name: "Custom Class",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:    "Empty choice",
 				Count:   1,
-				Type:    entities.ChoiceTypeEquipment,
+				Type:    shared.ChoiceTypeEquipment,
 				Options: nil, // Nil options
 			},
 			{
 				Name:    "No options",
 				Count:   1,
-				Type:    entities.ChoiceTypeEquipment,
-				Options: []entities.Option{}, // Empty options
+				Type:    shared.ChoiceTypeEquipment,
+				Options: []shared.Option{}, // Empty options
 			},
 			{
 				Name:  "Valid choice",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "dagger",
 							Name: "Dagger",
 						},
@@ -624,20 +625,20 @@ func (s *EquipmentChoiceResolverTestSuite) TestResolveEquipmentChoices_ChoicesWi
 
 func (s *EquipmentChoiceResolverTestSuite) TestResolveEquipmentChoices_InvalidOptionTypes() {
 	// Setup - Choice with invalid reference
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "custom",
 		Name: "Custom Class",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "Choice with nil reference",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
 						Reference: nil, // Nil reference
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "valid-item",
 							Name: "Valid Item",
 						},
@@ -661,45 +662,45 @@ func (s *EquipmentChoiceResolverTestSuite) TestResolveEquipmentChoices_InvalidOp
 
 func (s *EquipmentChoiceResolverTestSuite) TestResolveEquipmentChoices_DeepNestedChoices() {
 	// Setup - Complex nested martial weapon choice
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "fighter",
 		Name: "Fighter",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			{
 				Name:  "Weapon choice with deep nesting",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.MultipleOption{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.MultipleOption{
 						Key:  "complex-bundle",
 						Name: "weapon bundle",
-						Items: []entities.Option{
-							&entities.Choice{
+						Items: []shared.Option{
+							&shared.Choice{
 								Name:  "a martial melee weapon",
 								Count: 1,
-								Type:  entities.ChoiceTypeEquipment,
-								Options: []entities.Option{
-									&entities.ReferenceOption{
-										Reference: &entities.ReferenceItem{
+								Type:  shared.ChoiceTypeEquipment,
+								Options: []shared.Option{
+									&shared.ReferenceOption{
+										Reference: &shared.ReferenceItem{
 											Key:  "longsword",
 											Name: "Longsword",
 										},
 									},
-									&entities.ReferenceOption{
-										Reference: &entities.ReferenceItem{
+									&shared.ReferenceOption{
+										Reference: &shared.ReferenceItem{
 											Key:  "battleaxe",
 											Name: "Battleaxe",
 										},
 									},
 								},
 							},
-							&entities.Choice{
+							&shared.Choice{
 								Name:  "a simple ranged weapon",
 								Count: 1,
-								Type:  entities.ChoiceTypeEquipment,
-								Options: []entities.Option{
-									&entities.ReferenceOption{
-										Reference: &entities.ReferenceItem{
+								Type:  shared.ChoiceTypeEquipment,
+								Options: []shared.Option{
+									&shared.ReferenceOption{
+										Reference: &shared.ReferenceItem{
 											Key:  "shortbow",
 											Name: "Shortbow",
 										},
@@ -728,24 +729,24 @@ func (s *EquipmentChoiceResolverTestSuite) TestResolveEquipmentChoices_DeepNeste
 
 func (s *EquipmentChoiceResolverTestSuite) TestClericEquipmentChoices_WithHolySymbol() {
 	// Setup - Cleric with holy symbol choice
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "cleric",
 		Name: "Cleric",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			// Choice 1: (a) a mace or (b) a warhammer (if proficient)
 			{
 				Name:  "(a) a mace or (b) a warhammer (if proficient)",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "mace",
 							Name: "Mace",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "warhammer",
 							Name: "Warhammer",
 						},
@@ -756,22 +757,22 @@ func (s *EquipmentChoiceResolverTestSuite) TestClericEquipmentChoices_WithHolySy
 			{
 				Name:  "(a) scale mail, (b) leather armor, or (c) chain mail (if proficient)",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "scale-mail",
 							Name: "Scale Mail",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "leather-armor",
 							Name: "Leather Armor",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "chain-mail",
 							Name: "Chain Mail",
 						},
@@ -782,27 +783,27 @@ func (s *EquipmentChoiceResolverTestSuite) TestClericEquipmentChoices_WithHolySy
 			{
 				Name:  "a holy symbol",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.Choice{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.Choice{
 						Name:  "holy symbol",
 						Count: 1,
-						Type:  entities.ChoiceTypeEquipment,
-						Options: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Type:  shared.ChoiceTypeEquipment,
+						Options: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "amulet",
 									Name: "Amulet",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "emblem",
 									Name: "Emblem",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "reliquary",
 									Name: "Reliquary",
 								},
@@ -845,24 +846,24 @@ func (s *EquipmentChoiceResolverTestSuite) TestClericEquipmentChoices_WithHolySy
 
 func (s *EquipmentChoiceResolverTestSuite) TestRangerEquipmentChoices_WithMultipleOptions() {
 	// Setup - Ranger with varied equipment choices
-	class := &entities.Class{
+	class := &rulebook.Class{
 		Key:  "ranger",
 		Name: "Ranger",
-		StartingEquipmentChoices: []*entities.Choice{
+		StartingEquipmentChoices: []*shared.Choice{
 			// Choice 1: (a) scale mail or (b) leather armor
 			{
 				Name:  "(a) scale mail or (b) leather armor",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "scale-mail",
 							Name: "Scale Mail",
 						},
 					},
-					&entities.ReferenceOption{
-						Reference: &entities.ReferenceItem{
+					&shared.ReferenceOption{
+						Reference: &shared.ReferenceItem{
 							Key:  "leather-armor",
 							Name: "Leather Armor",
 						},
@@ -873,34 +874,34 @@ func (s *EquipmentChoiceResolverTestSuite) TestRangerEquipmentChoices_WithMultip
 			{
 				Name:  "(a) two shortswords or (b) two simple melee weapons",
 				Count: 1,
-				Type:  entities.ChoiceTypeEquipment,
-				Options: []entities.Option{
-					&entities.CountedReferenceOption{
+				Type:  shared.ChoiceTypeEquipment,
+				Options: []shared.Option{
+					&shared.CountedReferenceOption{
 						Count: 2,
-						Reference: &entities.ReferenceItem{
+						Reference: &shared.ReferenceItem{
 							Key:  "shortsword",
 							Name: "Shortsword",
 						},
 					},
-					&entities.Choice{
+					&shared.Choice{
 						Name:  "two simple melee weapons",
 						Count: 2,
-						Type:  entities.ChoiceTypeEquipment,
-						Options: []entities.Option{
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+						Type:  shared.ChoiceTypeEquipment,
+						Options: []shared.Option{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "handaxe",
 									Name: "Handaxe",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "club",
 									Name: "Club",
 								},
 							},
-							&entities.ReferenceOption{
-								Reference: &entities.ReferenceItem{
+							&shared.ReferenceOption{
+								Reference: &shared.ReferenceItem{
 									Key:  "dagger",
 									Name: "Dagger",
 								},

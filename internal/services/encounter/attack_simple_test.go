@@ -2,12 +2,13 @@ package encounter_test
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	session2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"testing"
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/gamesessions"
@@ -48,16 +49,16 @@ func TestPerformAttack_MonsterVsMonster_WithMockDice(t *testing.T) {
 	})
 
 	// Create a test session
-	sess := &entities.Session{
+	sess := &session2.Session{
 		ID:        "test-session",
 		Name:      "Test Session",
 		ChannelID: "channel-1",
 		CreatorID: "dm-1",
 		DMID:      "dm-1",
-		Members: map[string]*entities.SessionMember{
-			"dm-1": {UserID: "dm-1", Role: entities.SessionRoleDM},
+		Members: map[string]*session2.SessionMember{
+			"dm-1": {UserID: "dm-1", Role: session2.SessionRoleDM},
 		},
-		Status:     entities.SessionStatusActive,
+		Status:     session2.SessionStatusActive,
 		CreatedAt:  time.Now(),
 		LastActive: time.Now(),
 	}
@@ -78,7 +79,7 @@ func TestPerformAttack_MonsterVsMonster_WithMockDice(t *testing.T) {
 		Name:  "Goblin",
 		MaxHP: 7,
 		AC:    15,
-		Actions: []*entities.MonsterAction{
+		Actions: []*combat.MonsterAction{
 			{
 				Name:        "Scimitar",
 				AttackBonus: 4,
@@ -106,7 +107,7 @@ func TestPerformAttack_MonsterVsMonster_WithMockDice(t *testing.T) {
 	// Get updated encounter and manually set it up for combat
 	enc, err = encounterService.GetEncounter(ctx, enc.ID)
 	require.NoError(t, err)
-	enc.Status = entities.EncounterStatusActive
+	enc.Status = combat.EncounterStatusActive
 	enc.Turn = 0
 	enc.TurnOrder = []string{attacker.ID, target.ID}
 	enc.Combatants[attacker.ID].Initiative = 15
@@ -177,16 +178,16 @@ func TestPerformAttack_UnarmedStrike_WithMockDice(t *testing.T) {
 	})
 
 	// Create a test session
-	sess := &entities.Session{
+	sess := &session2.Session{
 		ID:        "test-session",
 		Name:      "Test Session",
 		ChannelID: "channel-1",
 		CreatorID: "dm-1",
 		DMID:      "dm-1",
-		Members: map[string]*entities.SessionMember{
-			"dm-1": {UserID: "dm-1", Role: entities.SessionRoleDM},
+		Members: map[string]*session2.SessionMember{
+			"dm-1": {UserID: "dm-1", Role: session2.SessionRoleDM},
 		},
-		Status:     entities.SessionStatusActive,
+		Status:     session2.SessionStatusActive,
 		CreatedAt:  time.Now(),
 		LastActive: time.Now(),
 	}
@@ -220,7 +221,7 @@ func TestPerformAttack_UnarmedStrike_WithMockDice(t *testing.T) {
 	// Get updated encounter and manually set it up for combat
 	enc, err = encounterService.GetEncounter(ctx, enc.ID)
 	require.NoError(t, err)
-	enc.Status = entities.EncounterStatusActive
+	enc.Status = combat.EncounterStatusActive
 	enc.Turn = 0
 	enc.TurnOrder = []string{attacker.ID, target.ID}
 	enc.Combatants[attacker.ID].Initiative = 10

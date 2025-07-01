@@ -7,7 +7,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+
 	"github.com/redis/go-redis/v9"
 )
 
@@ -51,26 +52,26 @@ func main() {
 		return
 	}
 
-	// Parse the session
-	var session entities.Session
-	if err := json.Unmarshal([]byte(data), &session); err != nil {
+	// Parse the sess
+	var sess session.Session
+	if err := json.Unmarshal([]byte(data), &sess); err != nil {
 		log.Printf("Failed to parse session: %v", err)
 		return
 	}
 
-	fmt.Printf("Session ID: %s\n", session.ID)
-	fmt.Printf("Name: %s\n", session.Name)
-	fmt.Printf("Creator: %s\n", session.CreatorID)
-	fmt.Printf("Channel: %s\n", session.ChannelID)
-	fmt.Printf("Status: %s\n", session.Status)
-	fmt.Printf("Members: %d\n", len(session.Members))
+	fmt.Printf("Session ID: %s\n", sess.ID)
+	fmt.Printf("Name: %s\n", sess.Name)
+	fmt.Printf("Creator: %s\n", sess.CreatorID)
+	fmt.Printf("Channel: %s\n", sess.ChannelID)
+	fmt.Printf("Status: %s\n", sess.Status)
+	fmt.Printf("Members: %d\n", len(sess.Members))
 
-	for userID, member := range session.Members {
+	for userID, member := range sess.Members {
 		fmt.Printf("  %s: %s (character: %s)\n", userID, member.Role, member.CharacterID)
 	}
 
-	fmt.Printf("Metadata: %d items\n", len(session.Metadata))
-	for key, value := range session.Metadata {
+	fmt.Printf("Metadata: %d items\n", len(sess.Metadata))
+	for key, value := range sess.Metadata {
 		fmt.Printf("  %s: %v\n", key, value)
 	}
 }

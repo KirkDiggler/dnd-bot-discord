@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	gameSession "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
 	"github.com/bwmarrin/discordgo"
@@ -52,7 +54,7 @@ func (h *AddMonsterHandler) Handle(req *AddMonsterRequest) error {
 
 	// Check if user is DM
 	member, exists := session.Members[req.Interaction.Member.User.ID]
-	if !exists || member.Role != entities.SessionRoleDM {
+	if !exists || member.Role != gameSession.SessionRoleDM {
 		content := "❌ Only the DM can add monsters to encounters!"
 		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
 			Content: &content,
@@ -220,7 +222,7 @@ func (h *AddMonsterHandler) getCommonMonsters(query string) []*encounter.AddMons
 				"wisdom":       8,
 				"charisma":     8,
 			},
-			Actions: []*entities.MonsterAction{
+			Actions: []*combat.MonsterAction{
 				{
 					Name:        "Scimitar",
 					AttackBonus: 4,
@@ -256,7 +258,7 @@ func (h *AddMonsterHandler) getCommonMonsters(query string) []*encounter.AddMons
 				"wisdom":       11,
 				"charisma":     10,
 			},
-			Actions: []*entities.MonsterAction{
+			Actions: []*combat.MonsterAction{
 				{
 					Name:        "Greataxe",
 					AttackBonus: 5,
@@ -292,7 +294,7 @@ func (h *AddMonsterHandler) getCommonMonsters(query string) []*encounter.AddMons
 				"wisdom":       8,
 				"charisma":     5,
 			},
-			Actions: []*entities.MonsterAction{
+			Actions: []*combat.MonsterAction{
 				{
 					Name:        "Shortsword",
 					AttackBonus: 4,
@@ -328,7 +330,7 @@ func (h *AddMonsterHandler) getCommonMonsters(query string) []*encounter.AddMons
 				"wisdom":       12,
 				"charisma":     7,
 			},
-			Actions: []*entities.MonsterAction{
+			Actions: []*combat.MonsterAction{
 				{
 					Name:        "Bite",
 					AttackBonus: 5,
@@ -356,7 +358,7 @@ func (h *AddMonsterHandler) getCommonMonsters(query string) []*encounter.AddMons
 				"wisdom":       6,
 				"charisma":     5,
 			},
-			Actions: []*entities.MonsterAction{
+			Actions: []*combat.MonsterAction{
 				{
 					Name:        "Slam",
 					AttackBonus: 3,

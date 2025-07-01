@@ -2,10 +2,12 @@ package character_test
 
 import (
 	"context"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -30,27 +32,27 @@ func TestProficiencyUpdateHandling(t *testing.T) {
 		})
 
 		// Create a character with base proficiencies
-		char := &entities.Character{
+		char := &character2.Character{
 			ID:      "test-char-1",
 			OwnerID: "test-user",
 			RealmID: "test-realm",
-			Status:  entities.CharacterStatusDraft,
-			Proficiencies: map[entities.ProficiencyType][]*entities.Proficiency{
+			Status:  shared.CharacterStatusDraft,
+			Proficiencies: map[rulebook.ProficiencyType][]*rulebook.Proficiency{
 				// Base proficiencies from class
-				entities.ProficiencyTypeArmor: {
-					{Key: "armor-light", Name: "Light Armor", Type: entities.ProficiencyTypeArmor},
+				rulebook.ProficiencyTypeArmor: {
+					{Key: "armor-light", Name: "Light Armor", Type: rulebook.ProficiencyTypeArmor},
 				},
-				entities.ProficiencyTypeWeapon: {
-					{Key: "weapon-simple", Name: "Simple Weapons", Type: entities.ProficiencyTypeWeapon},
+				rulebook.ProficiencyTypeWeapon: {
+					{Key: "weapon-simple", Name: "Simple Weapons", Type: rulebook.ProficiencyTypeWeapon},
 				},
-				entities.ProficiencyTypeSavingThrow: {
-					{Key: "saving-throw-dex", Name: "Dexterity", Type: entities.ProficiencyTypeSavingThrow},
-					{Key: "saving-throw-int", Name: "Intelligence", Type: entities.ProficiencyTypeSavingThrow},
+				rulebook.ProficiencyTypeSavingThrow: {
+					{Key: "saving-throw-dex", Name: "Dexterity", Type: rulebook.ProficiencyTypeSavingThrow},
+					{Key: "saving-throw-int", Name: "Intelligence", Type: rulebook.ProficiencyTypeSavingThrow},
 				},
 				// Previously chosen skills
-				entities.ProficiencyTypeSkill: {
-					{Key: "skill-acrobatics", Name: "Acrobatics", Type: entities.ProficiencyTypeSkill},
-					{Key: "skill-stealth", Name: "Stealth", Type: entities.ProficiencyTypeSkill},
+				rulebook.ProficiencyTypeSkill: {
+					{Key: "skill-acrobatics", Name: "Acrobatics", Type: rulebook.ProficiencyTypeSkill},
+					{Key: "skill-stealth", Name: "Stealth", Type: rulebook.ProficiencyTypeSkill},
 				},
 			},
 		}
@@ -61,9 +63,9 @@ func TestProficiencyUpdateHandling(t *testing.T) {
 
 		// Mock proficiency lookups for new selections
 		mockDNDClient.EXPECT().GetProficiency("skill-perception").Return(
-			&entities.Proficiency{Key: "skill-perception", Name: "Perception", Type: entities.ProficiencyTypeSkill}, nil)
+			&rulebook.Proficiency{Key: "skill-perception", Name: "Perception", Type: rulebook.ProficiencyTypeSkill}, nil)
 		mockDNDClient.EXPECT().GetProficiency("skill-investigation").Return(
-			&entities.Proficiency{Key: "skill-investigation", Name: "Investigation", Type: entities.ProficiencyTypeSkill}, nil)
+			&rulebook.Proficiency{Key: "skill-investigation", Name: "Investigation", Type: rulebook.ProficiencyTypeSkill}, nil)
 
 		// Update with new skill selections
 		updates := &character.UpdateDraftInput{
@@ -75,16 +77,16 @@ func TestProficiencyUpdateHandling(t *testing.T) {
 		assert.NotNil(t, updatedChar)
 
 		// Verify base proficiencies are preserved
-		assert.Len(t, updatedChar.Proficiencies[entities.ProficiencyTypeArmor], 1)
-		assert.Len(t, updatedChar.Proficiencies[entities.ProficiencyTypeWeapon], 1)
-		assert.Len(t, updatedChar.Proficiencies[entities.ProficiencyTypeSavingThrow], 2)
+		assert.Len(t, updatedChar.Proficiencies[rulebook.ProficiencyTypeArmor], 1)
+		assert.Len(t, updatedChar.Proficiencies[rulebook.ProficiencyTypeWeapon], 1)
+		assert.Len(t, updatedChar.Proficiencies[rulebook.ProficiencyTypeSavingThrow], 2)
 
 		// Verify skill proficiencies were replaced (not accumulated)
-		assert.Len(t, updatedChar.Proficiencies[entities.ProficiencyTypeSkill], 2)
+		assert.Len(t, updatedChar.Proficiencies[rulebook.ProficiencyTypeSkill], 2)
 
 		// Check the actual skills
 		skillKeys := make([]string, 0)
-		for _, prof := range updatedChar.Proficiencies[entities.ProficiencyTypeSkill] {
+		for _, prof := range updatedChar.Proficiencies[rulebook.ProficiencyTypeSkill] {
 			skillKeys = append(skillKeys, prof.Key)
 		}
 		assert.Contains(t, skillKeys, "skill-perception")

@@ -2,9 +2,11 @@ package dungeon_test
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/exploration"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/dungeons"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/dungeon"
 	mockencounter "github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter/mock"
@@ -27,13 +29,13 @@ func TestDungeonService_CreateDungeon_WithMonsterService(t *testing.T) {
 	monsterService := mockmonster.NewMockService(ctrl)
 
 	// Set up expectations
-	sessionService.EXPECT().GetSession(gomock.Any(), "session-123").Return(&entities.Session{
+	sessionService.EXPECT().GetSession(gomock.Any(), "session-123").Return(&session.Session{
 		ID: "session-123",
 	}, nil)
 	sessionService.EXPECT().SaveSession(gomock.Any(), gomock.Any()).Return(nil)
 
 	// Expect monster service to be called for room generation
-	monsterService.EXPECT().GetRandomMonsters(gomock.Any(), "medium", gomock.Any()).Return([]*entities.MonsterTemplate{
+	monsterService.EXPECT().GetRandomMonsters(gomock.Any(), "medium", gomock.Any()).Return([]*combat.MonsterTemplate{
 		{Key: "goblin", Name: "Goblin"},
 		{Key: "orc", Name: "Orc"},
 	}, nil).AnyTimes()
@@ -57,10 +59,10 @@ func TestDungeonService_CreateDungeon_WithMonsterService(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, result.ID)
 	assert.Equal(t, "session-123", result.SessionID)
-	assert.Equal(t, entities.DungeonStateAwaitingParty, result.State)
+	assert.Equal(t, exploration.DungeonStateAwaitingParty, result.State)
 	assert.Equal(t, 1, result.RoomNumber)
 	assert.NotNil(t, result.CurrentRoom)
-	assert.Equal(t, entities.RoomTypeCombat, result.CurrentRoom.Type)
+	assert.Equal(t, exploration.RoomTypeCombat, result.CurrentRoom.Type)
 
 	// Should have dynamic monsters from the service
 	assert.Contains(t, result.CurrentRoom.Monsters, "goblin")
@@ -78,7 +80,7 @@ func TestDungeonService_CreateDungeon_WithLootService(t *testing.T) {
 	lootService := mockloot.NewMockService(ctrl)
 
 	// Set up expectations
-	sessionService.EXPECT().GetSession(gomock.Any(), "session-123").Return(&entities.Session{
+	sessionService.EXPECT().GetSession(gomock.Any(), "session-123").Return(&session.Session{
 		ID: "session-123",
 	}, nil)
 	sessionService.EXPECT().SaveSession(gomock.Any(), gomock.Any()).Return(nil)
@@ -103,7 +105,7 @@ func TestDungeonService_CreateDungeon_WithLootService(t *testing.T) {
 	assert.NotEmpty(t, result.ID)
 
 	// First room should be combat
-	assert.Equal(t, entities.RoomTypeCombat, result.CurrentRoom.Type)
+	assert.Equal(t, exploration.RoomTypeCombat, result.CurrentRoom.Type)
 
 	// TODO: Add test for treasure room generation when we have proper room progression
 	// This would require simulating combat completion and room clearing
@@ -119,7 +121,7 @@ func TestDungeonService_CreateDungeon_FallbackWithoutServices(t *testing.T) {
 	encounterService := mockencounter.NewMockService(ctrl)
 
 	// Set up expectations
-	sessionService.EXPECT().GetSession(gomock.Any(), "session-123").Return(&entities.Session{
+	sessionService.EXPECT().GetSession(gomock.Any(), "session-123").Return(&session.Session{
 		ID: "session-123",
 	}, nil)
 	sessionService.EXPECT().SaveSession(gomock.Any(), gomock.Any()).Return(nil)

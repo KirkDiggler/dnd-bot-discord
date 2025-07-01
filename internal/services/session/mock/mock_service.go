@@ -6,9 +6,9 @@ package mocksession
 
 import (
 	context "context"
+	entities "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	reflect "reflect"
 
-	entities "github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	session "github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
 	gomock "go.uber.org/mock/gomock"
 )

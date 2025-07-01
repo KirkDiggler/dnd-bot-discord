@@ -3,7 +3,8 @@ package character
 import (
 	"fmt"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
 )
@@ -33,8 +34,8 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 		return fmt.Errorf("failed to acknowledge interaction: %w", err)
 	}
 
-	// Get the character
-	character, err := h.services.CharacterService.GetByID(req.CharacterID)
+	// Get the char
+	char, err := h.services.CharacterService.GetByID(req.CharacterID)
 	if err != nil {
 		content := fmt.Sprintf("❌ Character not found with ID: %s", req.CharacterID)
 		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
@@ -44,7 +45,7 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 	}
 
 	// Verify ownership
-	if character.OwnerID != req.Interaction.Member.User.ID {
+	if char.OwnerID != req.Interaction.Member.User.ID {
 		content := "❌ You can only view your own characters!"
 		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
 			Content: &content,
@@ -54,25 +55,25 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 
 	// Create detailed embed
 	embed := &discordgo.MessageEmbed{
-		Title:       fmt.Sprintf("🎭 %s", character.NameString()),
-		Description: fmt.Sprintf("**Status:** %s", character.Status),
-		Color:       getColorForStatus(character.Status),
+		Title:       fmt.Sprintf("🎭 %s", char.NameString()),
+		Description: fmt.Sprintf("**Status:** %s", char.Status),
+		Color:       getColorForStatus(char.Status),
 		Fields:      make([]*discordgo.MessageEmbedField, 0),
 	}
 
 	// Basic info
 	basicInfo := fmt.Sprintf("**Level:** %d\n**Experience:** %d XP\n**Speed:** %d ft",
-		character.Level,
-		character.Experience,
-		character.Speed,
+		char.Level,
+		char.Experience,
+		char.Speed,
 	)
 
 	// Add race and class info
-	if character.Race != nil {
-		basicInfo = fmt.Sprintf("**Race:** %s\n%s", character.Race.Name, basicInfo)
+	if char.Race != nil {
+		basicInfo = fmt.Sprintf("**Race:** %s\n%s", char.Race.Name, basicInfo)
 	}
-	if character.Class != nil {
-		basicInfo = fmt.Sprintf("**Class:** %s\n%s", character.Class.Name, basicInfo)
+	if char.Class != nil {
+		basicInfo = fmt.Sprintf("**Class:** %s\n%s", char.Class.Name, basicInfo)
 	}
 
 	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
@@ -82,23 +83,23 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 	}, &discordgo.MessageEmbedField{
 		Name: "⚔️ Combat Stats",
 		Value: fmt.Sprintf("**HP:** %d/%d\n**AC:** %d\n**Hit Die:** d%d",
-			character.CurrentHitPoints,
-			character.MaxHitPoints,
-			character.AC,
-			character.HitDie,
+			char.CurrentHitPoints,
+			char.MaxHitPoints,
+			char.AC,
+			char.HitDie,
 		),
 		Inline: true,
 	})
 
 	// Attributes
-	if len(character.Attributes) > 0 {
+	if len(char.Attributes) > 0 {
 		attrValue := ""
-		for _, attr := range entities.Attributes {
-			if character.Attributes[attr] != nil {
+		for attr := range char.Attributes {
+			if char.Attributes[attr] != nil {
 				attrValue += fmt.Sprintf("**%s:** %d (%+d)\n",
 					attr.Short(),
-					character.Attributes[attr].Score,
-					character.Attributes[attr].Bonus,
+					char.Attributes[attr].Score,
+					char.Attributes[attr].Bonus,
 				)
 			}
 		}
@@ -112,9 +113,9 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 	}
 
 	// Proficiencies
-	if len(character.Proficiencies) > 0 {
+	if len(char.Proficiencies) > 0 {
 		profValue := ""
-		for profType, profs := range character.Proficiencies {
+		for profType, profs := range char.Proficiencies {
 			if len(profs) > 0 {
 				profValue += fmt.Sprintf("**%s:**\n", profType)
 				for _, prof := range profs {
@@ -132,9 +133,9 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 	}
 
 	// Equipment
-	if len(character.EquippedSlots) > 0 {
+	if len(char.EquippedSlots) > 0 {
 		equipValue := ""
-		for slot, item := range character.EquippedSlots {
+		for slot, item := range char.EquippedSlots {
 			if item != nil {
 				equipValue += fmt.Sprintf("**%s:** %s\n", slot, item.GetName())
 			}
@@ -149,11 +150,11 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 	}
 
 	// Resources and Active Effects
-	if character.Resources != nil {
+	if char.Resources != nil {
 		// Active Effects
-		if len(character.Resources.ActiveEffects) > 0 {
+		if len(char.Resources.ActiveEffects) > 0 {
 			effectsValue := ""
-			for _, effect := range character.Resources.ActiveEffects {
+			for _, effect := range char.Resources.ActiveEffects {
 				effectsValue += fmt.Sprintf("• **%s** (%d rounds)\n", effect.Name, effect.Duration)
 			}
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
@@ -164,9 +165,9 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 		}
 
 		// Abilities with uses
-		if len(character.Resources.Abilities) > 0 {
+		if len(char.Resources.Abilities) > 0 {
 			abilitiesValue := ""
-			for _, ability := range character.Resources.Abilities {
+			for _, ability := range char.Resources.Abilities {
 				if ability.UsesMax > 0 {
 					abilitiesValue += fmt.Sprintf("• **%s**: %d/%d uses", ability.Name, ability.UsesRemaining, ability.UsesMax)
 					if ability.IsActive {
@@ -186,9 +187,9 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 	}
 
 	// Inventory summary
-	if len(character.Inventory) > 0 {
+	if len(char.Inventory) > 0 {
 		invCount := 0
-		for _, items := range character.Inventory {
+		for _, items := range char.Inventory {
 			invCount += len(items)
 		}
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
@@ -200,19 +201,19 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 
 	// Footer with ID
 	embed.Footer = &discordgo.MessageEmbedFooter{
-		Text: fmt.Sprintf("Character ID: %s", character.ID),
+		Text: fmt.Sprintf("Character ID: %s", char.ID),
 	}
 
 	// Add action buttons based on status
 	components := []discordgo.MessageComponent{}
-	switch character.Status {
-	case entities.CharacterStatusActive:
+	switch char.Status {
+	case shared.CharacterStatusActive:
 		components = append(components, discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.Button{
 					Label:    "Edit",
 					Style:    discordgo.PrimaryButton,
-					CustomID: fmt.Sprintf("character_manage:edit:%s", character.ID),
+					CustomID: fmt.Sprintf("character_manage:edit:%s", char.ID),
 					Emoji: &discordgo.ComponentEmoji{
 						Name: "✏️",
 					},
@@ -220,7 +221,7 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 				discordgo.Button{
 					Label:    "Archive",
 					Style:    discordgo.SecondaryButton,
-					CustomID: fmt.Sprintf("character_manage:archive:%s", character.ID),
+					CustomID: fmt.Sprintf("character_manage:archive:%s", char.ID),
 					Emoji: &discordgo.ComponentEmoji{
 						Name: "🗄️",
 					},
@@ -228,20 +229,20 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 				discordgo.Button{
 					Label:    "Delete",
 					Style:    discordgo.DangerButton,
-					CustomID: fmt.Sprintf("character_manage:delete:%s", character.ID),
+					CustomID: fmt.Sprintf("character_manage:delete:%s", char.ID),
 					Emoji: &discordgo.ComponentEmoji{
 						Name: "🗑️",
 					},
 				},
 			},
 		})
-	case entities.CharacterStatusDraft:
+	case shared.CharacterStatusDraft:
 		components = append(components, discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.Button{
 					Label:    "Continue Creating",
 					Style:    discordgo.PrimaryButton,
-					CustomID: fmt.Sprintf("character_manage:continue:%s", character.ID),
+					CustomID: fmt.Sprintf("character_manage:continue:%s", char.ID),
 					Emoji: &discordgo.ComponentEmoji{
 						Name: "▶️",
 					},
@@ -249,20 +250,20 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 				discordgo.Button{
 					Label:    "Delete Draft",
 					Style:    discordgo.DangerButton,
-					CustomID: fmt.Sprintf("character_manage:delete:%s", character.ID),
+					CustomID: fmt.Sprintf("character_manage:delete:%s", char.ID),
 					Emoji: &discordgo.ComponentEmoji{
 						Name: "🗑️",
 					},
 				},
 			},
 		})
-	case entities.CharacterStatusArchived:
+	case shared.CharacterStatusArchived:
 		components = append(components, discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.Button{
 					Label:    "Restore",
 					Style:    discordgo.SuccessButton,
-					CustomID: fmt.Sprintf("character_manage:restore:%s", character.ID),
+					CustomID: fmt.Sprintf("character_manage:restore:%s", char.ID),
 					Emoji: &discordgo.ComponentEmoji{
 						Name: "♻️",
 					},
@@ -270,7 +271,7 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 				discordgo.Button{
 					Label:    "Delete Permanently",
 					Style:    discordgo.DangerButton,
-					CustomID: fmt.Sprintf("character_manage:delete:%s", character.ID),
+					CustomID: fmt.Sprintf("character_manage:delete:%s", char.ID),
 					Emoji: &discordgo.ComponentEmoji{
 						Name: "🗑️",
 					},
@@ -287,13 +288,13 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 	return err
 }
 
-func getColorForStatus(status entities.CharacterStatus) int {
+func getColorForStatus(status shared.CharacterStatus) int {
 	switch status {
-	case entities.CharacterStatusActive:
+	case shared.CharacterStatusActive:
 		return 0x2ecc71 // Green
-	case entities.CharacterStatusDraft:
+	case shared.CharacterStatusDraft:
 		return 0xf39c12 // Orange
-	case entities.CharacterStatusArchived:
+	case shared.CharacterStatusArchived:
 		return 0x95a5a6 // Gray
 	default:
 		return 0x3498db // Blue

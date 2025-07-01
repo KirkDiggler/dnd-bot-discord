@@ -2,10 +2,13 @@ package discord_test
 
 import (
 	"context"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
@@ -46,64 +49,64 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 
 	// Step 1: Character creation starts - user clicks "Create Character"
 	// This should create a draft character
-	draftChar := &entities.Character{
+	draftChar := &character.Character{
 		ID:            "draft_123",
 		OwnerID:       user.ID,
 		RealmID:       "test_guild",
 		Name:          "Draft Character",
-		Status:        entities.CharacterStatusDraft,
+		Status:        shared.CharacterStatusDraft,
 		Level:         1,
-		Attributes:    make(map[entities.Attribute]*entities.AbilityScore),
-		Proficiencies: make(map[entities.ProficiencyType][]*entities.Proficiency),
-		Inventory:     make(map[entities.EquipmentType][]entities.Equipment),
-		EquippedSlots: make(map[entities.Slot]entities.Equipment),
+		Attributes:    make(map[shared.Attribute]*character.AbilityScore),
+		Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
+		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 	}
 
 	// Mock: GetOrCreateDraftCharacter
-	mockRepo.EXPECT().GetByOwnerAndRealm(ctx, user.ID, "test_guild").Return([]*entities.Character{}, nil)
+	mockRepo.EXPECT().GetByOwnerAndRealm(ctx, user.ID, "test_guild").Return([]*character.Character{}, nil)
 	mockRepo.EXPECT().Create(ctx, gomock.Any()).Return(nil)
 
 	// Step 2-5: User goes through race/class/abilities/proficiencies/equipment selection
 	// Each step calls UpdateDraftCharacter with new data
 
 	// Mock race selection
-	mockClient.EXPECT().GetRace("elf").Return(&entities.Race{
+	mockClient.EXPECT().GetRace("elf").Return(&rulebook.Race{
 		Key:  "elf",
 		Name: "Elf",
-		AbilityBonuses: []*entities.AbilityBonus{
-			{Attribute: entities.AttributeDexterity, Bonus: 2},
+		AbilityBonuses: []*shared.AbilityBonus{
+			{Attribute: shared.AttributeDexterity, Bonus: 2},
 		},
 	}, nil).AnyTimes()
 
 	// Mock class selection
-	mockClient.EXPECT().GetClass("monk").Return(&entities.Class{
+	mockClient.EXPECT().GetClass("monk").Return(&rulebook.Class{
 		Key:    "monk",
 		Name:   "Monk",
 		HitDie: 8,
 	}, nil).AnyTimes()
 
 	// This is the key: character after ability assignment but before finalization
-	charWithAbilities := &entities.Character{
+	charWithAbilities := &character.Character{
 		ID:      "draft_123",
 		OwnerID: user.ID,
 		RealmID: "test_guild",
 		Name:    "Draft Character",
-		Status:  entities.CharacterStatusDraft,
+		Status:  shared.CharacterStatusDraft,
 		Level:   1,
-		Race: &entities.Race{
+		Race: &rulebook.Race{
 			Key:  "elf",
 			Name: "Elf",
-			AbilityBonuses: []*entities.AbilityBonus{
-				{Attribute: entities.AttributeDexterity, Bonus: 2},
+			AbilityBonuses: []*shared.AbilityBonus{
+				{Attribute: shared.AttributeDexterity, Bonus: 2},
 			},
 		},
-		Class: &entities.Class{
+		Class: &rulebook.Class{
 			Key:    "monk",
 			Name:   "Monk",
 			HitDie: 8,
 		},
 		// This is what should happen: AbilityAssignments and AbilityRolls are set
-		AbilityRolls: []entities.AbilityRoll{
+		AbilityRolls: []character.AbilityRoll{
 			{ID: "roll_1", Value: 15},
 			{ID: "roll_2", Value: 14},
 			{ID: "roll_3", Value: 13},
@@ -120,10 +123,10 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 			"CHA": "roll_6",
 		},
 		// But Attributes should be empty at this point (conversion happens in UpdateDraftCharacter)
-		Attributes:    make(map[entities.Attribute]*entities.AbilityScore),
-		Proficiencies: make(map[entities.ProficiencyType][]*entities.Proficiency),
-		Inventory:     make(map[entities.EquipmentType][]entities.Equipment),
-		EquippedSlots: make(map[entities.Slot]entities.Equipment),
+		Attributes:    make(map[shared.Attribute]*character.AbilityScore),
+		Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
+		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 	}
 
 	// Mock: Multiple UpdateDraftCharacter calls during creation process
@@ -137,28 +140,28 @@ func TestCharacterCreationBug_ReproduceRealWorldFailure(t *testing.T) {
 	mockRepo.EXPECT().Get(ctx, "draft_123").Return(charWithAbilities, nil)
 
 	// Mock: FinalizeDraftCharacter should convert abilities and mark as active
-	_ = &entities.Character{
+	_ = &character.Character{
 		ID:      "draft_123",
 		OwnerID: user.ID,
 		RealmID: "test_guild",
-		Name:    "TestMonk",                     // Name added
-		Status:  entities.CharacterStatusActive, // Status changed
+		Name:    "TestMonk",                   // Name added
+		Status:  shared.CharacterStatusActive, // Status changed
 		Level:   1,
 		Race:    charWithAbilities.Race,
 		Class:   charWithAbilities.Class,
 		// THE BUG: In real world, this ends up empty despite having AbilityAssignments
 		AbilityRolls:       charWithAbilities.AbilityRolls,
 		AbilityAssignments: charWithAbilities.AbilityAssignments,
-		Attributes:         make(map[entities.Attribute]*entities.AbilityScore), // EMPTY!
-		Proficiencies:      make(map[entities.ProficiencyType][]*entities.Proficiency),
-		Inventory:          make(map[entities.EquipmentType][]entities.Equipment),
-		EquippedSlots:      make(map[entities.Slot]entities.Equipment),
+		Attributes:         make(map[shared.Attribute]*character.AbilityScore), // EMPTY!
+		Proficiencies:      make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
+		Inventory:          make(map[equipment.EquipmentType][]equipment.Equipment),
+		EquippedSlots:      make(map[shared.Slot]equipment.Equipment),
 	}
 
 	// This should save the broken character (reproducing the bug)
-	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, char *entities.Character) error {
+	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, char *character.Character) error {
 		// Verify this is the broken state we see in production
-		assert.Equal(t, entities.CharacterStatusActive, char.Status, "Character should be finalized")
+		assert.Equal(t, shared.CharacterStatusActive, char.Status, "Character should be finalized")
 		assert.Empty(t, char.Attributes, "BUG: Character has empty attributes")
 		assert.NotEmpty(t, char.AbilityAssignments, "Character should still have ability assignments")
 		assert.False(t, char.IsComplete(), "Character should be incomplete due to missing attributes")

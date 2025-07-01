@@ -2,10 +2,13 @@ package character_test
 
 import (
 	"context"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -29,26 +32,26 @@ func TestFixCharacterAttributes(t *testing.T) {
 	characterID := "broken_char"
 
 	// Character with the bug: has AbilityAssignments but no Attributes
-	brokenChar := &entities.Character{
+	brokenChar := &character2.Character{
 		ID:      characterID,
 		Name:    "BrokenMonk",
 		OwnerID: "user_123",
 		RealmID: "realm_123",
-		Status:  entities.CharacterStatusActive,
+		Status:  shared.CharacterStatusActive,
 		Level:   1,
-		Race: &entities.Race{
+		Race: &rulebook.Race{
 			Key:  "elf",
 			Name: "Elf",
-			AbilityBonuses: []*entities.AbilityBonus{
-				{Attribute: entities.AttributeDexterity, Bonus: 2},
+			AbilityBonuses: []*shared.AbilityBonus{
+				{Attribute: shared.AttributeDexterity, Bonus: 2},
 			},
 		},
-		Class: &entities.Class{
+		Class: &rulebook.Class{
 			Key:    "monk",
 			Name:   "Monk",
 			HitDie: 8,
 		},
-		AbilityRolls: []entities.AbilityRoll{
+		AbilityRolls: []character2.AbilityRoll{
 			{ID: "roll_1", Value: 15},
 			{ID: "roll_2", Value: 14},
 			{ID: "roll_3", Value: 13},
@@ -64,24 +67,24 @@ func TestFixCharacterAttributes(t *testing.T) {
 			"WIS": "roll_5",
 			"CHA": "roll_6",
 		},
-		Attributes:    map[entities.Attribute]*entities.AbilityScore{}, // Empty!
-		Proficiencies: make(map[entities.ProficiencyType][]*entities.Proficiency),
-		Inventory:     make(map[entities.EquipmentType][]entities.Equipment),
-		EquippedSlots: make(map[entities.Slot]entities.Equipment),
+		Attributes:    map[shared.Attribute]*character2.AbilityScore{}, // Empty!
+		Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
+		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 	}
 
 	// Mock repository calls
 	mockRepo.EXPECT().Get(ctx, characterID).Return(brokenChar, nil)
 
 	// Expect the fixed character to be saved
-	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, char *entities.Character) error {
+	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, char *character2.Character) error {
 		// Verify the character was fixed
 		assert.NotEmpty(t, char.Attributes, "Character should have attributes after fix")
 		assert.Len(t, char.Attributes, 6, "Should have all 6 ability scores")
 
 		// Verify specific scores with racial bonuses
-		assert.Equal(t, 16, char.Attributes[entities.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
-		assert.Equal(t, 15, char.Attributes[entities.AttributeIntelligence].Score, "INT should be 15")
+		assert.Equal(t, 16, char.Attributes[shared.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
+		assert.Equal(t, 15, char.Attributes[shared.AttributeIntelligence].Score, "INT should be 15")
 
 		// Verify HP was calculated
 		assert.Equal(t, 9, char.MaxHitPoints, "HP should be 8 (hit die) + 1 (CON mod)")
@@ -93,10 +96,10 @@ func TestFixCharacterAttributes(t *testing.T) {
 	})
 
 	// Mock getting class features for AC calculation
-	mockClient.EXPECT().GetClassFeatures("monk", 1).Return([]*entities.CharacterFeature{
+	mockClient.EXPECT().GetClassFeatures("monk", 1).Return([]*rulebook.CharacterFeature{
 		{
 			Name: "Unarmored Defense",
-			Type: entities.FeatureTypeClass,
+			Type: rulebook.FeatureTypeClass,
 		},
 	}, nil).AnyTimes()
 
@@ -126,12 +129,12 @@ func TestFixCharacterAttributes_AlreadyHasAttributes(t *testing.T) {
 	characterID := "good_char"
 
 	// Character that doesn't need fixing
-	goodChar := &entities.Character{
+	goodChar := &character2.Character{
 		ID:     characterID,
 		Name:   "GoodChar",
-		Status: entities.CharacterStatusActive,
-		Attributes: map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeStrength: {Score: 15, Bonus: 2},
+		Status: shared.CharacterStatusActive,
+		Attributes: map[shared.Attribute]*character2.AbilityScore{
+			shared.AttributeStrength: {Score: 15, Bonus: 2},
 		},
 	}
 

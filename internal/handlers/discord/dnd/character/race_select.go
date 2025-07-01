@@ -3,9 +3,9 @@ package character
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/bwmarrin/discordgo"
 )
@@ -123,7 +123,7 @@ func (h *RaceSelectHandler) Handle(req *RaceSelectRequest) error {
 }
 
 // buildRaceDetailsEmbed creates an embed showing race details
-func (h *RaceSelectHandler) buildRaceDetailsEmbed(race *entities.Race) *discordgo.MessageEmbed {
+func (h *RaceSelectHandler) buildRaceDetailsEmbed(race *rulebook.Race) *discordgo.MessageEmbed {
 	embed := &discordgo.MessageEmbed{
 		Title:       "Create New Character",
 		Description: fmt.Sprintf("**Selected Race:** %s\n\nGreat choice! %s characters have unique abilities and traits.", race.Name, race.Name),

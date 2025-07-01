@@ -6,9 +6,9 @@ package mockdungeon
 
 import (
 	context "context"
+	entities "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/exploration"
 	reflect "reflect"
 
-	entities "github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dungeon "github.com/KirkDiggler/dnd-bot-discord/internal/services/dungeon"
 	gomock "go.uber.org/mock/gomock"
 )

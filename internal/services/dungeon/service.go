@@ -5,10 +5,10 @@ package dungeon
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/exploration"
 	"math/rand"
 	"time"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/dungeons"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
@@ -24,22 +24,22 @@ type Repository = dungeons.Repository
 // Service defines the dungeon service interface
 type Service interface {
 	// CreateDungeon creates a new dungeon instance
-	CreateDungeon(ctx context.Context, input *CreateDungeonInput) (*entities.Dungeon, error)
+	CreateDungeon(ctx context.Context, input *CreateDungeonInput) (*exploration.Dungeon, error)
 
 	// GetDungeon retrieves a dungeon by ID
-	GetDungeon(ctx context.Context, dungeonID string) (*entities.Dungeon, error)
+	GetDungeon(ctx context.Context, dungeonID string) (*exploration.Dungeon, error)
 
 	// JoinDungeon adds a player to the dungeon party
 	JoinDungeon(ctx context.Context, dungeonID, userID, characterID string) error
 
 	// EnterRoom handles entering the current room
-	EnterRoom(ctx context.Context, dungeonID string) (*entities.DungeonRoom, error)
+	EnterRoom(ctx context.Context, dungeonID string) (*exploration.DungeonRoom, error)
 
 	// CompleteRoom marks the current room as completed
 	CompleteRoom(ctx context.Context, dungeonID string) error
 
 	// ProceedToNextRoom generates and moves to the next room
-	ProceedToNextRoom(ctx context.Context, dungeonID string) (*entities.DungeonRoom, error)
+	ProceedToNextRoom(ctx context.Context, dungeonID string) (*exploration.DungeonRoom, error)
 
 	// GetAvailableActions returns actions available in current state
 	GetAvailableActions(ctx context.Context, dungeonID string) ([]DungeonAction, error)
@@ -117,7 +117,7 @@ func NewService(cfg *ServiceConfig) Service {
 }
 
 // CreateDungeon creates a new dungeon instance
-func (s *service) CreateDungeon(ctx context.Context, input *CreateDungeonInput) (*entities.Dungeon, error) {
+func (s *service) CreateDungeon(ctx context.Context, input *CreateDungeonInput) (*exploration.Dungeon, error) {
 	if input == nil {
 		return nil, dnderr.InvalidArgument("input cannot be nil")
 	}
@@ -145,14 +145,14 @@ func (s *service) CreateDungeon(ctx context.Context, input *CreateDungeonInput) 
 	room := s.generateRoom(input.Difficulty, 1)
 
 	// Create dungeon
-	dungeon := &entities.Dungeon{
+	dungeon := &exploration.Dungeon{
 		ID:           dungeonID,
 		SessionID:    input.SessionID,
-		State:        entities.DungeonStateAwaitingParty,
+		State:        exploration.DungeonStateAwaitingParty,
 		CurrentRoom:  room,
 		RoomNumber:   1,
 		Difficulty:   input.Difficulty,
-		Party:        []entities.PartyMember{},
+		Party:        []exploration.PartyMember{},
 		RoomsCleared: 0,
 		CreatedAt:    time.Now(),
 	}
@@ -186,7 +186,7 @@ func (s *service) CreateDungeon(ctx context.Context, input *CreateDungeonInput) 
 }
 
 // GetDungeon retrieves a dungeon by ID
-func (s *service) GetDungeon(ctx context.Context, dungeonID string) (*entities.Dungeon, error) {
+func (s *service) GetDungeon(ctx context.Context, dungeonID string) (*exploration.Dungeon, error) {
 	if dungeonID == "" {
 		return nil, dnderr.InvalidArgument("dungeon ID is required")
 	}
@@ -218,7 +218,7 @@ func (s *service) JoinDungeon(ctx context.Context, dungeonID, userID, characterI
 	}
 
 	// Check state
-	if dungeon.State != entities.DungeonStateAwaitingParty && dungeon.State != entities.DungeonStateRoomReady {
+	if dungeon.State != exploration.DungeonStateAwaitingParty && dungeon.State != exploration.DungeonStateRoomReady {
 		return dnderr.InvalidArgument("cannot join dungeon in current state").
 			WithMeta("state", string(dungeon.State))
 	}
@@ -231,7 +231,7 @@ func (s *service) JoinDungeon(ctx context.Context, dungeonID, userID, characterI
 	}
 
 	// Add to party
-	dungeon.Party = append(dungeon.Party, entities.PartyMember{
+	dungeon.Party = append(dungeon.Party, exploration.PartyMember{
 		UserID:      userID,
 		CharacterID: characterID,
 		Status:      "active",
@@ -239,7 +239,7 @@ func (s *service) JoinDungeon(ctx context.Context, dungeonID, userID, characterI
 
 	// Update state if this is the first member
 	if len(dungeon.Party) == 1 {
-		dungeon.State = entities.DungeonStateRoomReady
+		dungeon.State = exploration.DungeonStateRoomReady
 	}
 
 	// Save
@@ -247,39 +247,39 @@ func (s *service) JoinDungeon(ctx context.Context, dungeonID, userID, characterI
 }
 
 // generateRoom creates a room based on difficulty and room number
-func (s *service) generateRoom(difficulty string, roomNumber int) *entities.DungeonRoom {
+func (s *service) generateRoom(difficulty string, roomNumber int) *exploration.DungeonRoom {
 	// First room is always combat to start the adventure
 	if roomNumber == 1 {
 		return s.generateCombatRoom(difficulty, roomNumber)
 	}
 
 	// Room type probabilities
-	roomTypes := []entities.RoomType{
-		entities.RoomTypeCombat,
-		entities.RoomTypeCombat,
-		entities.RoomTypeCombat, // Higher chance for combat
-		entities.RoomTypePuzzle,
-		entities.RoomTypeTrap,
-		entities.RoomTypeRest,
+	roomTypes := []exploration.RoomType{
+		exploration.RoomTypeCombat,
+		exploration.RoomTypeCombat,
+		exploration.RoomTypeCombat, // Higher chance for combat
+		exploration.RoomTypePuzzle,
+		exploration.RoomTypeTrap,
+		exploration.RoomTypeRest,
 	}
 
 	// Special rooms every 5 rooms
 	if roomNumber%5 == 0 {
-		roomTypes = append(roomTypes, entities.RoomTypeTreasure, entities.RoomTypeTreasure)
+		roomTypes = append(roomTypes, exploration.RoomTypeTreasure, exploration.RoomTypeTreasure)
 	}
 
 	roomType := roomTypes[s.random.Intn(len(roomTypes))]
 
 	switch roomType {
-	case entities.RoomTypeCombat:
+	case exploration.RoomTypeCombat:
 		return s.generateCombatRoom(difficulty, roomNumber)
-	case entities.RoomTypePuzzle:
+	case exploration.RoomTypePuzzle:
 		return s.generatePuzzleRoom(difficulty, roomNumber)
-	case entities.RoomTypeTrap:
+	case exploration.RoomTypeTrap:
 		return s.generateTrapRoom(difficulty, roomNumber)
-	case entities.RoomTypeTreasure:
+	case exploration.RoomTypeTreasure:
 		return s.generateTreasureRoom(difficulty, roomNumber)
-	case entities.RoomTypeRest:
+	case exploration.RoomTypeRest:
 		return s.generateRestRoom(roomNumber)
 	default:
 		return s.generateCombatRoom(difficulty, roomNumber)
@@ -287,7 +287,7 @@ func (s *service) generateRoom(difficulty string, roomNumber int) *entities.Dung
 }
 
 // generateCombatRoom creates a combat encounter room
-func (s *service) generateCombatRoom(difficulty string, roomNumber int) *entities.DungeonRoom {
+func (s *service) generateCombatRoom(difficulty string, roomNumber int) *exploration.DungeonRoom {
 	rooms := []struct {
 		name        string
 		description string
@@ -353,8 +353,8 @@ func (s *service) generateCombatRoom(difficulty string, roomNumber int) *entitie
 		}
 	}
 
-	return &entities.DungeonRoom{
-		Type:        entities.RoomTypeCombat,
+	return &exploration.DungeonRoom{
+		Type:        exploration.RoomTypeCombat,
 		Name:        selected.name,
 		Description: selected.description,
 		Completed:   false,
@@ -364,9 +364,9 @@ func (s *service) generateCombatRoom(difficulty string, roomNumber int) *entitie
 }
 
 // generatePuzzleRoom creates a puzzle room
-func (s *service) generatePuzzleRoom(difficulty string, roomNumber int) *entities.DungeonRoom {
-	return &entities.DungeonRoom{
-		Type:        entities.RoomTypePuzzle,
+func (s *service) generatePuzzleRoom(difficulty string, roomNumber int) *exploration.DungeonRoom {
+	return &exploration.DungeonRoom{
+		Type:        exploration.RoomTypePuzzle,
 		Name:        "The Riddler's Chamber",
 		Description: "Ancient runes glow on the walls. A voice echoes: 'Answer wisely or face the consequences.'",
 		Completed:   false,
@@ -375,9 +375,9 @@ func (s *service) generatePuzzleRoom(difficulty string, roomNumber int) *entitie
 }
 
 // generateTrapRoom creates a trap room
-func (s *service) generateTrapRoom(difficulty string, roomNumber int) *entities.DungeonRoom {
-	return &entities.DungeonRoom{
-		Type:        entities.RoomTypeTrap,
+func (s *service) generateTrapRoom(difficulty string, roomNumber int) *exploration.DungeonRoom {
+	return &exploration.DungeonRoom{
+		Type:        exploration.RoomTypeTrap,
 		Name:        "Hall of Dangers",
 		Description: "The floor tiles look suspicious. Strange holes dot the walls.",
 		Completed:   false,
@@ -386,7 +386,7 @@ func (s *service) generateTrapRoom(difficulty string, roomNumber int) *entities.
 }
 
 // generateTreasureRoom creates a treasure room
-func (s *service) generateTreasureRoom(difficulty string, roomNumber int) *entities.DungeonRoom {
+func (s *service) generateTreasureRoom(difficulty string, roomNumber int) *exploration.DungeonRoom {
 	// Generate treasure using loot service if available
 	var treasure []string
 	if s.lootService != nil {
@@ -402,8 +402,8 @@ func (s *service) generateTreasureRoom(difficulty string, roomNumber int) *entit
 		treasure = []string{"gold", "healing potion", "mysterious artifact"}
 	}
 
-	return &entities.DungeonRoom{
-		Type:        entities.RoomTypeTreasure,
+	return &exploration.DungeonRoom{
+		Type:        exploration.RoomTypeTreasure,
 		Name:        "Treasury Vault",
 		Description: "Chests and artifacts fill the room. Gold coins glitter in piles.",
 		Completed:   false,
@@ -413,9 +413,9 @@ func (s *service) generateTreasureRoom(difficulty string, roomNumber int) *entit
 }
 
 // generateRestRoom creates a rest room
-func (s *service) generateRestRoom(roomNumber int) *entities.DungeonRoom {
-	return &entities.DungeonRoom{
-		Type:        entities.RoomTypeRest,
+func (s *service) generateRestRoom(roomNumber int) *exploration.DungeonRoom {
+	return &exploration.DungeonRoom{
+		Type:        exploration.RoomTypeRest,
 		Name:        "Safe Haven",
 		Description: "A peaceful chamber with fresh water and comfortable bedrolls.",
 		Completed:   false,
@@ -424,7 +424,7 @@ func (s *service) generateRestRoom(roomNumber int) *entities.DungeonRoom {
 }
 
 // EnterRoom handles entering the current room
-func (s *service) EnterRoom(ctx context.Context, dungeonID string) (*entities.DungeonRoom, error) {
+func (s *service) EnterRoom(ctx context.Context, dungeonID string) (*exploration.DungeonRoom, error) {
 	dungeon, err := s.GetDungeon(ctx, dungeonID)
 	if err != nil {
 		return nil, err
@@ -437,22 +437,22 @@ func (s *service) EnterRoom(ctx context.Context, dungeonID string) (*entities.Du
 	}
 
 	// Update state
-	dungeon.State = entities.DungeonStateInProgress
+	dungeon.State = exploration.DungeonStateInProgress
 
 	// Handle room-specific logic
 	switch dungeon.CurrentRoom.Type {
-	case entities.RoomTypeCombat:
+	case exploration.RoomTypeCombat:
 		// Create encounter will be handled by the handler
 		// Just update state here
-	case entities.RoomTypePuzzle:
+	case exploration.RoomTypePuzzle:
 		// Puzzle logic would go here
-	case entities.RoomTypeTrap:
+	case exploration.RoomTypeTrap:
 		// Trap logic would go here
-	case entities.RoomTypeTreasure:
+	case exploration.RoomTypeTreasure:
 		// Mark as completed immediately for treasure rooms
 		dungeon.CurrentRoom.Completed = true
-		dungeon.State = entities.DungeonStateRoomCleared
-	case entities.RoomTypeRest:
+		dungeon.State = exploration.DungeonStateRoomCleared
+	case exploration.RoomTypeRest:
 		// Rest logic would go here
 	}
 
@@ -470,19 +470,19 @@ func (s *service) CompleteRoom(ctx context.Context, dungeonID string) error {
 		return err
 	}
 
-	if dungeon.State != entities.DungeonStateInProgress {
+	if dungeon.State != exploration.DungeonStateInProgress {
 		return dnderr.InvalidArgument("room is not in progress")
 	}
 
 	dungeon.CurrentRoom.Completed = true
-	dungeon.State = entities.DungeonStateRoomCleared
+	dungeon.State = exploration.DungeonStateRoomCleared
 	dungeon.RoomsCleared++
 
 	return s.repository.Update(ctx, dungeon)
 }
 
 // ProceedToNextRoom generates and moves to the next room
-func (s *service) ProceedToNextRoom(ctx context.Context, dungeonID string) (*entities.DungeonRoom, error) {
+func (s *service) ProceedToNextRoom(ctx context.Context, dungeonID string) (*exploration.DungeonRoom, error) {
 	dungeon, err := s.GetDungeon(ctx, dungeonID)
 	if err != nil {
 		return nil, err
@@ -496,11 +496,11 @@ func (s *service) ProceedToNextRoom(ctx context.Context, dungeonID string) (*ent
 	// Generate next room
 	dungeon.RoomNumber++
 	dungeon.CurrentRoom = s.generateRoom(dungeon.Difficulty, dungeon.RoomNumber)
-	dungeon.State = entities.DungeonStateRoomReady
+	dungeon.State = exploration.DungeonStateRoomReady
 
 	// Check for completion (e.g., after 10 rooms)
 	if dungeon.RoomNumber > 10 {
-		dungeon.State = entities.DungeonStateComplete
+		dungeon.State = exploration.DungeonStateComplete
 		now := time.Now()
 		dungeon.CompletedAt = &now
 	}
@@ -522,7 +522,7 @@ func (s *service) GetAvailableActions(ctx context.Context, dungeonID string) ([]
 	var actions []DungeonAction
 
 	switch dungeon.State {
-	case entities.DungeonStateAwaitingParty:
+	case exploration.DungeonStateAwaitingParty:
 		actions = append(actions, DungeonAction{
 			ID:          "join",
 			Label:       "Join Party",
@@ -530,7 +530,7 @@ func (s *service) GetAvailableActions(ctx context.Context, dungeonID string) ([]
 			Available:   true,
 		})
 
-	case entities.DungeonStateRoomReady:
+	case exploration.DungeonStateRoomReady:
 		actions = append(actions, DungeonAction{
 			ID:          "enter",
 			Label:       "Enter Room",
@@ -538,7 +538,7 @@ func (s *service) GetAvailableActions(ctx context.Context, dungeonID string) ([]
 			Available:   true,
 		})
 
-	case entities.DungeonStateRoomCleared:
+	case exploration.DungeonStateRoomCleared:
 		actions = append(actions, DungeonAction{
 			ID:          "proceed",
 			Label:       "Next Room",
@@ -551,7 +551,7 @@ func (s *service) GetAvailableActions(ctx context.Context, dungeonID string) ([]
 			Available:   true,
 		})
 
-	case entities.DungeonStateComplete:
+	case exploration.DungeonStateComplete:
 		actions = append(actions, DungeonAction{
 			ID:          "claim",
 			Label:       "Claim Rewards",
@@ -590,7 +590,7 @@ func (s *service) AbandonDungeon(ctx context.Context, dungeonID string) error {
 		return dnderr.InvalidArgument("dungeon is not active")
 	}
 
-	dungeon.State = entities.DungeonStateFailed
+	dungeon.State = exploration.DungeonStateFailed
 	now := time.Now()
 	dungeon.CompletedAt = &now
 

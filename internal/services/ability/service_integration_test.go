@@ -5,11 +5,13 @@ package ability
 
 import (
 	"context"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/testutils"
@@ -56,39 +58,39 @@ func (s *AbilityServiceIntegrationSuite) SetupTest() {
 
 func (s *AbilityServiceIntegrationSuite) TestRageAbilityFullCycle() {
 	// Create a level 1 barbarian
-	char := &entities.Character{
+	char := &character2.Character{
 		ID:               "barb_123",
 		OwnerID:          "player_123",
 		RealmID:          "realm_123",
 		Name:             "Grunk",
-		Class:            &entities.Class{Key: "barbarian", Name: "Barbarian"},
+		Class:            &rulebook.Class{Key: "barbarian", Name: "Barbarian"},
 		Level:            1,
-		Status:           entities.CharacterStatusActive,
+		Status:           shared.CharacterStatusActive,
 		CurrentHitPoints: 12,
 		MaxHitPoints:     12,
-		Attributes: map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeStrength:     {Score: 16},
-			entities.AttributeDexterity:    {Score: 14},
-			entities.AttributeConstitution: {Score: 15},
-			entities.AttributeIntelligence: {Score: 8},
-			entities.AttributeWisdom:       {Score: 12},
-			entities.AttributeCharisma:     {Score: 10},
+		Attributes: map[shared.Attribute]*character2.AbilityScore{
+			shared.AttributeStrength:     {Score: 16},
+			shared.AttributeDexterity:    {Score: 14},
+			shared.AttributeConstitution: {Score: 15},
+			shared.AttributeIntelligence: {Score: 8},
+			shared.AttributeWisdom:       {Score: 12},
+			shared.AttributeCharisma:     {Score: 10},
 		},
-		Resources: &entities.CharacterResources{
-			Abilities: map[string]*entities.ActiveAbility{
+		Resources: &character2.CharacterResources{
+			Abilities: map[string]*shared.ActiveAbility{
 				"rage": {
 					Name:          "Rage",
 					Key:           "rage",
 					Description:   "Enter a battle fury",
-					ActionType:    entities.AbilityTypeBonusAction,
+					ActionType:    shared.AbilityTypeBonusAction,
 					UsesMax:       2,
 					UsesRemaining: 2,
-					RestType:      entities.RestTypeLong,
+					RestType:      shared.RestTypeLong,
 					IsActive:      false,
 					Duration:      0,
 				},
 			},
-			ActiveEffects: []*entities.ActiveEffect{},
+			ActiveEffects: []*shared.ActiveEffect{},
 		},
 	}
 
@@ -151,34 +153,34 @@ func (s *AbilityServiceIntegrationSuite) TestRageAbilityFullCycle() {
 
 func (s *AbilityServiceIntegrationSuite) TestSecondWindHealing() {
 	// Create a level 3 fighter
-	char := &entities.Character{
+	char := &character2.Character{
 		ID:               "fighter_123",
 		OwnerID:          "player_123",
 		RealmID:          "realm_123",
 		Name:             "Aldric",
-		Class:            &entities.Class{Key: "fighter", Name: "Fighter"},
+		Class:            &rulebook.Class{Key: "fighter", Name: "Fighter"},
 		Level:            3,
-		Status:           entities.CharacterStatusActive,
+		Status:           shared.CharacterStatusActive,
 		CurrentHitPoints: 15, // Damaged
 		MaxHitPoints:     28,
-		Attributes: map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeStrength:     {Score: 16},
-			entities.AttributeDexterity:    {Score: 13},
-			entities.AttributeConstitution: {Score: 14},
-			entities.AttributeIntelligence: {Score: 10},
-			entities.AttributeWisdom:       {Score: 12},
-			entities.AttributeCharisma:     {Score: 8},
+		Attributes: map[shared.Attribute]*character2.AbilityScore{
+			shared.AttributeStrength:     {Score: 16},
+			shared.AttributeDexterity:    {Score: 13},
+			shared.AttributeConstitution: {Score: 14},
+			shared.AttributeIntelligence: {Score: 10},
+			shared.AttributeWisdom:       {Score: 12},
+			shared.AttributeCharisma:     {Score: 8},
 		},
-		Resources: &entities.CharacterResources{
-			Abilities: map[string]*entities.ActiveAbility{
+		Resources: &character2.CharacterResources{
+			Abilities: map[string]*shared.ActiveAbility{
 				"second_wind": {
 					Name:          "Second Wind",
 					Key:           "second_wind",
 					Description:   "Regain hit points",
-					ActionType:    entities.AbilityTypeBonusAction,
+					ActionType:    shared.AbilityTypeBonusAction,
 					UsesMax:       1,
 					UsesRemaining: 1,
-					RestType:      entities.RestTypeShort,
+					RestType:      shared.RestTypeShort,
 				},
 			},
 		},
@@ -212,33 +214,33 @@ func (s *AbilityServiceIntegrationSuite) TestSecondWindHealing() {
 
 func (s *AbilityServiceIntegrationSuite) TestMultipleRageUses() {
 	// Test using rage multiple times
-	char := &entities.Character{
+	char := &character2.Character{
 		ID:               "multi_123",
 		OwnerID:          "player_123",
 		RealmID:          "realm_123",
 		Name:             "RageTest",
-		Class:            &entities.Class{Key: "barbarian", Name: "Barbarian"},
+		Class:            &rulebook.Class{Key: "barbarian", Name: "Barbarian"},
 		Level:            1,
-		Status:           entities.CharacterStatusActive,
+		Status:           shared.CharacterStatusActive,
 		CurrentHitPoints: 12,
 		MaxHitPoints:     12,
-		Attributes: map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeStrength:     {Score: 16},
-			entities.AttributeDexterity:    {Score: 14},
-			entities.AttributeConstitution: {Score: 15},
-			entities.AttributeIntelligence: {Score: 8},
-			entities.AttributeWisdom:       {Score: 12},
-			entities.AttributeCharisma:     {Score: 10},
+		Attributes: map[shared.Attribute]*character2.AbilityScore{
+			shared.AttributeStrength:     {Score: 16},
+			shared.AttributeDexterity:    {Score: 14},
+			shared.AttributeConstitution: {Score: 15},
+			shared.AttributeIntelligence: {Score: 8},
+			shared.AttributeWisdom:       {Score: 12},
+			shared.AttributeCharisma:     {Score: 10},
 		},
-		Resources: &entities.CharacterResources{
-			Abilities: map[string]*entities.ActiveAbility{
+		Resources: &character2.CharacterResources{
+			Abilities: map[string]*shared.ActiveAbility{
 				"rage": {
 					Name:          "Rage",
 					Key:           "rage",
-					ActionType:    entities.AbilityTypeBonusAction,
+					ActionType:    shared.AbilityTypeBonusAction,
 					UsesMax:       2,
 					UsesRemaining: 2,
-					RestType:      entities.RestTypeLong,
+					RestType:      shared.RestTypeLong,
 				},
 			},
 		},
@@ -293,25 +295,25 @@ func (s *AbilityServiceIntegrationSuite) TestMultipleRageUses() {
 
 func (s *AbilityServiceIntegrationSuite) TestConcurrentAbilityUse() {
 	// Test that concurrent ability uses don't cause race conditions
-	char := &entities.Character{
+	char := &character2.Character{
 		ID:               "concurrent_123",
 		OwnerID:          "player_123",
 		RealmID:          "realm_123",
 		Name:             "Concurrent",
-		Class:            &entities.Class{Key: "barbarian", Name: "Barbarian"},
+		Class:            &rulebook.Class{Key: "barbarian", Name: "Barbarian"},
 		Level:            1,
-		Status:           entities.CharacterStatusActive,
+		Status:           shared.CharacterStatusActive,
 		CurrentHitPoints: 12,
 		MaxHitPoints:     12,
-		Resources: &entities.CharacterResources{
-			Abilities: map[string]*entities.ActiveAbility{
+		Resources: &character2.CharacterResources{
+			Abilities: map[string]*shared.ActiveAbility{
 				"rage": {
 					Name:          "Rage",
 					Key:           "rage",
-					ActionType:    entities.AbilityTypeBonusAction,
+					ActionType:    shared.AbilityTypeBonusAction,
 					UsesMax:       2,
 					UsesRemaining: 2,
-					RestType:      entities.RestTypeLong,
+					RestType:      shared.RestTypeLong,
 				},
 			},
 		},

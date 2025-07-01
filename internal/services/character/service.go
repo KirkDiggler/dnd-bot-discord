@@ -10,9 +10,13 @@ import (
 	"strings"
 	"time"
 
+	charDomain "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	features2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/features"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/features"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	characterRepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 )
@@ -26,10 +30,10 @@ type Service interface {
 	CreateCharacter(ctx context.Context, input *CreateCharacterInput) (*CreateCharacterOutput, error)
 
 	// GetCharacter retrieves a character by ID
-	GetCharacter(ctx context.Context, characterID string) (*entities.Character, error)
+	GetCharacter(ctx context.Context, characterID string) (*charDomain.Character, error)
 
 	// ListCharacters lists all characters for a user
-	ListCharacters(ctx context.Context, userID string) ([]*entities.Character, error)
+	ListCharacters(ctx context.Context, userID string) ([]*charDomain.Character, error)
 
 	// ValidateCharacterCreation validates character creation choices
 	ValidateCharacterCreation(ctx context.Context, input *ValidateCharacterInput) error
@@ -38,65 +42,65 @@ type Service interface {
 	ResolveChoices(ctx context.Context, input *ResolveChoicesInput) (*ResolveChoicesOutput, error)
 
 	// GetRace retrieves race information
-	GetRace(ctx context.Context, raceKey string) (*entities.Race, error)
+	GetRace(ctx context.Context, raceKey string) (*rulebook.Race, error)
 
 	// GetClass retrieves class information
-	GetClass(ctx context.Context, classKey string) (*entities.Class, error)
+	GetClass(ctx context.Context, classKey string) (*rulebook.Class, error)
 
 	// GetRaces retrieves all available races
-	GetRaces(ctx context.Context) ([]*entities.Race, error)
+	GetRaces(ctx context.Context) ([]*rulebook.Race, error)
 
 	// GetClasses retrieves all available classes
-	GetClasses(ctx context.Context) ([]*entities.Class, error)
+	GetClasses(ctx context.Context) ([]*rulebook.Class, error)
 
 	// GetOrCreateDraftCharacter gets an existing draft or creates a new one
-	GetOrCreateDraftCharacter(ctx context.Context, userID, realmID string) (*entities.Character, error)
+	GetOrCreateDraftCharacter(ctx context.Context, userID, realmID string) (*charDomain.Character, error)
 
 	// UpdateDraftCharacter updates a draft character
-	UpdateDraftCharacter(ctx context.Context, characterID string, updates *UpdateDraftInput) (*entities.Character, error)
+	UpdateDraftCharacter(ctx context.Context, characterID string, updates *UpdateDraftInput) (*charDomain.Character, error)
 
 	// FinalizeDraftCharacter marks a draft as active
-	FinalizeDraftCharacter(ctx context.Context, characterID string) (*entities.Character, error)
+	FinalizeDraftCharacter(ctx context.Context, characterID string) (*charDomain.Character, error)
 
 	// GetEquipmentByCategory retrieves equipment by category (e.g., "martial-weapons")
-	GetEquipmentByCategory(ctx context.Context, category string) ([]entities.Equipment, error)
+	GetEquipmentByCategory(ctx context.Context, category string) ([]equipment.Equipment, error)
 
 	// UpdateStatus updates a character's status
-	UpdateStatus(characterID string, status entities.CharacterStatus) error
+	UpdateStatus(characterID string, status shared.CharacterStatus) error
 
 	// UpdateEquipment saves equipment changes for a character
-	UpdateEquipment(character *entities.Character) error
+	UpdateEquipment(character *charDomain.Character) error
 
 	// Delete deletes a character
 	Delete(characterID string) error
 
 	// ListByOwner lists all characters for a specific owner
-	ListByOwner(ownerID string) ([]*entities.Character, error)
+	ListByOwner(ownerID string) ([]*charDomain.Character, error)
 
 	// GetByID retrieves a character by ID
-	GetByID(characterID string) (*entities.Character, error)
+	GetByID(characterID string) (*charDomain.Character, error)
 
 	// FixCharacterAttributes fixes characters that have AbilityAssignments but no Attributes
-	FixCharacterAttributes(ctx context.Context, characterID string) (*entities.Character, error)
+	FixCharacterAttributes(ctx context.Context, characterID string) (*charDomain.Character, error)
 
 	// FinalizeCharacterWithName sets the name and finalizes a draft character in one operation
-	FinalizeCharacterWithName(ctx context.Context, characterID, name, raceKey, classKey string) (*entities.Character, error)
+	FinalizeCharacterWithName(ctx context.Context, characterID, name, raceKey, classKey string) (*charDomain.Character, error)
 
 	// Character Creation Session methods
 	// StartCharacterCreation starts a new character creation session
-	StartCharacterCreation(ctx context.Context, userID, guildID string) (*entities.CharacterCreationSession, error)
+	StartCharacterCreation(ctx context.Context, userID, guildID string) (*charDomain.CharacterCreationSession, error)
 
 	// GetCharacterCreationSession retrieves an active session
-	GetCharacterCreationSession(ctx context.Context, sessionID string) (*entities.CharacterCreationSession, error)
+	GetCharacterCreationSession(ctx context.Context, sessionID string) (*charDomain.CharacterCreationSession, error)
 
 	// UpdateCharacterCreationSession updates the session step
 	UpdateCharacterCreationSession(ctx context.Context, sessionID, step string) error
 
 	// GetCharacterFromSession gets the character associated with a session
-	GetCharacterFromSession(ctx context.Context, sessionID string) (*entities.Character, error)
+	GetCharacterFromSession(ctx context.Context, sessionID string) (*charDomain.Character, error)
 
 	// StartFreshCharacterCreation gets or creates a draft and clears ability rolls
-	StartFreshCharacterCreation(ctx context.Context, userID, realmID string) (*entities.Character, error)
+	StartFreshCharacterCreation(ctx context.Context, userID, realmID string) (*charDomain.Character, error)
 }
 
 // CreateCharacterInput contains all data needed to create a character
@@ -113,7 +117,7 @@ type CreateCharacterInput struct {
 
 // CreateCharacterOutput contains the created character
 type CreateCharacterOutput struct {
-	Character *entities.Character
+	Character *charDomain.Character
 }
 
 // ValidateCharacterInput contains character data to validate
@@ -140,9 +144,9 @@ type ResolveChoicesOutput struct {
 type UpdateDraftInput struct {
 	RaceKey            *string
 	ClassKey           *string
-	AbilityScores      map[string]int         // Legacy: direct ability -> score mapping
-	AbilityRolls       []entities.AbilityRoll // New: rolls with IDs
-	AbilityAssignments map[string]string      // New: ability -> roll ID mapping
+	AbilityScores      map[string]int           // Legacy: direct ability -> score mapping
+	AbilityRolls       []charDomain.AbilityRoll // New: rolls with IDs
+	AbilityAssignments map[string]string        // New: ability -> roll ID mapping
 	Proficiencies      []string
 	Equipment          []string
 	Name               *string
@@ -172,7 +176,7 @@ type service struct {
 	choiceResolver ChoiceResolver
 	repository     Repository
 	// Temporary in-memory session store (should be Redis in production)
-	sessions map[string]*entities.CharacterCreationSession
+	sessions map[string]*charDomain.CharacterCreationSession
 	// Later we'll add:
 	// validator  Validator
 }
@@ -193,7 +197,7 @@ func NewService(cfg *ServiceConfig) Service {
 	svc := &service{
 		dndClient:  cfg.DNDClient,
 		repository: cfg.Repository,
-		sessions:   make(map[string]*entities.CharacterCreationSession),
+		sessions:   make(map[string]*charDomain.CharacterCreationSession),
 	}
 
 	// Use provided choice resolver or create default
@@ -228,21 +232,21 @@ func (s *service) CreateCharacter(ctx context.Context, input *CreateCharacterInp
 	}
 
 	// Create the character entity
-	character := &entities.Character{
+	character := &charDomain.Character{
 		ID:      generateID(),
 		OwnerID: input.UserID,
 		RealmID: input.RealmID,
 		Name:    input.Name,
 		Race:    race,
 		Class:   class,
-		Status:  entities.CharacterStatusDraft,
+		Status:  shared.CharacterStatusDraft,
 		HitDie:  class.HitDie,
 		Speed:   race.Speed,
 		Level:   1,
 	}
 
 	// Set ability scores
-	character.Attributes = make(map[entities.Attribute]*entities.AbilityScore)
+	character.Attributes = make(map[shared.Attribute]*charDomain.AbilityScore)
 	for ability, score := range input.AbilityScores {
 		attr := stringToAttribute(ability)
 		character.AddAttribute(attr, score)
@@ -287,10 +291,10 @@ func (s *service) CreateCharacter(ctx context.Context, input *CreateCharacterInp
 	// Add starting equipment
 	for _, se := range class.StartingEquipment {
 		if se != nil && se.Equipment != nil {
-			equipment, err := s.dndClient.GetEquipment(se.Equipment.Key)
-			if err == nil && equipment != nil {
+			equipmentValue, err := s.dndClient.GetEquipment(se.Equipment.Key)
+			if err == nil && equipmentValue != nil {
 				for i := 0; i < se.Quantity; i++ {
-					character.AddInventory(equipment)
+					character.AddInventory(equipmentValue)
 				}
 			}
 		}
@@ -298,10 +302,32 @@ func (s *service) CreateCharacter(ctx context.Context, input *CreateCharacterInp
 
 	// Add selected equipment
 	for _, equipKey := range input.Equipment {
-		equipment, err := s.dndClient.GetEquipment(equipKey)
-		if err == nil && equipment != nil {
-			character.AddInventory(equipment)
+		equipmentValue, err := s.dndClient.GetEquipment(equipKey)
+		if err == nil && equipmentValue != nil {
+			character.AddInventory(equipmentValue)
 		}
+	}
+
+	// Add racial features
+	racialFeatures := features2.GetRacialFeatures(race.Key)
+	if character.Features == nil {
+		character.Features = []*rulebook.CharacterFeature{}
+	}
+	for _, feat := range racialFeatures {
+		featCopy := feat
+		character.Features = append(character.Features, &featCopy)
+	}
+
+	// Add class features
+	classFeatures := features2.GetClassFeatures(class.Key, character.Level)
+	for _, feat := range classFeatures {
+		featCopy := feat
+		character.Features = append(character.Features, &featCopy)
+	}
+
+	// Apply passive effects from all features
+	if err := features2.DefaultRegistry.ApplyAllPassiveEffects(character); err != nil {
+		log.Printf("Error applying passive effects for character %s: %v", character.ID, err)
 	}
 
 	// Save to repository
@@ -318,7 +344,7 @@ func (s *service) CreateCharacter(ctx context.Context, input *CreateCharacterInp
 }
 
 // GetCharacter retrieves a character by ID
-func (s *service) GetCharacter(ctx context.Context, characterID string) (*entities.Character, error) {
+func (s *service) GetCharacter(ctx context.Context, characterID string) (*charDomain.Character, error) {
 	if strings.TrimSpace(characterID) == "" {
 		return nil, dnderr.InvalidArgument("character ID is required")
 	}
@@ -333,7 +359,7 @@ func (s *service) GetCharacter(ctx context.Context, characterID string) (*entiti
 }
 
 // ListCharacters lists all characters for a user
-func (s *service) ListCharacters(ctx context.Context, userID string) ([]*entities.Character, error) {
+func (s *service) ListCharacters(ctx context.Context, userID string) ([]*charDomain.Character, error) {
 	if strings.TrimSpace(userID) == "" {
 		return nil, dnderr.InvalidArgument("user ID is required")
 	}
@@ -402,7 +428,7 @@ func (s *service) ResolveChoices(ctx context.Context, input *ResolveChoicesInput
 }
 
 // GetRace retrieves race information
-func (s *service) GetRace(ctx context.Context, raceKey string) (*entities.Race, error) {
+func (s *service) GetRace(ctx context.Context, raceKey string) (*rulebook.Race, error) {
 	if strings.TrimSpace(raceKey) == "" {
 		return nil, dnderr.InvalidArgument("race key is required")
 	}
@@ -417,7 +443,7 @@ func (s *service) GetRace(ctx context.Context, raceKey string) (*entities.Race, 
 }
 
 // GetClass retrieves class information
-func (s *service) GetClass(ctx context.Context, classKey string) (*entities.Class, error) {
+func (s *service) GetClass(ctx context.Context, classKey string) (*rulebook.Class, error) {
 	if strings.TrimSpace(classKey) == "" {
 		return nil, dnderr.InvalidArgument("class key is required")
 	}
@@ -432,7 +458,7 @@ func (s *service) GetClass(ctx context.Context, classKey string) (*entities.Clas
 }
 
 // GetRaces retrieves all available races
-func (s *service) GetRaces(ctx context.Context) ([]*entities.Race, error) {
+func (s *service) GetRaces(ctx context.Context) ([]*rulebook.Race, error) {
 	races, err := s.dndClient.ListRaces()
 	if err != nil {
 		return nil, dnderr.Wrap(err, "failed to list races")
@@ -442,7 +468,7 @@ func (s *service) GetRaces(ctx context.Context) ([]*entities.Race, error) {
 }
 
 // GetClasses retrieves all available classes
-func (s *service) GetClasses(ctx context.Context) ([]*entities.Class, error) {
+func (s *service) GetClasses(ctx context.Context) ([]*rulebook.Class, error) {
 	classes, err := s.dndClient.ListClasses()
 	if err != nil {
 		return nil, dnderr.Wrap(err, "failed to list classes")
@@ -452,7 +478,7 @@ func (s *service) GetClasses(ctx context.Context) ([]*entities.Class, error) {
 }
 
 // GetOrCreateDraftCharacter gets an existing draft or creates a new one
-func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID string) (*entities.Character, error) {
+func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID string) (*charDomain.Character, error) {
 	if strings.TrimSpace(userID) == "" {
 		return nil, dnderr.InvalidArgument("user ID is required")
 	}
@@ -472,9 +498,9 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 	}
 
 	// Find all draft characters
-	var drafts []*entities.Character
+	var drafts []*charDomain.Character
 	for _, char := range chars {
-		if char.Status == entities.CharacterStatusDraft {
+		if char.Status == shared.CharacterStatusDraft {
 			drafts = append(drafts, char)
 		}
 	}
@@ -499,18 +525,18 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 	}
 
 	// No draft found, create a new one
-	character := &entities.Character{
+	character := &charDomain.Character{
 		ID:      generateID(),
 		OwnerID: userID,
 		RealmID: realmID,
 		Name:    "Draft Character",
-		Status:  entities.CharacterStatusDraft,
+		Status:  shared.CharacterStatusDraft,
 		Level:   1,
 		// Initialize empty maps
-		Attributes:    make(map[entities.Attribute]*entities.AbilityScore),
-		Proficiencies: make(map[entities.ProficiencyType][]*entities.Proficiency),
-		Inventory:     make(map[entities.EquipmentType][]entities.Equipment),
-		EquippedSlots: make(map[entities.Slot]entities.Equipment),
+		Attributes:    make(map[shared.Attribute]*charDomain.AbilityScore),
+		Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
+		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 	}
 
 	// Save to repository
@@ -524,7 +550,7 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 }
 
 // UpdateDraftCharacter updates a draft character
-func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, updates *UpdateDraftInput) (*entities.Character, error) {
+func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, updates *UpdateDraftInput) (*charDomain.Character, error) {
 	if strings.TrimSpace(characterID) == "" {
 		return nil, dnderr.InvalidArgument("character ID is required")
 	}
@@ -542,7 +568,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 	// Log character state BEFORE updates
 
 	// Verify it's a draft
-	if char.Status != entities.CharacterStatusDraft {
+	if char.Status != shared.CharacterStatusDraft {
 		return nil, dnderr.InvalidArgument("can only update draft characters").
 			WithMeta("character_id", characterID).
 			WithMeta("status", string(char.Status))
@@ -556,17 +582,17 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 				WithMeta("race_key", *updates.RaceKey)
 		}
 		char.Race = race
-		char.Speed = features.CalculateSpeed(char)
+		char.Speed = features2.CalculateSpeed(char)
 
 		// Apply racial features
-		racialFeatures := features.GetRacialFeatures(race.Key)
+		racialFeatures := features2.GetRacialFeatures(race.Key)
 		if char.Features == nil {
-			char.Features = []*entities.CharacterFeature{}
+			char.Features = []*rulebook.CharacterFeature{}
 		}
 		// Remove existing racial features
-		newFeatures := []*entities.CharacterFeature{}
+		newFeatures := []*rulebook.CharacterFeature{}
 		for _, f := range char.Features {
-			if f.Type != entities.FeatureTypeRacial {
+			if f.Type != rulebook.FeatureTypeRacial {
 				newFeatures = append(newFeatures, f)
 			}
 		}
@@ -578,7 +604,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		char.Features = newFeatures
 
 		// Apply passive effects from new racial features
-		if err := features.DefaultRegistry.ApplyAllPassiveEffects(char); err != nil {
+		if err := features2.DefaultRegistry.ApplyAllPassiveEffects(char); err != nil {
 			log.Printf("Error applying passive effects for character %s (race: %s): %v",
 				characterID, race.Name, err)
 		}
@@ -595,16 +621,16 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		char.HitDie = class.HitDie
 
 		// Apply class features
-		classFeatures := features.GetClassFeatures(class.Key, char.Level)
+		classFeatures := features2.GetClassFeatures(class.Key, char.Level)
 		if char.Features == nil {
-			char.Features = []*entities.CharacterFeature{}
+			char.Features = []*rulebook.CharacterFeature{}
 		}
 		// Create map of existing class features to preserve metadata
-		existingClassFeatures := make(map[string]*entities.CharacterFeature)
-		newFeatures := []*entities.CharacterFeature{}
+		existingClassFeatures := make(map[string]*rulebook.CharacterFeature)
+		newFeatures := []*rulebook.CharacterFeature{}
 
 		for _, f := range char.Features {
-			if f.Type == entities.FeatureTypeClass {
+			if f.Type == rulebook.FeatureTypeClass {
 				// Store existing class features by key to preserve metadata
 				existingClassFeatures[f.Key] = f
 			} else {
@@ -627,7 +653,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		char.Features = newFeatures
 
 		// Recalculate AC with new class features
-		char.AC = features.CalculateAC(char)
+		char.AC = features2.CalculateAC(char)
 	}
 
 	// Update ability rolls if provided (including clearing with empty slice)
@@ -648,7 +674,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 			}
 
 			// Clear existing scores
-			char.Attributes = make(map[entities.Attribute]*entities.AbilityScore)
+			char.Attributes = make(map[shared.Attribute]*charDomain.AbilityScore)
 
 			// Set new scores based on assignments
 			for ability, rollID := range char.AbilityAssignments {
@@ -669,14 +695,14 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 			char.SetHitpoints()
 
 			// Recalculate AC with new ability scores
-			char.AC = features.CalculateAC(char)
+			char.AC = features2.CalculateAC(char)
 		}
 	}
 
 	// Legacy: Update ability scores if provided directly
 	if len(updates.AbilityScores) > 0 && updates.AbilityAssignments == nil {
 		// Clear existing scores
-		char.Attributes = make(map[entities.Attribute]*entities.AbilityScore)
+		char.Attributes = make(map[shared.Attribute]*charDomain.AbilityScore)
 
 		// Set new scores
 		for ability, score := range updates.AbilityScores {
@@ -695,7 +721,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		char.SetHitpoints()
 
 		// Recalculate AC with new ability scores
-		char.AC = features.CalculateAC(char)
+		char.AC = features2.CalculateAC(char)
 	}
 
 	// Update name if provided
@@ -708,11 +734,11 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 
 		// Clear existing chosen proficiencies (keep starting ones from race/class)
 		if char.Proficiencies == nil {
-			char.Proficiencies = make(map[entities.ProficiencyType][]*entities.Proficiency)
+			char.Proficiencies = make(map[rulebook.ProficiencyType][]*rulebook.Proficiency)
 		}
 
 		// Separate proficiencies by type
-		skillProficiencies := []*entities.Proficiency{}
+		skillProficiencies := []*rulebook.Proficiency{}
 
 		// Get proficiency objects and filter by type
 		for _, profKey := range updates.Proficiencies {
@@ -720,7 +746,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 			if err == nil && proficiency != nil {
 				// Only handle skill proficiencies as replacements
 				// Other types (armor, weapon, etc) should accumulate
-				if proficiency.Type == entities.ProficiencyTypeSkill {
+				if proficiency.Type == rulebook.ProficiencyTypeSkill {
 					skillProficiencies = append(skillProficiencies, proficiency)
 				} else {
 					// For non-skill proficiencies, add normally (with duplicate check)
@@ -731,7 +757,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 
 		// Replace all skill proficiencies with the new set
 		if len(skillProficiencies) > 0 {
-			char.SetProficiencies(entities.ProficiencyTypeSkill, skillProficiencies)
+			char.SetProficiencies(rulebook.ProficiencyTypeSkill, skillProficiencies)
 		}
 
 	}
@@ -741,21 +767,21 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 
 		// Initialize inventory if needed
 		if char.Inventory == nil {
-			char.Inventory = make(map[entities.EquipmentType][]entities.Equipment)
+			char.Inventory = make(map[equipment.EquipmentType][]equipment.Equipment)
 		}
 
 		// Add selected equipment
 		for _, equipKey := range updates.Equipment {
-			equipment, err := s.dndClient.GetEquipment(equipKey)
-			if err == nil && equipment != nil {
-				char.AddInventory(equipment)
+			equipmentValue, err := s.dndClient.GetEquipment(equipKey)
+			if err == nil && equipmentValue != nil {
+				char.AddInventory(equipmentValue)
 			} else if err != nil {
 				log.Printf("Failed to get equipment '%s': %v", equipKey, err)
 			}
 		}
 
 		// Recalculate AC in case equipment affects it
-		char.AC = features.CalculateAC(char)
+		char.AC = features2.CalculateAC(char)
 
 	}
 
@@ -769,7 +795,7 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 }
 
 // FinalizeDraftCharacter marks a draft as active
-func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string) (*entities.Character, error) {
+func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string) (*charDomain.Character, error) {
 	if strings.TrimSpace(characterID) == "" {
 		return nil, dnderr.InvalidArgument("character ID is required")
 	}
@@ -782,7 +808,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 	}
 
 	// Verify it's a draft
-	if char.Status != entities.CharacterStatusDraft {
+	if char.Status != shared.CharacterStatusDraft {
 		return nil, dnderr.InvalidArgument("can only finalize draft characters").
 			WithMeta("character_id", characterID).
 			WithMeta("status", string(char.Status))
@@ -798,27 +824,27 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 		}
 
 		// Initialize attributes map
-		char.Attributes = make(map[entities.Attribute]*entities.AbilityScore)
+		char.Attributes = make(map[shared.Attribute]*charDomain.AbilityScore)
 
 		// Convert assignments to attributes
 		for abilityStr, rollID := range char.AbilityAssignments {
 			rollValue, rollValueOk := rollValues[rollID]
 			if rollValueOk {
 				// Parse ability string to Attribute type
-				var attr entities.Attribute
+				var attr shared.Attribute
 				switch abilityStr {
 				case "STR":
-					attr = entities.AttributeStrength
+					attr = shared.AttributeStrength
 				case "DEX":
-					attr = entities.AttributeDexterity
+					attr = shared.AttributeDexterity
 				case "CON":
-					attr = entities.AttributeConstitution
+					attr = shared.AttributeConstitution
 				case "INT":
-					attr = entities.AttributeIntelligence
+					attr = shared.AttributeIntelligence
 				case "WIS":
-					attr = entities.AttributeWisdom
+					attr = shared.AttributeWisdom
 				case "CHA":
-					attr = entities.AttributeCharisma
+					attr = shared.AttributeCharisma
 				default:
 					continue
 				}
@@ -839,7 +865,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 				modifier := (score - 10) / 2
 
 				// Create ability score
-				char.Attributes[attr] = &entities.AbilityScore{
+				char.Attributes[attr] = &charDomain.AbilityScore{
 					Score: score,
 					Bonus: modifier,
 				}
@@ -854,7 +880,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 		// Base HP = HitDie + Constitution modifier
 		conMod := 0
 		if char.Attributes != nil {
-			if con, ok := char.Attributes[entities.AttributeConstitution]; ok && con != nil {
+			if con, ok := char.Attributes[shared.AttributeConstitution]; ok && con != nil {
 				conMod = con.Bonus
 			}
 		}
@@ -865,18 +891,18 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 
 	// Ensure all required features are present, preserving existing metadata
 	if char.Features == nil {
-		char.Features = []*entities.CharacterFeature{}
+		char.Features = []*rulebook.CharacterFeature{}
 	}
 
 	// Create a map of existing features by key for quick lookup
-	existingFeatures := make(map[string]*entities.CharacterFeature)
+	existingFeatures := make(map[string]*rulebook.CharacterFeature)
 	for _, feat := range char.Features {
 		existingFeatures[feat.Key] = feat
 	}
 
 	// Add missing racial features (preserve existing ones with metadata)
 	if char.Race != nil {
-		racialFeatures := features.GetRacialFeatures(char.Race.Key)
+		racialFeatures := features2.GetRacialFeatures(char.Race.Key)
 		for _, templateFeat := range racialFeatures {
 			if _, exists := existingFeatures[templateFeat.Key]; !exists {
 				// Feature doesn't exist, add it from template
@@ -890,7 +916,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 
 	// Add missing class features (preserve existing ones with metadata)
 	if char.Class != nil {
-		classFeatures := features.GetClassFeatures(char.Class.Key, char.Level)
+		classFeatures := features2.GetClassFeatures(char.Class.Key, char.Level)
 		for _, templateFeat := range classFeatures {
 			if _, exists := existingFeatures[templateFeat.Key]; !exists {
 				// Feature doesn't exist, add it from template
@@ -903,20 +929,20 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 	}
 
 	// Apply passive effects from all features
-	if err := features.DefaultRegistry.ApplyAllPassiveEffects(char); err != nil {
+	if err := features2.DefaultRegistry.ApplyAllPassiveEffects(char); err != nil {
 		// Log error but don't fail finalization
 		log.Printf("Error applying passive effects for character %s (%s %s): %v",
 			char.ID, char.Race.Name, char.Class.Name, err)
 	}
 
 	// Calculate AC using the features package
-	char.AC = features.CalculateAC(char)
+	char.AC = features2.CalculateAC(char)
 
 	// Add starting proficiencies from class if not already present
 	if s.dndClient != nil && char.Class != nil && char.Class.Proficiencies != nil {
 		// Check if we already have class proficiencies (in case they were added earlier)
 		hasClassProficiencies := false
-		if weaponProfs, exists := char.Proficiencies[entities.ProficiencyTypeWeapon]; exists && len(weaponProfs) > 0 {
+		if weaponProfs, exists := char.Proficiencies[rulebook.ProficiencyTypeWeapon]; exists && len(weaponProfs) > 0 {
 			hasClassProficiencies = true
 		}
 
@@ -948,7 +974,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 	if s.dndClient != nil && char.Class != nil && char.Class.StartingEquipment != nil {
 		for _, se := range char.Class.StartingEquipment {
 			if se != nil && se.Equipment != nil {
-				equipment, err := s.dndClient.GetEquipment(se.Equipment.Key)
+				equipmentValue, err := s.dndClient.GetEquipment(se.Equipment.Key)
 				if err != nil {
 					// Log the error but don't fail the finalization
 					log.Printf("Failed to get starting equipment %s: %v", se.Equipment.Key, err)
@@ -956,7 +982,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 				}
 				// If no error, equipment is valid
 				for i := 0; i < se.Quantity; i++ {
-					char.AddInventory(equipment)
+					char.AddInventory(equipmentValue)
 				}
 			}
 		}
@@ -966,7 +992,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 	char.InitializeResources()
 
 	// Update status to active
-	char.Status = entities.CharacterStatusActive
+	char.Status = shared.CharacterStatusActive
 
 	// Save changes
 	if err := s.repository.Update(ctx, char); err != nil {
@@ -978,18 +1004,18 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 }
 
 // GetEquipmentByCategory retrieves equipment by category
-func (s *service) GetEquipmentByCategory(ctx context.Context, category string) ([]entities.Equipment, error) {
+func (s *service) GetEquipmentByCategory(ctx context.Context, category string) ([]equipment.Equipment, error) {
 	if strings.TrimSpace(category) == "" {
 		return nil, dnderr.InvalidArgument("category is required")
 	}
 
-	equipment, err := s.dndClient.GetEquipmentByCategory(category)
+	equipmentSlice, err := s.dndClient.GetEquipmentByCategory(category)
 	if err != nil {
 		return nil, dnderr.Wrapf(err, "failed to get equipment for category '%s'", category).
 			WithMeta("category", category)
 	}
 
-	return equipment, nil
+	return equipmentSlice, nil
 }
 
 // generateID generates a unique ID for a character
@@ -1000,7 +1026,7 @@ func generateID() string {
 }
 
 // UpdateStatus updates a character's status
-func (s *service) UpdateStatus(characterID string, status entities.CharacterStatus) error {
+func (s *service) UpdateStatus(characterID string, status shared.CharacterStatus) error {
 	if strings.TrimSpace(characterID) == "" {
 		return dnderr.InvalidArgument("character ID is required")
 	}
@@ -1028,7 +1054,7 @@ func (s *service) UpdateStatus(characterID string, status entities.CharacterStat
 }
 
 // UpdateEquipment saves equipment changes for a character
-func (s *service) UpdateEquipment(character *entities.Character) error {
+func (s *service) UpdateEquipment(character *charDomain.Character) error {
 	if character == nil {
 		return dnderr.InvalidArgument("character is required")
 	}
@@ -1040,7 +1066,7 @@ func (s *service) UpdateEquipment(character *entities.Character) error {
 	ctx := context.Background()
 
 	// Recalculate AC with the features calculator
-	character.AC = features.CalculateAC(character)
+	character.AC = features2.CalculateAC(character)
 
 	// Save the character with updated equipment
 	if err := s.repository.Update(ctx, character); err != nil {
@@ -1068,7 +1094,7 @@ func (s *service) Delete(characterID string) error {
 }
 
 // ListByOwner lists all characters for a specific owner
-func (s *service) ListByOwner(ownerID string) ([]*entities.Character, error) {
+func (s *service) ListByOwner(ownerID string) ([]*charDomain.Character, error) {
 	if strings.TrimSpace(ownerID) == "" {
 		return nil, dnderr.InvalidArgument("owner ID is required")
 	}
@@ -1085,7 +1111,7 @@ func (s *service) ListByOwner(ownerID string) ([]*entities.Character, error) {
 }
 
 // GetByID retrieves a character by ID
-func (s *service) GetByID(characterID string) (*entities.Character, error) {
+func (s *service) GetByID(characterID string) (*charDomain.Character, error) {
 	if strings.TrimSpace(characterID) == "" {
 		return nil, dnderr.InvalidArgument("character ID is required")
 	}
@@ -1108,27 +1134,27 @@ func (s *service) GetByID(characterID string) (*entities.Character, error) {
 }
 
 // stringToAttribute converts a string to an Attribute
-func stringToAttribute(s string) entities.Attribute {
+func stringToAttribute(s string) shared.Attribute {
 	switch strings.ToUpper(s) {
 	case "STR":
-		return entities.AttributeStrength
+		return shared.AttributeStrength
 	case "DEX":
-		return entities.AttributeDexterity
+		return shared.AttributeDexterity
 	case "CON":
-		return entities.AttributeConstitution
+		return shared.AttributeConstitution
 	case "INT":
-		return entities.AttributeIntelligence
+		return shared.AttributeIntelligence
 	case "WIS":
-		return entities.AttributeWisdom
+		return shared.AttributeWisdom
 	case "CHA":
-		return entities.AttributeCharisma
+		return shared.AttributeCharisma
 	default:
-		return entities.AttributeNone
+		return shared.AttributeNone
 	}
 }
 
 // StartFreshCharacterCreation gets or creates a draft and clears ability rolls
-func (s *service) StartFreshCharacterCreation(ctx context.Context, userID, realmID string) (*entities.Character, error) {
+func (s *service) StartFreshCharacterCreation(ctx context.Context, userID, realmID string) (*charDomain.Character, error) {
 	draft, err := s.GetOrCreateDraftCharacter(ctx, userID, realmID)
 	if err != nil {
 		return nil, err
@@ -1137,7 +1163,7 @@ func (s *service) StartFreshCharacterCreation(ctx context.Context, userID, realm
 	// Clear ability rolls and assignments if they exist
 	if len(draft.AbilityRolls) > 0 || len(draft.AbilityAssignments) > 0 {
 		_, err = s.UpdateDraftCharacter(ctx, draft.ID, &UpdateDraftInput{
-			AbilityRolls:       []entities.AbilityRoll{},
+			AbilityRolls:       []charDomain.AbilityRoll{},
 			AbilityAssignments: map[string]string{},
 		})
 		if err != nil {

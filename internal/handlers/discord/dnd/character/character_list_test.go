@@ -1,9 +1,11 @@
 package character_test
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/testutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -11,7 +13,7 @@ import (
 func TestCharacterListFiltering(t *testing.T) {
 	tests := []struct {
 		name             string
-		characters       []*entities.Character
+		characters       []*character.Character
 		expectedActive   int
 		expectedDraft    int
 		expectedArchived int
@@ -19,17 +21,17 @@ func TestCharacterListFiltering(t *testing.T) {
 	}{
 		{
 			name: "filters out empty draft characters",
-			characters: []*entities.Character{
+			characters: []*character.Character{
 				{
 					ID:     "draft1",
-					Status: entities.CharacterStatusDraft,
+					Status: shared.CharacterStatusDraft,
 					Name:   "",  // No name
 					Race:   nil, // No race
 					Class:  nil, // No class
 				},
 				{
 					ID:     "draft2",
-					Status: entities.CharacterStatusDraft,
+					Status: shared.CharacterStatusDraft,
 					Name:   "Bob",
 				},
 			},
@@ -40,10 +42,10 @@ func TestCharacterListFiltering(t *testing.T) {
 		},
 		{
 			name: "shows draft with race but no name",
-			characters: []*entities.Character{
+			characters: []*character.Character{
 				{
 					ID:     "draft3",
-					Status: entities.CharacterStatusDraft,
+					Status: shared.CharacterStatusDraft,
 					Name:   "",
 					Race:   testutils.CreateTestRace("human", "Human"),
 				},
@@ -55,10 +57,10 @@ func TestCharacterListFiltering(t *testing.T) {
 		},
 		{
 			name: "shows draft with class but no name",
-			characters: []*entities.Character{
+			characters: []*character.Character{
 				{
 					ID:     "draft4",
-					Status: entities.CharacterStatusDraft,
+					Status: shared.CharacterStatusDraft,
 					Name:   "",
 					Class:  testutils.CreateTestClass("fighter", "Fighter", 10),
 				},
@@ -70,20 +72,20 @@ func TestCharacterListFiltering(t *testing.T) {
 		},
 		{
 			name: "properly groups by status",
-			characters: []*entities.Character{
+			characters: []*character.Character{
 				{
 					ID:     "active1",
-					Status: entities.CharacterStatusActive,
+					Status: shared.CharacterStatusActive,
 					Name:   "Gandalf",
 				},
 				{
 					ID:     "draft5",
-					Status: entities.CharacterStatusDraft,
+					Status: shared.CharacterStatusDraft,
 					Name:   "Frodo",
 				},
 				{
 					ID:     "archived1",
-					Status: entities.CharacterStatusArchived,
+					Status: shared.CharacterStatusArchived,
 					Name:   "Boromir",
 				},
 			},
@@ -97,20 +99,20 @@ func TestCharacterListFiltering(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Group characters by status (mimicking the handler logic)
-			activeChars := make([]*entities.Character, 0)
-			draftChars := make([]*entities.Character, 0)
-			archivedChars := make([]*entities.Character, 0)
+			activeChars := make([]*character.Character, 0)
+			draftChars := make([]*character.Character, 0)
+			archivedChars := make([]*character.Character, 0)
 
 			for _, char := range tt.characters {
 				switch char.Status {
-				case entities.CharacterStatusActive:
+				case shared.CharacterStatusActive:
 					activeChars = append(activeChars, char)
-				case entities.CharacterStatusDraft:
+				case shared.CharacterStatusDraft:
 					// Only show drafts that have meaningful progress
 					if char.Name != "" || char.Race != nil || char.Class != nil {
 						draftChars = append(draftChars, char)
 					}
-				case entities.CharacterStatusArchived:
+				case shared.CharacterStatusArchived:
 					archivedChars = append(archivedChars, char)
 				}
 			}
@@ -125,50 +127,50 @@ func TestCharacterListFiltering(t *testing.T) {
 func TestDraftCharacterDisplay(t *testing.T) {
 	tests := []struct {
 		name             string
-		character        *entities.Character
+		character        *character.Character
 		expectedStatus   string
 		expectedProgress string
 	}{
 		{
 			name: "draft with name",
-			character: &entities.Character{
+			character: &character.Character{
 				Name:   "Aragorn",
-				Status: entities.CharacterStatusDraft,
+				Status: shared.CharacterStatusDraft,
 			},
 			expectedStatus:   "Aragorn",
 			expectedProgress: "✓ Name",
 		},
 		{
 			name: "draft with race and class but no name",
-			character: &entities.Character{
+			character: &character.Character{
 				Name:   "",
-				Race:   &entities.Race{Name: "Human"},
-				Class:  &entities.Class{Name: "Ranger"},
-				Status: entities.CharacterStatusDraft,
+				Race:   &rulebook.Race{Name: "Human"},
+				Class:  &rulebook.Class{Name: "Ranger"},
+				Status: shared.CharacterStatusDraft,
 			},
 			expectedStatus:   "Human Ranger (unnamed)",
 			expectedProgress: "✓ Race ✓ Class ",
 		},
 		{
 			name: "draft with only race",
-			character: &entities.Character{
+			character: &character.Character{
 				Name:   "",
-				Race:   &entities.Race{Name: "Elf"},
-				Status: entities.CharacterStatusDraft,
+				Race:   &rulebook.Race{Name: "Elf"},
+				Status: shared.CharacterStatusDraft,
 			},
 			expectedStatus:   "Elf (selecting class)",
 			expectedProgress: "✓ Race ",
 		},
 		{
 			name: "complete draft",
-			character: &entities.Character{
+			character: &character.Character{
 				Name:  "Legolas",
-				Race:  &entities.Race{Name: "Elf"},
-				Class: &entities.Class{Name: "Ranger"},
-				Attributes: map[entities.Attribute]*entities.AbilityScore{
-					entities.AttributeStrength: {Score: 14},
+				Race:  &rulebook.Race{Name: "Elf"},
+				Class: &rulebook.Class{Name: "Ranger"},
+				Attributes: map[shared.Attribute]*character.AbilityScore{
+					shared.AttributeStrength: {Score: 14},
 				},
-				Status: entities.CharacterStatusDraft,
+				Status: shared.CharacterStatusDraft,
 			},
 			expectedStatus:   "Legolas",
 			expectedProgress: "✓ Race ✓ Class ✓ Abilities ✓ Name",

@@ -1,9 +1,11 @@
 package dungeon_test
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -13,22 +15,22 @@ func TestJoinPartyWorkflow(t *testing.T) {
 		userID := "player-123"
 		characterID := "char-123"
 
-		session := &entities.Session{
+		sess := &session.Session{
 			ID: "session-123",
-			Members: map[string]*entities.SessionMember{
+			Members: map[string]*session.SessionMember{
 				userID: {
 					UserID:      userID,
-					Role:        entities.SessionRolePlayer,
+					Role:        session.SessionRolePlayer,
 					CharacterID: "", // No character selected yet
 				},
 			},
 		}
 
 		// User is already in session
-		assert.True(t, session.IsUserInSession(userID))
+		assert.True(t, sess.IsUserInSession(userID))
 
 		// But has no character
-		member := session.Members[userID]
+		member := sess.Members[userID]
 		assert.Empty(t, member.CharacterID)
 
 		// After selecting character
@@ -41,29 +43,29 @@ func TestJoinPartyWorkflow(t *testing.T) {
 		existingUserID := "player-existing"
 		newUserID := "player-new"
 
-		session := &entities.Session{
+		sess := &session.Session{
 			ID: "session-456",
-			Members: map[string]*entities.SessionMember{
+			Members: map[string]*session.SessionMember{
 				existingUserID: {
 					UserID:      existingUserID,
-					Role:        entities.SessionRolePlayer,
+					Role:        session.SessionRolePlayer,
 					CharacterID: "char-existing",
 				},
 			},
 		}
 
 		// New user is not in session
-		assert.False(t, session.IsUserInSession(newUserID))
+		assert.False(t, sess.IsUserInSession(newUserID))
 
 		// After joining
-		session.Members[newUserID] = &entities.SessionMember{
+		sess.Members[newUserID] = &session.SessionMember{
 			UserID:      newUserID,
-			Role:        entities.SessionRolePlayer,
+			Role:        session.SessionRolePlayer,
 			CharacterID: "char-new",
 		}
 
-		assert.True(t, session.IsUserInSession(newUserID))
-		assert.NotEmpty(t, session.Members[newUserID].CharacterID)
+		assert.True(t, sess.IsUserInSession(newUserID))
+		assert.NotEmpty(t, sess.Members[newUserID].CharacterID)
 	})
 
 	t.Run("Cannot enter room workflow states", func(t *testing.T) {
@@ -101,24 +103,24 @@ func TestJoinPartyWorkflow(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				session := &entities.Session{
+				sess := &session.Session{
 					ID:      "session-test",
-					Members: map[string]*entities.SessionMember{},
+					Members: map[string]*session.SessionMember{},
 				}
 
 				if tc.inSession {
-					session.Members[userID] = &entities.SessionMember{
+					sess.Members[userID] = &session.SessionMember{
 						UserID: userID,
-						Role:   entities.SessionRolePlayer,
+						Role:   session.SessionRolePlayer,
 					}
 					if tc.hasCharacter {
-						session.Members[userID].CharacterID = "char-test"
+						sess.Members[userID].CharacterID = "char-test"
 					}
 				}
 
 				// Check if can enter
-				canEnter := session.IsUserInSession(userID)
-				if canEnter && session.Members[userID].CharacterID == "" {
+				canEnter := sess.IsUserInSession(userID)
+				if canEnter && sess.Members[userID].CharacterID == "" {
 					canEnter = false
 				}
 
@@ -131,9 +133,9 @@ func TestJoinPartyWorkflow(t *testing.T) {
 func TestCharacterSelectionEdgeCases(t *testing.T) {
 	t.Run("Multiple active characters requires manual selection", func(t *testing.T) {
 		// User has multiple characters - can't auto-select
-		characters := []*entities.Character{
-			{ID: "char-1", Name: "Aragorn", Status: entities.CharacterStatusActive},
-			{ID: "char-2", Name: "Gandalf", Status: entities.CharacterStatusActive},
+		characters := []*character.Character{
+			{ID: "char-1", Name: "Aragorn", Status: shared.CharacterStatusActive},
+			{ID: "char-2", Name: "Gandalf", Status: shared.CharacterStatusActive},
 		}
 
 		// Should not auto-select when multiple active
@@ -141,7 +143,7 @@ func TestCharacterSelectionEdgeCases(t *testing.T) {
 
 		var activeCount int
 		for _, char := range characters {
-			if char.Status == entities.CharacterStatusActive {
+			if char.Status == shared.CharacterStatusActive {
 				activeCount++
 			}
 		}
@@ -149,15 +151,15 @@ func TestCharacterSelectionEdgeCases(t *testing.T) {
 	})
 
 	t.Run("Single active character can auto-select", func(t *testing.T) {
-		characters := []*entities.Character{
-			{ID: "char-1", Name: "Legolas", Status: entities.CharacterStatusActive},
-			{ID: "char-2", Name: "Gimli", Status: entities.CharacterStatusArchived},
-			{ID: "char-3", Name: "Boromir", Status: entities.CharacterStatusDraft},
+		characters := []*character.Character{
+			{ID: "char-1", Name: "Legolas", Status: shared.CharacterStatusActive},
+			{ID: "char-2", Name: "Gimli", Status: shared.CharacterStatusArchived},
+			{ID: "char-3", Name: "Boromir", Status: shared.CharacterStatusDraft},
 		}
 
-		var activeChars []*entities.Character
+		var activeChars []*character.Character
 		for _, char := range characters {
-			if char.Status == entities.CharacterStatusActive {
+			if char.Status == shared.CharacterStatusActive {
 				activeChars = append(activeChars, char)
 			}
 		}
@@ -167,14 +169,14 @@ func TestCharacterSelectionEdgeCases(t *testing.T) {
 	})
 
 	t.Run("No active characters prevents joining", func(t *testing.T) {
-		characters := []*entities.Character{
-			{ID: "char-1", Name: "Draft Hero", Status: entities.CharacterStatusDraft},
-			{ID: "char-2", Name: "Old Hero", Status: entities.CharacterStatusArchived},
+		characters := []*character.Character{
+			{ID: "char-1", Name: "Draft Hero", Status: shared.CharacterStatusDraft},
+			{ID: "char-2", Name: "Old Hero", Status: shared.CharacterStatusArchived},
 		}
 
-		var activeChars []*entities.Character
+		var activeChars []*character.Character
 		for _, char := range characters {
-			if char.Status == entities.CharacterStatusActive {
+			if char.Status == shared.CharacterStatusActive {
 				activeChars = append(activeChars, char)
 			}
 		}

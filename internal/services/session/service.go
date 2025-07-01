@@ -7,10 +7,10 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	gameSession "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"strings"
 	"time"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/gamesessions"
 	charService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
@@ -23,16 +23,16 @@ type Repository = gamesessions.Repository
 // Service defines the session service interface
 type Service interface {
 	// CreateSession creates a new game session
-	CreateSession(ctx context.Context, input *CreateSessionInput) (*entities.Session, error)
+	CreateSession(ctx context.Context, input *CreateSessionInput) (*gameSession.Session, error)
 
 	// GetSession retrieves a session by ID
-	GetSession(ctx context.Context, sessionID string) (*entities.Session, error)
+	GetSession(ctx context.Context, sessionID string) (*gameSession.Session, error)
 
 	// GetSessionByInviteCode retrieves a session by invite code
-	GetSessionByInviteCode(ctx context.Context, code string) (*entities.Session, error)
+	GetSessionByInviteCode(ctx context.Context, code string) (*gameSession.Session, error)
 
 	// UpdateSession updates session details
-	UpdateSession(ctx context.Context, sessionID string, input *UpdateSessionInput) (*entities.Session, error)
+	UpdateSession(ctx context.Context, sessionID string, input *UpdateSessionInput) (*gameSession.Session, error)
 
 	// DeleteSession removes a session
 	DeleteSession(ctx context.Context, sessionID string) error
@@ -41,10 +41,10 @@ type Service interface {
 	InviteToSession(ctx context.Context, sessionID, inviterID, inviteeID string) error
 
 	// JoinSession adds a user to a session
-	JoinSession(ctx context.Context, sessionID, userID string) (*entities.SessionMember, error)
+	JoinSession(ctx context.Context, sessionID, userID string) (*gameSession.SessionMember, error)
 
 	// JoinSessionByCode adds a user to a session using invite code
-	JoinSessionByCode(ctx context.Context, code, userID string) (*entities.SessionMember, error)
+	JoinSessionByCode(ctx context.Context, code, userID string) (*gameSession.SessionMember, error)
 
 	// LeaveSession removes a user from a session
 	LeaveSession(ctx context.Context, sessionID, userID string) error
@@ -65,19 +65,19 @@ type Service interface {
 	ResumeSession(ctx context.Context, sessionID, userID string) error
 
 	// ListUserSessions lists all sessions for a user
-	ListUserSessions(ctx context.Context, userID string) ([]*entities.Session, error)
+	ListUserSessions(ctx context.Context, userID string) ([]*gameSession.Session, error)
 
 	// ListRealmSessions lists all sessions for a realm
-	ListRealmSessions(ctx context.Context, realmID string) ([]*entities.Session, error)
+	ListRealmSessions(ctx context.Context, realmID string) ([]*gameSession.Session, error)
 
 	// ListActiveUserSessions lists active sessions for a user
-	ListActiveUserSessions(ctx context.Context, userID string) ([]*entities.Session, error)
+	ListActiveUserSessions(ctx context.Context, userID string) ([]*gameSession.Session, error)
 
 	// ListActiveRealmSessions lists active sessions for a realm
-	ListActiveRealmSessions(ctx context.Context, realmID string) ([]*entities.Session, error)
+	ListActiveRealmSessions(ctx context.Context, realmID string) ([]*gameSession.Session, error)
 
 	// SaveSession saves a session to the repository
-	SaveSession(ctx context.Context, session *entities.Session) error
+	SaveSession(ctx context.Context, session *gameSession.Session) error
 }
 
 // CreateSessionInput contains data for creating a session
@@ -87,14 +87,14 @@ type CreateSessionInput struct {
 	RealmID     string
 	ChannelID   string
 	CreatorID   string
-	Settings    *entities.SessionSettings // Optional, will use defaults if nil
+	Settings    *gameSession.SessionSettings // Optional, will use defaults if nil
 }
 
 // UpdateSessionInput contains fields that can be updated
 type UpdateSessionInput struct {
 	Name        *string
 	Description *string
-	Settings    *entities.SessionSettings
+	Settings    *gameSession.SessionSettings
 }
 
 // service implements the Service interface
@@ -136,7 +136,7 @@ func NewService(cfg *ServiceConfig) Service {
 }
 
 // CreateSession creates a new game session
-func (s *service) CreateSession(ctx context.Context, input *CreateSessionInput) (*entities.Session, error) {
+func (s *service) CreateSession(ctx context.Context, input *CreateSessionInput) (*gameSession.Session, error) {
 	if input == nil {
 		return nil, dnderr.InvalidArgument("input cannot be nil")
 	}
@@ -162,7 +162,7 @@ func (s *service) CreateSession(ctx context.Context, input *CreateSessionInput) 
 	inviteCode := generateInviteCode()
 
 	// Create session
-	session := entities.NewSession(sessionID, input.Name, input.RealmID, input.ChannelID, input.CreatorID)
+	session := gameSession.NewSession(sessionID, input.Name, input.RealmID, input.ChannelID, input.CreatorID)
 	session.Description = input.Description
 	session.InviteCode = inviteCode
 
@@ -172,7 +172,7 @@ func (s *service) CreateSession(ctx context.Context, input *CreateSessionInput) 
 	}
 
 	// Add creator as DM
-	session.AddMember(input.CreatorID, entities.SessionRoleDM)
+	session.AddMember(input.CreatorID, gameSession.SessionRoleDM)
 
 	// Save to repository
 	if err := s.repository.Create(ctx, session); err != nil {
@@ -185,7 +185,7 @@ func (s *service) CreateSession(ctx context.Context, input *CreateSessionInput) 
 }
 
 // GetSession retrieves a session by ID
-func (s *service) GetSession(ctx context.Context, sessionID string) (*entities.Session, error) {
+func (s *service) GetSession(ctx context.Context, sessionID string) (*gameSession.Session, error) {
 	if strings.TrimSpace(sessionID) == "" {
 		return nil, dnderr.InvalidArgument("session ID is required")
 	}
@@ -200,7 +200,7 @@ func (s *service) GetSession(ctx context.Context, sessionID string) (*entities.S
 }
 
 // GetSessionByInviteCode retrieves a session by invite code
-func (s *service) GetSessionByInviteCode(ctx context.Context, code string) (*entities.Session, error) {
+func (s *service) GetSessionByInviteCode(ctx context.Context, code string) (*gameSession.Session, error) {
 	if strings.TrimSpace(code) == "" {
 		return nil, dnderr.InvalidArgument("invite code is required")
 	}
@@ -215,7 +215,7 @@ func (s *service) GetSessionByInviteCode(ctx context.Context, code string) (*ent
 }
 
 // UpdateSession updates session details
-func (s *service) UpdateSession(ctx context.Context, sessionID string, input *UpdateSessionInput) (*entities.Session, error) {
+func (s *service) UpdateSession(ctx context.Context, sessionID string, input *UpdateSessionInput) (*gameSession.Session, error) {
 	if strings.TrimSpace(sessionID) == "" {
 		return nil, dnderr.InvalidArgument("session ID is required")
 	}
@@ -244,7 +244,7 @@ func (s *service) UpdateSession(ctx context.Context, sessionID string, input *Up
 	session.UpdateActivity()
 
 	// Save changes
-	if err := s.repository.Update(ctx, session); err != nil {
+	if err = s.repository.Update(ctx, session); err != nil {
 		return nil, dnderr.Wrap(err, "failed to update session").
 			WithMeta("session_id", sessionID)
 	}
@@ -287,7 +287,7 @@ func (s *service) InviteToSession(ctx context.Context, sessionID, inviterID, inv
 
 	// Check if inviter is DM
 	inviter, exists := session.Members[inviterID]
-	if !exists || inviter.Role != entities.SessionRoleDM {
+	if !exists || inviter.Role != gameSession.SessionRoleDM {
 		return dnderr.PermissionDenied("only the DM can invite players").
 			WithMeta("inviter_id", inviterID).
 			WithMeta("session_id", sessionID)
@@ -307,7 +307,7 @@ func (s *service) InviteToSession(ctx context.Context, sessionID, inviterID, inv
 }
 
 // JoinSession adds a user to a session
-func (s *service) JoinSession(ctx context.Context, sessionID, userID string) (*entities.SessionMember, error) {
+func (s *service) JoinSession(ctx context.Context, sessionID, userID string) (*gameSession.SessionMember, error) {
 	if strings.TrimSpace(sessionID) == "" {
 		return nil, dnderr.InvalidArgument("session ID is required")
 	}
@@ -337,7 +337,7 @@ func (s *service) JoinSession(ctx context.Context, sessionID, userID string) (*e
 	}
 
 	// Add as player by default
-	member := session.AddMember(userID, entities.SessionRolePlayer)
+	member := session.AddMember(userID, gameSession.SessionRolePlayer)
 
 	// Save changes
 	if err := s.repository.Update(ctx, session); err != nil {
@@ -349,7 +349,7 @@ func (s *service) JoinSession(ctx context.Context, sessionID, userID string) (*e
 }
 
 // JoinSessionByCode adds a user to a session using invite code
-func (s *service) JoinSessionByCode(ctx context.Context, code, userID string) (*entities.SessionMember, error) {
+func (s *service) JoinSessionByCode(ctx context.Context, code, userID string) (*gameSession.SessionMember, error) {
 	if strings.TrimSpace(code) == "" {
 		return nil, dnderr.InvalidArgument("invite code is required")
 	}
@@ -393,7 +393,7 @@ func (s *service) LeaveSession(ctx context.Context, sessionID, userID string) er
 	}
 
 	// Don't allow DM to leave unless ending session (skip this for planning sessions)
-	if member.Role == entities.SessionRoleDM && session.Status != entities.SessionStatusEnded && session.Status != entities.SessionStatusPlanning {
+	if member.Role == gameSession.SessionRoleDM && session.Status != gameSession.SessionStatusEnded && session.Status != gameSession.SessionStatusPlanning {
 		return dnderr.InvalidArgument("DM cannot leave an active session").
 			WithMeta("user_id", userID).
 			WithMeta("session_id", sessionID)
@@ -477,7 +477,7 @@ func (s *service) StartSession(ctx context.Context, sessionID, userID string) er
 
 	// Check if user is DM
 	member, exists := session.Members[userID]
-	if !exists || member.Role != entities.SessionRoleDM {
+	if !exists || member.Role != gameSession.SessionRoleDM {
 		return dnderr.PermissionDenied("only the DM can start the session").
 			WithMeta("user_id", userID).
 			WithMeta("session_id", sessionID)
@@ -517,7 +517,7 @@ func (s *service) EndSession(ctx context.Context, sessionID, userID string) erro
 
 	// Check if user is DM
 	member, exists := session.Members[userID]
-	if !exists || member.Role != entities.SessionRoleDM {
+	if !exists || member.Role != gameSession.SessionRoleDM {
 		return dnderr.PermissionDenied("only the DM can end the session").
 			WithMeta("user_id", userID).
 			WithMeta("session_id", sessionID)
@@ -557,7 +557,7 @@ func (s *service) PauseSession(ctx context.Context, sessionID, userID string) er
 
 	// Check if user is DM
 	member, exists := session.Members[userID]
-	if !exists || member.Role != entities.SessionRoleDM {
+	if !exists || member.Role != gameSession.SessionRoleDM {
 		return dnderr.PermissionDenied("only the DM can pause the session").
 			WithMeta("user_id", userID).
 			WithMeta("session_id", sessionID)
@@ -597,7 +597,7 @@ func (s *service) ResumeSession(ctx context.Context, sessionID, userID string) e
 
 	// Check if user is DM
 	member, exists := session.Members[userID]
-	if !exists || member.Role != entities.SessionRoleDM {
+	if !exists || member.Role != gameSession.SessionRoleDM {
 		return dnderr.PermissionDenied("only the DM can resume the session").
 			WithMeta("user_id", userID).
 			WithMeta("session_id", sessionID)
@@ -620,7 +620,7 @@ func (s *service) ResumeSession(ctx context.Context, sessionID, userID string) e
 }
 
 // ListUserSessions lists all sessions for a user
-func (s *service) ListUserSessions(ctx context.Context, userID string) ([]*entities.Session, error) {
+func (s *service) ListUserSessions(ctx context.Context, userID string) ([]*gameSession.Session, error) {
 	if strings.TrimSpace(userID) == "" {
 		return nil, dnderr.InvalidArgument("user ID is required")
 	}
@@ -635,7 +635,7 @@ func (s *service) ListUserSessions(ctx context.Context, userID string) ([]*entit
 }
 
 // ListRealmSessions lists all sessions for a realm
-func (s *service) ListRealmSessions(ctx context.Context, realmID string) ([]*entities.Session, error) {
+func (s *service) ListRealmSessions(ctx context.Context, realmID string) ([]*gameSession.Session, error) {
 	if strings.TrimSpace(realmID) == "" {
 		return nil, dnderr.InvalidArgument("realm ID is required")
 	}
@@ -650,7 +650,7 @@ func (s *service) ListRealmSessions(ctx context.Context, realmID string) ([]*ent
 }
 
 // ListActiveUserSessions lists active sessions for a user
-func (s *service) ListActiveUserSessions(ctx context.Context, userID string) ([]*entities.Session, error) {
+func (s *service) ListActiveUserSessions(ctx context.Context, userID string) ([]*gameSession.Session, error) {
 	if strings.TrimSpace(userID) == "" {
 		return nil, dnderr.InvalidArgument("user ID is required")
 	}
@@ -665,7 +665,7 @@ func (s *service) ListActiveUserSessions(ctx context.Context, userID string) ([]
 }
 
 // ListActiveRealmSessions lists active sessions for a realm
-func (s *service) ListActiveRealmSessions(ctx context.Context, realmID string) ([]*entities.Session, error) {
+func (s *service) ListActiveRealmSessions(ctx context.Context, realmID string) ([]*gameSession.Session, error) {
 	if strings.TrimSpace(realmID) == "" {
 		return nil, dnderr.InvalidArgument("realm ID is required")
 	}
@@ -680,7 +680,7 @@ func (s *service) ListActiveRealmSessions(ctx context.Context, realmID string) (
 }
 
 // SaveSession saves a session to the repository
-func (s *service) SaveSession(ctx context.Context, session *entities.Session) error {
+func (s *service) SaveSession(ctx context.Context, session *gameSession.Session) error {
 	if session == nil {
 		return dnderr.New(dnderr.CodeInvalidArgument, "session is required")
 	}

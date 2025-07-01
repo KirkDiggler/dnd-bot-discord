@@ -2,9 +2,12 @@ package character
 
 import (
 	"encoding/json"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	mockcharacters "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,15 +22,15 @@ func TestFightingStylePersistence(t *testing.T) {
 	handler := NewClassFeaturesHandler(mockService)
 
 	// Create a fighter character with fighting style feature (but no selection yet)
-	fighter := &entities.Character{
+	fighter := &character.Character{
 		ID:    "test-fighter-id",
 		Name:  "Test Fighter",
-		Class: &entities.Class{Key: "fighter"},
-		Features: []*entities.CharacterFeature{
+		Class: &rulebook.Class{Key: "fighter"},
+		Features: []*rulebook.CharacterFeature{
 			{
 				Key:      "fighting_style",
 				Name:     "Fighting Style",
-				Type:     entities.FeatureTypeClass,
+				Type:     rulebook.FeatureTypeClass,
 				Level:    1,
 				Source:   "Fighter",
 				Metadata: nil, // No selection yet
@@ -35,7 +38,7 @@ func TestFightingStylePersistence(t *testing.T) {
 		},
 	}
 
-	var savedCharacter *entities.Character
+	var savedCharacter *character.Character
 
 	t.Run("Test fighting style selection and persistence", func(t *testing.T) {
 		// Mock getting the character
@@ -46,7 +49,7 @@ func TestFightingStylePersistence(t *testing.T) {
 		// Mock saving the character - capture what gets saved
 		mockService.EXPECT().
 			UpdateEquipment(gomock.Any()).
-			Do(func(char *entities.Character) {
+			Do(func(char *character.Character) {
 				savedCharacter = char
 			}).
 			Return(nil)
@@ -82,19 +85,19 @@ func TestFightingStylePersistence(t *testing.T) {
 		}
 
 		// Add required attributes and equipment for dueling test
-		savedCharacter.Attributes = map[entities.Attribute]*entities.AbilityScore{
-			entities.AttributeStrength: {Score: 16, Bonus: 3},
+		savedCharacter.Attributes = map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength: {Score: 16, Bonus: 3},
 		}
 		savedCharacter.Level = 1
-		savedCharacter.Proficiencies = map[entities.ProficiencyType][]*entities.Proficiency{
-			entities.ProficiencyTypeWeapon: {
+		savedCharacter.Proficiencies = map[rulebook.ProficiencyType][]*rulebook.Proficiency{
+			rulebook.ProficiencyTypeWeapon: {
 				{Key: "martial-weapons", Name: "Martial Weapons"},
 			},
 		}
 
 		// Create a longsword
-		longsword := &entities.Weapon{
-			Base: entities.BasicEquipment{
+		longsword := &equipment.Weapon{
+			Base: equipment.BasicEquipment{
 				Key:  "longsword",
 				Name: "Longsword",
 			},
@@ -103,17 +106,17 @@ func TestFightingStylePersistence(t *testing.T) {
 		}
 
 		// Create a shield (not a weapon, so dueling should still work)
-		shield := &entities.Armor{
-			Base: entities.BasicEquipment{
+		shield := &equipment.Armor{
+			Base: equipment.BasicEquipment{
 				Key:  "shield",
 				Name: "Shield",
 			},
 			ArmorCategory: "shield",
 		}
 
-		savedCharacter.EquippedSlots = map[entities.Slot]entities.Equipment{
-			entities.SlotMainHand: longsword,
-			entities.SlotOffHand:  shield,
+		savedCharacter.EquippedSlots = map[shared.Slot]equipment.Equipment{
+			shared.SlotMainHand: longsword,
+			shared.SlotOffHand:  shield,
 		}
 
 		// Just verify the feature was set correctly - bonus testing is in other tests
@@ -130,15 +133,15 @@ func TestFightingStylePersistenceFlow(t *testing.T) {
 	// This test simulates the complete flow without mocks to see where it breaks
 	t.Run("Simulate complete persistence flow", func(t *testing.T) {
 		// Step 1: Create character with fighting style feature
-		char := &entities.Character{
+		char := &character.Character{
 			ID:    "flow-test-id",
 			Name:  "Flow Test Fighter",
-			Class: &entities.Class{Key: "fighter"},
-			Features: []*entities.CharacterFeature{
+			Class: &rulebook.Class{Key: "fighter"},
+			Features: []*rulebook.CharacterFeature{
 				{
 					Key:      "fighting_style",
 					Name:     "Fighting Style",
-					Type:     entities.FeatureTypeClass,
+					Type:     rulebook.FeatureTypeClass,
 					Level:    1,
 					Source:   "Fighter",
 					Metadata: make(map[string]any), // Empty metadata
@@ -182,7 +185,7 @@ func TestFightingStylePersistenceFlow(t *testing.T) {
 		require.NoError(t, err)
 		t.Logf("Step 4a: Serialized features to JSON: %s", string(jsonData))
 
-		var deserializedFeatures []*entities.CharacterFeature
+		var deserializedFeatures []*rulebook.CharacterFeature
 		err = json.Unmarshal(jsonData, &deserializedFeatures)
 		require.NoError(t, err)
 		t.Logf("Step 4b: Deserialized %d features", len(deserializedFeatures))

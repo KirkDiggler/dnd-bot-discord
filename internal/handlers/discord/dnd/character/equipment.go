@@ -2,10 +2,11 @@ package character
 
 import (
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
 )
@@ -75,7 +76,7 @@ func (h *EquipmentHandler) HandleEquip(s *discordgo.Session, i *discordgo.Intera
 	}
 
 	// Find item in inventory (weapon or shield)
-	var foundItem entities.Equipment
+	var foundItem equipment.Equipment
 	for _, equipmentList := range char.Inventory {
 		for _, equipment := range equipmentList {
 			if equipment.GetKey() == itemKey {
@@ -142,7 +143,7 @@ func (h *EquipmentHandler) HandleEquip(s *discordgo.Session, i *discordgo.Intera
 	}
 
 	// Add weapon stats if it's a weapon
-	if weapon, ok := foundItem.(*entities.Weapon); ok {
+	if weapon, ok := foundItem.(*equipment.Weapon); ok {
 		if weapon.Damage != nil {
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 				Name:   "Damage",
@@ -155,7 +156,7 @@ func (h *EquipmentHandler) HandleEquip(s *discordgo.Session, i *discordgo.Intera
 			Value:  fmt.Sprintf("%s %s", weapon.WeaponRange, weapon.WeaponCategory),
 			Inline: true,
 		})
-	} else if armor, ok := foundItem.(*entities.Armor); ok && armor.ArmorCategory == entities.ArmorCategoryShield {
+	} else if armor, ok := foundItem.(*equipment.Armor); ok && armor.ArmorCategory == equipment.ArmorCategoryShield {
 		// Add shield stats
 		if armor.ArmorClass != nil {
 			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
@@ -226,7 +227,7 @@ func (h *EquipmentHandler) HandleUnequip(s *discordgo.Session, i *discordgo.Inte
 	}
 
 	// Convert slot name to Slot type
-	slot := entities.Slot(slotName)
+	slot := shared.Slot(slotName)
 
 	// Check if anything is equipped in that slot
 	if char.EquippedSlots == nil || char.EquippedSlots[slot] == nil {
@@ -353,7 +354,7 @@ func (h *EquipmentHandler) HandleInventory(s *discordgo.Session, i *discordgo.In
 
 	// Show available weapons
 	var weaponList []string
-	if weapons, exists := char.Inventory[entities.EquipmentTypeWeapon]; exists {
+	if weapons, exists := char.Inventory[equipment.EquipmentTypeWeapon]; exists {
 		for _, weapon := range weapons {
 			weaponList = append(weaponList, fmt.Sprintf("• %s (%s)", weapon.GetName(), weapon.GetKey()))
 		}
@@ -375,9 +376,9 @@ func (h *EquipmentHandler) HandleInventory(s *discordgo.Session, i *discordgo.In
 
 	// Show available shields
 	var shieldList []string
-	if armor, exists := char.Inventory[entities.EquipmentTypeArmor]; exists {
+	if armor, exists := char.Inventory[equipment.EquipmentTypeArmor]; exists {
 		for _, item := range armor {
-			if armorItem, ok := item.(*entities.Armor); ok && armorItem.ArmorCategory == entities.ArmorCategoryShield {
+			if armorItem, ok := item.(*equipment.Armor); ok && armorItem.ArmorCategory == equipment.ArmorCategoryShield {
 				shieldList = append(shieldList, fmt.Sprintf("• %s (%s)", item.GetName(), item.GetKey()))
 			}
 		}

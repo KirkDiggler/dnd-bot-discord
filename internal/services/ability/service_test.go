@@ -4,8 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
+
 	mockdice "github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,10 +21,10 @@ func TestAbilityService_UseAbility(t *testing.T) {
 		name         string
 		setupMocks   func(*mockchar.MockService, *mockdice.ManualMockRoller)
 		input        *UseAbilityInput
-		character    *entities.Character
+		character    *character.Character
 		wantResult   *UseAbilityResult
 		wantErr      bool
-		validateChar func(*testing.T, *entities.Character)
+		validateChar func(*testing.T, *character.Character)
 	}{
 		{
 			name: "barbarian rage success",
@@ -42,7 +44,7 @@ func TestAbilityService_UseAbility(t *testing.T) {
 				EffectName:    "Rage",
 				Duration:      10,
 			},
-			validateChar: func(t *testing.T, char *entities.Character) {
+			validateChar: func(t *testing.T, char *character.Character) {
 				// Check rage is active
 				rage := char.Resources.Abilities["rage"]
 				assert.True(t, rage.IsActive)
@@ -69,7 +71,7 @@ func TestAbilityService_UseAbility(t *testing.T) {
 				CharacterID: "char_123",
 				AbilityKey:  "second-wind",
 			},
-			character: func() *entities.Character {
+			character: func() *character.Character {
 				char := createTestCharacter("fighter", 1, map[string]int{"CON": 14})
 				char.Resources.HP.Current = 5 // Damaged
 				return char
@@ -81,7 +83,7 @@ func TestAbilityService_UseAbility(t *testing.T) {
 				HealingDone:   7,
 				TargetNewHP:   12, // 5 + 7
 			},
-			validateChar: func(t *testing.T, char *entities.Character) {
+			validateChar: func(t *testing.T, char *character.Character) {
 				assert.Equal(t, 12, char.Resources.HP.Current)
 				assert.Equal(t, 12, char.CurrentHitPoints)
 			},
@@ -116,7 +118,7 @@ func TestAbilityService_UseAbility(t *testing.T) {
 				AbilityKey:  "lay-on-hands",
 				Value:       3, // Heal 3 HP
 			},
-			character: func() *entities.Character {
+			character: func() *character.Character {
 				char := createTestCharacter("paladin", 1, map[string]int{"CHA": 14})
 				char.Resources.HP.Current = 7 // Damaged
 				return char
@@ -128,7 +130,7 @@ func TestAbilityService_UseAbility(t *testing.T) {
 				HealingDone:   3,
 				TargetNewHP:   10,
 			},
-			validateChar: func(t *testing.T, char *entities.Character) {
+			validateChar: func(t *testing.T, char *character.Character) {
 				assert.Equal(t, 10, char.Resources.HP.Current)
 				assert.Equal(t, 2, char.Resources.Abilities["lay-on-hands"].UsesRemaining)
 			},
@@ -159,7 +161,7 @@ func TestAbilityService_UseAbility(t *testing.T) {
 				CharacterID: "char_123",
 				AbilityKey:  "second-wind",
 			},
-			character: func() *entities.Character {
+			character: func() *character.Character {
 				char := createTestCharacter("fighter", 1, nil)
 				char.Resources.Abilities["second-wind"].UsesRemaining = 0
 				return char
@@ -244,13 +246,13 @@ func TestAbilityService_GetAvailableAbilities(t *testing.T) {
 
 	mockCharSvc := mockchar.NewMockService(ctrl)
 
-	character := createTestCharacter("fighter", 1, nil)
+	char := createTestCharacter("fighter", 1, nil)
 	// Set second wind to no uses
-	character.Resources.Abilities["second-wind"].UsesRemaining = 0
+	char.Resources.Abilities["second-wind"].UsesRemaining = 0
 
 	mockCharSvc.EXPECT().
 		GetByID("char_123").
-		Return(character, nil)
+		Return(char, nil)
 
 	svc := NewService(&ServiceConfig{
 		CharacterService: mockCharSvc,
@@ -267,8 +269,8 @@ func TestAbilityService_GetAvailableAbilities(t *testing.T) {
 }
 
 // Helper function to create test characters
-func createTestCharacter(classKey string, level int, attributes map[string]int) *entities.Character {
-	char := &entities.Character{
+func createTestCharacter(classKey string, level int, attributes map[string]int) *character.Character {
+	char := &character.Character{
 		ID:               "char_123",
 		Name:             "Test Character",
 		Level:            level,
@@ -279,22 +281,22 @@ func createTestCharacter(classKey string, level int, attributes map[string]int) 
 
 	// Set attributes if provided
 	if attributes != nil {
-		char.Attributes = make(map[entities.Attribute]*entities.AbilityScore)
+		char.Attributes = make(map[shared.Attribute]*character.AbilityScore)
 		for attr, score := range attributes {
-			var attribute entities.Attribute
+			var attribute shared.Attribute
 			switch attr {
 			case "STR":
-				attribute = entities.AttributeStrength
+				attribute = shared.AttributeStrength
 			case "DEX":
-				attribute = entities.AttributeDexterity
+				attribute = shared.AttributeDexterity
 			case "CON":
-				attribute = entities.AttributeConstitution
+				attribute = shared.AttributeConstitution
 			case "INT":
-				attribute = entities.AttributeIntelligence
+				attribute = shared.AttributeIntelligence
 			case "WIS":
-				attribute = entities.AttributeWisdom
+				attribute = shared.AttributeWisdom
 			case "CHA":
-				attribute = entities.AttributeCharisma
+				attribute = shared.AttributeCharisma
 			}
 			char.AddAttribute(attribute, score)
 		}

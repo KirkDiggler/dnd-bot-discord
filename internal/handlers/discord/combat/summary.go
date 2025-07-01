@@ -3,9 +3,9 @@ package combat
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -24,16 +24,16 @@ func (h *Handler) handleSummary(s *discordgo.Session, i *discordgo.InteractionCr
 	}
 
 	// Determine outcome
-	if enc.Status == entities.EncounterStatusCompleted {
+	if enc.Status == combat.EncounterStatusCompleted {
 		// Check who won based on remaining combatants
 		playersAlive := 0
 		monstersAlive := 0
 		for _, c := range enc.Combatants {
 			if c.IsActive && c.CurrentHP > 0 {
 				switch c.Type {
-				case entities.CombatantTypePlayer:
+				case combat.CombatantTypePlayer:
 					playersAlive++
-				case entities.CombatantTypeMonster:
+				case combat.CombatantTypeMonster:
 					monstersAlive++
 				}
 			}

@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"os"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	charactersRepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/redis/go-redis/v9"
 )
@@ -63,10 +63,10 @@ func main() {
 		dexMod := 0
 		wisMod := 0
 
-		if dex, ok := char.Attributes[entities.AttributeDexterity]; ok && dex != nil {
+		if dex, ok := char.Attributes[shared.AttributeDexterity]; ok && dex != nil {
 			dexMod = dex.Bonus
 		}
-		if wis, ok := char.Attributes[entities.AttributeWisdom]; ok && wis != nil {
+		if wis, ok := char.Attributes[shared.AttributeWisdom]; ok && wis != nil {
 			wisMod = wis.Bonus
 		}
 

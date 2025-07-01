@@ -2,10 +2,13 @@ package character_test
 
 import (
 	"context"
+	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -32,17 +35,17 @@ func TestLevel1Features(t *testing.T) {
 		userID := "user-123"
 		realmID := "realm-123"
 
-		barbarian := &entities.Character{
+		barbarian := &character2.Character{
 			ID:               characterID,
 			OwnerID:          userID,
 			RealmID:          realmID,
 			Name:             "Grog",
-			Status:           entities.CharacterStatusDraft,
+			Status:           shared.CharacterStatusDraft,
 			Level:            1,
 			HitDie:           12,
 			MaxHitPoints:     15, // 12 + 3 CON
 			CurrentHitPoints: 15,
-			AbilityRolls: []entities.AbilityRoll{
+			AbilityRolls: []character2.AbilityRoll{
 				{ID: "roll1", Value: 18},
 				{ID: "roll2", Value: 16},
 				{ID: "roll3", Value: 14},
@@ -58,11 +61,11 @@ func TestLevel1Features(t *testing.T) {
 				"WIS": "roll4", // 12
 				"CHA": "roll6", // 8
 			},
-			Race: &entities.Race{
+			Race: &rulebook.Race{
 				Key:  "human",
 				Name: "Human",
 			},
-			Class: &entities.Class{
+			Class: &rulebook.Class{
 				Key:    "barbarian",
 				Name:   "Barbarian",
 				HitDie: 12,
@@ -77,7 +80,7 @@ func TestLevel1Features(t *testing.T) {
 		// Mock repository Update
 		mockRepo.EXPECT().
 			Update(ctx, gomock.Any()).
-			DoAndReturn(func(_ context.Context, char *entities.Character) error {
+			DoAndReturn(func(_ context.Context, char *character2.Character) error {
 				// Verify features were applied
 				assert.NotNil(t, char.Features)
 
@@ -88,7 +91,7 @@ func TestLevel1Features(t *testing.T) {
 					if feat.Key == "unarmored_defense_barbarian" {
 						hasUnarmoredDefense = true
 						assert.Equal(t, "Unarmored Defense", feat.Name)
-						assert.Equal(t, entities.FeatureTypeClass, feat.Type)
+						assert.Equal(t, rulebook.FeatureTypeClass, feat.Type)
 						assert.Equal(t, 1, feat.Level)
 						assert.Equal(t, "Barbarian", feat.Source)
 					}
@@ -110,7 +113,7 @@ func TestLevel1Features(t *testing.T) {
 		result, err := svc.FinalizeDraftCharacter(ctx, characterID)
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, entities.CharacterStatusActive, result.Status)
+		assert.Equal(t, shared.CharacterStatusActive, result.Status)
 	})
 
 	t.Run("Monk Unarmored Defense", func(t *testing.T) {
@@ -119,17 +122,17 @@ func TestLevel1Features(t *testing.T) {
 		userID := "user-456"
 		realmID := "realm-456"
 
-		monk := &entities.Character{
+		monk := &character2.Character{
 			ID:               characterID,
 			OwnerID:          userID,
 			RealmID:          realmID,
 			Name:             "Kwai Chang",
-			Status:           entities.CharacterStatusDraft,
+			Status:           shared.CharacterStatusDraft,
 			Level:            1,
 			HitDie:           8,
 			MaxHitPoints:     10, // 8 + 2 CON
 			CurrentHitPoints: 10,
-			AbilityRolls: []entities.AbilityRoll{
+			AbilityRolls: []character2.AbilityRoll{
 				{ID: "roll1", Value: 16},
 				{ID: "roll2", Value: 16},
 				{ID: "roll3", Value: 14},
@@ -145,11 +148,11 @@ func TestLevel1Features(t *testing.T) {
 				"WIS": "roll2", // 16
 				"CHA": "roll6", // 8
 			},
-			Race: &entities.Race{
+			Race: &rulebook.Race{
 				Key:  "elf",
 				Name: "Elf",
 			},
-			Class: &entities.Class{
+			Class: &rulebook.Class{
 				Key:    "monk",
 				Name:   "Monk",
 				HitDie: 8,
@@ -164,7 +167,7 @@ func TestLevel1Features(t *testing.T) {
 		// Mock repository Update
 		mockRepo.EXPECT().
 			Update(ctx, gomock.Any()).
-			DoAndReturn(func(_ context.Context, char *entities.Character) error {
+			DoAndReturn(func(_ context.Context, char *character2.Character) error {
 				// Verify features were applied
 				assert.NotNil(t, char.Features)
 
@@ -175,7 +178,7 @@ func TestLevel1Features(t *testing.T) {
 					if feat.Key == "unarmored_defense_monk" {
 						hasUnarmoredDefense = true
 						assert.Equal(t, "Unarmored Defense", feat.Name)
-						assert.Equal(t, entities.FeatureTypeClass, feat.Type)
+						assert.Equal(t, rulebook.FeatureTypeClass, feat.Type)
 						assert.Equal(t, 1, feat.Level)
 						assert.Equal(t, "Monk", feat.Source)
 					}
@@ -192,7 +195,7 @@ func TestLevel1Features(t *testing.T) {
 				for _, feat := range char.Features {
 					if feat.Key == "darkvision" {
 						hasDarkvision = true
-						assert.Equal(t, entities.FeatureTypeRacial, feat.Type)
+						assert.Equal(t, rulebook.FeatureTypeRacial, feat.Type)
 						assert.Equal(t, "Elf", feat.Source)
 					}
 				}
@@ -208,7 +211,7 @@ func TestLevel1Features(t *testing.T) {
 		result, err := svc.FinalizeDraftCharacter(ctx, characterID)
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, entities.CharacterStatusActive, result.Status)
+		assert.Equal(t, shared.CharacterStatusActive, result.Status)
 	})
 
 	t.Run("Fighter with Armor", func(t *testing.T) {
@@ -217,17 +220,17 @@ func TestLevel1Features(t *testing.T) {
 		userID := "user-789"
 		realmID := "realm-789"
 
-		fighter := &entities.Character{
+		fighter := &character2.Character{
 			ID:               characterID,
 			OwnerID:          userID,
 			RealmID:          realmID,
 			Name:             "Ser Arthur",
-			Status:           entities.CharacterStatusDraft,
+			Status:           shared.CharacterStatusDraft,
 			Level:            1,
 			HitDie:           10,
 			MaxHitPoints:     12, // 10 + 2 CON
 			CurrentHitPoints: 12,
-			AbilityRolls: []entities.AbilityRoll{
+			AbilityRolls: []character2.AbilityRoll{
 				{ID: "roll1", Value: 16},
 				{ID: "roll2", Value: 14},
 				{ID: "roll3", Value: 14},
@@ -243,23 +246,23 @@ func TestLevel1Features(t *testing.T) {
 				"WIS": "roll4", // 12
 				"CHA": "roll6", // 8
 			},
-			Race: &entities.Race{
+			Race: &rulebook.Race{
 				Key:  "human",
 				Name: "Human",
 			},
-			Class: &entities.Class{
+			Class: &rulebook.Class{
 				Key:    "fighter",
 				Name:   "Fighter",
 				HitDie: 10,
 			},
-			EquippedSlots: map[entities.Slot]entities.Equipment{
-				entities.SlotBody: &entities.Armor{
-					Base: entities.BasicEquipment{
+			EquippedSlots: map[shared.Slot]equipment.Equipment{
+				shared.SlotBody: &equipment.Armor{
+					Base: equipment.BasicEquipment{
 						Key:  "chain-mail",
 						Name: "Chain Mail",
 					},
-					ArmorCategory: entities.ArmorCategoryHeavy,
-					ArmorClass: &entities.ArmorClass{
+					ArmorCategory: equipment.ArmorCategoryHeavy,
+					ArmorClass: &equipment.ArmorClass{
 						Base:     16,
 						DexBonus: false,
 					},
@@ -275,7 +278,7 @@ func TestLevel1Features(t *testing.T) {
 		// Mock repository Update
 		mockRepo.EXPECT().
 			Update(ctx, gomock.Any()).
-			DoAndReturn(func(_ context.Context, char *entities.Character) error {
+			DoAndReturn(func(_ context.Context, char *character2.Character) error {
 				// Verify features were applied
 				assert.NotNil(t, char.Features)
 
@@ -303,7 +306,7 @@ func TestLevel1Features(t *testing.T) {
 		result, err := svc.FinalizeDraftCharacter(ctx, characterID)
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, entities.CharacterStatusActive, result.Status)
+		assert.Equal(t, shared.CharacterStatusActive, result.Status)
 	})
 
 	t.Run("UpdateDraftCharacter applies features when class changes", func(t *testing.T) {
@@ -312,22 +315,22 @@ func TestLevel1Features(t *testing.T) {
 		userID := "user-999"
 		realmID := "realm-999"
 
-		char := &entities.Character{
+		char := &character2.Character{
 			ID:      characterID,
 			OwnerID: userID,
 			RealmID: realmID,
 			Name:    "Changeling",
-			Status:  entities.CharacterStatusDraft,
+			Status:  shared.CharacterStatusDraft,
 			Level:   1,
-			Attributes: map[entities.Attribute]*entities.AbilityScore{
-				entities.AttributeStrength:     {Score: 10, Bonus: 0},
-				entities.AttributeDexterity:    {Score: 14, Bonus: 2},
-				entities.AttributeConstitution: {Score: 16, Bonus: 3},
-				entities.AttributeIntelligence: {Score: 12, Bonus: 1},
-				entities.AttributeWisdom:       {Score: 13, Bonus: 1},
-				entities.AttributeCharisma:     {Score: 8, Bonus: -1},
+			Attributes: map[shared.Attribute]*character2.AbilityScore{
+				shared.AttributeStrength:     {Score: 10, Bonus: 0},
+				shared.AttributeDexterity:    {Score: 14, Bonus: 2},
+				shared.AttributeConstitution: {Score: 16, Bonus: 3},
+				shared.AttributeIntelligence: {Score: 12, Bonus: 1},
+				shared.AttributeWisdom:       {Score: 13, Bonus: 1},
+				shared.AttributeCharisma:     {Score: 8, Bonus: -1},
 			},
-			Race: &entities.Race{
+			Race: &rulebook.Race{
 				Key:  "human",
 				Name: "Human",
 			},
@@ -339,7 +342,7 @@ func TestLevel1Features(t *testing.T) {
 			Return(char, nil)
 
 		// Mock getting barbarian class
-		barbarianClass := &entities.Class{
+		barbarianClass := &rulebook.Class{
 			Key:    "barbarian",
 			Name:   "Barbarian",
 			HitDie: 12,
@@ -351,7 +354,7 @@ func TestLevel1Features(t *testing.T) {
 		// Mock repository Update
 		mockRepo.EXPECT().
 			Update(ctx, gomock.Any()).
-			DoAndReturn(func(_ context.Context, updated *entities.Character) error {
+			DoAndReturn(func(_ context.Context, updated *character2.Character) error {
 				// Verify barbarian features were applied
 				hasUnarmoredDefense := false
 				for _, feat := range updated.Features {

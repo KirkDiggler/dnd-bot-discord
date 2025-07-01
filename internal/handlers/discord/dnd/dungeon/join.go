@@ -3,10 +3,11 @@ package dungeon
 import (
 	"context"
 	"fmt"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
 )
@@ -51,10 +52,10 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 	log.Printf("JoinParty - User %s has %d characters", i.Member.User.ID, len(chars))
 
 	// Find all active characters
-	var activeChars []*entities.Character
+	var activeChars []*character.Character
 	for _, char := range chars {
 		log.Printf("JoinParty - Character: ID=%s, Name=%s, Status=%s", char.ID, char.Name, char.Status)
-		if char.Status == entities.CharacterStatusActive {
+		if char.Status == shared.CharacterStatusActive {
 			activeChars = append(activeChars, char)
 		}
 	}
@@ -245,7 +246,7 @@ func (h *JoinPartyHandler) HandleButton(s *discordgo.Session, i *discordgo.Inter
 }
 
 // buildCharacterSelectMenu creates a dropdown menu for character selection
-func buildCharacterSelectMenu(characters []*entities.Character, sessionID string) []discordgo.MessageComponent {
+func buildCharacterSelectMenu(characters []*character.Character, sessionID string) []discordgo.MessageComponent {
 	options := make([]discordgo.SelectMenuOption, 0, len(characters))
 	for _, char := range characters {
 		options = append(options, discordgo.SelectMenuOption{

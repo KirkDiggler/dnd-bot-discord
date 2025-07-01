@@ -1,42 +1,43 @@
 package dnd5e
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"log"
 	"strconv"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities/damage"
-
 	"github.com/fadedpez/dnd5e-api/clients/dnd5e"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/entities"
 	apiEntities "github.com/fadedpez/dnd5e-api/entities"
 )
 
-func apiReferenceItemToClass(apiClass *apiEntities.ReferenceItem) *entities.Class {
-	return &entities.Class{
+func apiReferenceItemToClass(apiClass *apiEntities.ReferenceItem) *rulebook.Class {
+	return &rulebook.Class{
 		Key:  apiClass.Key,
 		Name: apiClass.Name,
 	}
 }
 
-func apiReferenceItemsToClasses(input []*apiEntities.ReferenceItem) []*entities.Class {
-	output := make([]*entities.Class, len(input))
+func apiReferenceItemsToClasses(input []*apiEntities.ReferenceItem) []*rulebook.Class {
+	output := make([]*rulebook.Class, len(input))
 	for i, apiClass := range input {
 		output[i] = apiReferenceItemToClass(apiClass)
 	}
 	return output
 }
 
-func apiReferenceItemToRace(input *apiEntities.ReferenceItem) *entities.Race {
-	return &entities.Race{
+func apiReferenceItemToRace(input *apiEntities.ReferenceItem) *rulebook.Race {
+	return &rulebook.Race{
 		Key:  input.Key,
 		Name: input.Name,
 	}
 }
 
-func apiReferenceItemsToRaces(input []*apiEntities.ReferenceItem) []*entities.Race {
-	output := make([]*entities.Race, len(input))
+func apiReferenceItemsToRaces(input []*apiEntities.ReferenceItem) []*rulebook.Race {
+	output := make([]*rulebook.Race, len(input))
 	for i, apiRace := range input {
 		output[i] = apiReferenceItemToRace(apiRace)
 	}
@@ -44,8 +45,8 @@ func apiReferenceItemsToRaces(input []*apiEntities.ReferenceItem) []*entities.Ra
 	return output
 }
 
-func apiRaceToRace(input *apiEntities.Race) *entities.Race {
-	return &entities.Race{
+func apiRaceToRace(input *apiEntities.Race) *rulebook.Race {
+	return &rulebook.Race{
 		Key:                        input.Key,
 		Name:                       input.Name,
 		Speed:                      input.Speed,
@@ -55,8 +56,8 @@ func apiRaceToRace(input *apiEntities.Race) *entities.Race {
 	}
 }
 
-func apiAbilityBonusesToAbilityBonuses(input []*apiEntities.AbilityBonus) []*entities.AbilityBonus {
-	output := make([]*entities.AbilityBonus, len(input))
+func apiAbilityBonusesToAbilityBonuses(input []*apiEntities.AbilityBonus) []*shared.AbilityBonus {
+	output := make([]*shared.AbilityBonus, len(input))
 	for i, apiAbilityBonus := range input {
 		output[i] = apiAbilityBonusToAbilityBonus(apiAbilityBonus)
 	}
@@ -64,7 +65,7 @@ func apiAbilityBonusesToAbilityBonuses(input []*apiEntities.AbilityBonus) []*ent
 	return output
 }
 
-func apiAbilityBonusToAbilityBonus(input *apiEntities.AbilityBonus) *entities.AbilityBonus {
+func apiAbilityBonusToAbilityBonus(input *apiEntities.AbilityBonus) *shared.AbilityBonus {
 	if input == nil {
 		return nil
 	}
@@ -72,62 +73,62 @@ func apiAbilityBonusToAbilityBonus(input *apiEntities.AbilityBonus) *entities.Ab
 		return nil
 	}
 
-	return &entities.AbilityBonus{
+	return &shared.AbilityBonus{
 		Attribute: referenceItemKeyToAttribute(input.AbilityScore.Key),
 		Bonus:     input.Bonus,
 	}
 }
 
-func referenceItemKeyToAttribute(input string) entities.Attribute {
+func referenceItemKeyToAttribute(input string) shared.Attribute {
 	switch input {
 	case "str":
-		return entities.AttributeStrength
+		return shared.AttributeStrength
 	case "dex":
-		return entities.AttributeDexterity
+		return shared.AttributeDexterity
 	case "con":
-		return entities.AttributeConstitution
+		return shared.AttributeConstitution
 	case "int":
-		return entities.AttributeIntelligence
+		return shared.AttributeIntelligence
 	case "wis":
-		return entities.AttributeWisdom
+		return shared.AttributeWisdom
 	case "cha":
-		return entities.AttributeCharisma
+		return shared.AttributeCharisma
 	default:
 		log.Fatalf("Unknown attribute %s", input)
-		return entities.AttributeNone
+		return shared.AttributeNone
 	}
 }
 
-func apiProficiencyToProficiency(input *apiEntities.Proficiency) *entities.Proficiency {
-	return &entities.Proficiency{
+func apiProficiencyToProficiency(input *apiEntities.Proficiency) *rulebook.Proficiency {
+	return &rulebook.Proficiency{
 		Key:  input.Key,
 		Name: input.Name,
 		Type: apiProficiencyTypeToProficiencyType(input.Type),
 	}
 }
 
-func apiProficiencyTypeToProficiencyType(input apiEntities.ProficiencyType) entities.ProficiencyType {
+func apiProficiencyTypeToProficiencyType(input apiEntities.ProficiencyType) rulebook.ProficiencyType {
 	switch input {
 	case apiEntities.ProficiencyTypeArmor:
-		return entities.ProficiencyTypeArmor
+		return rulebook.ProficiencyTypeArmor
 	case apiEntities.ProficiencyTypeWeapon:
-		return entities.ProficiencyTypeWeapon
+		return rulebook.ProficiencyTypeWeapon
 	case apiEntities.ProficiencyTypeTool:
-		return entities.ProficiencyTypeTool
+		return rulebook.ProficiencyTypeTool
 	case apiEntities.ProficiencyTypeSavingThrow:
-		return entities.ProficiencyTypeSavingThrow
+		return rulebook.ProficiencyTypeSavingThrow
 	case apiEntities.ProficiencyTypeSkill:
-		return entities.ProficiencyTypeSkill
+		return rulebook.ProficiencyTypeSkill
 	case apiEntities.ProficiencyTypeInstrument:
-		return entities.ProficiencyTypeInstrument
+		return rulebook.ProficiencyTypeInstrument
 	default:
 		// Silently handle unknown proficiency types
-		return entities.ProficiencyTypeUnknown
+		return rulebook.ProficiencyTypeUnknown
 
 	}
 }
-func apiClassToClass(input *apiEntities.Class) *entities.Class {
-	return &entities.Class{
+func apiClassToClass(input *apiEntities.Class) *rulebook.Class {
+	return &rulebook.Class{
 		Key:                      input.Key,
 		Name:                     input.Name,
 		HitDie:                   input.HitDie,
@@ -138,22 +139,22 @@ func apiClassToClass(input *apiEntities.Class) *entities.Class {
 	}
 }
 
-func apiStartingEquipmentToStartingEquipment(input *apiEntities.StartingEquipment) *entities.StartingEquipment {
-	return &entities.StartingEquipment{
+func apiStartingEquipmentToStartingEquipment(input *apiEntities.StartingEquipment) *rulebook.StartingEquipment {
+	return &rulebook.StartingEquipment{
 		Quantity:  input.Quantity,
 		Equipment: apiReferenceItemToReferenceItem(input.Equipment),
 	}
 }
 
-func apiStartingEquipmentsToStartingEquipments(input []*apiEntities.StartingEquipment) []*entities.StartingEquipment {
-	output := make([]*entities.StartingEquipment, len(input))
+func apiStartingEquipmentsToStartingEquipments(input []*apiEntities.StartingEquipment) []*rulebook.StartingEquipment {
+	output := make([]*rulebook.StartingEquipment, len(input))
 	for i, apiStartingEquipment := range input {
 		output[i] = apiStartingEquipmentToStartingEquipment(apiStartingEquipment)
 	}
 
 	return output
 }
-func apiEquipmentInterfaceToEquipment(input dnd5e.EquipmentInterface) entities.Equipment {
+func apiEquipmentInterfaceToEquipment(input dnd5e.EquipmentInterface) equipment.Equipment {
 	if input == nil {
 		return nil
 	}
@@ -171,9 +172,9 @@ func apiEquipmentInterfaceToEquipment(input dnd5e.EquipmentInterface) entities.E
 	}
 }
 
-func apiWeaponToWeapon(input *apiEntities.Weapon) *entities.Weapon {
-	return &entities.Weapon{
-		Base: entities.BasicEquipment{
+func apiWeaponToWeapon(input *apiEntities.Weapon) *equipment.Weapon {
+	return &equipment.Weapon{
+		Base: equipment.BasicEquipment{
 			Key:    input.Key,
 			Name:   input.Name,
 			Weight: input.Weight,
@@ -256,31 +257,31 @@ func apiDamageTypeToDamageType(input *apiEntities.ReferenceItem) damage.Type {
 	}
 }
 
-func apiArmorToArmor(input *apiEntities.Armor) *entities.Armor {
+func apiArmorToArmor(input *apiEntities.Armor) *equipment.Armor {
 	// Determine armor category from the API data
-	var category entities.ArmorCategory
+	var category equipment.ArmorCategory
 	switch strings.ToLower(input.ArmorCategory) {
 	case "light":
-		category = entities.ArmorCategoryLight
+		category = equipment.ArmorCategoryLight
 	case "medium":
-		category = entities.ArmorCategoryMedium
+		category = equipment.ArmorCategoryMedium
 	case "heavy":
-		category = entities.ArmorCategoryHeavy
+		category = equipment.ArmorCategoryHeavy
 	case "shield":
-		category = entities.ArmorCategoryShield
+		category = equipment.ArmorCategoryShield
 	default:
-		category = entities.ArmorCategoryUnknown
+		category = equipment.ArmorCategoryUnknown
 	}
 
-	return &entities.Armor{
-		Base: entities.BasicEquipment{
+	return &equipment.Armor{
+		Base: equipment.BasicEquipment{
 			Key:    input.Key,
 			Name:   input.Name,
 			Weight: input.Weight,
 			Cost:   apiCostToCost(input.Cost),
 		},
 		ArmorCategory: category,
-		ArmorClass: &entities.ArmorClass{
+		ArmorClass: &equipment.ArmorClass{
 			Base:     input.ArmorClass.Base,
 			DexBonus: input.ArmorClass.DexBonus,
 			// MaxBonus is not available from the API, so medium armor limits
@@ -290,8 +291,8 @@ func apiArmorToArmor(input *apiEntities.Armor) *entities.Armor {
 	}
 }
 
-func apiEquipmentToEquipment(input *apiEntities.Equipment) *entities.BasicEquipment {
-	return &entities.BasicEquipment{
+func apiEquipmentToEquipment(input *apiEntities.Equipment) *equipment.BasicEquipment {
+	return &equipment.BasicEquipment{
 		Key:    input.Key,
 		Name:   input.Name,
 		Weight: input.Weight,
@@ -299,15 +300,15 @@ func apiEquipmentToEquipment(input *apiEntities.Equipment) *entities.BasicEquipm
 	}
 }
 
-func apiCostToCost(input *apiEntities.Cost) *entities.Cost {
-	return &entities.Cost{
+func apiCostToCost(input *apiEntities.Cost) *shared.Cost {
+	return &shared.Cost{
 		Quantity: input.Quantity,
 		Unit:     input.Unit,
 	}
 }
 
-func apiChoicesToChoices(input []*apiEntities.ChoiceOption) []*entities.Choice {
-	output := make([]*entities.Choice, len(input))
+func apiChoicesToChoices(input []*apiEntities.ChoiceOption) []*shared.Choice {
+	output := make([]*shared.Choice, len(input))
 	for i, apiChoice := range input {
 		output[i] = apiChoiceOptionToChoice(apiChoice)
 	}
@@ -315,7 +316,7 @@ func apiChoicesToChoices(input []*apiEntities.ChoiceOption) []*entities.Choice {
 	return output
 }
 
-func apiChoiceOptionToChoice(input *apiEntities.ChoiceOption) *entities.Choice {
+func apiChoiceOptionToChoice(input *apiEntities.ChoiceOption) *shared.Choice {
 	if input == nil {
 		return nil
 	}
@@ -324,7 +325,7 @@ func apiChoiceOptionToChoice(input *apiEntities.ChoiceOption) *entities.Choice {
 		return nil
 	}
 
-	output := make([]entities.Option, len(input.OptionList.Options))
+	output := make([]shared.Option, len(input.OptionList.Options))
 
 	for i, apiProficiency := range input.OptionList.Options {
 		output[i] = apiOptionToOption(apiProficiency)
@@ -332,7 +333,7 @@ func apiChoiceOptionToChoice(input *apiEntities.ChoiceOption) *entities.Choice {
 
 	// Choice created successfully
 
-	return &entities.Choice{
+	return &shared.Choice{
 		Count:   input.ChoiceCount,
 		Name:    input.Description,
 		Type:    apiChoiceTypeToChoiceType(input.ChoiceType),
@@ -341,21 +342,21 @@ func apiChoiceOptionToChoice(input *apiEntities.ChoiceOption) *entities.Choice {
 	}
 }
 
-func apiChoiceTypeToChoiceType(input string) entities.ChoiceType {
+func apiChoiceTypeToChoiceType(input string) shared.ChoiceType {
 	switch input {
 	case "proficiencies":
-		return entities.ChoiceTypeProficiency
+		return shared.ChoiceTypeProficiency
 	case "equipment":
-		return entities.ChoiceTypeEquipment
+		return shared.ChoiceTypeEquipment
 	case "languages":
-		return entities.ChoiceTypeLanguage
+		return shared.ChoiceTypeLanguage
 	default:
 		// Silently handle unknown choice types
-		return entities.ChoiceTypeUnset
+		return shared.ChoiceTypeUnset
 	}
 }
 
-func apiOptionToOption(input apiEntities.Option) entities.Option {
+func apiOptionToOption(input apiEntities.Option) shared.Option {
 	switch input.GetOptionType() {
 	case apiEntities.OptionTypeReference:
 		item, ok := input.(*apiEntities.ReferenceOption)
@@ -363,7 +364,7 @@ func apiOptionToOption(input apiEntities.Option) entities.Option {
 			return nil
 		}
 
-		return &entities.ReferenceOption{
+		return &shared.ReferenceOption{
 			Reference: apiReferenceItemToReferenceItem(item.Reference),
 		}
 	case apiEntities.OptionTypeChoice:
@@ -379,7 +380,7 @@ func apiOptionToOption(input apiEntities.Option) entities.Option {
 			return nil
 		}
 
-		return &entities.CountedReferenceOption{
+		return &shared.CountedReferenceOption{
 			Count:     item.Count,
 			Reference: apiReferenceItemToReferenceItem(item.Reference),
 		}
@@ -389,12 +390,12 @@ func apiOptionToOption(input apiEntities.Option) entities.Option {
 			return nil
 		}
 
-		options := make([]entities.Option, len(item.Items))
+		options := make([]shared.Option, len(item.Items))
 		for i, apiOption := range item.Items {
 			options[i] = apiOptionToOption(apiOption)
 		}
 
-		return &entities.MultipleOption{
+		return &shared.MultipleOption{
 			Items: options,
 		}
 	default:
@@ -403,41 +404,41 @@ func apiOptionToOption(input apiEntities.Option) entities.Option {
 	}
 }
 
-func apiReferenceItemsToReferenceItems(input []*apiEntities.ReferenceItem) []*entities.ReferenceItem {
-	output := make([]*entities.ReferenceItem, len(input))
+func apiReferenceItemsToReferenceItems(input []*apiEntities.ReferenceItem) []*shared.ReferenceItem {
+	output := make([]*shared.ReferenceItem, len(input))
 	for i, apiReferenceItem := range input {
 		output[i] = apiReferenceItemToReferenceItem(apiReferenceItem)
 	}
 
 	return output
 }
-func apiReferenceItemToReferenceItem(input *apiEntities.ReferenceItem) *entities.ReferenceItem {
-	return &entities.ReferenceItem{
+func apiReferenceItemToReferenceItem(input *apiEntities.ReferenceItem) *shared.ReferenceItem {
+	return &shared.ReferenceItem{
 		Key:  input.Key,
 		Name: input.Name,
 		Type: typeStringToReferenceType(input.Type),
 	}
 }
 
-func typeStringToReferenceType(input string) entities.ReferenceType {
+func typeStringToReferenceType(input string) shared.ReferenceType {
 	switch input {
 	case "equipment":
-		return entities.ReferenceTypeEquipment
+		return shared.ReferenceTypeEquipment
 	case "proficiencies":
-		return entities.ReferenceTypeProficiency
+		return shared.ReferenceTypeProficiency
 	case "languages":
-		return entities.ReferenceTypeLanguage
+		return shared.ReferenceTypeLanguage
 	case "ability-scores":
-		return entities.ReferenceTypeAbilityScore
+		return shared.ReferenceTypeAbilityScore
 	case "skills":
-		return entities.ReferenceTypeSkill
+		return shared.ReferenceTypeSkill
 	case "weapon-properties":
-		return entities.ReferenceTypeWeaponProperty
+		return shared.ReferenceTypeWeaponProperty
 	default:
 		// Don't log for known but unhandled types
 		if input != "2014" {
 			log.Println("Unknown reference type: ", input)
 		}
-		return entities.ReferenceTypeUnset
+		return shared.ReferenceTypeUnset
 	}
 }
