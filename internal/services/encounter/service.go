@@ -12,6 +12,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat/attack"
 	gameSession "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
@@ -192,6 +193,7 @@ type service struct {
 	characterService charService.Service
 	uuidGenerator    uuid.Generator
 	diceRoller       dice.Roller
+	eventBus         *events.EventBus
 }
 
 // ServiceConfig holds configuration for the service
@@ -201,6 +203,7 @@ type ServiceConfig struct {
 	CharacterService charService.Service
 	UUIDGenerator    uuid.Generator
 	DiceRoller       dice.Roller
+	EventBus         *events.EventBus
 }
 
 // NewService creates a new encounter service
@@ -220,6 +223,7 @@ func NewService(cfg *ServiceConfig) Service {
 		sessionService:   cfg.SessionService,
 		characterService: cfg.CharacterService,
 		diceRoller:       cfg.DiceRoller,
+		eventBus:         cfg.EventBus,
 	}
 
 	if cfg.UUIDGenerator != nil {
@@ -674,6 +678,24 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 	// Advance turn
 	encounter.NextTurn()
 
+	// Emit OnTurnStart event for duration tracking
+	if s.eventBus != nil {
+		// Get the new current combatant
+		newCurrent := encounter.GetCurrentCombatant()
+		if newCurrent != nil && newCurrent.Type == combat.CombatantTypePlayer && newCurrent.CharacterID != "" {
+			if char, err := s.characterService.GetByID(newCurrent.CharacterID); err == nil {
+				turnEvent := events.NewGameEvent(events.OnTurnStart).
+					WithActor(char).
+					WithContext("turn_count", encounter.Turn).
+					WithContext("round", encounter.Round)
+
+				if err := s.eventBus.Emit(turnEvent); err != nil {
+					log.Printf("Failed to emit OnTurnStart event: %v", err)
+				}
+			}
+		}
+	}
+
 	// Check if a new round started
 	if encounter.Round > prevRound {
 		// Reset per-turn abilities for all player characters
@@ -853,6 +875,24 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 				}
 				result.DamageBonus = attackResult.DamageRoll - diceTotal
 				// Damage calculation debug logs removed
+			}
+
+			// Emit OnDamageRoll event for damage modifiers (like rage)
+			if s.eventBus != nil {
+				damageEvent := events.NewGameEvent(events.OnDamageRoll).
+					WithActor(char).
+					WithContext("attack_type", attackResult.AttackType).
+					WithContext("damage", result.Damage).
+					WithContext("target_id", target.ID)
+
+				if err := s.eventBus.Emit(damageEvent); err != nil {
+					log.Printf("Failed to emit OnDamageRoll event: %v", err)
+				}
+
+				// Update damage from event
+				if modifiedDamage, exists := damageEvent.GetIntContext("damage"); exists {
+					result.Damage = modifiedDamage
+				}
 			}
 
 			// Copy reroll information for Great Weapon Fighting display
@@ -1067,6 +1107,48 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		// Update the result damage to reflect the actual damage dealt
 		if finalDamage != result.Damage {
 			result.Damage = finalDamage
+		}
+
+		// Emit BeforeTakeDamage event for damage resistance (like rage)
+		if s.eventBus != nil && finalDamage > 0 {
+			// Get target character for event
+			var targetChar *character.Character
+			if target.Type == combat.CombatantTypePlayer && target.CharacterID != "" {
+				var err error
+				targetChar, err = s.characterService.GetByID(target.CharacterID)
+				if err != nil {
+					log.Printf("Failed to get target character for BeforeTakeDamage event: %v", err)
+				}
+			}
+
+			if targetChar != nil {
+				damageType := damage.TypeBludgeoning // Default
+				if result.DamageType != "" {
+					switch strings.ToLower(result.DamageType) {
+					case "slashing":
+						damageType = damage.TypeSlashing
+					case "piercing":
+						damageType = damage.TypePiercing
+					case "bludgeoning":
+						damageType = damage.TypeBludgeoning
+					}
+				}
+
+				takeDamageEvent := events.NewGameEvent(events.BeforeTakeDamage).
+					WithTarget(targetChar).
+					WithContext("damage", finalDamage).
+					WithContext("damage_type", string(damageType))
+
+				if err := s.eventBus.Emit(takeDamageEvent); err != nil {
+					log.Printf("Failed to emit BeforeTakeDamage event: %v", err)
+				}
+
+				// Update damage from event
+				if modifiedDamage, exists := takeDamageEvent.GetIntContext("damage"); exists {
+					finalDamage = modifiedDamage
+					result.Damage = finalDamage
+				}
+			}
 		}
 
 		target.ApplyDamage(finalDamage)

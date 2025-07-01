@@ -1,23 +1,21 @@
-package features
+package modifiers
 
 import (
 	"fmt"
-	"strings"
-
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
+	"strings"
 )
 
-// RageModifier implements the barbarian rage feature as an event modifier
+// RageModifier implements the barbarian rage effect using the event system
 type RageModifier struct {
 	id          string
-	characterID string
 	level       int
+	roundsLeft  int
 	damageBonus int
-	startTurn   int
 }
 
-// NewRageModifier creates a new rage modifier for a specific character
-func NewRageModifier(characterID string, level, startTurn int) *RageModifier {
+// NewRageModifier creates a new rage modifier
+func NewRageModifier(level int) *RageModifier {
 	// Determine damage bonus based on level
 	damageBonus := 2
 	if level >= 16 {
@@ -27,11 +25,10 @@ func NewRageModifier(characterID string, level, startTurn int) *RageModifier {
 	}
 
 	return &RageModifier{
-		id:          fmt.Sprintf("rage_%s", characterID),
-		characterID: characterID,
+		id:          fmt.Sprintf("rage_%d", level),
 		level:       level,
+		roundsLeft:  10,
 		damageBonus: damageBonus,
-		startTurn:   startTurn,
 	}
 }
 
@@ -43,7 +40,7 @@ func (r *RageModifier) ID() string {
 // Source returns information about where this modifier comes from
 func (r *RageModifier) Source() events.ModifierSource {
 	return events.ModifierSource{
-		Type:        "feature",
+		Type:        "ability",
 		Name:        "Rage",
 		Description: "Barbarian class feature",
 	}
@@ -56,13 +53,8 @@ func (r *RageModifier) Priority() int {
 
 // Condition checks if this modifier should apply to the event
 func (r *RageModifier) Condition(event *events.GameEvent) bool {
-	// Only apply to the raging character's events
+	// Check if this is a damage roll event
 	if event.Type == events.OnDamageRoll {
-		// Must be this character's attack
-		if event.Actor == nil || event.Actor.ID != r.characterID {
-			return false
-		}
-
 		// Rage damage bonus only applies to melee attacks
 		attackType, exists := event.GetStringContext("attack_type")
 		if !exists {
@@ -71,13 +63,8 @@ func (r *RageModifier) Condition(event *events.GameEvent) bool {
 		return strings.EqualFold(attackType, "melee")
 	}
 
-	// Check if this character is taking damage (for resistance)
+	// Check if this is taking damage (for resistance)
 	if event.Type == events.BeforeTakeDamage {
-		// Must be damage to this character
-		if event.Target == nil || event.Target.ID != r.characterID {
-			return false
-		}
-
 		// Rage provides resistance to physical damage
 		damageType, exists := event.GetStringContext("damage_type")
 		if !exists {
@@ -87,7 +74,6 @@ func (r *RageModifier) Condition(event *events.GameEvent) bool {
 	}
 
 	// TODO: Add advantage on Strength checks and saves
-	// if event.Type == events.BeforeAbilityCheck || event.Type == events.BeforeSavingThrow
 
 	return false
 }
@@ -112,7 +98,6 @@ func (r *RageModifier) Apply(event *events.GameEvent) error {
 			return fmt.Errorf("no damage value in event context")
 		}
 
-		// D&D 5e: Resistance halves damage, rounded down
 		reducedDamage := currentDamage / 2
 		event.WithContext("damage", reducedDamage)
 		event.WithContext("resistance_applied", "Rage (physical damage resistance)")
@@ -125,39 +110,6 @@ func (r *RageModifier) Apply(event *events.GameEvent) error {
 func (r *RageModifier) Duration() events.ModifierDuration {
 	return &events.RoundsDuration{
 		Rounds:    10,
-		StartTurn: r.startTurn,
+		StartTurn: 0, // TODO: Track actual start turn
 	}
-}
-
-// RageListener wraps a rage modifier to work with the event bus
-type RageListener struct {
-	modifier *RageModifier
-}
-
-// NewRageListener creates a new rage listener
-func NewRageListener(characterID string, level, startTurn int) *RageListener {
-	return &RageListener{
-		modifier: NewRageModifier(characterID, level, startTurn),
-	}
-}
-
-// HandleEvent processes events for rage
-func (rl *RageListener) HandleEvent(event *events.GameEvent) error {
-	// Check if modifier condition is met
-	if !rl.modifier.Condition(event) {
-		return nil
-	}
-
-	// Apply the modifier
-	return rl.modifier.Apply(event)
-}
-
-// Priority returns the listener priority
-func (rl *RageListener) Priority() int {
-	return rl.modifier.Priority()
-}
-
-// ID returns the modifier ID for tracking
-func (rl *RageListener) ID() string {
-	return rl.modifier.ID()
 }
