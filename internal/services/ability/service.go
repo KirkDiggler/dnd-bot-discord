@@ -196,8 +196,16 @@ func (s *service) handleRage(char *character.Character, ability *shared.ActiveAb
 	if encounterID != "" && s.encounterService != nil {
 		if encounter, err := s.encounterService.GetEncounter(context.Background(), encounterID); err == nil {
 			currentTurn = encounter.Turn
-			log.Printf("Rage activated at turn %d", currentTurn)
+			log.Printf("=== RAGE ACTIVATION TURN INFO ===")
+			log.Printf("Encounter ID: %s", encounterID)
+			log.Printf("Current turn: %d", currentTurn)
+			log.Printf("Current round: %d", encounter.Round)
+			log.Printf("Rage will expire at turn: %d", currentTurn+10)
+		} else {
+			log.Printf("Failed to get encounter for rage activation: %v", err)
 		}
+	} else {
+		log.Printf("No encounter ID provided for rage activation - duration tracking may not work")
 	}
 
 	// Create rage listener for event system with current turn
@@ -438,9 +446,23 @@ func (t *turnStartListener) HandleEvent(event *events.GameEvent) error {
 					// Update the UI effect duration
 					activeEffects := event.Actor.GetActiveStatusEffects()
 					for _, effect := range activeEffects {
-						if effect.Name == "Rage" {
-							effect.Duration.Rounds = remainingRounds
-							break
+						if effect.Name != "Rage" {
+							continue
+						}
+						effect.Duration.Rounds = remainingRounds
+						log.Printf("=== RAGE DURATION UPDATE ===")
+						log.Printf("Character: %s", event.Actor.Name)
+						log.Printf("Current turn: %d, Start turn: %d", currentTurn, roundsDuration.StartTurn)
+						log.Printf("Remaining rounds: %d", remainingRounds)
+						break
+					}
+
+					// Save character to persist the updated duration
+					if t.service.characterService != nil {
+						if err := t.service.characterService.UpdateEquipment(event.Actor); err != nil {
+							log.Printf("Failed to save character after rage duration update: %v", err)
+						} else {
+							log.Printf("Character saved with updated rage duration")
 						}
 					}
 				}
