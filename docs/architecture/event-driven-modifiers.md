@@ -55,39 +55,88 @@ OnMonsterSpawn   // Monster appears
 Listen to `OnAttackRoll` and modify:
 ```go
 // Rage: +2 to melee damage rolls
-rageModifier.Listen(OnDamageRoll) -> if melee && hasRage: +2
+eventBus.Subscribe(OnDamageRoll, func(e *GameEvent) {
+    if e.Actor.HasEffect("rage") && e.Weapon.IsMelee() {
+        e.SetContext("damage_bonus", e.GetInt("damage_bonus") + 2)
+    }
+})
 
 // Bless: +1d4 to attack rolls  
-blessModifier.Listen(OnAttackRoll) -> if blessed: +1d4
+eventBus.Subscribe(OnAttackRoll, func(e *GameEvent) {
+    if e.Actor.HasEffect("bless") {
+        bonus := dice.Roll(1, 4, 0)
+        e.SetContext("attack_bonus", e.GetInt("attack_bonus") + bonus)
+    }
+})
 
 // Sneak Attack: +Xd6 if conditions met
-sneakModifier.Listen(OnDamageRoll) -> if advantage || allyAdjacent: +Xd6
+eventBus.Subscribe(OnDamageRoll, func(e *GameEvent) {
+    if e.GetBool("has_advantage") || e.GetBool("ally_adjacent") {
+        dice := e.Actor.GetSneakAttackDice()
+        damage := dice.Roll(dice, 6, 0)
+        e.SetContext("sneak_damage", damage)
+    }
+})
 ```
 
 ### Defense Modifiers
 Listen to `OnTakeDamage` and modify:
 ```go
 // Rage: Resistance to physical damage
-rageResistance.Listen(OnTakeDamage) -> if physical: damage / 2
+eventBus.Subscribe(OnTakeDamage, func(e *GameEvent) {
+    if e.Target.HasEffect("rage") && isPhysical(e.GetString("damage_type")) {
+        damage := e.GetInt("damage")
+        e.SetContext("damage", damage / 2)
+    }
+})
 
 // Shield spell: +5 AC against one attack
-shieldSpell.Listen(OnAttackRoll) -> if targeted && hasReaction: +5 AC
+eventBus.Subscribe(OnAttackRoll, func(e *GameEvent) {
+    if e.Target.HasSpellPrepared("shield") && e.Target.HasReaction() {
+        e.SetContext("ac_bonus", e.GetInt("ac_bonus") + 5)
+        e.Target.UseReaction()
+    }
+})
 
 // Uncanny Dodge: Half damage from one attack per turn
-uncannyDodge.Listen(OnTakeDamage) -> if dex save && first this turn: damage / 2
+eventBus.Subscribe(OnTakeDamage, func(e *GameEvent) {
+    if e.Target.CanUncannyDodge() && !e.Target.UsedUncannyDodge() {
+        damage := e.GetInt("damage")
+        e.SetContext("damage", damage / 2)
+        e.Target.MarkUncannyDodgeUsed()
+    }
+})
 ```
 
 ### Resource Modifiers
 Listen to various events and enable/modify:
 ```go
 // Martial Arts: Bonus unarmed strike after Attack action
-martialArts.Listen(OnAttackRoll) -> if unarmed && action: enable bonus action
+eventBus.Subscribe(OnAttackRoll, func(e *GameEvent) {
+    if e.Weapon.IsUnarmed() && e.GetString("action_type") == "action" {
+        e.SetContext("bonus_actions_available", append(
+            e.GetStringSlice("bonus_actions_available"),
+            "martial_arts_strike",
+        ))
+    }
+})
 
 // Action Surge: Extra action this turn
-actionSurge.Listen(OnTurnStart) -> if activated: grant extra action
+eventBus.Subscribe(OnTurnStart, func(e *GameEvent) {
+    if e.Actor.HasResource("action_surge") && e.GetBool("action_surge_activated") {
+        e.SetContext("extra_actions", e.GetInt("extra_actions") + 1)
+        e.Actor.ConsumeResource("action_surge", 1)
+    }
+})
 
 // Ki Points: Enable special abilities
-ki.Listen(OnUseAbility) -> if flurry/dodge/dash: consume 1 ki
+eventBus.Subscribe(OnUseAbility, func(e *GameEvent) {
+    ability := e.GetString("ability_key")
+    if isKiAbility(ability) && e.Actor.HasResource("ki", 1) {
+        e.Actor.ConsumeResource("ki", 1)
+        e.SetContext("ability_enabled", true)
+    }
+})
 ```
 
 ## Implementation Pattern
