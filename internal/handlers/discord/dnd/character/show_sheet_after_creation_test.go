@@ -1,11 +1,11 @@
 package character_test
 
 import (
+	"testing"
+
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
-	"testing"
-
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/dnd/character"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stretchr/testify/assert"

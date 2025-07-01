@@ -6,6 +6,8 @@ import (
 	"log"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e/features"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
@@ -19,6 +21,8 @@ type service struct {
 	characterService charService.Service
 	encounterService encounterService.Service
 	diceRoller       dice.Roller
+	eventBus         *events.EventBus
+	activeListeners  map[string]events.EventListener // Track active listeners by character ID
 }
 
 // ServiceConfig holds configuration for the ability service
@@ -26,6 +30,7 @@ type ServiceConfig struct {
 	CharacterService charService.Service
 	EncounterService encounterService.Service
 	DiceRoller       dice.Roller
+	EventBus         *events.EventBus
 }
 
 // NewService creates a new ability service
@@ -38,10 +43,17 @@ func NewService(cfg *ServiceConfig) Service {
 		characterService: cfg.CharacterService,
 		encounterService: cfg.EncounterService,
 		diceRoller:       cfg.DiceRoller,
+		eventBus:         cfg.EventBus,
+		activeListeners:  make(map[string]events.EventListener),
 	}
 
 	if svc.diceRoller == nil {
 		svc.diceRoller = dice.NewRandomRoller()
+	}
+
+	// Subscribe to turn start events to update effect durations
+	if svc.eventBus != nil {
+		svc.eventBus.Subscribe(events.OnTurnStart, &turnStartListener{service: svc})
 	}
 
 	return svc
@@ -128,7 +140,7 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 
 	switch input.AbilityKey {
 	case "rage":
-		result = s.handleRage(char, ability, result)
+		result = s.handleRage(char, ability, result, input.EncounterID)
 	case "second-wind":
 		result = s.handleSecondWind(char, result)
 	case "bardic-inspiration":
@@ -156,31 +168,75 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 }
 
 // handleRage handles the Barbarian's Rage ability
-func (s *service) handleRage(char *character.Character, ability *shared.ActiveAbility, result *UseAbilityResult) *UseAbilityResult {
-	// Create rage effect using the new status effect system
-	rageEffect := effects.BuildRageEffect(char.Level)
-
-	// Add the effect to the character
-	err := char.AddStatusEffect(rageEffect)
-	if err != nil {
-		log.Printf("Failed to add rage effect: %v", err)
-		result.Success = false
-		result.Message = "Failed to enter rage"
-		// Restore the use since we didn't actually use it
-		ability.UsesRemaining++
+func (s *service) handleRage(char *character.Character, ability *shared.ActiveAbility, result *UseAbilityResult, encounterID string) *UseAbilityResult {
+	// Check if EventBus is available
+	if s.eventBus == nil {
+		// Fallback to old system if EventBus not available
+		rageEffect := effects.BuildRageEffect(char.Level)
+		err := char.AddStatusEffect(rageEffect)
+		if err != nil {
+			log.Printf("Failed to add rage effect: %v", err)
+			result.Success = false
+			result.Message = "Failed to enter rage"
+			ability.UsesRemaining++
+			return result
+		}
+		ability.IsActive = true
+		ability.Duration = 10
+		result.Message = fmt.Sprintf("You enter a rage! +%d damage to melee attacks, resistance to physical damage", 2+(char.Level-1)/8)
+		result.EffectApplied = true
+		result.EffectID = rageEffect.ID
+		result.EffectName = rageEffect.Name
+		result.Duration = 10
 		return result
+	}
+
+	// Get current turn count from encounter
+	currentTurn := 0
+	if encounterID != "" && s.encounterService != nil {
+		if encounter, err := s.encounterService.GetEncounter(context.Background(), encounterID); err == nil {
+			// Calculate total turns (rounds * combatants + current turn index)
+			if len(encounter.TurnOrder) > 0 {
+				currentTurn = (encounter.Round-1)*len(encounter.TurnOrder) + encounter.Turn
+			}
+			log.Printf("=== RAGE ACTIVATION INFO ===")
+			log.Printf("Encounter ID: %s", encounterID)
+			log.Printf("Current Round: %d, Turn index: %d, Combatants: %d", encounter.Round, encounter.Turn, len(encounter.TurnOrder))
+			log.Printf("Starting at turn count: %d", currentTurn)
+			log.Printf("Rage lasts 10 rounds (with %d combatants, that's %d turns)", len(encounter.TurnOrder), 10*len(encounter.TurnOrder))
+			log.Printf("Rage will expire after turn: %d", currentTurn+(10*len(encounter.TurnOrder)))
+		} else {
+			log.Printf("Failed to get encounter for rage activation: %v", err)
+		}
+	} else {
+		log.Printf("No encounter ID provided for rage activation - duration tracking may not work")
+	}
+
+	// Create rage listener for event system with current turn
+	rageListener := features.NewRageListener(char.ID, char.Level, currentTurn)
+
+	// Subscribe rage listener to relevant events
+	s.eventBus.Subscribe(events.OnDamageRoll, rageListener)
+	s.eventBus.Subscribe(events.BeforeTakeDamage, rageListener)
+
+	// Track the active listener
+	s.activeListeners[char.ID] = rageListener
+
+	// Also add rage to the old effect system for UI display
+	// This ensures the character sheet shows rage as active
+	rageEffect := effects.BuildRageEffect(char.Level)
+	// Update the duration to match what we're tracking
+	rageEffect.Duration = effects.Duration{
+		Type:   effects.DurationRounds,
+		Rounds: 10,
+	}
+	if err := char.AddStatusEffect(rageEffect); err != nil {
+		log.Printf("Failed to add rage status effect for UI: %v", err)
 	}
 
 	// Mark ability as active
 	ability.IsActive = true
 	ability.Duration = 10
-
-	log.Printf("=== RAGE ACTIVATION DEBUG ===")
-	log.Printf("Character: %s", char.Name)
-	log.Printf("Effect added: %s (ID: %s)", rageEffect.Name, rageEffect.ID)
-	log.Printf("Active effects after adding rage: %d", len(char.GetActiveStatusEffects()))
-	log.Printf("Rage uses remaining: %d/%d", ability.UsesRemaining, ability.UsesMax)
-	log.Printf("Rage is active: %v", ability.IsActive)
 
 	// Calculate damage bonus based on level
 	damageBonus := "+2"
@@ -190,11 +246,18 @@ func (s *service) handleRage(char *character.Character, ability *shared.ActiveAb
 		damageBonus = "+3"
 	}
 
+	log.Printf("=== RAGE ACTIVATION (EVENT SYSTEM) ===")
+	log.Printf("Character: %s (ID: %s)", char.Name, char.ID)
+	log.Printf("Rage listener registered with ID: %s", rageListener.ID())
+	log.Printf("Rage uses remaining: %d/%d", ability.UsesRemaining, ability.UsesMax)
+	log.Printf("Rage is active: %v", ability.IsActive)
+	log.Printf("Event listeners registered for OnDamageRoll and BeforeTakeDamage")
+
 	result.Message = fmt.Sprintf("You enter a rage! %s damage to melee attacks, resistance to physical damage", damageBonus)
 	result.EffectApplied = true
-	result.EffectID = rageEffect.ID
-	result.EffectName = rageEffect.Name
-	result.Duration = rageEffect.Duration.Rounds
+	result.EffectID = rageListener.ID()
+	result.EffectName = "Rage"
+	result.Duration = 10
 
 	return result
 }
@@ -319,6 +382,10 @@ func (s *service) GetAvailableAbilities(ctx context.Context, characterID string)
 			}
 		}
 
+		// Note: Duration for active abilities (like rage) is tracked in the turnStartListener
+		// and updated on the status effect which is what the UI shows.
+		// The ability definition always shows the max duration.
+
 		abilities = append(abilities, available)
 	}
 
@@ -330,4 +397,101 @@ func (s *service) ApplyAbilityEffects(ctx context.Context, input *ApplyEffectsIn
 	// This would handle applying effects in combat context
 	// For now, it's a placeholder
 	return nil
+}
+
+// turnStartListener handles turn start events to update ability durations
+type turnStartListener struct {
+	service *service
+}
+
+func (t *turnStartListener) HandleEvent(event *events.GameEvent) error {
+	if event.Actor == nil {
+		return nil
+	}
+
+	// Check if this character has active rage
+	if listener, exists := t.service.activeListeners[event.Actor.ID]; exists {
+		// Check if rage has expired
+		if rageListener, ok := listener.(*features.RageListener); ok {
+			duration := rageListener.Duration()
+			if roundsDuration, ok := duration.(*events.RoundsDuration); ok {
+				currentTurn, _ := event.GetIntContext("turn_count")       // TODO: Use constant
+				numCombatants, _ := event.GetIntContext("num_combatants") // TODO: Use constant
+
+				// Calculate rounds elapsed (turns / combatants)
+				turnsElapsed := currentTurn - roundsDuration.StartTurn
+				roundsElapsed := 0
+				if numCombatants > 0 {
+					roundsElapsed = turnsElapsed / numCombatants
+				}
+				remainingRounds := roundsDuration.Rounds - roundsElapsed
+
+				if remainingRounds <= 0 {
+					// Rage has expired - unsubscribe and remove
+					t.service.eventBus.Unsubscribe(events.OnDamageRoll, rageListener)
+					t.service.eventBus.Unsubscribe(events.BeforeTakeDamage, rageListener)
+					delete(t.service.activeListeners, event.Actor.ID)
+
+					// Remove rage effect from character
+					activeEffects := event.Actor.GetActiveStatusEffects()
+					for _, effect := range activeEffects {
+						if effect.Name == "Rage" {
+							event.Actor.RemoveStatusEffect(effect.ID)
+							break
+						}
+					}
+
+					// Mark ability as inactive
+					if resources := event.Actor.GetResources(); resources != nil {
+						if rage, exists := resources.Abilities["rage"]; exists {
+							rage.IsActive = false
+						}
+					}
+
+					// Sync effects to ensure persistence layer is updated
+					event.Actor.SyncEffects()
+
+					// Save character
+					if t.service.characterService != nil {
+						if err := t.service.characterService.UpdateEquipment(event.Actor); err != nil {
+							log.Printf("Failed to save character after rage expiry: %v", err)
+						}
+					}
+				} else {
+					// Update the UI effect duration
+					activeEffects := event.Actor.GetActiveStatusEffects()
+					for _, effect := range activeEffects {
+						if effect.Name != "Rage" {
+							continue
+						}
+						effect.Duration.Rounds = remainingRounds
+						log.Printf("=== RAGE DURATION UPDATE ===")
+						log.Printf("Character: %s", event.Actor.Name)
+						log.Printf("Current turn: %d, Start turn: %d", currentTurn, roundsDuration.StartTurn)
+						log.Printf("Turns elapsed: %d, Combatants: %d", turnsElapsed, numCombatants)
+						log.Printf("Rounds elapsed: %d, Remaining rounds: %d", roundsElapsed, remainingRounds)
+						break
+					}
+
+					// Sync effects to ensure persistence layer is updated
+					event.Actor.SyncEffects()
+
+					// Save character to persist the updated duration
+					if t.service.characterService != nil {
+						if err := t.service.characterService.UpdateEquipment(event.Actor); err != nil {
+							log.Printf("Failed to save character after rage duration update: %v", err)
+						} else {
+							log.Printf("Character saved with updated rage duration")
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (t *turnStartListener) Priority() int {
+	return 200 // Lower priority, runs after other effects
 }

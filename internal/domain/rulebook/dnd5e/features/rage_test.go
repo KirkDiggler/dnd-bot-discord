@@ -34,7 +34,7 @@ func (s *RageModifierSuite) TestRageDamageBonus() {
 	for _, tc := range testCases {
 		s.Run(tc.name, func() {
 			characterID := "test-barbarian"
-			rage := features.NewRageModifier(characterID, tc.level)
+			rage := features.NewRageModifier(characterID, tc.level, 0)
 
 			// Create character for event
 			char := &character.Character{ID: characterID}
@@ -62,7 +62,7 @@ func (s *RageModifierSuite) TestRageDamageBonus() {
 
 func (s *RageModifierSuite) TestRageOnlyAppliesToCorrectCharacter() {
 	characterID := "barbarian-1"
-	rage := features.NewRageModifier(characterID, 5)
+	rage := features.NewRageModifier(characterID, 5, 0)
 
 	// Different character's attack should not get rage bonus
 	otherChar := &character.Character{ID: "other-character"}
@@ -76,7 +76,7 @@ func (s *RageModifierSuite) TestRageOnlyAppliesToCorrectCharacter() {
 
 func (s *RageModifierSuite) TestRageOnlyAppliesToMelee() {
 	characterID := "test-barbarian"
-	rage := features.NewRageModifier(characterID, 5)
+	rage := features.NewRageModifier(characterID, 5, 0)
 	char := &character.Character{ID: characterID}
 
 	// Ranged attack should not get rage bonus
@@ -90,7 +90,7 @@ func (s *RageModifierSuite) TestRageOnlyAppliesToMelee() {
 
 func (s *RageModifierSuite) TestRagePhysicalResistance() {
 	characterID := "test-barbarian"
-	rage := features.NewRageModifier(characterID, 5)
+	rage := features.NewRageModifier(characterID, 5, 0)
 	char := &character.Character{ID: characterID}
 
 	damageTypes := []struct {
@@ -131,7 +131,7 @@ func (s *RageModifierSuite) TestRagePhysicalResistance() {
 
 func (s *RageModifierSuite) TestRageListener() {
 	characterID := "test-barbarian"
-	listener := features.NewRageListener(characterID, 5)
+	listener := features.NewRageListener(characterID, 5, 0)
 	char := &character.Character{ID: characterID}
 
 	// Test that listener properly wraps modifier

@@ -13,10 +13,11 @@ type RageModifier struct {
 	characterID string
 	level       int
 	damageBonus int
+	startTurn   int
 }
 
 // NewRageModifier creates a new rage modifier for a specific character
-func NewRageModifier(characterID string, level int) *RageModifier {
+func NewRageModifier(characterID string, level, startTurn int) *RageModifier {
 	// Determine damage bonus based on level
 	damageBonus := 2
 	if level >= 16 {
@@ -30,6 +31,7 @@ func NewRageModifier(characterID string, level int) *RageModifier {
 		characterID: characterID,
 		level:       level,
 		damageBonus: damageBonus,
+		startTurn:   startTurn,
 	}
 }
 
@@ -123,7 +125,7 @@ func (r *RageModifier) Apply(event *events.GameEvent) error {
 func (r *RageModifier) Duration() events.ModifierDuration {
 	return &events.RoundsDuration{
 		Rounds:    10,
-		StartTurn: 0, // TODO: Track actual start turn
+		StartTurn: r.startTurn,
 	}
 }
 
@@ -133,9 +135,9 @@ type RageListener struct {
 }
 
 // NewRageListener creates a new rage listener
-func NewRageListener(characterID string, level int) *RageListener {
+func NewRageListener(characterID string, level, startTurn int) *RageListener {
 	return &RageListener{
-		modifier: NewRageModifier(characterID, level),
+		modifier: NewRageModifier(characterID, level, startTurn),
 	}
 }
 
@@ -158,4 +160,9 @@ func (rl *RageListener) Priority() int {
 // ID returns the modifier ID for tracking
 func (rl *RageListener) ID() string {
 	return rl.modifier.ID()
+}
+
+// Duration returns the modifier's duration
+func (rl *RageListener) Duration() events.ModifierDuration {
+	return rl.modifier.Duration()
 }
