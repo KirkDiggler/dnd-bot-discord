@@ -14,7 +14,7 @@ dnd-bot-discord (Go)
 
 ## Target State
 ```
-rpg-toolkit (TypeScript)          dnd-bot-discord (Go)
+rpg-toolkit (Go)                  dnd-bot-discord (Go)
 ├── Pure game mechanics     →     ├── Discord handlers
 ├── Event-driven features   →     ├── rpg-toolkit Go client
 ├── Storage interfaces      →     ├── Redis adapter
@@ -23,9 +23,9 @@ rpg-toolkit (TypeScript)          dnd-bot-discord (Go)
 
 ## Integration Approach
 
-### Option 1: Go Port of RPG Toolkit
+### Option 1: Native Go RPG Toolkit
 - Create `rpg-toolkit-go` as a Go implementation
-- Maintain feature parity with TypeScript version
+- Focus on Go idioms and best practices
 - Share design patterns, not code
 
 ### Option 2: gRPC Service
@@ -34,8 +34,8 @@ rpg-toolkit (TypeScript)          dnd-bot-discord (Go)
 - Enables polyglot architecture
 
 ### Option 3: WebAssembly Bridge
-- Compile TypeScript to WASM
-- Run in Go via wasmer/wasmtime
+- Compile Go to WASM
+- Run in various environments via wasmer/wasmtime
 - Single codebase, multiple runtimes
 
 ## Event System Design
@@ -81,22 +81,22 @@ type Feature interface {
 }
 ```
 
-### TypeScript Implementation
-```typescript
-// rpg-toolkit/src/events/types.ts
-export interface Event<T = unknown> {
-  type: string;
-  context: T;
+### Alternative Go Implementation (Interface-based)
+```go
+// rpg-toolkit/events/interfaces.go
+type Event[T any] struct {
+    Type    string
+    Context T
 }
 
-export interface EventHandler<T = unknown> {
-  handle(event: Event<T>): Promise<void>;
-  priority: number;
+type EventHandler[T any] interface {
+    Handle(event Event[T]) error
+    Priority() int
 }
 
-export interface Feature {
-  id: string;
-  registerHandlers(bus: EventBus): void;
+type Feature interface {
+    ID() string
+    RegisterHandlers(bus EventBus)
 }
 ```
 
@@ -194,7 +194,7 @@ func handleAttack(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 ## Challenges
 
-1. **Language Differences**: Go vs TypeScript idioms
+1. **Language Differences**: Go idioms and patterns
 2. **Performance**: Event overhead vs direct calls
 3. **Type Safety**: Maintaining across languages
 4. **Backwards Compatibility**: Don't break existing bot
@@ -210,7 +210,7 @@ func handleAttack(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 ## Questions for Discussion
 
-1. Should rpg-toolkit be polyglot or TypeScript-only?
+1. Should rpg-toolkit be polyglot or Go-only?
 2. Is event-driven the right approach for all features?
 3. How do we handle cross-language type safety?
 4. What's the minimum viable toolkit?
