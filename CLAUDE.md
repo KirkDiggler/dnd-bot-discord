@@ -641,6 +641,63 @@ attackRoll += attackBonus
 gh issue create --title "Implement Ki points system" --label "monk,combat,enhancement"
 ```
 
+### Rage Implementation and Event-Driven Architecture (PR #235) - July 1, 2025
+
+**Context**: Started with restructure-rage-modifier branch, evolved into comprehensive architecture design.
+
+#### What Was Fixed in PR #235 (MERGED)
+1. **Rage Duration Bug**: Fixed counting to properly track rounds (not turns)
+   - Rage lasts 10 rounds in D&D 5e, not 10 turns
+   - With 3 combatants, 30 turns = 10 rounds
+   - Added proper round calculation: `turnsElapsed / numCombatants`
+
+2. **Effect Synchronization**: Fixed dual effect system persistence
+   - New event system (`effects.StatusEffect`) 
+   - Old UI system (`shared.ActiveEffect`)
+   - Added `SyncEffects()` method to ensure both stay in sync
+
+3. **Combat Messages**: Now show "(includes effects)" when rage damage applies
+
+4. **Created Package READMEs** defining boundaries:
+   - `/internal/services/ability/README.md` - Ruleset-agnostic service
+   - `/internal/domain/rulebook/README.md` - ALL game-specific logic
+   - `/internal/domain/events/README.md` - Event bus architecture
+   - `/internal/domain/character/README.md` - Universal vs ruleset boundaries
+
+#### Architectural Discovery Session (July 1, 2025)
+
+**Key Insight**: "Things just do things and emit events. Everything else listens and modifies."
+
+This led to documenting a comprehensive event-driven architecture:
+
+1. **Unified Tracking System** (PR #239)
+   - Composable trackers: Duration, Pool, Usage, Event-based
+   - Separates "what tracks" from "what it does"
+   - Example: Rage = DurationTracker(10 rounds) + UsageTracker(2/long rest) + Modifiers
+
+2. **Event-Driven Modifiers**
+   - Core entities emit events (OnAttackRoll, OnDamageRoll, etc.)
+   - Modifiers listen and apply changes
+   - No direct coupling between systems
+   - Enables multiple rulesets to coexist
+
+3. **Documentation Created**:
+   - `/docs/architecture/unified-tracking-system.md`
+   - `/docs/architecture/event-driven-modifiers.md`
+   - `/docs/examples/modifier-examples.md` (5 concrete implementations)
+   - `/docs/examples/event-flow-examples.md` (5 combat scenarios)
+
+#### Issues Created
+- **#237**: Refactor ability service to be ruleset-agnostic (technical debt from rage)
+- **#236**: Show rage duration in combat actions UI
+- **#238**: Complete README documentation for remaining packages
+- **#240**: Implement unified tracking and modifier system (based on architecture docs)
+
+#### Current Architecture State
+- Ability service has hardcoded switch statement for abilities (technical debt)
+- Event system partially implemented (rage uses it, other abilities don't)
+- Good foundation but needs the refactor described in #237/#240
+
 ### Contact
 - GitHub Issues: https://github.com/KirkDiggler/dnd-bot-discord/issues
 - GitHub Project: https://github.com/users/KirkDiggler/projects/6
