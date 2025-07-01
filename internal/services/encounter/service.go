@@ -689,9 +689,9 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 				totalTurns := (encounter.Round-1)*len(encounter.TurnOrder) + encounter.Turn
 				turnEvent := events.NewGameEvent(events.OnTurnStart).
 					WithActor(char).
-					WithContext("turn_count", totalTurns).
-					WithContext("round", encounter.Round).
-					WithContext("num_combatants", len(encounter.TurnOrder))
+					WithContext("turn_count", totalTurns).                  // TODO: Use constant
+					WithContext("round", encounter.Round).                  // TODO: Use constant
+					WithContext("num_combatants", len(encounter.TurnOrder)) // TODO: Use constant
 
 				if err := s.eventBus.Emit(turnEvent); err != nil {
 					log.Printf("Failed to emit OnTurnStart event: %v", err)

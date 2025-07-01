@@ -415,8 +415,8 @@ func (t *turnStartListener) HandleEvent(event *events.GameEvent) error {
 		if rageListener, ok := listener.(*features.RageListener); ok {
 			duration := rageListener.Duration()
 			if roundsDuration, ok := duration.(*events.RoundsDuration); ok {
-				currentTurn, _ := event.GetIntContext("turn_count")
-				numCombatants, _ := event.GetIntContext("num_combatants")
+				currentTurn, _ := event.GetIntContext("turn_count")       // TODO: Use constant
+				numCombatants, _ := event.GetIntContext("num_combatants") // TODO: Use constant
 
 				// Calculate rounds elapsed (turns / combatants)
 				turnsElapsed := currentTurn - roundsDuration.StartTurn
