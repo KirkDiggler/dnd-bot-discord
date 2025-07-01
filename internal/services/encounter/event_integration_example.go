@@ -1,6 +1,8 @@
 package encounter
 
 import (
+	"fmt"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat/attack"
@@ -44,7 +46,10 @@ func (calc *EventBasedDamageCalculator) CalculateAttackDamage(
 	}
 
 	// Get modified damage
-	modifiedDamage, _ := damageEvent.GetIntContext("damage")
+	modifiedDamage, ok := damageEvent.GetIntContext("damage")
+	if !ok {
+		return baseDamage, fmt.Errorf("damage context not found in damageEvent")
+	}
 
 	// Now create a "before take damage" event for the target
 	takeDamageEvent := events.NewGameEvent(events.BeforeTakeDamage).

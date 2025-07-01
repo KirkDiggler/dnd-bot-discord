@@ -110,6 +110,7 @@ func (r *RageModifier) Apply(event *events.GameEvent) error {
 			return fmt.Errorf("no damage value in event context")
 		}
 
+		// D&D 5e: Resistance halves damage, rounded down
 		reducedDamage := currentDamage / 2
 		event.WithContext("damage", reducedDamage)
 		event.WithContext("resistance_applied", "Rage (physical damage resistance)")
