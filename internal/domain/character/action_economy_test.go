@@ -1,26 +1,27 @@
-package shared
+package character
 
 import (
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 )
 
 func TestActionEconomy_Reset(t *testing.T) {
-	ae := &ActionEconomy{
+	ae := &shared.ActionEconomy{
 		ActionUsed:      true,
 		BonusActionUsed: true,
 		ReactionUsed:    true,
 		MovementUsed:    30,
-		ActionsThisTurn: []ActionRecord{
+		ActionsThisTurn: []shared.ActionRecord{
 			{Type: "attack", Subtype: "weapon"},
 		},
-		AvailableBonusActions: []BonusActionOption{
+		AvailableBonusActions: []shared.BonusActionOption{
 			{Key: "test"},
 		},
 	}
@@ -53,7 +54,7 @@ func TestActionEconomy_RecordAction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ae := &ActionEconomy{}
+			ae := &shared.ActionEconomy{}
 			ae.RecordAction(tt.actionType, "test", "test-weapon")
 
 			assert.Equal(t, tt.expectUsed, ae.ActionUsed)
@@ -64,7 +65,7 @@ func TestActionEconomy_RecordAction(t *testing.T) {
 }
 
 func TestActionEconomy_HasTakenAction(t *testing.T) {
-	ae := &ActionEconomy{}
+	ae := &shared.ActionEconomy{}
 
 	assert.False(t, ae.HasTakenAction("attack"))
 
@@ -77,7 +78,7 @@ func TestActionEconomy_HasTakenAction(t *testing.T) {
 }
 
 func TestActionEconomy_GetActionsByType(t *testing.T) {
-	ae := &ActionEconomy{}
+	ae := &shared.ActionEconomy{}
 
 	// Record multiple actions
 	ae.RecordAction("attack", "weapon", "longsword")
@@ -96,11 +97,11 @@ func TestActionEconomy_GetActionsByType(t *testing.T) {
 }
 
 func TestCharacter_StartNewTurn(t *testing.T) {
-	char := &character.Character{
+	char := &Character{
 		Name:  "Test Character",
 		Level: 1,
-		Resources: &character.CharacterResources{
-			ActionEconomy: ActionEconomy{
+		Resources: &CharacterResources{
+			ActionEconomy: shared.ActionEconomy{
 				ActionUsed:      true,
 				BonusActionUsed: true,
 				ReactionUsed:    true,
@@ -121,15 +122,15 @@ func TestCharacter_StartNewTurn(t *testing.T) {
 
 func TestCharacter_MartialArtsBonusAction(t *testing.T) {
 	// Create a monk with martial arts
-	monk := &character.Character{
+	monk := &Character{
 		Name:  "Test Monk",
 		Level: 1,
 		Features: []*rulebook.CharacterFeature{
 			{Key: "martial-arts", Name: "Martial Arts"},
 		},
-		Resources: &character.CharacterResources{},
-		EquippedSlots: map[Slot]equipment.Equipment{
-			SlotMainHand: &equipment.Weapon{
+		Resources: &CharacterResources{},
+		EquippedSlots: map[shared.Slot]equipment.Equipment{
+			shared.SlotMainHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: equipment.WeaponKeyShortsword},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
@@ -162,25 +163,25 @@ func TestCharacter_MartialArtsBonusAction(t *testing.T) {
 
 func TestCharacter_TwoWeaponFightingBonusAction(t *testing.T) {
 	// Create a character with two light weapons
-	char := &character.Character{
+	char := &Character{
 		Name:      "Dual Wielder",
 		Level:     1,
-		Resources: &character.CharacterResources{},
-		EquippedSlots: map[Slot]equipment.Equipment{
-			SlotMainHand: &equipment.Weapon{
+		Resources: &CharacterResources{},
+		EquippedSlots: map[shared.Slot]equipment.Equipment{
+			shared.SlotMainHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: "shortsword"},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
-				Properties: []*ReferenceItem{
+				Properties: []*shared.ReferenceItem{
 					{Key: "light"},
 					{Key: "finesse"},
 				},
 			},
-			SlotOffHand: &equipment.Weapon{
+			shared.SlotOffHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: "dagger"},
 				WeaponCategory: "Simple",
 				WeaponRange:    "Melee",
-				Properties: []*ReferenceItem{
+				Properties: []*shared.ReferenceItem{
 					{Key: "light"},
 					{Key: "finesse"},
 					{Key: "thrown"},
@@ -206,24 +207,24 @@ func TestCharacter_TwoWeaponFightingBonusAction(t *testing.T) {
 
 func TestCharacter_NoTwoWeaponWithoutLight(t *testing.T) {
 	// Character with non-light weapon in main hand
-	char := &character.Character{
+	char := &Character{
 		Name:      "Fighter",
 		Level:     1,
-		Resources: &character.CharacterResources{},
-		EquippedSlots: map[Slot]equipment.Equipment{
-			SlotMainHand: &equipment.Weapon{
+		Resources: &CharacterResources{},
+		EquippedSlots: map[shared.Slot]equipment.Equipment{
+			shared.SlotMainHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: "longsword"},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
-				Properties: []*ReferenceItem{
+				Properties: []*shared.ReferenceItem{
 					{Key: "versatile"},
 				},
 			},
-			SlotOffHand: &equipment.Weapon{
+			shared.SlotOffHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: "shortsword"},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",
-				Properties: []*ReferenceItem{
+				Properties: []*shared.ReferenceItem{
 					{Key: "light"},
 					{Key: "finesse"},
 				},
@@ -239,10 +240,10 @@ func TestCharacter_NoTwoWeaponWithoutLight(t *testing.T) {
 }
 
 func TestCharacter_ActionAvailability(t *testing.T) {
-	char := &character.Character{
+	char := &Character{
 		Name:      "Test",
 		Level:     1,
-		Resources: &character.CharacterResources{},
+		Resources: &CharacterResources{},
 	}
 
 	// Initially has action available
@@ -258,10 +259,10 @@ func TestCharacter_ActionAvailability(t *testing.T) {
 }
 
 func TestCharacter_GetActionsTaken(t *testing.T) {
-	char := &character.Character{
+	char := &Character{
 		Name:      "Test",
 		Level:     1,
-		Resources: &character.CharacterResources{},
+		Resources: &CharacterResources{},
 	}
 
 	// Take some actions
@@ -278,15 +279,15 @@ func TestCharacter_GetActionsTaken(t *testing.T) {
 
 func TestCharacter_NonMonkNoMartialArts(t *testing.T) {
 	// Create a fighter with a shortsword
-	fighter := &character.Character{
+	fighter := &Character{
 		Name:  "Test Fighter",
 		Level: 1,
 		Features: []*rulebook.CharacterFeature{
 			{Key: "second_wind", Name: "Second Wind"},
 		},
-		Resources: &character.CharacterResources{},
-		EquippedSlots: map[Slot]equipment.Equipment{
-			SlotMainHand: &equipment.Weapon{
+		Resources: &CharacterResources{},
+		EquippedSlots: map[shared.Slot]equipment.Equipment{
+			shared.SlotMainHand: &equipment.Weapon{
 				Base:           equipment.BasicEquipment{Key: equipment.WeaponKeyShortsword},
 				WeaponCategory: "Martial",
 				WeaponRange:    "Melee",

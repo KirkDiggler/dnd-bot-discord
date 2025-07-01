@@ -3,10 +3,11 @@ package encounter
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
-	"strings"
+	gameSession "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
@@ -53,7 +54,7 @@ func (h *AddMonsterHandler) Handle(req *AddMonsterRequest) error {
 
 	// Check if user is DM
 	member, exists := session.Members[req.Interaction.Member.User.ID]
-	if !exists || member.Role != session.SessionRoleDM {
+	if !exists || member.Role != gameSession.SessionRoleDM {
 		content := "❌ Only the DM can add monsters to encounters!"
 		_, err = req.Session.InteractionResponseEdit(req.Interaction.Interaction, &discordgo.WebhookEdit{
 			Content: &content,

@@ -5,15 +5,16 @@ package character
 import (
 	"context"
 	"fmt"
+	"log"
+	"sort"
+	"strings"
+	"time"
+
 	charDomain "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	features2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/features"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
-	"log"
-	"sort"
-	"strings"
-	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
@@ -290,10 +291,10 @@ func (s *service) CreateCharacter(ctx context.Context, input *CreateCharacterInp
 	// Add starting equipment
 	for _, se := range class.StartingEquipment {
 		if se != nil && se.Equipment != nil {
-			equipment, err := s.dndClient.GetEquipment(se.Equipment.Key)
-			if err == nil && equipment != nil {
+			equipmentValue, err := s.dndClient.GetEquipment(se.Equipment.Key)
+			if err == nil && equipmentValue != nil {
 				for i := 0; i < se.Quantity; i++ {
-					character.AddInventory(equipment)
+					character.AddInventory(equipmentValue)
 				}
 			}
 		}
@@ -301,10 +302,32 @@ func (s *service) CreateCharacter(ctx context.Context, input *CreateCharacterInp
 
 	// Add selected equipment
 	for _, equipKey := range input.Equipment {
-		equipment, err := s.dndClient.GetEquipment(equipKey)
-		if err == nil && equipment != nil {
-			character.AddInventory(equipment)
+		equipmentValue, err := s.dndClient.GetEquipment(equipKey)
+		if err == nil && equipmentValue != nil {
+			character.AddInventory(equipmentValue)
 		}
+	}
+
+	// Add racial features
+	racialFeatures := features2.GetRacialFeatures(race.Key)
+	if character.Features == nil {
+		character.Features = []*rulebook.CharacterFeature{}
+	}
+	for _, feat := range racialFeatures {
+		featCopy := feat
+		character.Features = append(character.Features, &featCopy)
+	}
+
+	// Add class features
+	classFeatures := features2.GetClassFeatures(class.Key, character.Level)
+	for _, feat := range classFeatures {
+		featCopy := feat
+		character.Features = append(character.Features, &featCopy)
+	}
+
+	// Apply passive effects from all features
+	if err := features2.DefaultRegistry.ApplyAllPassiveEffects(character); err != nil {
+		log.Printf("Error applying passive effects for character %s: %v", character.ID, err)
 	}
 
 	// Save to repository
@@ -749,9 +772,9 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 
 		// Add selected equipment
 		for _, equipKey := range updates.Equipment {
-			equipment, err := s.dndClient.GetEquipment(equipKey)
-			if err == nil && equipment != nil {
-				char.AddInventory(equipment)
+			equipmentValue, err := s.dndClient.GetEquipment(equipKey)
+			if err == nil && equipmentValue != nil {
+				char.AddInventory(equipmentValue)
 			} else if err != nil {
 				log.Printf("Failed to get equipment '%s': %v", equipKey, err)
 			}
@@ -951,7 +974,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 	if s.dndClient != nil && char.Class != nil && char.Class.StartingEquipment != nil {
 		for _, se := range char.Class.StartingEquipment {
 			if se != nil && se.Equipment != nil {
-				equipment, err := s.dndClient.GetEquipment(se.Equipment.Key)
+				equipmentValue, err := s.dndClient.GetEquipment(se.Equipment.Key)
 				if err != nil {
 					// Log the error but don't fail the finalization
 					log.Printf("Failed to get starting equipment %s: %v", se.Equipment.Key, err)
@@ -959,7 +982,7 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 				}
 				// If no error, equipment is valid
 				for i := 0; i < se.Quantity; i++ {
-					char.AddInventory(equipment)
+					char.AddInventory(equipmentValue)
 				}
 			}
 		}
@@ -986,13 +1009,13 @@ func (s *service) GetEquipmentByCategory(ctx context.Context, category string) (
 		return nil, dnderr.InvalidArgument("category is required")
 	}
 
-	equipment, err := s.dndClient.GetEquipmentByCategory(category)
+	equipmentSlice, err := s.dndClient.GetEquipmentByCategory(category)
 	if err != nil {
 		return nil, dnderr.Wrapf(err, "failed to get equipment for category '%s'", category).
 			WithMeta("category", category)
 	}
 
-	return equipment, nil
+	return equipmentSlice, nil
 }
 
 // generateID generates a unique ID for a character

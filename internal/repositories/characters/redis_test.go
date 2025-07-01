@@ -3,11 +3,12 @@ package characters
 import (
 	"context"
 	"encoding/json"
+	"testing"
+	"time"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
-	"testing"
-	"time"
 
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	mockredis "github.com/KirkDiggler/dnd-bot-discord/internal/mocks/redis"
@@ -72,7 +73,7 @@ func (s *RedisMockTestSuite) createTestCharacter() *character.Character {
 // Test Create with pipeline support
 func (s *RedisMockTestSuite) TestCreate_HappyPath() {
 	ctx := context.Background()
-	character := s.createTestCharacter()
+	char := s.createTestCharacter()
 
 	// We're using the generated mock, so isTestMode will return false (not a *redis.Client)
 
@@ -107,21 +108,21 @@ func (s *RedisMockTestSuite) TestCreate_HappyPath() {
 	cmds := []redis.Cmder{setCmd, sAddCmd1, sAddCmd2, sAddCmd3}
 	pipeline.EXPECT().Exec(ctx).Return(cmds, nil)
 
-	err := s.repo.Create(ctx, character)
+	err := s.repo.Create(ctx, char)
 	s.NoError(err)
 }
 
 // Test Create - already exists
 func (s *RedisMockTestSuite) TestCreate_AlreadyExists() {
 	ctx := context.Background()
-	character := s.createTestCharacter()
+	char := s.createTestCharacter()
 
 	// Expect existence check returns 1 (exists)
 	existsCmd := redis.NewIntCmd(ctx, "exists", "character:test-id")
 	existsCmd.SetVal(1)
 	s.mockClient.EXPECT().Exists(ctx, "character:test-id").Return(existsCmd)
 
-	err := s.repo.Create(ctx, character)
+	err := s.repo.Create(ctx, char)
 	s.Error(err)
 
 	var alreadyExists *dnderr.Error
@@ -132,8 +133,8 @@ func (s *RedisMockTestSuite) TestCreate_AlreadyExists() {
 // Test Get
 func (s *RedisMockTestSuite) TestGet_HappyPath() {
 	ctx := context.Background()
-	character := s.createTestCharacter()
-	data, err := s.repo.toCharacterData(character)
+	char := s.createTestCharacter()
+	data, err := s.repo.toCharacterData(char)
 	s.Require().NoError(err)
 	data.CreatedAt = time.Now().UTC()
 	data.UpdatedAt = data.CreatedAt
@@ -147,8 +148,8 @@ func (s *RedisMockTestSuite) TestGet_HappyPath() {
 
 	result, err := s.repo.Get(ctx, "test-id")
 	s.NoError(err)
-	s.Equal(character.ID, result.ID)
-	s.Equal(character.Name, result.Name)
+	s.Equal(char.ID, result.ID)
+	s.Equal(char.Name, result.Name)
 }
 
 // Test Update with owner/realm change using pipeline
@@ -220,8 +221,8 @@ func (s *RedisMockTestSuite) TestUpdate_WithOwnerRealmChange() {
 // Test Delete with pipeline
 func (s *RedisMockTestSuite) TestDelete_HappyPath() {
 	ctx := context.Background()
-	character := s.createTestCharacter()
-	data, err := s.repo.toCharacterData(character)
+	char := s.createTestCharacter()
+	data, err := s.repo.toCharacterData(char)
 	s.Require().NoError(err)
 	data.CreatedAt = time.Now().UTC()
 	data.UpdatedAt = data.CreatedAt

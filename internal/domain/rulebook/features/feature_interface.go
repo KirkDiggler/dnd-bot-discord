@@ -11,15 +11,15 @@ type FeatureHandler interface {
 
 	// ApplyPassiveEffects applies any passive effects to the character
 	// This is called during character finalization and when features are updated
-	ApplyPassiveEffects(character *character.Character) error
+	ApplyPassiveEffects(char *character.Character) error
 
 	// ModifySkillCheck allows features to modify skill checks
 	// Returns the modified result and whether the feature applied
-	ModifySkillCheck(character *character.Character, skillKey string, baseResult int) (int, bool)
+	ModifySkillCheck(char *character.Character, skillKey string, baseResult int) (int, bool)
 
 	// GetPassiveDisplayInfo returns information to display on character sheets
 	// Returns display text and whether this feature should be prominently shown
-	GetPassiveDisplayInfo(character *character.Character) (string, bool)
+	GetPassiveDisplayInfo(char *character.Character) (string, bool)
 }
 
 // FeatureRegistry manages all implemented feature handlers
@@ -51,18 +51,18 @@ func (r *FeatureRegistry) GetHandler(key string) (FeatureHandler, bool) {
 }
 
 // ApplyAllPassiveEffects applies passive effects from all character features
-func (r *FeatureRegistry) ApplyAllPassiveEffects(character *character.Character) error {
-	if character.Features == nil {
+func (r *FeatureRegistry) ApplyAllPassiveEffects(char *character.Character) error {
+	if char.Features == nil {
 		return nil
 	}
 
-	for _, feature := range character.Features {
+	for _, feature := range char.Features {
 		if feature == nil {
 			continue
 		}
 
 		if handler, exists := r.GetHandler(feature.Key); exists {
-			if err := handler.ApplyPassiveEffects(character); err != nil {
+			if err := handler.ApplyPassiveEffects(char); err != nil {
 				// Log error but continue with other features
 				// TODO: Add proper logging
 				continue
@@ -74,20 +74,20 @@ func (r *FeatureRegistry) ApplyAllPassiveEffects(character *character.Character)
 }
 
 // GetAllPassiveDisplayInfo gets display info for all character features
-func (r *FeatureRegistry) GetAllPassiveDisplayInfo(character *character.Character) []string {
+func (r *FeatureRegistry) GetAllPassiveDisplayInfo(char *character.Character) []string {
 	var displayInfo []string
 
-	if character.Features == nil {
+	if char.Features == nil {
 		return displayInfo
 	}
 
-	for _, feature := range character.Features {
+	for _, feature := range char.Features {
 		if feature == nil {
 			continue
 		}
 
 		if handler, exists := r.GetHandler(feature.Key); exists {
-			if info, shouldDisplay := handler.GetPassiveDisplayInfo(character); shouldDisplay && info != "" {
+			if info, shouldDisplay := handler.GetPassiveDisplayInfo(char); shouldDisplay && info != "" {
 				displayInfo = append(displayInfo, info)
 			}
 		}

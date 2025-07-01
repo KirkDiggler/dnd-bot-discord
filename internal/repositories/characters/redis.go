@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"strings"
+	"time"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
-	"log"
-	"strings"
-	"time"
 
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/uuid"
@@ -193,32 +194,32 @@ func (r *redisRepo) ownerRealmCharactersKey(ownerID, realmID string) string {
 }
 
 // Create stores a new character
-func (r *redisRepo) Create(ctx context.Context, character *character.Character) error {
-	if character == nil {
+func (r *redisRepo) Create(ctx context.Context, char *character.Character) error {
+	if char == nil {
 		return dnderr.InvalidArgument("character cannot be nil")
 	}
-	if character.ID == "" {
+	if char.ID == "" {
 		return dnderr.InvalidArgument("character ID is required")
 	}
-	if character.OwnerID == "" {
+	if char.OwnerID == "" {
 		return dnderr.InvalidArgument("character owner ID is required")
 	}
-	if character.RealmID == "" {
+	if char.RealmID == "" {
 		return dnderr.InvalidArgument("character realm ID is required")
 	}
 
 	// Check if character already exists
-	exists, err := r.client.Exists(ctx, r.key(character.ID)).Result()
+	exists, err := r.client.Exists(ctx, r.key(char.ID)).Result()
 	if err != nil {
 		return fmt.Errorf("failed to check character existence: %w", err)
 	}
 	if exists > 0 {
-		return dnderr.AlreadyExistsf("character with ID '%s' already exists", character.ID).
-			WithMeta("character_id", character.ID)
+		return dnderr.AlreadyExistsf("character with ID '%s' already exists", char.ID).
+			WithMeta("character_id", char.ID)
 	}
 
 	// Convert to data struct
-	data, err := r.toCharacterData(character)
+	data, err := r.toCharacterData(char)
 	if err != nil {
 		return fmt.Errorf("failed to convert character data: %w", err)
 	}
@@ -235,12 +236,12 @@ func (r *redisRepo) Create(ctx context.Context, character *character.Character) 
 	pipe := r.client.Pipeline()
 
 	// Store character data
-	pipe.Set(ctx, r.key(character.ID), jsonData, 0) // No expiration for finalized characters
+	pipe.Set(ctx, r.key(char.ID), jsonData, 0) // No expiration for finalized characters
 
 	// Add to various index sets
-	pipe.SAdd(ctx, r.ownerCharactersKey(character.OwnerID), character.ID)
-	pipe.SAdd(ctx, r.realmCharactersKey(character.RealmID), character.ID)
-	pipe.SAdd(ctx, r.ownerRealmCharactersKey(character.OwnerID, character.RealmID), character.ID)
+	pipe.SAdd(ctx, r.ownerCharactersKey(char.OwnerID), char.ID)
+	pipe.SAdd(ctx, r.realmCharactersKey(char.RealmID), char.ID)
+	pipe.SAdd(ctx, r.ownerRealmCharactersKey(char.OwnerID, char.RealmID), char.ID)
 
 	// Execute pipeline
 	_, err = pipe.Exec(ctx)
@@ -302,12 +303,12 @@ func (r *redisRepo) GetByOwner(ctx context.Context, ownerID string) ([]*characte
 	// Get each character
 	characters := make([]*character.Character, 0, len(ids))
 	for _, id := range ids {
-		character, err := r.Get(ctx, id)
+		char, err := r.Get(ctx, id)
 		if err != nil {
 			// Skip characters that can't be loaded
 			continue
 		}
-		characters = append(characters, character)
+		characters = append(characters, char)
 	}
 
 	return characters, nil
@@ -331,31 +332,31 @@ func (r *redisRepo) GetByOwnerAndRealm(ctx context.Context, ownerID, realmID str
 	// Get each character
 	characters := make([]*character.Character, 0, len(ids))
 	for _, id := range ids {
-		character, err := r.Get(ctx, id)
+		char, err := r.Get(ctx, id)
 		if err != nil {
 			// Skip characters that can't be loaded
 			continue
 		}
-		characters = append(characters, character)
+		characters = append(characters, char)
 	}
 
 	return characters, nil
 }
 
 // Update updates an existing character
-func (r *redisRepo) Update(ctx context.Context, character *character.Character) error {
-	if character == nil {
+func (r *redisRepo) Update(ctx context.Context, char *character.Character) error {
+	if char == nil {
 		return dnderr.InvalidArgument("character cannot be nil")
 	}
-	if character.ID == "" {
+	if char.ID == "" {
 		return dnderr.InvalidArgument("character ID is required")
 	}
 
 	// Get existing character to verify it exists and preserve created timestamp
-	existingData, err := r.client.Get(ctx, r.key(character.ID)).Result()
+	existingData, err := r.client.Get(ctx, r.key(char.ID)).Result()
 	if err == redis.Nil {
-		return dnderr.NotFoundf("character with ID '%s' not found", character.ID).
-			WithMeta("character_id", character.ID)
+		return dnderr.NotFoundf("character with ID '%s' not found", char.ID).
+			WithMeta("character_id", char.ID)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to get existing character: %w", err)
@@ -368,7 +369,7 @@ func (r *redisRepo) Update(ctx context.Context, character *character.Character) 
 	}
 
 	// Convert to data struct
-	data, err := r.toCharacterData(character)
+	data, err := r.toCharacterData(char)
 	if err != nil {
 		return fmt.Errorf("failed to convert character data: %w", err)
 	}
@@ -376,7 +377,7 @@ func (r *redisRepo) Update(ctx context.Context, character *character.Character) 
 	data.UpdatedAt = time.Now().UTC()
 
 	// Debug: Log features being saved
-	log.Printf("DEBUG REDIS: Saving character %s with %d features", character.Name, len(data.Features))
+	log.Printf("DEBUG REDIS: Saving character %s with %d features", char.Name, len(data.Features))
 	for i, feature := range data.Features {
 		log.Printf("DEBUG REDIS: Feature %d: key=%s, metadata=%v", i, feature.Key, feature.Metadata)
 	}
@@ -388,24 +389,24 @@ func (r *redisRepo) Update(ctx context.Context, character *character.Character) 
 	}
 
 	// Update in Redis
-	err = r.client.Set(ctx, r.key(character.ID), jsonData, 0).Err()
+	err = r.client.Set(ctx, r.key(char.ID), jsonData, 0).Err()
 	if err != nil {
 		return fmt.Errorf("failed to update character: %w", err)
 	}
 
 	// If owner or realm changed, update indexes
-	if existing.OwnerID != character.OwnerID || existing.RealmID != character.RealmID {
+	if existing.OwnerID != char.OwnerID || existing.RealmID != char.RealmID {
 		pipe := r.client.Pipeline()
 
 		// Remove from old indexes
-		pipe.SRem(ctx, r.ownerCharactersKey(existing.OwnerID), character.ID)
-		pipe.SRem(ctx, r.realmCharactersKey(existing.RealmID), character.ID)
-		pipe.SRem(ctx, r.ownerRealmCharactersKey(existing.OwnerID, existing.RealmID), character.ID)
+		pipe.SRem(ctx, r.ownerCharactersKey(existing.OwnerID), char.ID)
+		pipe.SRem(ctx, r.realmCharactersKey(existing.RealmID), char.ID)
+		pipe.SRem(ctx, r.ownerRealmCharactersKey(existing.OwnerID, existing.RealmID), char.ID)
 
 		// Add to new indexes
-		pipe.SAdd(ctx, r.ownerCharactersKey(character.OwnerID), character.ID)
-		pipe.SAdd(ctx, r.realmCharactersKey(character.RealmID), character.ID)
-		pipe.SAdd(ctx, r.ownerRealmCharactersKey(character.OwnerID, character.RealmID), character.ID)
+		pipe.SAdd(ctx, r.ownerCharactersKey(char.OwnerID), char.ID)
+		pipe.SAdd(ctx, r.realmCharactersKey(char.RealmID), char.ID)
+		pipe.SAdd(ctx, r.ownerRealmCharactersKey(char.OwnerID, char.RealmID), char.ID)
 
 		_, err = pipe.Exec(ctx)
 		if err != nil {
@@ -423,7 +424,7 @@ func (r *redisRepo) Delete(ctx context.Context, id string) error {
 	}
 
 	// Get character to find owner/realm for cleanup
-	character, err := r.Get(ctx, id)
+	char, err := r.Get(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -435,9 +436,9 @@ func (r *redisRepo) Delete(ctx context.Context, id string) error {
 	pipe.Del(ctx, r.key(id))
 
 	// Remove from index sets
-	pipe.SRem(ctx, r.ownerCharactersKey(character.OwnerID), id)
-	pipe.SRem(ctx, r.realmCharactersKey(character.RealmID), id)
-	pipe.SRem(ctx, r.ownerRealmCharactersKey(character.OwnerID, character.RealmID), id)
+	pipe.SRem(ctx, r.ownerCharactersKey(char.OwnerID), id)
+	pipe.SRem(ctx, r.realmCharactersKey(char.RealmID), id)
+	pipe.SRem(ctx, r.ownerRealmCharactersKey(char.OwnerID, char.RealmID), id)
 
 	// Execute pipeline
 	_, err = pipe.Exec(ctx)

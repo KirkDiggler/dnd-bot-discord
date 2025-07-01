@@ -5,11 +5,12 @@ package character_test
 
 import (
 	"context"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"log"
 	"net/http"
 	"os"
 	"testing"
+
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	charactersRepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
@@ -141,14 +142,14 @@ func TestInventoryDisplayBug(t *testing.T) {
 		items := []string{"greataxe", "handaxe", "explorers-pack"}
 
 		for _, key := range items {
-			equipment, err := dndClient.GetEquipment(key)
+			equipmentValue, err := dndClient.GetEquipment(key)
 			if err != nil {
 				log.Printf("Error getting %s: %v", key, err)
 				continue
 			}
 
 			log.Printf("Equipment '%s': Type = %T, GetEquipmentType() = %s",
-				key, equipment, equipment.GetEquipmentType())
+				key, equipmentValue, equipmentValue.GetEquipmentType())
 		}
 	})
 }

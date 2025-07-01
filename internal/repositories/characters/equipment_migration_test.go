@@ -3,11 +3,12 @@ package characters
 import (
 	"encoding/json"
 	"fmt"
+	"testing"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -43,7 +44,7 @@ func TestDataToEquipmentWithMigration(t *testing.T) {
 				Type:      "weapon",
 				Equipment: weaponJSON,
 			},
-			expectedType: "*entities.Weapon",
+			expectedType: "*equipment.Weapon",
 			validate: func(t *testing.T, eq equipment.Equipment) {
 				weapon, ok := eq.(*equipment.Weapon)
 				require.True(t, ok)
@@ -58,7 +59,7 @@ func TestDataToEquipmentWithMigration(t *testing.T) {
 				Type:      "",
 				Equipment: weaponJSON,
 			},
-			expectedType: "*entities.Weapon",
+			expectedType: "*equipment.Weapon",
 			validate: func(t *testing.T, eq equipment.Equipment) {
 				weapon, ok := eq.(*equipment.Weapon)
 				require.True(t, ok)
@@ -72,7 +73,7 @@ func TestDataToEquipmentWithMigration(t *testing.T) {
 				Type:      "unknown",
 				Equipment: weaponJSON,
 			},
-			expectedType: "*entities.Weapon",
+			expectedType: "*equipment.Weapon",
 			validate: func(t *testing.T, eq equipment.Equipment) {
 				weapon, ok := eq.(*equipment.Weapon)
 				require.True(t, ok)
@@ -85,7 +86,7 @@ func TestDataToEquipmentWithMigration(t *testing.T) {
 				Type:      "WEAPON",
 				Equipment: weaponJSON,
 			},
-			expectedType: "*entities.Weapon",
+			expectedType: "*equipment.Weapon",
 			validate: func(t *testing.T, eq equipment.Equipment) {
 				weapon, ok := eq.(*equipment.Weapon)
 				require.True(t, ok)

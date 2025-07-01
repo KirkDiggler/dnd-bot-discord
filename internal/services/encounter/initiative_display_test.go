@@ -2,10 +2,11 @@ package encounter_test
 
 import (
 	"context"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"strings"
 	"testing"
+
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 
 	mockencrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters/mock"
 	mockcharacter "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
@@ -166,14 +167,14 @@ func TestInitiativeRollDisplay(t *testing.T) {
 			CombatLog: []string{},
 		}
 
-		// Mock session service for dungeon check (called during permission check)
-		session := &session.Session{
+		// Mock sess service for dungeon check (called during permission check)
+		sess := &session.Session{
 			ID: "dungeon-session",
 			Metadata: map[string]interface{}{
 				"sessionType": "dungeon",
 			},
 		}
-		mockSessionService.EXPECT().GetSession(ctx, "dungeon-session").Return(session, nil).Times(1)
+		mockSessionService.EXPECT().GetSession(ctx, "dungeon-session").Return(sess, nil).Times(1)
 
 		// Mock repository calls
 		mockRepo.EXPECT().Get(ctx, encounterID).Return(enc, nil)

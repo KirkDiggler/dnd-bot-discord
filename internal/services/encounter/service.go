@@ -5,6 +5,10 @@ package encounter
 import (
 	"context"
 	"fmt"
+	"log"
+	"sort"
+	"strings"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
@@ -12,9 +16,6 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat/attack"
 	gameSession "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
-	"log"
-	"sort"
-	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
@@ -395,7 +396,7 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 	}
 
 	// Get character details
-	character, err := s.characterService.GetByID(characterID)
+	char, err := s.characterService.GetByID(characterID)
 	if err != nil {
 		return nil, dnderr.Wrap(err, "failed to get character")
 	}
@@ -404,7 +405,7 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 	// Character retrieved successfully
 
 	// Ensure resources are initialized (lazy initialization)
-	resources := character.GetResources()
+	resources := char.GetResources()
 
 	// Check if this is a dungeon session - if so, perform a long rest
 	// to reset abilities like rage uses and lay on hands
@@ -416,7 +417,7 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 				resources.LongRest()
 
 				// Save the character to persist the reset abilities
-				if err := s.characterService.UpdateEquipment(character); err != nil {
+				if err := s.characterService.UpdateEquipment(char); err != nil {
 					log.Printf("Failed to save character after long rest: %v", err)
 					// Continue anyway - the abilities are reset in memory
 				}
@@ -425,16 +426,16 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 	}
 
 	// Reset action economy for the start of combat
-	log.Printf("[ACTION ECONOMY] Resetting actions for %s as they join combat", character.Name)
-	character.StartNewTurn()
+	log.Printf("[ACTION ECONOMY] Resetting actions for %s as they join combat", char.Name)
+	char.StartNewTurn()
 
 	// Save character to persist the reset action economy
-	if err := s.characterService.UpdateEquipment(character); err != nil {
+	if err := s.characterService.UpdateEquipment(char); err != nil {
 		log.Printf("Failed to save character after action economy reset: %v", err)
 	}
 
 	// Verify character belongs to player
-	if character.OwnerID != playerID {
+	if char.OwnerID != playerID {
 		return nil, dnderr.PermissionDenied("character does not belong to player")
 	}
 
@@ -450,28 +451,28 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 
 	// Get dexterity modifier for initiative
 	dexBonus := 0
-	if dexScore, exists := character.Attributes[shared.AttributeDexterity]; exists {
+	if dexScore, exists := char.Attributes[shared.AttributeDexterity]; exists {
 		dexBonus = dexScore.Bonus
 	}
 
 	// Get character class and race info
 	className := ""
-	if character.Class != nil {
-		className = character.Class.Name
+	if char.Class != nil {
+		className = char.Class.Name
 	}
 	raceName := ""
-	if character.Race != nil {
-		raceName = character.Race.Name
+	if char.Race != nil {
+		raceName = char.Race.Name
 	}
 
 	combatant := &combat.Combatant{
 		ID:              combatantID,
-		Name:            character.Name,
+		Name:            char.Name,
 		Type:            combat.CombatantTypePlayer,
 		InitiativeBonus: dexBonus,
-		CurrentHP:       character.CurrentHitPoints,
-		MaxHP:           character.MaxHitPoints,
-		AC:              character.AC,
+		CurrentHP:       char.CurrentHitPoints,
+		MaxHP:           char.MaxHitPoints,
+		AC:              char.AC,
 		Speed:           30, // Default, should come from race
 		IsActive:        true,
 		PlayerID:        playerID,

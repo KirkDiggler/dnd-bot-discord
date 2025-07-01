@@ -2,11 +2,12 @@ package character
 
 import (
 	"fmt"
+	"log"
+	"strings"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
-	"log"
-	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/utils"
@@ -37,19 +38,19 @@ func (h *SheetHandler) Handle(s *discordgo.Session, i *discordgo.InteractionCrea
 	}
 
 	// Get the character from service (all business logic is in the service)
-	character, err := h.services.CharacterService.GetByID(characterID)
+	char, err := h.services.CharacterService.GetByID(characterID)
 	if err != nil {
 		log.Printf("Error getting character %s: %v", characterID, err)
 		return respondWithError(s, i, "Character not found")
 	}
 
 	// Verify ownership
-	if character.OwnerID != i.Member.User.ID {
+	if char.OwnerID != i.Member.User.ID {
 		return respondWithError(s, i, "You can only view your own characters!")
 	}
 
 	// Build the character sheet embed (pure presentation logic)
-	embed := BuildCharacterSheetEmbed(character)
+	embed := BuildCharacterSheetEmbed(char)
 
 	// Build interactive components
 	components := BuildCharacterSheetComponents(characterID)

@@ -42,7 +42,7 @@ func TestAddPlayer_DungeonLongRest(t *testing.T) {
 	combatantID := "combatant123"
 
 	// Create a barbarian character with used rage
-	character := &character.Character{
+	char := &character.Character{
 		ID:               characterID,
 		OwnerID:          playerID,
 		Name:             "Grognak",
@@ -89,7 +89,7 @@ func TestAddPlayer_DungeonLongRest(t *testing.T) {
 
 	// Setup expectations
 	mockRepo.EXPECT().Get(ctx, encounterID).Return(encounter, nil)
-	mockCharService.EXPECT().GetByID(characterID).Return(character, nil)
+	mockCharService.EXPECT().GetByID(characterID).Return(char, nil)
 	mockSessionService.EXPECT().GetSession(ctx, sessionID).Return(dungeonSession, nil)
 
 	// Expect the character to be saved after long rest
@@ -115,8 +115,8 @@ func TestAddPlayer_DungeonLongRest(t *testing.T) {
 	assert.Equal(t, "Grognak", combatant.Name)
 
 	// Verify the character's resources were reset (in memory)
-	assert.Equal(t, 3, character.Resources.Abilities["rage"].UsesRemaining, "Rage uses should be reset to max")
-	assert.Equal(t, 30, character.Resources.HP.Current, "HP should be restored to max")
+	assert.Equal(t, 3, char.Resources.Abilities["rage"].UsesRemaining, "Rage uses should be reset to max")
+	assert.Equal(t, 30, char.Resources.HP.Current, "HP should be restored to max")
 }
 
 func TestAddPlayer_NonDungeonNoLongRest(t *testing.T) {
@@ -143,7 +143,7 @@ func TestAddPlayer_NonDungeonNoLongRest(t *testing.T) {
 	combatantID := "combatant123"
 
 	// Create a barbarian character with used rage
-	character := &character.Character{
+	char := &character.Character{
 		ID:               characterID,
 		OwnerID:          playerID,
 		Name:             "Grognak",
@@ -190,7 +190,7 @@ func TestAddPlayer_NonDungeonNoLongRest(t *testing.T) {
 
 	// Setup expectations
 	mockRepo.EXPECT().Get(ctx, encounterID).Return(encounter, nil)
-	mockCharService.EXPECT().GetByID(characterID).Return(character, nil)
+	mockCharService.EXPECT().GetByID(characterID).Return(char, nil)
 	mockSessionService.EXPECT().GetSession(ctx, sessionID).Return(regularSession, nil)
 
 	// Expect the character to be saved after action economy reset (but no long rest)
@@ -207,6 +207,6 @@ func TestAddPlayer_NonDungeonNoLongRest(t *testing.T) {
 	assert.NotNil(t, combatant)
 
 	// Verify the character's resources were NOT reset
-	assert.Equal(t, 1, character.Resources.Abilities["rage"].UsesRemaining, "Rage uses should not be reset")
-	assert.Equal(t, 20, character.Resources.HP.Current, "HP should not be restored")
+	assert.Equal(t, 1, char.Resources.Abilities["rage"].UsesRemaining, "Rage uses should not be reset")
+	assert.Equal(t, 20, char.Resources.HP.Current, "HP should not be restored")
 }

@@ -2,6 +2,7 @@ package character
 
 import (
 	"fmt"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
@@ -93,7 +94,7 @@ func (h *ShowHandler) Handle(req *ShowRequest) error {
 	// Attributes
 	if len(char.Attributes) > 0 {
 		attrValue := ""
-		for attr, _ := range char.Attributes {
+		for attr := range char.Attributes {
 			if char.Attributes[attr] != nil {
 				attrValue += fmt.Sprintf("**%s:** %d (%+d)\n",
 					attr.Short(),

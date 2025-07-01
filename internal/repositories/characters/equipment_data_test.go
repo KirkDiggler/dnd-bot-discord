@@ -35,11 +35,11 @@ func TestEquipmentDataMarshaling(t *testing.T) {
 	require.NoError(t, err)
 
 	// Convert back to Equipment
-	equipment, err := dataToEquipment(unmarshaledData)
+	eq, err := dataToEquipment(unmarshaledData)
 	require.NoError(t, err)
 
 	// Verify it's still a weapon
-	weaponBack, ok := equipment.(*equipment.Weapon)
+	weaponBack, ok := eq.(*equipment.Weapon)
 	require.True(t, ok)
 	assert.Equal(t, "longsword", weaponBack.Base.Key)
 	assert.Equal(t, "Longsword", weaponBack.Base.Name)
@@ -73,11 +73,11 @@ func TestEquipmentDataArmor(t *testing.T) {
 	require.NoError(t, err)
 
 	// Convert back to Equipment
-	equipment, err := dataToEquipment(unmarshaledData)
+	eq, err := dataToEquipment(unmarshaledData)
 	require.NoError(t, err)
 
 	// Verify it's still armor
-	armorBack, ok := equipment.(*equipment.Armor)
+	armorBack, ok := eq.(*equipment.Armor)
 	require.True(t, ok)
 	assert.Equal(t, "chainmail", armorBack.Base.Key)
 	assert.Equal(t, "Chainmail", armorBack.Base.Name)

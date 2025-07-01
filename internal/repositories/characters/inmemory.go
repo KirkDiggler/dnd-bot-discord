@@ -2,8 +2,9 @@ package characters
 
 import (
 	"context"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"sync"
+
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 )
@@ -23,25 +24,25 @@ func NewInMemoryRepository() Repository {
 }
 
 // Create stores a new character
-func (r *InMemoryRepository) Create(ctx context.Context, character *character.Character) error {
-	if character == nil {
+func (r *InMemoryRepository) Create(ctx context.Context, char *character.Character) error {
+	if char == nil {
 		return dnderr.InvalidArgument("character cannot be nil")
 	}
 
-	if character.ID == "" {
+	if char.ID == "" {
 		return dnderr.InvalidArgument("character ID is required")
 	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.characters[character.ID]; exists {
-		return dnderr.AlreadyExistsf("character with ID '%s' already exists", character.ID).
-			WithMeta("character_id", character.ID)
+	if _, exists := r.characters[char.ID]; exists {
+		return dnderr.AlreadyExistsf("character with ID '%s' already exists", char.ID).
+			WithMeta("character_id", char.ID)
 	}
 
 	// Create a copy to avoid external modifications
-	r.characters[character.ID] = character.Clone()
+	r.characters[char.ID] = char.Clone()
 
 	return nil
 }
@@ -55,14 +56,14 @@ func (r *InMemoryRepository) Get(ctx context.Context, id string) (*character.Cha
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	character, exists := r.characters[id]
+	char, exists := r.characters[id]
 	if !exists {
 		return nil, dnderr.NotFoundf("character with ID '%s' not found", id).
 			WithMeta("character_id", id)
 	}
 
 	// Return a copy to avoid external modifications
-	return character.Clone(), nil
+	return char.Clone(), nil
 }
 
 // GetByOwner retrieves all characters for a specific owner
@@ -110,25 +111,25 @@ func (r *InMemoryRepository) GetByOwnerAndRealm(ctx context.Context, ownerID, re
 }
 
 // Update updates an existing character
-func (r *InMemoryRepository) Update(ctx context.Context, character *character.Character) error {
-	if character == nil {
+func (r *InMemoryRepository) Update(ctx context.Context, char *character.Character) error {
+	if char == nil {
 		return dnderr.InvalidArgument("character cannot be nil")
 	}
 
-	if character.ID == "" {
+	if char.ID == "" {
 		return dnderr.InvalidArgument("character ID is required")
 	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.characters[character.ID]; !exists {
-		return dnderr.NotFoundf("character with ID '%s' not found", character.ID).
-			WithMeta("character_id", character.ID)
+	if _, exists := r.characters[char.ID]; !exists {
+		return dnderr.NotFoundf("character with ID '%s' not found", char.ID).
+			WithMeta("character_id", char.ID)
 	}
 
 	// Create a copy to avoid external modifications
-	r.characters[character.ID] = character.Clone()
+	r.characters[char.ID] = char.Clone()
 
 	return nil
 }

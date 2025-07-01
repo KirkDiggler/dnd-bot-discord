@@ -3,8 +3,9 @@ package gamesessions
 import (
 	"context"
 	"fmt"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"sync"
+
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 )
 
 // inMemoryRepository implements Repository using in-memory storage
@@ -23,31 +24,31 @@ func NewInMemoryRepository() Repository {
 }
 
 // Create creates a new session
-func (r *inMemoryRepository) Create(ctx context.Context, session *session.Session) error {
-	if session == nil {
+func (r *inMemoryRepository) Create(ctx context.Context, sess *session.Session) error {
+	if sess == nil {
 		return fmt.Errorf("session cannot be nil")
 	}
-	if session.ID == "" {
+	if sess.ID == "" {
 		return fmt.Errorf("session ID cannot be empty")
 	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.sessions[session.ID]; exists {
-		return fmt.Errorf("session with ID %s already exists", session.ID)
+	if _, exists := r.sessions[sess.ID]; exists {
+		return fmt.Errorf("session with ID %s already exists", sess.ID)
 	}
 
-	if session.InviteCode != "" {
-		if existingID, exists := r.inviteCodes[session.InviteCode]; exists {
-			return fmt.Errorf("invite code %s already in use by session %s", session.InviteCode, existingID)
+	if sess.InviteCode != "" {
+		if existingID, exists := r.inviteCodes[sess.InviteCode]; exists {
+			return fmt.Errorf("invite code %s already in use by session %s", sess.InviteCode, existingID)
 		}
-		r.inviteCodes[session.InviteCode] = session.ID
+		r.inviteCodes[sess.InviteCode] = sess.ID
 	}
 
 	// Create a deep copy to avoid external modifications
-	sessionCopy := *session
-	r.sessions[session.ID] = &sessionCopy
+	sessionCopy := *sess
+	r.sessions[sess.ID] = &sessionCopy
 
 	return nil
 }
@@ -57,14 +58,14 @@ func (r *inMemoryRepository) Get(ctx context.Context, id string) (*session.Sessi
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	session, exists := r.sessions[id]
+	sess, exists := r.sessions[id]
 	if !exists {
 		return nil, fmt.Errorf("session not found: %s", id)
 	}
 
 	// Return a copy to avoid external modifications
-	sessionCopy := *session
-	return &sessionCopy, nil
+	sessCopy := *sess
+	return &sessCopy, nil
 }
 
 // GetByInviteCode retrieves a session by its invite code
@@ -77,52 +78,52 @@ func (r *inMemoryRepository) GetByInviteCode(ctx context.Context, code string) (
 		return nil, fmt.Errorf("no session found with invite code: %s", code)
 	}
 
-	session, exists := r.sessions[sessionID]
+	sess, exists := r.sessions[sessionID]
 	if !exists {
 		return nil, fmt.Errorf("session not found: %s", sessionID)
 	}
 
 	// Return a copy to avoid external modifications
-	sessionCopy := *session
-	return &sessionCopy, nil
+	sessCopy := *sess
+	return &sessCopy, nil
 }
 
 // Update updates an existing session
-func (r *inMemoryRepository) Update(ctx context.Context, session *session.Session) error {
-	if session == nil {
+func (r *inMemoryRepository) Update(ctx context.Context, sess *session.Session) error {
+	if sess == nil {
 		return fmt.Errorf("session cannot be nil")
 	}
-	if session.ID == "" {
+	if sess.ID == "" {
 		return fmt.Errorf("session ID cannot be empty")
 	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	existing, exists := r.sessions[session.ID]
+	existing, exists := r.sessions[sess.ID]
 	if !exists {
-		return fmt.Errorf("session not found: %s", session.ID)
+		return fmt.Errorf("session not found: %s", sess.ID)
 	}
 
 	// Handle invite code changes
-	if existing.InviteCode != session.InviteCode {
+	if existing.InviteCode != sess.InviteCode {
 		// Remove old invite code mapping
 		if existing.InviteCode != "" {
 			delete(r.inviteCodes, existing.InviteCode)
 		}
 
 		// Add new invite code mapping
-		if session.InviteCode != "" {
-			if existingID, exists := r.inviteCodes[session.InviteCode]; exists && existingID != session.ID {
-				return fmt.Errorf("invite code %s already in use by session %s", session.InviteCode, existingID)
+		if sess.InviteCode != "" {
+			if existingID, exists := r.inviteCodes[sess.InviteCode]; exists && existingID != sess.ID {
+				return fmt.Errorf("invite code %s already in use by session %s", sess.InviteCode, existingID)
 			}
-			r.inviteCodes[session.InviteCode] = session.ID
+			r.inviteCodes[sess.InviteCode] = sess.ID
 		}
 	}
 
 	// Update with a copy
-	sessionCopy := *session
-	r.sessions[session.ID] = &sessionCopy
+	sessionCopy := *sess
+	r.sessions[sess.ID] = &sessionCopy
 
 	return nil
 }
@@ -132,14 +133,14 @@ func (r *inMemoryRepository) Delete(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	session, exists := r.sessions[id]
+	sess, exists := r.sessions[id]
 	if !exists {
 		return fmt.Errorf("session not found: %s", id)
 	}
 
 	// Remove invite code mapping
-	if session.InviteCode != "" {
-		delete(r.inviteCodes, session.InviteCode)
+	if sess.InviteCode != "" {
+		delete(r.inviteCodes, sess.InviteCode)
 	}
 
 	delete(r.sessions, id)

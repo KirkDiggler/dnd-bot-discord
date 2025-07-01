@@ -15,7 +15,7 @@ func TestJoinPartyWorkflow(t *testing.T) {
 		userID := "player-123"
 		characterID := "char-123"
 
-		session := &session.Session{
+		sess := &session.Session{
 			ID: "session-123",
 			Members: map[string]*session.SessionMember{
 				userID: {
@@ -27,10 +27,10 @@ func TestJoinPartyWorkflow(t *testing.T) {
 		}
 
 		// User is already in session
-		assert.True(t, session.IsUserInSession(userID))
+		assert.True(t, sess.IsUserInSession(userID))
 
 		// But has no character
-		member := session.Members[userID]
+		member := sess.Members[userID]
 		assert.Empty(t, member.CharacterID)
 
 		// After selecting character
@@ -43,7 +43,7 @@ func TestJoinPartyWorkflow(t *testing.T) {
 		existingUserID := "player-existing"
 		newUserID := "player-new"
 
-		session := &session.Session{
+		sess := &session.Session{
 			ID: "session-456",
 			Members: map[string]*session.SessionMember{
 				existingUserID: {
@@ -55,17 +55,17 @@ func TestJoinPartyWorkflow(t *testing.T) {
 		}
 
 		// New user is not in session
-		assert.False(t, session.IsUserInSession(newUserID))
+		assert.False(t, sess.IsUserInSession(newUserID))
 
 		// After joining
-		session.Members[newUserID] = &session.SessionMember{
+		sess.Members[newUserID] = &session.SessionMember{
 			UserID:      newUserID,
 			Role:        session.SessionRolePlayer,
 			CharacterID: "char-new",
 		}
 
-		assert.True(t, session.IsUserInSession(newUserID))
-		assert.NotEmpty(t, session.Members[newUserID].CharacterID)
+		assert.True(t, sess.IsUserInSession(newUserID))
+		assert.NotEmpty(t, sess.Members[newUserID].CharacterID)
 	})
 
 	t.Run("Cannot enter room workflow states", func(t *testing.T) {
@@ -103,24 +103,24 @@ func TestJoinPartyWorkflow(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				session := &session.Session{
+				sess := &session.Session{
 					ID:      "session-test",
 					Members: map[string]*session.SessionMember{},
 				}
 
 				if tc.inSession {
-					session.Members[userID] = &session.SessionMember{
+					sess.Members[userID] = &session.SessionMember{
 						UserID: userID,
 						Role:   session.SessionRolePlayer,
 					}
 					if tc.hasCharacter {
-						session.Members[userID].CharacterID = "char-test"
+						sess.Members[userID].CharacterID = "char-test"
 					}
 				}
 
 				// Check if can enter
-				canEnter := session.IsUserInSession(userID)
-				if canEnter && session.Members[userID].CharacterID == "" {
+				canEnter := sess.IsUserInSession(userID)
+				if canEnter && sess.Members[userID].CharacterID == "" {
 					canEnter = false
 				}
 

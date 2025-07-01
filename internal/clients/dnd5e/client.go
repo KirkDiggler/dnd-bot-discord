@@ -1,14 +1,15 @@
 package dnd5e
 
 import (
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook"
 
 	apiEntities "github.com/fadedpez/dnd5e-api/entities"
 
@@ -132,7 +133,7 @@ func (c *client) GetEquipmentByCategory(category string) ([]equipment.Equipment,
 	}
 
 	// Fetch each piece of equipment
-	equipment := make([]equipment.Equipment, 0, len(categoryData.Equipment))
+	equipmentSlice := make([]equipment.Equipment, 0, len(categoryData.Equipment))
 	for _, ref := range categoryData.Equipment {
 		if ref.Key != "" {
 			equip, err := c.GetEquipment(ref.Key)
@@ -140,11 +141,11 @@ func (c *client) GetEquipmentByCategory(category string) ([]equipment.Equipment,
 				// Log error but continue with other equipment
 				continue
 			}
-			equipment = append(equipment, equip)
+			equipmentSlice = append(equipmentSlice, equip)
 		}
 	}
 
-	return equipment, nil
+	return equipmentSlice, nil
 }
 
 // GetClassFeatures returns features for a class at a specific level
@@ -244,7 +245,7 @@ func (c *client) ListEquipment() ([]equipment.Equipment, error) {
 	}
 
 	// Fetch each piece of equipment
-	equipment := make([]equipment.Equipment, 0, len(equipmentRefs))
+	equipmentValue := make([]equipment.Equipment, 0, len(equipmentRefs))
 	for _, ref := range equipmentRefs {
 		if ref.Key != "" {
 			equip, err := c.GetEquipment(ref.Key)
@@ -254,12 +255,12 @@ func (c *client) ListEquipment() ([]equipment.Equipment, error) {
 				continue
 			}
 			if equip != nil {
-				equipment = append(equipment, equip)
+				equipmentValue = append(equipmentValue, equip)
 			}
 		}
 	}
 
-	return equipment, nil
+	return equipmentValue, nil
 }
 
 func apiToMonsterTemplate(input *apiEntities.Monster) *combat.MonsterTemplate {

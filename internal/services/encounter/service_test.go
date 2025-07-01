@@ -3,11 +3,12 @@ package encounter_test
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
-	"testing"
 
 	mockencrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters/mock"
 	mockcharacter "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
@@ -630,15 +631,15 @@ func TestUpdateMessageID(t *testing.T) {
 		UUIDGenerator:    mockUUID,
 	})
 
-	// Create test session
-	session := &session.Session{
+	// Create test sess
+	sess := &session.Session{
 		ID: "session-1",
 		Members: map[string]*session.SessionMember{
 			"dm-1": {Role: session.SessionRoleDM},
 		},
 	}
 
-	mockSessionSvc.EXPECT().GetSession(ctx, "session-1").Return(session, nil).AnyTimes()
+	mockSessionSvc.EXPECT().GetSession(ctx, "session-1").Return(sess, nil).AnyTimes()
 
 	// Mock UUID generation
 	mockUUID.EXPECT().New().Return("enc-1")

@@ -3,11 +3,12 @@ package session
 import (
 	"context"
 	"fmt"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"strings"
 
-	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
+
+	gameSession "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 )
 
 type ListRequest struct {
@@ -62,20 +63,20 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 	}
 
 	// Group sessions by status
-	activeSessions := make([]*session.Session, 0)
-	planningSessions := make([]*session.Session, 0)
-	pausedSessions := make([]*session.Session, 0)
-	endedSessions := make([]*session.Session, 0)
+	activeSessions := make([]*gameSession.Session, 0)
+	planningSessions := make([]*gameSession.Session, 0)
+	pausedSessions := make([]*gameSession.Session, 0)
+	endedSessions := make([]*gameSession.Session, 0)
 
 	for _, session := range sessions {
 		switch session.Status {
-		case session.SessionStatusActive:
+		case gameSession.SessionStatusActive:
 			activeSessions = append(activeSessions, session)
-		case session.SessionStatusPlanning:
+		case gameSession.SessionStatusPlanning:
 			planningSessions = append(planningSessions, session)
-		case session.SessionStatusPaused:
+		case gameSession.SessionStatusPaused:
 			pausedSessions = append(pausedSessions, session)
-		case session.SessionStatusEnded:
+		case gameSession.SessionStatusEnded:
 			endedSessions = append(endedSessions, session)
 		}
 	}
@@ -162,14 +163,14 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 	return err
 }
 
-func (h *ListHandler) getUserRole(session *session.Session, userID string) string {
+func (h *ListHandler) getUserRole(session *gameSession.Session, userID string) string {
 	if member, exists := session.Members[userID]; exists {
 		switch member.Role {
-		case session.SessionRoleDM:
+		case gameSession.SessionRoleDM:
 			return "DM"
-		case session.SessionRolePlayer:
+		case gameSession.SessionRolePlayer:
 			return "Player"
-		case session.SessionRoleSpectator:
+		case gameSession.SessionRoleSpectator:
 			return "Spectator"
 		}
 	}

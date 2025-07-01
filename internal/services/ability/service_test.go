@@ -2,9 +2,10 @@ package ability
 
 import (
 	"context"
+	"testing"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
-	"testing"
 
 	mockdice "github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/testutils"
@@ -245,13 +246,13 @@ func TestAbilityService_GetAvailableAbilities(t *testing.T) {
 
 	mockCharSvc := mockchar.NewMockService(ctrl)
 
-	character := createTestCharacter("fighter", 1, nil)
+	char := createTestCharacter("fighter", 1, nil)
 	// Set second wind to no uses
-	character.Resources.Abilities["second-wind"].UsesRemaining = 0
+	char.Resources.Abilities["second-wind"].UsesRemaining = 0
 
 	mockCharSvc.EXPECT().
 		GetByID("char_123").
-		Return(character, nil)
+		Return(char, nil)
 
 	svc := NewService(&ServiceConfig{
 		CharacterService: mockCharSvc,

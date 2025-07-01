@@ -5,10 +5,11 @@ package loot
 import (
 	"context"
 	"fmt"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"log"
 	"math/rand"
 	"time"
+
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
@@ -95,9 +96,9 @@ func (s *service) GenerateTreasure(ctx context.Context, difficulty string, roomN
 	// Equipment from API if available
 	if s.dndClient != nil && roomNumber%5 == 0 {
 		// Try to get equipment from API
-		equipment, err := s.getRandomEquipment(ctx)
-		if err == nil && equipment != nil {
-			treasure = append(treasure, equipment.GetName())
+		equipmentValue, err := s.getRandomEquipment(ctx)
+		if err == nil && equipmentValue != nil {
+			treasure = append(treasure, equipmentValue.GetName())
 		}
 	}
 
@@ -192,17 +193,17 @@ func (s *service) getRandomEquipment(ctx context.Context) (equipment.Equipment, 
 	}
 
 	// Try to get equipment list
-	equipment, err := s.dndClient.ListEquipment()
+	equipmentSlice, err := s.dndClient.ListEquipment()
 	if err != nil {
 		return nil, err
 	}
 
-	if len(equipment) == 0 {
+	if len(equipmentSlice) == 0 {
 		return nil, dnderr.NotFound("no equipment available")
 	}
 
 	// Return random equipment
-	return equipment[s.random.Intn(len(equipment))], nil
+	return equipmentSlice[s.random.Intn(len(equipmentSlice))], nil
 }
 
 // getSpecialItems returns special items based on room progression

@@ -1,26 +1,29 @@
 package character_test
 
 import (
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 )
 
 func TestCharacter_EquipLeatherArmor_CalculatesAC(t *testing.T) {
 	// Create a character with +4 DEX bonus
-	char := &Character{
+	char := &character.Character{
 		ID:      "test-char",
 		OwnerID: "test-owner",
 		Name:    "Test Ranger",
 		Level:   1,
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeDexterity: {
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeDexterity: {
 				Score: 18, // +4 bonus
 				Bonus: 4,
 			},
 		},
-		EquippedSlots: make(map[Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
 	}
 
@@ -49,7 +52,7 @@ func TestCharacter_EquipLeatherArmor_CalculatesAC(t *testing.T) {
 	assert.True(t, success, "Should successfully equip leather armor")
 
 	// Check if armor is actually equipped
-	equippedArmor := char.EquippedSlots[SlotBody]
+	equippedArmor := char.EquippedSlots[shared.SlotBody]
 	assert.NotNil(t, equippedArmor, "Armor should be equipped in body slot")
 
 	// Debug print the actual armor
@@ -64,18 +67,18 @@ func TestCharacter_EquipLeatherArmor_CalculatesAC(t *testing.T) {
 
 func TestCharacter_EquipChainMail_IgnoresDex(t *testing.T) {
 	// Create a character with +4 DEX bonus
-	char := &Character{
+	char := &character.Character{
 		ID:      "test-char",
 		OwnerID: "test-owner",
 		Name:    "Test Fighter",
 		Level:   1,
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeDexterity: {
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeDexterity: {
 				Score: 18, // +4 bonus
 				Bonus: 4,
 			},
 		},
-		EquippedSlots: make(map[Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
 	}
 
@@ -106,18 +109,18 @@ func TestCharacter_EquipChainMail_IgnoresDex(t *testing.T) {
 
 func TestCharacter_EquipShield_AddsBonus(t *testing.T) {
 	// Create a character with leather armor and shield
-	char := &Character{
+	char := &character.Character{
 		ID:      "test-char",
 		OwnerID: "test-owner",
 		Name:    "Test Fighter",
 		Level:   1,
-		Attributes: map[Attribute]*AbilityScore{
-			AttributeDexterity: {
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeDexterity: {
 				Score: 14, // +2 bonus
 				Bonus: 2,
 			},
 		},
-		EquippedSlots: make(map[Slot]equipment.Equipment),
+		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 		Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
 	}
 

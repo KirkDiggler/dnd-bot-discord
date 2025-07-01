@@ -8,8 +8,8 @@ import (
 )
 
 // CalculateAC calculates AC based on class features, armor, and abilities
-func CalculateAC(character *character.Character) int {
-	if character == nil {
+func CalculateAC(char *character.Character) int {
+	if char == nil {
 		return 10
 	}
 
@@ -18,13 +18,13 @@ func CalculateAC(character *character.Character) int {
 	wisMod := 0
 	conMod := 0
 
-	if dexScore, exists := character.Attributes[shared.AttributeDexterity]; exists && dexScore != nil {
+	if dexScore, exists := char.Attributes[shared.AttributeDexterity]; exists && dexScore != nil {
 		dexMod = dexScore.Bonus
 	}
-	if wisScore, exists := character.Attributes[shared.AttributeWisdom]; exists && wisScore != nil {
+	if wisScore, exists := char.Attributes[shared.AttributeWisdom]; exists && wisScore != nil {
 		wisMod = wisScore.Bonus
 	}
-	if conScore, exists := character.Attributes[shared.AttributeConstitution]; exists && conScore != nil {
+	if conScore, exists := char.Attributes[shared.AttributeConstitution]; exists && conScore != nil {
 		conMod = conScore.Bonus
 	}
 
@@ -33,8 +33,8 @@ func CalculateAC(character *character.Character) int {
 	baseAC := 10
 
 	// Check equipped slots for armor
-	if character.EquippedSlots != nil {
-		for slot, item := range character.EquippedSlots {
+	if char.EquippedSlots != nil {
+		for slot, item := range char.EquippedSlots {
 			if item != nil && slot == shared.SlotBody && item.GetEquipmentType() == equipment.EquipmentTypeArmor {
 				hasArmor = true
 				// Try to cast to Armor type to get AC values
@@ -102,8 +102,8 @@ func CalculateAC(character *character.Character) int {
 
 	// Get class features
 	classFeatures := []rulebook.CharacterFeature{}
-	if character.Class != nil {
-		classFeatures = GetClassFeatures(character.Class.Key, character.Level)
+	if char.Class != nil {
+		classFeatures = GetClassFeatures(char.Class.Key, char.Level)
 	}
 
 	// Calculate AC based on armor or unarmored defense
@@ -127,8 +127,8 @@ func CalculateAC(character *character.Character) int {
 
 	// Check for shield (works with any AC calculation including unarmored defense)
 	hasShield := false
-	if character.EquippedSlots != nil {
-		for _, item := range character.EquippedSlots {
+	if char.EquippedSlots != nil {
+		for _, item := range char.EquippedSlots {
 			if item != nil && item.GetKey() == "shield" {
 				hasShield = true
 				break
@@ -144,13 +144,13 @@ func CalculateAC(character *character.Character) int {
 }
 
 // CalculateInitiativeBonus calculates initiative modifier
-func CalculateInitiativeBonus(character *character.Character) int {
-	if character == nil {
+func CalculateInitiativeBonus(char *character.Character) int {
+	if char == nil {
 		return 0
 	}
 
 	dexMod := 0
-	if dexScore, exists := character.Attributes[shared.AttributeDexterity]; exists && dexScore != nil {
+	if dexScore, exists := char.Attributes[shared.AttributeDexterity]; exists && dexScore != nil {
 		dexMod = dexScore.Bonus
 	}
 
@@ -161,11 +161,11 @@ func CalculateInitiativeBonus(character *character.Character) int {
 }
 
 // CalculateSpeed calculates movement speed including racial modifiers
-func CalculateSpeed(character *character.Character) int {
+func CalculateSpeed(char *character.Character) int {
 	baseSpeed := 30 // Default for most races
 
-	if character.Race != nil {
-		switch character.Race.Key {
+	if char.Race != nil {
+		switch char.Race.Key {
 		case "dwarf":
 			baseSpeed = 25
 		case "halfling":

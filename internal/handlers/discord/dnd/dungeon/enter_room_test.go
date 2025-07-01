@@ -10,7 +10,7 @@ import (
 func TestEnterRoomValidation(t *testing.T) {
 	t.Run("Player cannot enter room without joining party", func(t *testing.T) {
 		// Session without the player as member
-		session := &session.Session{
+		sess := &session.Session{
 			ID: "session-123",
 			Members: map[string]*session.SessionMember{
 				"dm-123": {
@@ -22,14 +22,14 @@ func TestEnterRoomValidation(t *testing.T) {
 		}
 
 		playerID := "player-123"
-		canEnter := session.IsUserInSession(playerID)
+		canEnter := sess.IsUserInSession(playerID)
 
 		assert.False(t, canEnter, "Player should not be able to enter without joining")
 	})
 
 	t.Run("Player cannot enter combat room without character", func(t *testing.T) {
 		// Session with player but no character selected
-		session := &session.Session{
+		sess := &session.Session{
 			ID: "session-456",
 			Members: map[string]*session.SessionMember{
 				"player-456": {
@@ -40,7 +40,7 @@ func TestEnterRoomValidation(t *testing.T) {
 			},
 		}
 
-		member := session.Members["player-456"]
+		member := sess.Members["player-456"]
 		hasCharacter := member.CharacterID != ""
 
 		assert.False(t, hasCharacter, "Player should not be able to enter combat without character")
@@ -48,7 +48,7 @@ func TestEnterRoomValidation(t *testing.T) {
 
 	t.Run("Player with character can enter room", func(t *testing.T) {
 		// Session with player and character selected
-		session := &session.Session{
+		sess := &session.Session{
 			ID: "session-789",
 			Members: map[string]*session.SessionMember{
 				"player-789": {
@@ -60,15 +60,15 @@ func TestEnterRoomValidation(t *testing.T) {
 		}
 
 		playerID := "player-789"
-		member := session.Members[playerID]
+		member := sess.Members[playerID]
 
-		canEnter := session.IsUserInSession(playerID) && member.CharacterID != ""
+		canEnter := sess.IsUserInSession(playerID) && member.CharacterID != ""
 		assert.True(t, canEnter, "Player with character should be able to enter")
 	})
 
 	t.Run("DM can enter room without character", func(t *testing.T) {
 		// DM doesn't need a character
-		session := &session.Session{
+		sess := &session.Session{
 			ID: "session-dm",
 			Members: map[string]*session.SessionMember{
 				"dm-999": {
@@ -80,10 +80,10 @@ func TestEnterRoomValidation(t *testing.T) {
 		}
 
 		dmID := "dm-999"
-		member := session.Members[dmID]
+		member := sess.Members[dmID]
 
 		// DM can enter regardless of character
-		canEnter := session.IsUserInSession(dmID) &&
+		canEnter := sess.IsUserInSession(dmID) &&
 			(member.Role == session.SessionRoleDM || member.CharacterID != "")
 
 		assert.True(t, canEnter, "DM should be able to enter without character")
