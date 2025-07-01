@@ -47,3 +47,29 @@ func (e *Armor) GetSlot() shared.Slot {
 
 	return shared.SlotBody
 }
+
+// GetACBase returns the base AC for this armor
+func (e *Armor) GetACBase() int {
+	if e.ArmorClass != nil && e.ArmorClass.Base > 0 {
+		return e.ArmorClass.Base
+	}
+	// Return -1 to indicate no AC data available
+	return -1
+}
+
+// UsesDexBonus returns whether this armor uses DEX bonus
+func (e *Armor) UsesDexBonus() bool {
+	if e.ArmorClass != nil {
+		return e.ArmorClass.DexBonus
+	}
+	// Default to true for no armor data
+	return true
+}
+
+// GetMaxDexBonus returns the maximum DEX bonus (0 = unlimited)
+func (e *Armor) GetMaxDexBonus() int {
+	if e.ArmorClass != nil {
+		return e.ArmorClass.MaxBonus
+	}
+	return 0
+}

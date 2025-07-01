@@ -168,6 +168,9 @@ func TestDnD5eACCalculator_Calculate(t *testing.T) {
 						Key:  "shield",
 					},
 					ArmorCategory: equipment.ArmorCategoryShield,
+					ArmorClass: &equipment.ArmorClass{
+						Base: 2, // Shield bonus
+					},
 				}
 				return char
 			},

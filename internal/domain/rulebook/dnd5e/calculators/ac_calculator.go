@@ -46,23 +46,29 @@ func (c *DnD5eACCalculator) Calculate(char *character.Character) int {
 		for slot, item := range char.EquippedSlots {
 			if item != nil && slot == shared.SlotBody && item.GetEquipmentType() == equipment.EquipmentTypeArmor {
 				hasArmor = true
-				// Try to cast to Armor type to get AC values
-				if armor, ok := item.(*equipment.Armor); ok && armor.ArmorClass != nil {
-					baseAC = armor.ArmorClass.Base
-					// Special handling for leather armor - D&D 5e API may incorrectly set DexBonus to false
-					if item.GetKey() == "leather-armor" || item.GetKey() == "studded-leather-armor" {
-						// Light armor always uses full DEX bonus
-						// Keep dexMod as is
-					} else if !armor.ArmorClass.DexBonus {
-						dexMod = 0 // Heavy armor doesn't use DEX
-					} else if armor.ArmorClass.MaxBonus > 0 {
-						// Limit dex bonus for medium armor
-						if dexMod > armor.ArmorClass.MaxBonus {
-							dexMod = armor.ArmorClass.MaxBonus
+				// Check if it implements ACProvider interface
+				if acProvider, ok := item.(equipment.ACProvider); ok {
+					acBase := acProvider.GetACBase()
+					if acBase < 0 {
+						// No AC data, use fallback
+						baseAC = c.getArmorACFallback(item.GetKey(), &dexMod)
+					} else {
+						baseAC = acBase
+						// Special handling for leather armor - D&D 5e API may incorrectly set DexBonus to false
+						if item.GetKey() == "leather-armor" || item.GetKey() == "studded-leather-armor" {
+							// Light armor always uses full DEX bonus
+							// Keep dexMod as is
+						} else if !acProvider.UsesDexBonus() {
+							dexMod = 0 // Heavy armor doesn't use DEX
+						} else if maxBonus := acProvider.GetMaxDexBonus(); maxBonus > 0 {
+							// Limit dex bonus for medium armor
+							if dexMod > maxBonus {
+								dexMod = maxBonus
+							}
 						}
 					}
 				} else {
-					// Fallback for armor without proper AC data
+					// Fallback for equipment that doesn't implement ACProvider
 					baseAC = c.getArmorACFallback(item.GetKey(), &dexMod)
 				}
 				break
@@ -111,15 +117,8 @@ func (c *DnD5eACCalculator) Calculate(char *character.Character) int {
 	}
 
 	// Apply Defense fighting style (+1 AC while wearing armor)
-	if hasArmor && char.Features != nil {
-		for _, feature := range char.Features {
-			if feature.Key == "fighting_style" && feature.Metadata != nil {
-				if style, ok := feature.Metadata["style"].(string); ok && style == "defense" {
-					ac++
-					break
-				}
-			}
-		}
+	if hasArmor && c.hasDefenseFightingStyle(char) {
+		ac++
 	}
 
 	// Apply any AC modifiers from active effects
@@ -174,4 +173,23 @@ func (c *DnD5eACCalculator) getArmorACFallback(key string, dexMod *int) int {
 	default:
 		return 10
 	}
+}
+
+// hasDefenseFightingStyle checks if the character has the Defense fighting style
+func (c *DnD5eACCalculator) hasDefenseFightingStyle(char *character.Character) bool {
+	if char.Features == nil {
+		return false
+	}
+
+	for _, feature := range char.Features {
+		if feature.Key == "fighting_style" && feature.Metadata != nil {
+			// Check if the style is defense
+			if styleValue, exists := feature.Metadata["style"]; exists {
+				if style, isString := styleValue.(string); isString && style == "defense" {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
