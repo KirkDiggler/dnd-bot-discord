@@ -44,7 +44,7 @@ func (h *SpellDamageHandler) HandleEvent(event *events.GameEvent) error {
 	}
 
 	// Get encounter ID (would need to be added to event context)
-	encounterID, exists := event.GetStringContext("encounter_id")
+	encounterID, exists := event.GetStringContext(events.ContextEncounterID)
 	if !exists {
 		log.Printf("SpellDamageHandler: No encounter ID in spell damage event")
 		return nil
@@ -53,7 +53,7 @@ func (h *SpellDamageHandler) HandleEvent(event *events.GameEvent) error {
 	// Apply the damage
 	// TODO: Need to get userID from event context - for now use system
 	userID := "system"
-	if uid, exists := event.GetStringContext("user_id"); exists {
+	if uid, exists := event.GetStringContext(events.ContextUserID); exists {
 		userID = uid
 	}
 
@@ -65,7 +65,7 @@ func (h *SpellDamageHandler) HandleEvent(event *events.GameEvent) error {
 	}
 
 	// Get spell name for logging
-	spellName, _ := event.GetStringContext("spell_name")
+	spellName, _ := event.GetStringContext(events.ContextSpellName)
 	damageType, _ := event.GetStringContext(events.ContextDamageType)
 
 	log.Printf("SpellDamageHandler: Applied %d %s damage from %s to target %s",

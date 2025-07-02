@@ -100,7 +100,7 @@ func (v *ViciousMockeryHandler) Execute(ctx context.Context, caster *character.C
 			WithActor(caster).
 			WithTarget(target).
 			WithContext(events.ContextSpellLevel, 0). // Cantrip
-			WithContext("spell_name", "Vicious Mockery").
+			WithContext(events.ContextSpellName, "Vicious Mockery").
 			WithContext(events.ContextSpellSchool, "enchantment").
 			WithContext(events.ContextSpellSaveType, "WIS").
 			WithContext(events.ContextSpellSaveDC, saveDC)
@@ -146,9 +146,9 @@ func (v *ViciousMockeryHandler) Execute(ctx context.Context, caster *character.C
 				WithTarget(target).
 				WithContext(events.ContextDamage, damage).
 				WithContext(events.ContextDamageType, "psychic").
-				WithContext("spell_name", "Vicious Mockery").
+				WithContext(events.ContextSpellName, "Vicious Mockery").
 				WithContext("damage_dice", fmt.Sprintf("%dd4", diceCount)).
-				WithContext("encounter_id", input.EncounterID).
+				WithContext(events.ContextEncounterID, input.EncounterID).
 				WithContext(events.ContextTargetID, targetID)
 
 			if err := v.eventBus.Emit(damageEvent); err != nil {

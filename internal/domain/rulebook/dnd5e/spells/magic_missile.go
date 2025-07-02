@@ -107,7 +107,7 @@ func (m *MagicMissileHandler) Execute(ctx context.Context, caster *character.Cha
 		spellEvent := events.NewGameEvent(events.OnSpellCast).
 			WithActor(caster).
 			WithContext(events.ContextSpellLevel, input.SpellLevel).
-			WithContext("spell_name", "Magic Missile").
+			WithContext(events.ContextSpellName, "Magic Missile").
 			WithContext(events.ContextSpellSchool, "evocation")
 
 		if err := m.eventBus.Emit(spellEvent); err != nil {
@@ -153,9 +153,9 @@ func (m *MagicMissileHandler) Execute(ctx context.Context, caster *character.Cha
 				WithTarget(target).
 				WithContext(events.ContextDamage, totalDamage).
 				WithContext(events.ContextDamageType, "force").
-				WithContext("spell_name", "Magic Missile").
+				WithContext(events.ContextSpellName, "Magic Missile").
 				WithContext("num_missiles", missiles).
-				WithContext("encounter_id", input.EncounterID).
+				WithContext(events.ContextEncounterID, input.EncounterID).
 				WithContext(events.ContextTargetID, targetID)
 
 			if err := m.eventBus.Emit(damageEvent); err != nil {

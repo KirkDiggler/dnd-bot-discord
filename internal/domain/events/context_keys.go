@@ -47,4 +47,9 @@ const (
 	ContextSneakAttackDice   = "sneak_attack_dice"   // string: dice notation (e.g., "3d6")
 	ContextDamageBonusSource = "damage_bonus_source" // string: source of damage bonus
 	ContextResistanceApplied = "resistance_applied"  // string: type of resistance applied
+
+	// Session and encounter context
+	ContextEncounterID = "encounter_id" // string: ID of the encounter
+	ContextUserID      = "user_id"      // string: ID of the user performing action
+	ContextSpellName   = "spell_name"   // string: name of the spell being cast
 )
