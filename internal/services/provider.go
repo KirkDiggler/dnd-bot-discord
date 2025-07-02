@@ -12,6 +12,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/gamesessions"
 	abilityService "github.com/KirkDiggler/dnd-bot-discord/internal/services/ability"
 	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	conditionService "github.com/KirkDiggler/dnd-bot-discord/internal/services/condition"
 	dungeonService "github.com/KirkDiggler/dnd-bot-discord/internal/services/dungeon"
 	encounterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/encounter"
 	lootService "github.com/KirkDiggler/dnd-bot-discord/internal/services/loot"
@@ -28,6 +29,7 @@ type Provider struct {
 	MonsterService   monsterService.Service
 	LootService      lootService.Service
 	AbilityService   abilityService.Service
+	ConditionService conditionService.Service
 	DiceRoller       dice.Roller
 	EventBus         *events.EventBus
 }
@@ -84,11 +86,15 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 		CharacterService: charService,
 	})
 
+	// Create condition service
+	condService := conditionService.NewService(eventBus)
+
 	// Create encounter service
 	encService := encounterService.NewService(&encounterService.ServiceConfig{
 		Repository:       encounterRepo,
 		SessionService:   sessService,
 		CharacterService: charService,
+		ConditionService: condService,
 		DiceRoller:       cfg.DiceRoller,
 		EventBus:         eventBus,
 	})
@@ -135,6 +141,7 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 		MonsterService:   monstService,
 		LootService:      ltService,
 		AbilityService:   abilService,
+		ConditionService: condService,
 		DiceRoller:       cfg.DiceRoller,
 		EventBus:         eventBus,
 	}

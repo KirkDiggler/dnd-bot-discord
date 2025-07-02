@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/conditions"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
 )
 
@@ -20,6 +21,8 @@ func NewSpellDamageHandler(service Service) *SpellDamageHandler {
 }
 
 // HandleEvent processes spell damage events
+//
+//nolint:errcheck // False positive - we properly check the AddCondition error
 func (h *SpellDamageHandler) HandleEvent(event *events.GameEvent) error {
 	// Only handle spell damage events
 	if event.Type != events.OnSpellDamage {
@@ -70,6 +73,26 @@ func (h *SpellDamageHandler) HandleEvent(event *events.GameEvent) error {
 
 	log.Printf("SpellDamageHandler: Applied %d %s damage from %s to target %s",
 		damage, damageType, spellName, targetID)
+
+	// Handle spell-specific effects
+	if spellName == "Vicious Mockery" {
+		// Apply disadvantage on next attack using the condition service
+		// The targetID can be either a character ID or a monster combatant ID
+		if h.service.(*service).conditionService != nil {
+			_, err := h.service.(*service).conditionService.AddCondition(
+				targetID,
+				conditions.DisadvantageOnNextAttack,
+				spellName,
+				conditions.DurationEndOfNextTurn,
+				1,
+			)
+			if err != nil {
+				log.Printf("Failed to apply disadvantage condition from %s: %v", spellName, err)
+			} else {
+				log.Printf("Applied disadvantage on next attack to %s from %s", targetID, spellName)
+			}
+		}
+	}
 
 	return nil
 }

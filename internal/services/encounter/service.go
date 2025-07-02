@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/conditions"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
@@ -23,6 +24,7 @@ import (
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
 	charService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	condService "github.com/KirkDiggler/dnd-bot-discord/internal/services/condition"
 	sessService "github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/uuid"
 )
@@ -192,6 +194,7 @@ type service struct {
 	repository       encounters.Repository
 	sessionService   sessService.Service
 	characterService charService.Service
+	conditionService condService.Service
 	uuidGenerator    uuid.Generator
 	diceRoller       dice.Roller
 	eventBus         *events.EventBus
@@ -202,6 +205,7 @@ type ServiceConfig struct {
 	Repository       encounters.Repository
 	SessionService   sessService.Service
 	CharacterService charService.Service
+	ConditionService condService.Service
 	UUIDGenerator    uuid.Generator
 	DiceRoller       dice.Roller
 	EventBus         *events.EventBus
@@ -223,6 +227,7 @@ func NewService(cfg *ServiceConfig) Service {
 		repository:       cfg.Repository,
 		sessionService:   cfg.SessionService,
 		characterService: cfg.CharacterService,
+		conditionService: cfg.ConditionService,
 		diceRoller:       cfg.DiceRoller,
 		eventBus:         cfg.EventBus,
 	}
@@ -238,8 +243,9 @@ func NewService(cfg *ServiceConfig) Service {
 		svc.diceRoller = dice.NewRandomRoller()
 	}
 
-	// Register spell damage handler if event bus is available
+	// Register event handlers if event bus is available
 	if cfg.EventBus != nil {
+		// Spell damage handler
 		spellDamageHandler := NewSpellDamageHandler(svc)
 		cfg.EventBus.Subscribe(events.OnSpellDamage, spellDamageHandler)
 	}
@@ -685,22 +691,29 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 	// Advance turn
 	encounter.NextTurn()
 
-	// Emit OnTurnStart event for duration tracking
-	if s.eventBus != nil {
-		// Get the new current combatant
-		newCurrent := encounter.GetCurrentCombatant()
-		if newCurrent != nil && newCurrent.Type == combat.CombatantTypePlayer && newCurrent.CharacterID != "" {
-			if char, err := s.characterService.GetByID(newCurrent.CharacterID); err == nil {
-				// Calculate total turns (rounds * combatants + current turn index)
-				totalTurns := (encounter.Round-1)*len(encounter.TurnOrder) + encounter.Turn
-				turnEvent := events.NewGameEvent(events.OnTurnStart).
-					WithActor(char).
-					WithContext(events.ContextTurnCount, totalTurns).
-					WithContext(events.ContextRound, encounter.Round).
-					WithContext(events.ContextNumCombatants, len(encounter.TurnOrder))
+	// Process turn start for the new current combatant
+	newCurrent := encounter.GetCurrentCombatant()
+	if newCurrent != nil {
+		// Process turn-based condition durations for ANY combatant (player or monster)
+		if s.conditionService != nil {
+			s.conditionService.ProcessTurnStart(newCurrent.ID)
+		}
 
-				if err := s.eventBus.Emit(turnEvent); err != nil {
-					log.Printf("Failed to emit OnTurnStart event: %v", err)
+		// Emit OnTurnStart event for player characters
+		if newCurrent.Type == combat.CombatantTypePlayer && newCurrent.CharacterID != "" {
+			if s.eventBus != nil {
+				if char, err := s.characterService.GetByID(newCurrent.CharacterID); err == nil {
+					// Calculate total turns (rounds * combatants + current turn index)
+					totalTurns := (encounter.Round-1)*len(encounter.TurnOrder) + encounter.Turn
+					turnEvent := events.NewGameEvent(events.OnTurnStart).
+						WithActor(char).
+						WithContext(events.ContextTurnCount, totalTurns).
+						WithContext(events.ContextRound, encounter.Round).
+						WithContext(events.ContextNumCombatants, len(encounter.TurnOrder))
+
+					if err := s.eventBus.Emit(turnEvent); err != nil {
+						log.Printf("Failed to emit OnTurnStart event: %v", err)
+					}
 				}
 			}
 		}
@@ -708,26 +721,30 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 
 	// Check if a new round started
 	if encounter.Round > prevRound {
-		// Reset per-turn abilities for all player characters
+		// Process round-based conditions for ALL combatants
 		for _, combatant := range encounter.Combatants {
-			if combatant.Type != combat.CombatantTypePlayer || combatant.CharacterID == "" {
-				continue
+			// Process round-based condition durations for all combatants
+			if s.conditionService != nil {
+				s.conditionService.ProcessRoundEnd(combatant.ID)
 			}
 
-			// Get the character
-			char, err := s.characterService.GetByID(combatant.CharacterID)
-			if err != nil {
-				// Failed to get character for turn reset - continue anyway
-				continue
-			}
+			// Reset per-turn abilities for player characters only
+			if combatant.Type == combat.CombatantTypePlayer && combatant.CharacterID != "" {
+				// Get the character
+				char, err := s.characterService.GetByID(combatant.CharacterID)
+				if err != nil {
+					// Failed to get character for turn reset - continue anyway
+					continue
+				}
 
-			// Reset per-turn abilities
-			log.Printf("[ACTION ECONOMY] New round started - resetting actions for %s", char.Name)
-			char.StartNewTurn()
+				// Reset per-turn abilities
+				log.Printf("[ACTION ECONOMY] New round started - resetting actions for %s", char.Name)
+				char.StartNewTurn()
 
-			// Save character to persist the reset
-			if err := s.characterService.UpdateEquipment(char); err != nil {
-				log.Printf("Failed to update character %s after turn reset: %v", char.ID, err)
+				// Save character to persist the reset
+				if err := s.characterService.UpdateEquipment(char); err != nil {
+					log.Printf("Failed to update character %s after turn reset: %v", char.ID, err)
+				}
 			}
 		}
 	}
@@ -992,10 +1009,46 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		action := attacker.Actions[input.ActionIndex]
 		result.WeaponName = action.Name
 
-		// Roll attack
-		attackResult, err := s.diceRoller.Roll(1, 20, action.AttackBonus)
-		if err != nil {
-			return nil, dnderr.Wrap(err, "failed to roll attack")
+		// Check for disadvantage condition
+		hasDisadvantage := false
+		if s.conditionService != nil && s.conditionService.HasCondition(attacker.ID, conditions.DisadvantageOnNextAttack) {
+			hasDisadvantage = true
+			log.Printf("Monster %s attacking with disadvantage due to condition", attacker.Name)
+		}
+
+		// Roll attack (with disadvantage if applicable)
+		var attackResult *dice.RollResult
+		if hasDisadvantage {
+			// Roll twice and take the lower
+			roll1, err := s.diceRoller.Roll(1, 20, action.AttackBonus)
+			if err != nil {
+				return nil, dnderr.Wrap(err, "failed to roll first attack")
+			}
+			roll2, err := s.diceRoller.Roll(1, 20, action.AttackBonus)
+			if err != nil {
+				return nil, dnderr.Wrap(err, "failed to roll second attack")
+			}
+
+			// Take the lower result
+			if roll1.Total <= roll2.Total {
+				attackResult = roll1
+				log.Printf("Monster rolled with disadvantage: %d and %d, using %d", roll1.Rolls[0], roll2.Rolls[0], roll1.Rolls[0])
+			} else {
+				attackResult = roll2
+				log.Printf("Monster rolled with disadvantage: %d and %d, using %d", roll1.Rolls[0], roll2.Rolls[0], roll2.Rolls[0])
+			}
+
+			// Remove the condition after use
+			if err := s.conditionService.RemoveConditionByType(attacker.ID, conditions.DisadvantageOnNextAttack); err != nil {
+				log.Printf("Failed to remove disadvantage condition: %v", err)
+			}
+		} else {
+			// Normal attack roll
+			var err error
+			attackResult, err = s.diceRoller.Roll(1, 20, action.AttackBonus)
+			if err != nil {
+				return nil, dnderr.Wrap(err, "failed to roll attack")
+			}
 		}
 
 		result.AttackRoll = attackResult.Rolls[0]
@@ -1204,6 +1257,11 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		result.TargetNewHP = target.CurrentHP
 		result.TargetDefeated = target.CurrentHP == 0
 
+		// Process damage-based conditions (e.g., conditions that end on damage) for all combatants
+		if finalDamage > 0 && s.conditionService != nil {
+			s.conditionService.ProcessDamage(target.ID, finalDamage)
+		}
+
 		// Check if combat should end
 		if shouldEnd, playersWon := encounter.CheckCombatEnd(); shouldEnd {
 			log.Printf("Combat ending after attack - Players won: %v", playersWon)
@@ -1384,6 +1442,11 @@ func (s *service) ApplyDamage(ctx context.Context, encounterID, combatantID, use
 
 	// Apply damage
 	combatant.ApplyDamage(damageAmount)
+
+	// Process damage-based conditions (e.g., conditions that end on damage) for all combatants
+	if damageAmount > 0 && s.conditionService != nil {
+		s.conditionService.ProcessDamage(combatant.ID, damageAmount)
+	}
 
 	// Add to combat log if damage was dealt
 	if damageAmount > 0 {
