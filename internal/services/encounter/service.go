@@ -243,9 +243,8 @@ func NewService(cfg *ServiceConfig) Service {
 		svc.diceRoller = dice.NewRandomRoller()
 	}
 
-	// Register event handlers if event bus is available
+	// Register spell damage handler if event bus is available
 	if cfg.EventBus != nil {
-		// Spell damage handler
 		spellDamageHandler := NewSpellDamageHandler(svc)
 		cfg.EventBus.Subscribe(events.OnSpellDamage, spellDamageHandler)
 	}
@@ -691,7 +690,7 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 	// Advance turn
 	encounter.NextTurn()
 
-	// Process turn start for the new current combatant
+	// Get the new current combatant
 	newCurrent := encounter.GetCurrentCombatant()
 	if newCurrent != nil {
 		// Process turn-based condition durations for ANY combatant (player or monster)

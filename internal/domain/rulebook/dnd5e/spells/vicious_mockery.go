@@ -165,20 +165,8 @@ func (v *ViciousMockeryHandler) Execute(ctx context.Context, caster *character.C
 		result.TotalDamage = damage
 		result.Message = fmt.Sprintf("Your cutting words deal %d psychic damage! The target has disadvantage on their next attack.", damage)
 
-		// Apply disadvantage on next attack condition
-		if v.eventBus != nil {
-			conditionEvent := events.NewGameEvent(events.OnConditionApplied).
-				WithContext(events.ContextCharacterID, targetID).
-				WithContext(events.ContextConditionType, "disadvantage_next_attack").
-				WithContext(events.ContextSource, "Vicious Mockery").
-				WithContext(events.ContextSourceID, caster.ID).
-				WithContext(events.ContextDurationType, "end_next_turn").
-				WithContext(events.ContextDurationValue, 1)
-
-			if err := v.eventBus.Emit(conditionEvent); err != nil {
-				log.Printf("Failed to emit OnConditionApplied event: %v", err)
-			}
-		}
+		// The disadvantage effect is applied by the spell damage handler
+		// when it processes the OnSpellDamage event
 
 	} else {
 		result.Message = "The target shrugs off your mockery!"
