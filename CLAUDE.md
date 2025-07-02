@@ -192,6 +192,16 @@ If any step fails, fix the issues before committing.
 - The Makefile automatically adds this to PATH when running `make generate-mocks`
 - If you see "mockgen not found", use the full path or run `make generate-mocks`
 
+#### Mock Library Migration (July 2, 2025)
+**Issue**: Both github.com/golang/mock and go.uber.org/mock in go.mod causing conflicts
+**Solution**: 
+1. Use only go.uber.org/mock (Uber's maintained fork)
+2. All mock files must import "go.uber.org/mock/gomock" not "github.com/golang/mock/gomock"
+3. Run `go mod edit -droprequire github.com/golang/mock` to remove old library
+4. Regenerate all mocks with: `make generate-mocks`
+5. Update any manual imports in test files
+**Root Cause**: The golang/mock library is deprecated, Uber's fork is the maintained version
+
 ### Key Decisions Made
 - Use Uber's gomock for mocking (go.uber.org/mock)
 - Character status flow: Draft → Active (via FinalizeDraftCharacter)

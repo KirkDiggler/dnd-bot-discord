@@ -86,6 +86,10 @@ func (h *Handler) HandleButton(s *discordgo.Session, i *discordgo.InteractionCre
 		return h.handleShowAbilities(s, i, encounterID)
 	case "use_ability":
 		return h.handleUseAbility(s, i, encounterID)
+	case "use_ability_target":
+		return h.handleUseAbilityWithTarget(s, i, encounterID)
+	case "abt": // Shortened form for ability target
+		return h.handleUseAbilityWithTarget(s, i, encounterID)
 	case "lay_on_hands_amount":
 		return h.handleLayOnHandsAmount(s, i, encounterID)
 	case "bonus_action":

@@ -4,7 +4,7 @@ go 1.23.2
 
 require (
 	github.com/bwmarrin/discordgo v0.29.0
-	github.com/fadedpez/dnd5e-api v0.0.0-20250618163518-632e109d4682
+	github.com/fadedpez/dnd5e-api v0.0.0-20250702035924-9fa22aaeef04
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/redis/go-redis/v9 v9.11.0

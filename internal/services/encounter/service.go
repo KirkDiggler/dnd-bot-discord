@@ -238,6 +238,12 @@ func NewService(cfg *ServiceConfig) Service {
 		svc.diceRoller = dice.NewRandomRoller()
 	}
 
+	// Register spell damage handler if event bus is available
+	if cfg.EventBus != nil {
+		spellDamageHandler := NewSpellDamageHandler(svc)
+		cfg.EventBus.Subscribe(events.OnSpellDamage, spellDamageHandler)
+	}
+
 	return svc
 }
 
@@ -689,9 +695,9 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 				totalTurns := (encounter.Round-1)*len(encounter.TurnOrder) + encounter.Turn
 				turnEvent := events.NewGameEvent(events.OnTurnStart).
 					WithActor(char).
-					WithContext("turn_count", totalTurns).                  // TODO: Use constant
-					WithContext("round", encounter.Round).                  // TODO: Use constant
-					WithContext("num_combatants", len(encounter.TurnOrder)) // TODO: Use constant
+					WithContext(events.ContextTurnCount, totalTurns).
+					WithContext(events.ContextRound, encounter.Round).
+					WithContext(events.ContextNumCombatants, len(encounter.TurnOrder))
 
 				if err := s.eventBus.Emit(turnEvent); err != nil {
 					log.Printf("Failed to emit OnTurnStart event: %v", err)
@@ -881,21 +887,60 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 				// Damage calculation debug logs removed
 			}
 
-			// Emit OnDamageRoll event for damage modifiers (like rage)
+			// Emit OnDamageRoll event for damage modifiers (like rage and sneak attack)
 			if s.eventBus != nil {
 				damageEvent := events.NewGameEvent(events.OnDamageRoll).
 					WithActor(char).
-					WithContext("attack_type", attackResult.AttackType).
-					WithContext("damage", result.Damage).
-					WithContext("target_id", target.ID)
+					WithContext(events.ContextAttackType, attackResult.AttackType).
+					WithContext(events.ContextDamage, result.Damage).
+					WithContext(events.ContextTargetID, target.ID).
+					WithContext(events.ContextIsCritical, result.Critical)
+
+				// Add weapon information for sneak attack
+				if attackResult.WeaponKey != "" {
+					damageEvent.WithContext(events.ContextWeaponKey, attackResult.WeaponKey)
+
+					// Check weapon type (ranged vs melee)
+					weaponType := "melee"
+					if char.EquippedSlots[shared.SlotMainHand] != nil {
+						if weapon, ok := char.EquippedSlots[shared.SlotMainHand].(*equipment.Weapon); ok {
+							if weapon.WeaponRange == "Ranged" {
+								weaponType = "ranged"
+							}
+							// Check for finesse property
+							for _, prop := range weapon.Properties {
+								if prop != nil && prop.Key == "finesse" {
+									damageEvent.WithContext(events.ContextWeaponHasFinesse, true)
+									break
+								}
+							}
+						}
+					}
+					damageEvent.WithContext(events.ContextWeaponType, weaponType)
+				}
+
+				// Add combat conditions (these would need to be passed in via input)
+				// For now, we'll use defaults - this should be enhanced later
+				damageEvent.WithContext(events.ContextHasAdvantage, false)
+				damageEvent.WithContext(events.ContextHasDisadvantage, false)
+				damageEvent.WithContext(events.ContextAllyAdjacent, false)
 
 				if err := s.eventBus.Emit(damageEvent); err != nil {
 					log.Printf("Failed to emit OnDamageRoll event: %v", err)
 				}
 
 				// Update damage from event
-				if modifiedDamage, exists := damageEvent.GetIntContext("damage"); exists {
+				if modifiedDamage, exists := damageEvent.GetIntContext(events.ContextDamage); exists {
 					result.Damage = modifiedDamage
+				}
+
+				// Check if sneak attack was applied
+				if sneakDamage, exists := damageEvent.GetIntContext(events.ContextSneakAttackDamage); exists && sneakDamage > 0 {
+					result.SneakAttackDamage = sneakDamage
+					if sneakDice, exists := damageEvent.GetStringContext(events.ContextSneakAttackDice); exists {
+						// Extract dice count from format like "3d6"
+						_, _ = fmt.Sscanf(sneakDice, "%dd6", &result.SneakAttackDice) //nolint:errcheck
+					}
 				}
 			}
 

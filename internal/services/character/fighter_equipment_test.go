@@ -257,6 +257,18 @@ func (m *mockDndClient) GetClassFeatures(classKey string, level int) ([]*ruleboo
 	return nil, nil
 }
 
+func (m *mockDndClient) GetSpell(key string) (*rulebook.Spell, error) {
+	return nil, errors.New("not found")
+}
+
+func (m *mockDndClient) ListSpellsByClass(classKey string) ([]*rulebook.SpellReference, error) {
+	return nil, nil
+}
+
+func (m *mockDndClient) ListSpellsByClassAndLevel(classKey string, level int) ([]*rulebook.SpellReference, error) {
+	return nil, nil
+}
+
 func strPtr(s string) *string {
 	return &s
 }

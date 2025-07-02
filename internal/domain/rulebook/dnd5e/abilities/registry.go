@@ -43,4 +43,14 @@ func RegisterAll(registry interface {
 	// Register divine sense
 	divineSenseHandler := NewDivineSenseHandler()
 	registry.RegisterHandler(NewServiceHandlerAdapter(divineSenseHandler))
+
+	// Register vicious mockery (bard cantrip)
+	viciousMockeryHandler := NewViciousMockeryHandler(cfg.EventBus)
+	if cfg.DiceRoller != nil {
+		viciousMockeryHandler.SetDiceRoller(cfg.DiceRoller)
+	}
+	if cfg.CharacterService != nil {
+		viciousMockeryHandler.SetCharacterService(cfg.CharacterService)
+	}
+	registry.RegisterHandler(NewServiceHandlerAdapter(viciousMockeryHandler))
 }
