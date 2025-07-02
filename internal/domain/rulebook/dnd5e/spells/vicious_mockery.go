@@ -165,8 +165,8 @@ func (v *ViciousMockeryHandler) Execute(ctx context.Context, caster *character.C
 		result.TotalDamage = damage
 		result.Message = fmt.Sprintf("Your cutting words deal %d psychic damage! The target has disadvantage on their next attack.", damage)
 
-		// TODO: Apply disadvantage effect to target's next attack
-		// This would need to be tracked as a status effect
+		// The disadvantage effect is applied by the spell damage handler
+		// when it processes the OnSpellDamage event
 
 	} else {
 		result.Message = "The target shrugs off your mockery!"

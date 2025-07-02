@@ -52,4 +52,14 @@ const (
 	ContextEncounterID = "encounter_id" // string: ID of the encounter
 	ContextUserID      = "user_id"      // string: ID of the user performing action
 	ContextSpellName   = "spell_name"   // string: name of the spell being cast
+
+	// Condition context
+	ContextCharacterID   = "character_id"   // string: ID of affected character (DEPRECATED - use ContextEntityID)
+	ContextEntityID      = "entity_id"      // string: ID of affected entity (character, monster, object)
+	ContextConditionID   = "condition_id"   // string: ID of the condition
+	ContextConditionType = "condition_type" // string: type of condition
+	ContextSource        = "source"         // string: source of condition
+	ContextSourceID      = "source_id"      // string: ID of source (caster, attacker, etc)
+	ContextDurationType  = "duration_type"  // string: how long condition lasts
+	ContextDurationValue = "duration_value" // int: duration amount (rounds/turns)
 )
