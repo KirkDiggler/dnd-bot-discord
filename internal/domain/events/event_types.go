@@ -41,6 +41,10 @@ const (
 	// Rest events
 	OnShortRest
 	OnLongRest
+
+	// Spell events
+	OnSpellCast
+	OnSpellDamage
 )
 
 // String returns the string representation of an EventType
@@ -70,6 +74,8 @@ func (e EventType) String() string {
 		"OnStatusRemoved",
 		"OnShortRest",
 		"OnLongRest",
+		"OnSpellCast",
+		"OnSpellDamage",
 	}
 
 	if int(e) < len(names) {

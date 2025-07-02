@@ -21,16 +21,17 @@ const (
 
 // ActiveAbility represents an ability that can be used in combat
 type ActiveAbility struct {
-	Key           string      `json:"key"`
-	Name          string      `json:"name"`
-	Description   string      `json:"description"`
-	FeatureKey    string      `json:"feature_key"` // Links to CharacterFeature
-	ActionType    AbilityType `json:"action_type"`
-	UsesMax       int         `json:"uses_max"` // -1 for unlimited
-	UsesRemaining int         `json:"uses_remaining"`
-	RestType      RestType    `json:"rest_type"`
-	IsActive      bool        `json:"is_active"` // For toggle abilities like Rage
-	Duration      int         `json:"duration"`  // Rounds remaining (-1 for unlimited)
+	Key           string            `json:"key"`
+	Name          string            `json:"name"`
+	Description   string            `json:"description"`
+	FeatureKey    string            `json:"feature_key"` // Links to CharacterFeature
+	ActionType    AbilityType       `json:"action_type"`
+	UsesMax       int               `json:"uses_max"` // -1 for unlimited
+	UsesRemaining int               `json:"uses_remaining"`
+	RestType      RestType          `json:"rest_type"`
+	IsActive      bool              `json:"is_active"`           // For toggle abilities like Rage
+	Duration      int               `json:"duration"`            // Rounds remaining (-1 for unlimited)
+	Targeting     *AbilityTargeting `json:"targeting,omitempty"` // Targeting rules
 }
 
 // CanUse checks if the ability can be used

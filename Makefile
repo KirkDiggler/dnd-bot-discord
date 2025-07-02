@@ -82,7 +82,7 @@ lint:
 install-tools:
 	@echo "Installing development tools..."
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	@go install github.com/golang/mock/mockgen@latest
+	@go install go.uber.org/mock/mockgen@latest
 	@go install github.com/stretchr/testify@latest
 
 # Generate mocks

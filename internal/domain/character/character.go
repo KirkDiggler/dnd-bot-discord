@@ -52,6 +52,9 @@ type Character struct {
 	// Resources tracks HP, abilities, spell slots, etc
 	Resources *CharacterResources `json:"resources"`
 
+	// Spells tracks known/prepared spells
+	Spells *SpellList `json:"spells,omitempty"`
+
 	// EffectManager tracks all active status effects
 	EffectManager *effects.Manager `json:"-"`
 
@@ -234,8 +237,8 @@ func (c *Character) initializeClassAbilities() {
 	// Add class-specific abilities based on class key
 	switch c.Class.Key {
 	case "barbarian":
-		c.Resources.Abilities["rage"] = &shared.ActiveAbility{
-			Key:           "rage",
+		c.Resources.Abilities[shared.AbilityKeyRage] = &shared.ActiveAbility{
+			Key:           shared.AbilityKeyRage,
 			Name:          "Rage",
 			Description:   "Enter a battle fury gaining damage bonus and resistance",
 			FeatureKey:    "barbarian-rage",
@@ -246,8 +249,8 @@ func (c *Character) initializeClassAbilities() {
 			Duration:      10, // 10 rounds (1 minute)
 		}
 	case "fighter":
-		c.Resources.Abilities["second-wind"] = &shared.ActiveAbility{
-			Key:           "second-wind",
+		c.Resources.Abilities[shared.AbilityKeySecondWind] = &shared.ActiveAbility{
+			Key:           shared.AbilityKeySecondWind,
 			Name:          "Second Wind",
 			Description:   "Regain hit points equal to 1d10 + fighter level",
 			FeatureKey:    "fighter-second-wind",
@@ -258,8 +261,8 @@ func (c *Character) initializeClassAbilities() {
 			Duration:      0, // Instant effect
 		}
 	case "bard":
-		c.Resources.Abilities["bardic-inspiration"] = &shared.ActiveAbility{
-			Key:           "bardic-inspiration",
+		c.Resources.Abilities[shared.AbilityKeyBardicInspiration] = &shared.ActiveAbility{
+			Key:           shared.AbilityKeyBardicInspiration,
 			Name:          "Bardic Inspiration",
 			Description:   "Grant an ally a d6 to add to one ability check, attack roll, or saving throw",
 			FeatureKey:    "bard-bardic-inspiration",
@@ -269,9 +272,11 @@ func (c *Character) initializeClassAbilities() {
 			RestType:      shared.RestTypeLong,
 			Duration:      10, // 10 minutes (100 rounds), but usually consumed on use
 		}
+		// Initialize bard spells
+		c.initializeBardSpells()
 	case "paladin":
-		c.Resources.Abilities["lay-on-hands"] = &shared.ActiveAbility{
-			Key:           "lay-on-hands",
+		c.Resources.Abilities[shared.AbilityKeyLayOnHands] = &shared.ActiveAbility{
+			Key:           shared.AbilityKeyLayOnHands,
 			Name:          "Lay on Hands",
 			Description:   "Heal wounds with a pool of hit points equal to 5 × paladin level",
 			FeatureKey:    "paladin-lay-on-hands",
@@ -281,8 +286,8 @@ func (c *Character) initializeClassAbilities() {
 			RestType:      shared.RestTypeLong,
 			Duration:      0, // Instant effect
 		}
-		c.Resources.Abilities["divine-sense"] = &shared.ActiveAbility{
-			Key:           "divine-sense",
+		c.Resources.Abilities[shared.AbilityKeyDivineSense] = &shared.ActiveAbility{
+			Key:           shared.AbilityKeyDivineSense,
 			Name:          "Divine Sense",
 			Description:   "Detect celestials, fiends, and undead within 60 feet",
 			FeatureKey:    "paladin-divine-sense",
@@ -809,4 +814,31 @@ func (c *Character) applyFightingStyleBonusesWithHand(weapon *equipment.Weapon, 
 	}
 
 	return attackBonus, damageBonus
+}
+
+// initializeBardSpells adds default bard cantrips
+func (c *Character) initializeBardSpells() {
+	// For now, just add vicious mockery as a default cantrip
+	// In a full implementation, this would be part of character creation choices
+	c.AddCantrip(shared.SpellKeyViciousMockery)
+
+	// We could also add it as an ability that references the spell
+	// This maintains backward compatibility while we transition
+	c.Resources.Abilities[shared.AbilityKeyViciousMockery] = &shared.ActiveAbility{
+		Key:           shared.AbilityKeyViciousMockery,
+		Name:          "Vicious Mockery",
+		Description:   "Unleash a string of insults laced with subtle enchantments",
+		FeatureKey:    "bard-vicious-mockery",
+		ActionType:    shared.AbilityTypeAction,
+		UsesMax:       -1, // Unlimited (cantrip)
+		UsesRemaining: -1,
+		RestType:      shared.RestTypeNone,
+		Targeting: &shared.AbilityTargeting{
+			TargetType: shared.TargetTypeSingleEnemy,
+			RangeType:  shared.RangeTypeRanged,
+			Range:      60,
+			Components: []shared.ComponentType{shared.ComponentVerbal},
+			SaveType:   shared.AttributeWisdom,
+		},
+	}
 }

@@ -22,4 +22,9 @@ type Client interface {
 	GetClassFeatures(classKey string, level int) ([]*rulebook.CharacterFeature, error)
 	ListMonstersByCR(minCR, maxCR float32) ([]*combat.MonsterTemplate, error)
 	ListEquipment() ([]equipment.Equipment, error)
+
+	// Spell methods
+	GetSpell(key string) (*rulebook.Spell, error)
+	ListSpellsByClass(classKey string) ([]*rulebook.SpellReference, error)
+	ListSpellsByClassAndLevel(classKey string, level int) ([]*rulebook.SpellReference, error)
 }
