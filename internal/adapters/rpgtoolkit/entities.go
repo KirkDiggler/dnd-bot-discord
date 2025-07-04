@@ -2,6 +2,7 @@ package rpgtoolkit
 
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"github.com/KirkDiggler/rpg-toolkit/core"
 )
 
@@ -29,14 +30,16 @@ func (c *CharacterEntityAdapter) GetType() string {
 	return "character"
 }
 
-// MonsterEntityAdapter adapts a monster/NPC to rpg-toolkit's Entity interface
+// MonsterEntityAdapter adapts a combat monster to rpg-toolkit's Entity interface
 type MonsterEntityAdapter struct {
-	ID   string
-	Name string
+	*combat.Combatant
 }
 
 // GetID returns the monster's ID
 func (m *MonsterEntityAdapter) GetID() string {
+	if m.Combatant == nil {
+		return ""
+	}
 	return m.ID
 }
 
@@ -52,6 +55,10 @@ func CreateEntityAdapter(entity interface{}) EntityAdapter {
 		return &CharacterEntityAdapter{Character: e}
 	case character.Character:
 		return &CharacterEntityAdapter{Character: &e}
+	case *combat.Combatant:
+		return &MonsterEntityAdapter{Combatant: e}
+	case combat.Combatant:
+		return &MonsterEntityAdapter{Combatant: &e}
 	default:
 		// For now, return nil for unknown types
 		// In the future, we might want to handle more entity types

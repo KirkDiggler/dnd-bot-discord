@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/KirkDiggler/dnd-bot-discord/internal/adapters/rpgtoolkit"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
@@ -1092,43 +1093,7 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 
 		// Emit BeforeAttackRoll event
 		if s.eventBus != nil {
-			// Create a basic character representation for the monster
-			monsterChar := &character.Character{
-				ID:   attacker.ID,
-				Name: attacker.Name,
-				Attributes: map[shared.Attribute]*character.AbilityScore{
-					shared.AttributeStrength:     {Score: 10}, // Default if not available
-					shared.AttributeDexterity:    {Score: 10},
-					shared.AttributeConstitution: {Score: 10},
-					shared.AttributeIntelligence: {Score: 10},
-					shared.AttributeWisdom:       {Score: 10},
-					shared.AttributeCharisma:     {Score: 10},
-				},
-			}
-
-			// Use actual monster abilities if available
-			if attacker.Abilities != nil {
-				if str, ok := attacker.Abilities["STR"]; ok {
-					monsterChar.Attributes[shared.AttributeStrength].Score = str
-				}
-				if dex, ok := attacker.Abilities["DEX"]; ok {
-					monsterChar.Attributes[shared.AttributeDexterity].Score = dex
-				}
-				if con, ok := attacker.Abilities["CON"]; ok {
-					monsterChar.Attributes[shared.AttributeConstitution].Score = con
-				}
-				if intl, ok := attacker.Abilities["INT"]; ok {
-					monsterChar.Attributes[shared.AttributeIntelligence].Score = intl
-				}
-				if wis, ok := attacker.Abilities["WIS"]; ok {
-					monsterChar.Attributes[shared.AttributeWisdom].Score = wis
-				}
-				if cha, ok := attacker.Abilities["CHA"]; ok {
-					monsterChar.Attributes[shared.AttributeCharisma].Score = cha
-				}
-			}
-
-			// Get target character
+			// Get target character or create adapter for non-player targets
 			var targetChar *character.Character
 			if target.Type == combat.CombatantTypePlayer && target.CharacterID != "" {
 				var err error
@@ -1137,15 +1102,29 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 					log.Printf("Failed to get target character: %v", err)
 				}
 			} else {
-				// Create basic character for non-player target
+				// For non-player targets, we still need a Character for the current event system
+				// This will be improved when we fully migrate to rpgtoolkit events
 				targetChar = &character.Character{
 					ID:   target.ID,
 					Name: target.Name,
 				}
 			}
 
+			// Create event using rpgtoolkit.CreateEntityAdapter for the monster
+			actorAdapter := rpgtoolkit.CreateEntityAdapter(attacker)
+			var actorChar *character.Character
+			if charAdapter, ok := actorAdapter.(*rpgtoolkit.CharacterEntityAdapter); ok {
+				actorChar = charAdapter.Character
+			} else {
+				// For monster adapters, we need to create a minimal Character for the current event system
+				actorChar = &character.Character{
+					ID:   attacker.ID,
+					Name: attacker.Name,
+				}
+			}
+
 			beforeAttackEvent := events.NewGameEvent(events.BeforeAttackRoll).
-				WithActor(monsterChar).
+				WithActor(actorChar).
 				WithTarget(targetChar).
 				WithContext("weapon", action.Name).
 				WithContext("attack_bonus", action.AttackBonus)
@@ -1244,38 +1223,16 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 
 		// Emit OnAttackRoll event
 		if s.eventBus != nil {
-			monsterChar := &character.Character{
-				ID:   attacker.ID,
-				Name: attacker.Name,
-				Attributes: map[shared.Attribute]*character.AbilityScore{
-					shared.AttributeStrength:     {Score: 10}, // Default if not available
-					shared.AttributeDexterity:    {Score: 10},
-					shared.AttributeConstitution: {Score: 10},
-					shared.AttributeIntelligence: {Score: 10},
-					shared.AttributeWisdom:       {Score: 10},
-					shared.AttributeCharisma:     {Score: 10},
-				},
-			}
-
-			// Use actual monster abilities if available
-			if attacker.Abilities != nil {
-				if str, ok := attacker.Abilities["STR"]; ok {
-					monsterChar.Attributes[shared.AttributeStrength].Score = str
-				}
-				if dex, ok := attacker.Abilities["DEX"]; ok {
-					monsterChar.Attributes[shared.AttributeDexterity].Score = dex
-				}
-				if con, ok := attacker.Abilities["CON"]; ok {
-					monsterChar.Attributes[shared.AttributeConstitution].Score = con
-				}
-				if intl, ok := attacker.Abilities["INT"]; ok {
-					monsterChar.Attributes[shared.AttributeIntelligence].Score = intl
-				}
-				if wis, ok := attacker.Abilities["WIS"]; ok {
-					monsterChar.Attributes[shared.AttributeWisdom].Score = wis
-				}
-				if cha, ok := attacker.Abilities["CHA"]; ok {
-					monsterChar.Attributes[shared.AttributeCharisma].Score = cha
+			// Reuse the actor from the previous event preparation
+			actorAdapter := rpgtoolkit.CreateEntityAdapter(attacker)
+			var actorChar *character.Character
+			if charAdapter, ok := actorAdapter.(*rpgtoolkit.CharacterEntityAdapter); ok {
+				actorChar = charAdapter.Character
+			} else {
+				// For monster adapters, create a minimal Character for the current event system
+				actorChar = &character.Character{
+					ID:   attacker.ID,
+					Name: attacker.Name,
 				}
 			}
 
@@ -1294,7 +1251,7 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			}
 
 			onAttackEvent := events.NewGameEvent(events.OnAttackRoll).
-				WithActor(monsterChar).
+				WithActor(actorChar).
 				WithTarget(targetChar).
 				WithContext("weapon", action.Name).
 				WithContext("attack_roll", result.AttackRoll).
@@ -1318,38 +1275,16 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 
 		// Emit AfterAttackRoll event
 		if s.eventBus != nil {
-			monsterChar := &character.Character{
-				ID:   attacker.ID,
-				Name: attacker.Name,
-				Attributes: map[shared.Attribute]*character.AbilityScore{
-					shared.AttributeStrength:     {Score: 10}, // Default if not available
-					shared.AttributeDexterity:    {Score: 10},
-					shared.AttributeConstitution: {Score: 10},
-					shared.AttributeIntelligence: {Score: 10},
-					shared.AttributeWisdom:       {Score: 10},
-					shared.AttributeCharisma:     {Score: 10},
-				},
-			}
-
-			// Use actual monster abilities if available
-			if attacker.Abilities != nil {
-				if str, ok := attacker.Abilities["STR"]; ok {
-					monsterChar.Attributes[shared.AttributeStrength].Score = str
-				}
-				if dex, ok := attacker.Abilities["DEX"]; ok {
-					monsterChar.Attributes[shared.AttributeDexterity].Score = dex
-				}
-				if con, ok := attacker.Abilities["CON"]; ok {
-					monsterChar.Attributes[shared.AttributeConstitution].Score = con
-				}
-				if intl, ok := attacker.Abilities["INT"]; ok {
-					monsterChar.Attributes[shared.AttributeIntelligence].Score = intl
-				}
-				if wis, ok := attacker.Abilities["WIS"]; ok {
-					monsterChar.Attributes[shared.AttributeWisdom].Score = wis
-				}
-				if cha, ok := attacker.Abilities["CHA"]; ok {
-					monsterChar.Attributes[shared.AttributeCharisma].Score = cha
+			// Reuse the actor from the previous event preparation
+			actorAdapter := rpgtoolkit.CreateEntityAdapter(attacker)
+			var actorChar *character.Character
+			if charAdapter, ok := actorAdapter.(*rpgtoolkit.CharacterEntityAdapter); ok {
+				actorChar = charAdapter.Character
+			} else {
+				// For monster adapters, create a minimal Character for the current event system
+				actorChar = &character.Character{
+					ID:   attacker.ID,
+					Name: attacker.Name,
 				}
 			}
 
@@ -1368,7 +1303,7 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			}
 
 			afterAttackEvent := events.NewGameEvent(events.AfterAttackRoll).
-				WithActor(monsterChar).
+				WithActor(actorChar).
 				WithTarget(targetChar).
 				WithContext("weapon", action.Name).
 				WithContext("attack_roll", result.AttackRoll).

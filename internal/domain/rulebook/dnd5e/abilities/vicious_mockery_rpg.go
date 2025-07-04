@@ -37,23 +37,46 @@ func (v *ViciousMockeryRPGListener) handleBeforeAttackRoll(ctx context.Context, 
 		return nil
 	}
 
-	// Check if this is a character with vicious mockery effect
-	charAdapter, ok := attacker.(*rpgtoolkit.CharacterEntityAdapter)
-	if !ok || charAdapter.Character == nil {
-		return nil
-	}
+	// Check if this is an entity with vicious mockery effect
+	var hasViciousMockery bool
+	var entityName string
 
-	char := charAdapter.Character
+	switch adapter := attacker.(type) {
+	case *rpgtoolkit.CharacterEntityAdapter:
+		// Handle player characters
+		if adapter.Character == nil {
+			return nil
+		}
+		entityName = adapter.Name
 
-	// Check if character has vicious mockery effect
-	hasViciousMockery := false
-	if char.Resources != nil && char.Resources.ActiveEffects != nil {
-		for _, effect := range char.Resources.ActiveEffects {
-			if effect.Name == "Vicious Mockery Disadvantage" && !effect.IsExpired() {
-				hasViciousMockery = true
-				break
+		if adapter.Resources != nil && adapter.Resources.ActiveEffects != nil {
+			for _, effect := range adapter.Resources.ActiveEffects {
+				if effect.Name == "Vicious Mockery Disadvantage" && !effect.IsExpired() {
+					hasViciousMockery = true
+					break
+				}
 			}
 		}
+
+	case *rpgtoolkit.MonsterEntityAdapter:
+		// Handle monsters
+		if adapter.Combatant == nil {
+			return nil
+		}
+		entityName = adapter.Name
+
+		if adapter.ActiveEffects != nil {
+			for _, effect := range adapter.ActiveEffects {
+				if effect.Name == "Vicious Mockery Disadvantage" && !effect.IsExpired() {
+					hasViciousMockery = true
+					break
+				}
+			}
+		}
+
+	default:
+		// Unknown entity type
+		return nil
 	}
 
 	if hasViciousMockery {
@@ -65,17 +88,31 @@ func (v *ViciousMockeryRPGListener) handleBeforeAttackRoll(ctx context.Context, 
 			100,                   // High priority to ensure it's applied
 		))
 
-		log.Printf("Applied disadvantage from Vicious Mockery to %s's attack", char.Name)
+		log.Printf("Applied disadvantage from Vicious Mockery to %s's attack", entityName)
 
 		// Remove the effect after it's used (it only affects the next attack)
-		if char.Resources != nil && char.Resources.ActiveEffects != nil {
-			newEffects := []*shared.ActiveEffect{}
-			for _, effect := range char.Resources.ActiveEffects {
-				if effect.Name != "Vicious Mockery Disadvantage" {
-					newEffects = append(newEffects, effect)
+		switch adapter := attacker.(type) {
+		case *rpgtoolkit.CharacterEntityAdapter:
+			if adapter.Resources != nil && adapter.Resources.ActiveEffects != nil {
+				newEffects := []*shared.ActiveEffect{}
+				for _, effect := range adapter.Resources.ActiveEffects {
+					if effect.Name != "Vicious Mockery Disadvantage" {
+						newEffects = append(newEffects, effect)
+					}
 				}
+				adapter.Resources.ActiveEffects = newEffects
 			}
-			char.Resources.ActiveEffects = newEffects
+
+		case *rpgtoolkit.MonsterEntityAdapter:
+			if adapter.ActiveEffects != nil {
+				newEffects := []*shared.ActiveEffect{}
+				for _, effect := range adapter.ActiveEffects {
+					if effect.Name != "Vicious Mockery Disadvantage" {
+						newEffects = append(newEffects, effect)
+					}
+				}
+				adapter.ActiveEffects = newEffects
+			}
 		}
 	}
 
