@@ -2061,7 +2061,7 @@ func (h *StatusEffectHandler) HandleEvent(event *events.GameEvent) error {
 		log.Printf("StatusEffectHandler: Applying vicious mockery disadvantage to target %s", targetID)
 
 		// First check if target is a player character
-		if event.Actor != nil && event.Actor.OwnerID != "" {
+		if event.Target != nil && event.Target.OwnerID != "" {
 			// For players, the effect is handled through character.Resources.ActiveEffects
 			// This is already done in the vicious_mockery.go ApplyViciousMockeryDisadvantage function
 			log.Printf("StatusEffectHandler: Target is a player, effect already applied to character")
