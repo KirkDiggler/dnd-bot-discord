@@ -17,7 +17,7 @@ import (
 type service struct {
 	characterService charService.Service
 	diceRoller       dice.Roller
-	eventBus         *events.EventBus
+	eventBus         events.Bus
 	registry         *HandlerRegistry
 }
 
@@ -25,7 +25,7 @@ type service struct {
 type ServiceConfig struct {
 	CharacterService charService.Service
 	DiceRoller       dice.Roller
-	EventBus         *events.EventBus
+	EventBus         events.Bus
 }
 
 // NewService creates a new ability service without any hardcoded abilities

@@ -12,7 +12,7 @@ import (
 
 // ViciousMockeryHandler implements the vicious mockery cantrip
 type ViciousMockeryHandler struct {
-	eventBus   *events.EventBus
+	eventBus   events.Bus
 	diceRoller interface {
 		Roll(numDice, sides, modifier int) (struct{ Total int }, error)
 	}
@@ -23,7 +23,7 @@ type ViciousMockeryHandler struct {
 }
 
 // NewViciousMockeryHandler creates a new vicious mockery handler
-func NewViciousMockeryHandler(eventBus *events.EventBus) *ViciousMockeryHandler {
+func NewViciousMockeryHandler(eventBus events.Bus) *ViciousMockeryHandler {
 	return &ViciousMockeryHandler{
 		eventBus: eventBus,
 	}
@@ -165,12 +165,18 @@ func (v *ViciousMockeryHandler) Execute(ctx context.Context, caster *character.C
 		result.TotalDamage = damage
 		result.Message = fmt.Sprintf("Your cutting words deal %d psychic damage! The target has disadvantage on their next attack.", damage)
 
-		// Apply disadvantage effect to target's next attack
-		if target != nil && target.ID != "Monster" && v.characterService != nil {
-			// This is a real character, apply the effect
-			ApplyViciousMockeryDisadvantage(target)
-			if err := v.characterService.UpdateEquipment(target); err != nil {
-				log.Printf("Failed to save vicious mockery effect: %v", err)
+		// Emit an event to apply the vicious mockery effect
+		if v.eventBus != nil {
+			effectEvent := events.NewGameEvent(events.OnStatusApplied).
+				WithActor(caster).
+				WithContext(events.ContextTargetID, targetID).
+				WithContext("effect_name", "Vicious Mockery Disadvantage").
+				WithContext("effect_duration", 1). // Lasts for 1 attack
+				WithContext("effect_type", "disadvantage_next_attack").
+				WithContext(events.ContextEncounterID, input.EncounterID)
+
+			if err := v.eventBus.Emit(effectEvent); err != nil {
+				log.Printf("Failed to emit OnStatusApplied event: %v", err)
 			}
 		}
 

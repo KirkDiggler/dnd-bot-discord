@@ -31,8 +31,7 @@ type Provider struct {
 	LootService      lootService.Service
 	AbilityService   abilityService.Service
 	DiceRoller       dice.Roller
-	EventBus         *events.EventBus
-	EventBusAdapter  *rpgtoolkit.EventBusAdapter
+	EventBus         events.Bus // Now using the interface
 	RPGEventBus      *rpgevents.Bus
 }
 
@@ -48,10 +47,10 @@ type ProviderConfig struct {
 
 // NewProvider creates a new service provider with all services initialized
 func NewProvider(cfg *ProviderConfig) *Provider {
-	// Create rpg-toolkit event bus adapter
+	// Create rpg-toolkit event bus adapter that replaces the old event bus
 	eventBusAdapter := rpgtoolkit.NewEventBusAdapter()
-	// We need both for now during migration
-	eventBus := events.NewEventBus()
+	// The adapter now IS our event bus
+	eventBus := eventBusAdapter
 	rpgBus := eventBusAdapter.GetRPGBus()
 
 	// Use in-memory repository if none provided
@@ -145,7 +144,6 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 		AbilityService:   abilService,
 		DiceRoller:       cfg.DiceRoller,
 		EventBus:         eventBus,
-		EventBusAdapter:  eventBusAdapter,
 		RPGEventBus:      rpgBus,
 	}
 }

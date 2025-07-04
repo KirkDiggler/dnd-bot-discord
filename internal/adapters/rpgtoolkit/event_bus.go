@@ -16,6 +16,8 @@ type EventBusAdapter struct {
 	eventTypeMap map[events.EventType]string
 	// Maps rpg-toolkit event types back to Discord bot types
 	reverseMap map[string]events.EventType
+	// Track listeners for unsubscribe support
+	listenerMap map[events.EventListener]map[events.EventType][]func(context.Context, rpgevents.Event) error
 }
 
 // NewEventBusAdapter creates a new adapter wrapping an rpg-toolkit event bus
@@ -24,6 +26,7 @@ func NewEventBusAdapter() *EventBusAdapter {
 		rpgBus:       rpgevents.NewBus(),
 		eventTypeMap: make(map[events.EventType]string),
 		reverseMap:   make(map[string]events.EventType),
+		listenerMap:  make(map[events.EventListener]map[events.EventType][]func(context.Context, rpgevents.Event) error),
 	}
 
 	// Set up event type mappings
@@ -63,15 +66,15 @@ func (a *EventBusAdapter) setupEventMappings() {
 	}
 }
 
-// Publish publishes an event to the rpg-toolkit event bus
-func (a *EventBusAdapter) Publish(eventType events.EventType, data interface{}) error {
-	rpgEventType, ok := a.eventTypeMap[eventType]
+// Emit publishes an event to the rpg-toolkit event bus
+func (a *EventBusAdapter) Emit(event *events.GameEvent) error {
+	rpgEventType, ok := a.eventTypeMap[event.Type]
 	if !ok {
-		return fmt.Errorf("unknown event type: %v", eventType)
+		return fmt.Errorf("unknown event type: %v", event.Type)
 	}
 
-	// Convert the data to an rpg-toolkit event
-	gameEvent := a.createGameEvent(rpgEventType, data)
+	// Convert the Discord event to an rpg-toolkit event
+	gameEvent := a.createGameEvent(rpgEventType, event)
 
 	return a.rpgBus.Publish(context.Background(), gameEvent)
 }
@@ -87,8 +90,26 @@ func (a *EventBusAdapter) Subscribe(eventType events.EventType, listener events.
 	// Wrap the listener to convert rpg-toolkit events back to Discord format
 	wrappedHandler := a.wrapHandler(listener, eventType)
 
+	// Track the handler for unsubscribe
+	if a.listenerMap[listener] == nil {
+		a.listenerMap[listener] = make(map[events.EventType][]func(context.Context, rpgevents.Event) error)
+	}
+	a.listenerMap[listener][eventType] = append(a.listenerMap[listener][eventType], wrappedHandler)
+
 	// Use the listener's priority
 	a.rpgBus.SubscribeFunc(rpgEventType, listener.Priority(), wrappedHandler)
+}
+
+// Unsubscribe removes a listener for a specific event type
+func (a *EventBusAdapter) Unsubscribe(eventType events.EventType, listener events.EventListener) {
+	// For now, we can't unsubscribe from rpg-toolkit bus
+	// TODO: Implement when rpg-toolkit supports unsubscribe
+	if handlers, ok := a.listenerMap[listener]; ok {
+		delete(handlers, eventType)
+		if len(handlers) == 0 {
+			delete(a.listenerMap, listener)
+		}
+	}
 }
 
 // createGameEvent converts Discord bot event data to rpg-toolkit GameEvent
@@ -191,4 +212,22 @@ func (a *EventBusAdapter) convertToGameEvent(rpgEvent rpgevents.Event, eventType
 // GetRPGBus returns the underlying rpg-toolkit event bus for direct access
 func (a *EventBusAdapter) GetRPGBus() *rpgevents.Bus {
 	return a.rpgBus
+}
+
+// Clear removes all listeners
+func (a *EventBusAdapter) Clear() {
+	// Create a new bus to clear all listeners
+	a.rpgBus = rpgevents.NewBus()
+	a.listenerMap = make(map[events.EventListener]map[events.EventType][]func(context.Context, rpgevents.Event) error)
+}
+
+// ListenerCount returns the number of listeners for an event type
+func (a *EventBusAdapter) ListenerCount(eventType events.EventType) int {
+	count := 0
+	for _, handlers := range a.listenerMap {
+		if _, ok := handlers[eventType]; ok {
+			count += len(handlers[eventType])
+		}
+	}
+	return count
 }

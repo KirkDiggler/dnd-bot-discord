@@ -11,7 +11,7 @@ import (
 
 // MagicMissileHandler implements the magic missile spell
 type MagicMissileHandler struct {
-	eventBus   *events.EventBus
+	eventBus   events.Bus
 	diceRoller interface {
 		Roll(numDice, sides, modifier int) (struct{ Total int }, error)
 	}
@@ -22,7 +22,7 @@ type MagicMissileHandler struct {
 }
 
 // NewMagicMissileHandler creates a new magic missile handler
-func NewMagicMissileHandler(eventBus *events.EventBus) *MagicMissileHandler {
+func NewMagicMissileHandler(eventBus events.Bus) *MagicMissileHandler {
 	return &MagicMissileHandler{
 		eventBus: eventBus,
 	}

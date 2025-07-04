@@ -9,7 +9,7 @@ import (
 
 // RegistryConfig contains dependencies needed for ability handlers
 type RegistryConfig struct {
-	EventBus         *events.EventBus
+	EventBus         events.Bus     // Now using the interface
 	RPGEventBus      *rpgevents.Bus // RPG toolkit event bus for future migration
 	DiceRoller       dice.Roller
 	EncounterService interface{} // Should have GetEncounter method
