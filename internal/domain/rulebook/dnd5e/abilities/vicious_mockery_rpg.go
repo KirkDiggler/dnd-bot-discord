@@ -47,10 +47,12 @@ func (v *ViciousMockeryRPGListener) handleBeforeAttackRoll(ctx context.Context, 
 
 	// Check if character has vicious mockery effect
 	hasViciousMockery := false
-	for _, effect := range char.Resources.ActiveEffects {
-		if effect.Name == "Vicious Mockery Disadvantage" && !effect.IsExpired() {
-			hasViciousMockery = true
-			break
+	if char.Resources != nil && char.Resources.ActiveEffects != nil {
+		for _, effect := range char.Resources.ActiveEffects {
+			if effect.Name == "Vicious Mockery Disadvantage" && !effect.IsExpired() {
+				hasViciousMockery = true
+				break
+			}
 		}
 	}
 
@@ -66,13 +68,15 @@ func (v *ViciousMockeryRPGListener) handleBeforeAttackRoll(ctx context.Context, 
 		log.Printf("Applied disadvantage from Vicious Mockery to %s's attack", char.Name)
 
 		// Remove the effect after it's used (it only affects the next attack)
-		newEffects := []*shared.ActiveEffect{}
-		for _, effect := range char.Resources.ActiveEffects {
-			if effect.Name != "Vicious Mockery Disadvantage" {
-				newEffects = append(newEffects, effect)
+		if char.Resources != nil && char.Resources.ActiveEffects != nil {
+			newEffects := []*shared.ActiveEffect{}
+			for _, effect := range char.Resources.ActiveEffects {
+				if effect.Name != "Vicious Mockery Disadvantage" {
+					newEffects = append(newEffects, effect)
+				}
 			}
+			char.Resources.ActiveEffects = newEffects
 		}
-		char.Resources.ActiveEffects = newEffects
 	}
 
 	return nil
