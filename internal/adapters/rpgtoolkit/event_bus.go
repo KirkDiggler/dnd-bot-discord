@@ -102,8 +102,10 @@ func (a *EventBusAdapter) Subscribe(eventType events.EventType, listener events.
 
 // Unsubscribe removes a listener for a specific event type
 func (a *EventBusAdapter) Unsubscribe(eventType events.EventType, listener events.EventListener) {
-	// For now, we can't unsubscribe from rpg-toolkit bus
-	// TODO: Implement when rpg-toolkit supports unsubscribe
+	// NOTE: This only removes from the adapter's tracking map but doesn't actually
+	// unsubscribe from the underlying rpgBus, so handlers will still fire.
+	// Full implementation would require tracking subscription IDs from SubscribeFunc.
+	// TODO: Remove this entire adapter as part of issue #258 - pure rpg-toolkit migration
 	if handlers, ok := a.listenerMap[listener]; ok {
 		delete(handlers, eventType)
 		if len(handlers) == 0 {
@@ -196,6 +198,8 @@ func (a *EventBusAdapter) convertToGameEvent(rpgEvent rpgevents.Event, eventType
 	ctx := rpgEvent.Context()
 	// TODO: The rpg-toolkit Context interface doesn't expose a way to iterate all keys
 	// For now, copy all known fields that might be used
+	// TECH DEBT: Hard-coded list risks dropping new fields. Need rpg-toolkit to expose
+	// context keys or this entire adapter will be removed in issue #258
 	knownFields := []string{
 		"weapon", "damage", "damage_type", "target_id", "effect_name",
 		"effect_duration", "effect_type", "encounter_id", "user_id",

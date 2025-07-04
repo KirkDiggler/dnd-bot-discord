@@ -190,6 +190,8 @@ func (v *ViciousMockeryHandler) Execute(ctx context.Context, caster *character.C
 }
 
 // ApplyViciousMockeryDisadvantage applies the disadvantage effect to a target
+// TODO: This helper function is never registered or invoked for player targets.
+// Should either be wired into the ability registry or removed when migrating to pure rpg-toolkit.
 func ApplyViciousMockeryDisadvantage(target *character.Character) {
 	if target == nil || target.Resources == nil {
 		return
