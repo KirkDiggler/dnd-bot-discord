@@ -165,8 +165,14 @@ func (v *ViciousMockeryHandler) Execute(ctx context.Context, caster *character.C
 		result.TotalDamage = damage
 		result.Message = fmt.Sprintf("Your cutting words deal %d psychic damage! The target has disadvantage on their next attack.", damage)
 
-		// TODO: Apply disadvantage effect to target's next attack
-		// This would need to be tracked as a status effect
+		// Apply disadvantage effect to target's next attack
+		if target != nil && target.ID != "Monster" && v.characterService != nil {
+			// This is a real character, apply the effect
+			ApplyViciousMockeryDisadvantage(target)
+			if err := v.characterService.UpdateEquipment(target); err != nil {
+				log.Printf("Failed to save vicious mockery effect: %v", err)
+			}
+		}
 
 	} else {
 		result.Message = "The target shrugs off your mockery!"
@@ -182,4 +188,27 @@ func (v *ViciousMockeryHandler) Execute(ctx context.Context, caster *character.C
 	}
 
 	return result, nil
+}
+
+// ApplyViciousMockeryDisadvantage applies the disadvantage effect to a target
+func ApplyViciousMockeryDisadvantage(target *character.Character) {
+	if target == nil || target.Resources == nil {
+		return
+	}
+
+	// Add vicious mockery disadvantage effect
+	effect := &shared.ActiveEffect{
+		Name:         "Vicious Mockery Disadvantage",
+		Description:  "Disadvantage on next attack roll",
+		Source:       "Vicious Mockery",
+		Duration:     1, // Lasts for 1 attack
+		DurationType: shared.DurationTypeRounds,
+		Modifiers: []shared.Modifier{
+			{
+				Type: shared.ModifierTypeDisadvantage,
+			},
+		},
+	}
+
+	target.Resources.ActiveEffects = append(target.Resources.ActiveEffects, effect)
 }

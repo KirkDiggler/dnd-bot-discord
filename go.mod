@@ -4,7 +4,7 @@ go 1.24.1
 
 require (
 	github.com/KirkDiggler/rpg-toolkit/core v0.1.1-0.20250704020020-1ad05ac94e2b
-	github.com/KirkDiggler/rpg-toolkit/events v0.1.2-0.20250704015839-a9a025dddbb0
+	github.com/KirkDiggler/rpg-toolkit/events v0.1.2-0.20250704020020-1ad05ac94e2b
 	github.com/bwmarrin/discordgo v0.29.0
 	github.com/fadedpez/dnd5e-api v0.0.0-20250702035924-9fa22aaeef04
 	github.com/google/uuid v1.6.0

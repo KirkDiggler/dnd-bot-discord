@@ -21,7 +21,7 @@ func (c *CharacterEntityAdapter) GetID() string {
 	if c.Character == nil {
 		return ""
 	}
-	return c.Character.ID
+	return c.ID
 }
 
 // GetType returns the entity type
