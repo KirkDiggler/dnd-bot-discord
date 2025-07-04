@@ -192,18 +192,20 @@ func (a *EventBusAdapter) convertToGameEvent(rpgEvent rpgevents.Event, eventType
 		}
 	}
 
-	// Copy context data
+	// Copy context data - iterate through all context fields
 	ctx := rpgEvent.Context()
-	// We would need to iterate through context data
-	// For now, copy specific known fields
-	if weapon, ok := ctx.Get("weapon"); ok {
-		gameEvent.Context["weapon"] = weapon
+	// TODO: The rpg-toolkit Context interface doesn't expose a way to iterate all keys
+	// For now, copy all known fields that might be used
+	knownFields := []string{
+		"weapon", "damage", "damage_type", "target_id", "effect_name",
+		"effect_duration", "effect_type", "encounter_id", "user_id",
+		"spell_name", "caster_id", "damage_amount",
 	}
-	if damage, ok := ctx.Get("damage"); ok {
-		gameEvent.Context["damage"] = damage
-	}
-	if damageType, ok := ctx.Get("damage_type"); ok {
-		gameEvent.Context["damage_type"] = damageType
+
+	for _, field := range knownFields {
+		if value, ok := ctx.Get(field); ok {
+			gameEvent.Context[field] = value
+		}
 	}
 
 	return gameEvent
