@@ -443,7 +443,6 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 	}
 
 	// Reset action economy for the start of combat
-	log.Printf("[ACTION ECONOMY] Resetting actions for %s as they join combat", char.Name)
 	char.StartNewTurn()
 
 	// Save character to persist the reset action economy
@@ -728,7 +727,6 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 			}
 
 			// Reset per-turn abilities
-			log.Printf("[ACTION ECONOMY] New round started - resetting actions for %s", char.Name)
 			char.StartNewTurn()
 
 			// Save character to persist the reset

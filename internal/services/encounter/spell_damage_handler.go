@@ -39,15 +39,13 @@ func (h *SpellDamageHandler) HandleEvent(event *events.GameEvent) error {
 	}
 
 	if targetID == "" {
-		log.Printf("SpellDamageHandler: No target ID for spell damage")
-		return nil
+		return nil // No target ID for spell damage
 	}
 
 	// Get encounter ID (would need to be added to event context)
 	encounterID, exists := event.GetStringContext(events.ContextEncounterID)
 	if !exists {
-		log.Printf("SpellDamageHandler: No encounter ID in spell damage event")
-		return nil
+		return nil // No encounter ID in spell damage event
 	}
 
 	// Apply the damage
@@ -64,12 +62,7 @@ func (h *SpellDamageHandler) HandleEvent(event *events.GameEvent) error {
 		return err
 	}
 
-	// Get spell name for logging
-	spellName, _ := event.GetStringContext(events.ContextSpellName)
-	damageType, _ := event.GetStringContext(events.ContextDamageType)
-
-	log.Printf("SpellDamageHandler: Applied %d %s damage from %s to target %s",
-		damage, damageType, spellName, targetID)
+	// Spell damage applied successfully (removed excessive logging)
 
 	return nil
 }

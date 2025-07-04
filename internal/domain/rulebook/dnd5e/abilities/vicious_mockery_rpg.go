@@ -2,7 +2,6 @@ package abilities
 
 import (
 	"context"
-	"log"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/adapters/rpgtoolkit"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
@@ -39,7 +38,6 @@ func (v *ViciousMockeryRPGListener) handleBeforeAttackRoll(ctx context.Context, 
 
 	// Check if this is an entity with vicious mockery effect
 	var hasViciousMockery bool
-	var entityName string
 
 	switch adapter := attacker.(type) {
 	case *rpgtoolkit.CharacterEntityAdapter:
@@ -47,7 +45,6 @@ func (v *ViciousMockeryRPGListener) handleBeforeAttackRoll(ctx context.Context, 
 		if adapter.Character == nil {
 			return nil
 		}
-		entityName = adapter.Name
 
 		if adapter.Resources != nil && adapter.Resources.ActiveEffects != nil {
 			for _, effect := range adapter.Resources.ActiveEffects {
@@ -63,7 +60,6 @@ func (v *ViciousMockeryRPGListener) handleBeforeAttackRoll(ctx context.Context, 
 		if adapter.Combatant == nil {
 			return nil
 		}
-		entityName = adapter.Name
 
 		if adapter.ActiveEffects != nil {
 			for _, effect := range adapter.ActiveEffects {
@@ -88,7 +84,7 @@ func (v *ViciousMockeryRPGListener) handleBeforeAttackRoll(ctx context.Context, 
 			100,                   // High priority to ensure it's applied
 		))
 
-		log.Printf("Applied disadvantage from Vicious Mockery to %s's attack", entityName)
+		// Applied disadvantage from Vicious Mockery (removed excessive logging)
 
 		// Remove the effect after it's used (it only affects the next attack)
 		switch adapter := attacker.(type) {
