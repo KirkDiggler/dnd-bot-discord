@@ -1825,8 +1825,6 @@ func (s *service) ProcessMonsterTurn(ctx context.Context, encounterID, monsterID
 	// Find a target (first active player)
 	var target *combat.Combatant
 	for _, combatant := range encounter.Combatants {
-		log.Printf("ProcessMonsterTurn - Checking combatant %s: Type=%s, IsActive=%v, HP=%d/%d",
-			combatant.Name, combatant.Type, combatant.IsActive, combatant.CurrentHP, combatant.MaxHP)
 		if combatant.Type == combat.CombatantTypePlayer && combatant.IsActive {
 			target = combatant
 			break

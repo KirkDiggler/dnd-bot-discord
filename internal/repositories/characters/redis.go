@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -370,11 +369,7 @@ func (r *redisRepo) Update(ctx context.Context, char *character.Character) error
 	data.CreatedAt = existing.CreatedAt // Preserve creation time
 	data.UpdatedAt = time.Now().UTC()
 
-	// Debug: Log features being saved
-	log.Printf("DEBUG REDIS: Saving character %s with %d features", char.Name, len(data.Features))
-	for i, feature := range data.Features {
-		log.Printf("DEBUG REDIS: Feature %d: key=%s, metadata=%v", i, feature.Key, feature.Metadata)
-	}
+	// Features saved to Redis (removed excessive debug logging)
 
 	// Serialize updated character
 	jsonData, err := json.Marshal(data)

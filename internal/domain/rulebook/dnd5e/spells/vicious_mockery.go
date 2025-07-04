@@ -184,14 +184,7 @@ func (v *ViciousMockeryHandler) Execute(ctx context.Context, caster *character.C
 		result.Message = "The target shrugs off your mockery!"
 	}
 
-	log.Printf("=== VICIOUS MOCKERY CAST ===")
-	log.Printf("Caster: %s (Level %d)", caster.Name, caster.Level)
-	log.Printf("Target: %s", targetID)
-	log.Printf("Save DC: %d", saveDC)
-	log.Printf("Save Failed: %v", saveFailed)
-	if saveFailed {
-		log.Printf("Damage: %d", result.TotalDamage)
-	}
+	// Vicious mockery cast completed (removed excessive debug logging)
 
 	return result, nil
 }
