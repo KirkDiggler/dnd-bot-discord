@@ -12,7 +12,7 @@ import (
 
 // ViciousMockeryHandler implements the vicious mockery cantrip
 type ViciousMockeryHandler struct {
-	eventBus   *events.EventBus
+	eventBus   events.Bus
 	diceRoller interface {
 		Roll(numDice, sides, modifier int) (struct{ Total int }, error)
 	}
@@ -23,7 +23,7 @@ type ViciousMockeryHandler struct {
 }
 
 // NewViciousMockeryHandler creates a new vicious mockery handler
-func NewViciousMockeryHandler(eventBus *events.EventBus) *ViciousMockeryHandler {
+func NewViciousMockeryHandler(eventBus events.Bus) *ViciousMockeryHandler {
 	return &ViciousMockeryHandler{
 		eventBus: eventBus,
 	}
@@ -165,21 +165,49 @@ func (v *ViciousMockeryHandler) Execute(ctx context.Context, caster *character.C
 		result.TotalDamage = damage
 		result.Message = fmt.Sprintf("Your cutting words deal %d psychic damage! The target has disadvantage on their next attack.", damage)
 
-		// TODO: Apply disadvantage effect to target's next attack
-		// This would need to be tracked as a status effect
+		// Emit an event to apply the vicious mockery effect
+		if v.eventBus != nil {
+			effectEvent := events.NewGameEvent(events.OnStatusApplied).
+				WithActor(caster).
+				WithContext(events.ContextTargetID, targetID).
+				WithContext("effect_name", "Vicious Mockery Disadvantage").
+				WithContext("effect_duration", 1). // Lasts for 1 attack
+				WithContext("effect_type", "disadvantage_next_attack").
+				WithContext(events.ContextEncounterID, input.EncounterID)
+
+			if err := v.eventBus.Emit(effectEvent); err != nil {
+				log.Printf("Failed to emit OnStatusApplied event: %v", err)
+			}
+		}
 
 	} else {
 		result.Message = "The target shrugs off your mockery!"
 	}
 
-	log.Printf("=== VICIOUS MOCKERY CAST ===")
-	log.Printf("Caster: %s (Level %d)", caster.Name, caster.Level)
-	log.Printf("Target: %s", targetID)
-	log.Printf("Save DC: %d", saveDC)
-	log.Printf("Save Failed: %v", saveFailed)
-	if saveFailed {
-		log.Printf("Damage: %d", result.TotalDamage)
-	}
+	// Vicious mockery cast completed (removed excessive debug logging)
 
 	return result, nil
+}
+
+// ApplyViciousMockeryDisadvantage applies the disadvantage effect to a target
+func ApplyViciousMockeryDisadvantage(target *character.Character) {
+	if target == nil || target.Resources == nil {
+		return
+	}
+
+	// Add vicious mockery disadvantage effect
+	effect := &shared.ActiveEffect{
+		Name:         "Vicious Mockery Disadvantage",
+		Description:  "Disadvantage on next attack roll",
+		Source:       "Vicious Mockery",
+		Duration:     1, // Lasts for 1 attack
+		DurationType: shared.DurationTypeRounds,
+		Modifiers: []shared.Modifier{
+			{
+				Type: shared.ModifierTypeDisadvantage,
+			},
+		},
+	}
+
+	target.Resources.ActiveEffects = append(target.Resources.ActiveEffects, effect)
 }

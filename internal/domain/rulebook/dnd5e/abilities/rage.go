@@ -15,7 +15,7 @@ import (
 
 // RageHandler implements the barbarian rage ability
 type RageHandler struct {
-	eventBus         *events.EventBus
+	eventBus         events.Bus
 	encounterService interface {
 		GetEncounter(ctx context.Context, id string) (*Encounter, error)
 	}
@@ -33,7 +33,7 @@ type Encounter struct {
 }
 
 // NewRageHandler creates a new rage handler
-func NewRageHandler(eventBus *events.EventBus) *RageHandler {
+func NewRageHandler(eventBus events.Bus) *RageHandler {
 	return &RageHandler{
 		eventBus:        eventBus,
 		activeListeners: make(map[string]events.EventListener),

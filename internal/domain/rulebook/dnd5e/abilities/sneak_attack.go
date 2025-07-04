@@ -13,7 +13,7 @@ import (
 
 // SneakAttackHandler implements the rogue sneak attack ability
 type SneakAttackHandler struct {
-	eventBus   *events.EventBus
+	eventBus   events.Bus
 	diceRoller interface {
 		Roll(numDice, sides, modifier int) (struct{ Total int }, error)
 	}
@@ -27,7 +27,7 @@ type SneakAttackHandler struct {
 }
 
 // NewSneakAttackHandler creates a new sneak attack handler
-func NewSneakAttackHandler(eventBus *events.EventBus) *SneakAttackHandler {
+func NewSneakAttackHandler(eventBus events.Bus) *SneakAttackHandler {
 	return &SneakAttackHandler{
 		eventBus:        eventBus,
 		activeListeners: make(map[string]events.EventListener),

@@ -4,11 +4,13 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
 	abilityService "github.com/KirkDiggler/dnd-bot-discord/internal/services/ability"
+	rpgevents "github.com/KirkDiggler/rpg-toolkit/events"
 )
 
 // RegistryConfig contains dependencies needed for ability handlers
 type RegistryConfig struct {
-	EventBus         *events.EventBus
+	EventBus         events.Bus     // Now using the interface
+	RPGEventBus      *rpgevents.Bus // RPG toolkit event bus for future migration
 	DiceRoller       dice.Roller
 	EncounterService interface{} // Should have GetEncounter method
 	CharacterService interface{} // Should have UpdateEquipment method
@@ -45,12 +47,5 @@ func RegisterAll(registry interface {
 	registry.RegisterHandler(NewServiceHandlerAdapter(divineSenseHandler))
 
 	// Register vicious mockery (bard cantrip)
-	viciousMockeryHandler := NewViciousMockeryHandler(cfg.EventBus)
-	if cfg.DiceRoller != nil {
-		viciousMockeryHandler.SetDiceRoller(cfg.DiceRoller)
-	}
-	if cfg.CharacterService != nil {
-		viciousMockeryHandler.SetCharacterService(cfg.CharacterService)
-	}
-	registry.RegisterHandler(NewServiceHandlerAdapter(viciousMockeryHandler))
+	RegisterViciousMockeryHandler(registry, cfg)
 }

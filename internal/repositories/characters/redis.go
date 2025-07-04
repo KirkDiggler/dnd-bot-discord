@@ -4,13 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
+	rulebook "github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
@@ -274,12 +273,6 @@ func (r *redisRepo) Get(ctx context.Context, id string) (*character.Character, e
 		return nil, fmt.Errorf("failed to unmarshal character: %w", unmarshalErr)
 	}
 
-	// Debug: Log features being loaded
-	log.Printf("DEBUG REDIS: Loading character %s with %d features", data.Name, len(data.Features))
-	for i, feature := range data.Features {
-		log.Printf("DEBUG REDIS: Loaded Feature %d: key=%s, metadata=%v", i, feature.Key, feature.Metadata)
-	}
-
 	// Convert to entity
 	char, err := r.fromCharacterData(&data)
 	if err != nil {
@@ -376,11 +369,7 @@ func (r *redisRepo) Update(ctx context.Context, char *character.Character) error
 	data.CreatedAt = existing.CreatedAt // Preserve creation time
 	data.UpdatedAt = time.Now().UTC()
 
-	// Debug: Log features being saved
-	log.Printf("DEBUG REDIS: Saving character %s with %d features", char.Name, len(data.Features))
-	for i, feature := range data.Features {
-		log.Printf("DEBUG REDIS: Feature %d: key=%s, metadata=%v", i, feature.Key, feature.Metadata)
-	}
+	// Features saved to Redis (removed excessive debug logging)
 
 	// Serialize updated character
 	jsonData, err := json.Marshal(data)

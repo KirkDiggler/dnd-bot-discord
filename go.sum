@@ -1,3 +1,7 @@
+github.com/KirkDiggler/rpg-toolkit/core v0.1.1-0.20250704020020-1ad05ac94e2b h1:av8oZztjMXy31/iSNcYLwGDzy9yVJ6ALTWtIOLuiyMQ=
+github.com/KirkDiggler/rpg-toolkit/core v0.1.1-0.20250704020020-1ad05ac94e2b/go.mod h1:N7xIvJGjmrHHNjfWQ3O1LlkalzImcMav3O0fNOg+8No=
+github.com/KirkDiggler/rpg-toolkit/events v0.1.2-0.20250704020020-1ad05ac94e2b h1:jcVjTUTeC3TSJcpemW93tcbndQQN9mBV8VXfXkPZ7MQ=
+github.com/KirkDiggler/rpg-toolkit/events v0.1.2-0.20250704020020-1ad05ac94e2b/go.mod h1:M+mF5gE04daLz73PX173IOn0CmVoAC6ff10Kx3BBCe8=
 github.com/bsm/ginkgo/v2 v2.12.0 h1:Ny8MWAHyOepLGlLKYmXG4IEkioBysk6GpaRTLC8zwWs=
 github.com/bsm/ginkgo/v2 v2.12.0/go.mod h1:SwYbGRRDovPVboqFv0tPTcG1sN61LM1Z4ARdbAV9g4c=
 github.com/bsm/gomega v1.27.10 h1:yeMWxP2pV2fG3FgAODIY8EiRE3dy0aeFYt4l7wh6yKA=

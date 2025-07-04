@@ -17,7 +17,7 @@ import (
 type service struct {
 	characterService charService.Service
 	diceRoller       dice.Roller
-	eventBus         *events.EventBus
+	eventBus         events.Bus
 	registry         *HandlerRegistry
 }
 
@@ -25,7 +25,7 @@ type service struct {
 type ServiceConfig struct {
 	CharacterService charService.Service
 	DiceRoller       dice.Roller
-	EventBus         *events.EventBus
+	EventBus         events.Bus
 }
 
 // NewService creates a new ability service without any hardcoded abilities
@@ -162,16 +162,8 @@ func (s *service) UseAbility(ctx context.Context, input *UseAbilityInput) (*UseA
 	}
 
 	// Save character state
-	log.Printf("=== SAVING CHARACTER AFTER ABILITY USE ===")
-	log.Printf("Character: %s", char.Name)
-	if char.Resources != nil {
-		log.Printf("Active effects before save: %d", len(char.Resources.ActiveEffects))
-	}
-
 	if updateErr := s.characterService.UpdateEquipment(char); updateErr != nil {
 		log.Printf("Failed to save character state after ability use: %v", updateErr)
-	} else {
-		log.Printf("Character saved successfully")
 	}
 
 	return result, nil

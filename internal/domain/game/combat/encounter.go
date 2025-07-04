@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 )
 
 // EncounterStatus represents the current state of an encounter
@@ -73,6 +75,9 @@ type Combatant struct {
 	XP         int              `json:"xp,omitempty"`          // Experience Points
 	Abilities  map[string]int   `json:"abilities,omitempty"`   // STR, DEX, etc.
 	Actions    []*MonsterAction `json:"actions,omitempty"`     // Available actions
+
+	// Temporary effects (for both players and monsters)
+	ActiveEffects []*shared.ActiveEffect `json:"active_effects,omitempty"` // Temporary combat effects
 }
 
 // IsAlive returns true if the combatant has more than 0 HP

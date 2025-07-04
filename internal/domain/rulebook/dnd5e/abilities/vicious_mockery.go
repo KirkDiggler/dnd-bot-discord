@@ -16,7 +16,7 @@ type ViciousMockeryHandler struct {
 }
 
 // NewViciousMockeryHandler creates a new vicious mockery ability handler
-func NewViciousMockeryHandler(eventBus *events.EventBus) *ViciousMockeryHandler {
+func NewViciousMockeryHandler(eventBus events.Bus) *ViciousMockeryHandler {
 	return &ViciousMockeryHandler{
 		spellHandler: spells.NewViciousMockeryHandler(eventBus),
 	}

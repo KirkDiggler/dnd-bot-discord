@@ -1,6 +1,7 @@
 package services
 
 import (
+	"github.com/KirkDiggler/dnd-bot-discord/internal/adapters/rpgtoolkit"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
@@ -17,6 +18,7 @@ import (
 	lootService "github.com/KirkDiggler/dnd-bot-discord/internal/services/loot"
 	monsterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/monster"
 	sessionService "github.com/KirkDiggler/dnd-bot-discord/internal/services/session"
+	rpgevents "github.com/KirkDiggler/rpg-toolkit/events"
 )
 
 // Provider holds all service instances
@@ -29,7 +31,8 @@ type Provider struct {
 	LootService      lootService.Service
 	AbilityService   abilityService.Service
 	DiceRoller       dice.Roller
-	EventBus         *events.EventBus
+	EventBus         events.Bus // Now using the interface
+	RPGEventBus      *rpgevents.Bus
 }
 
 // ProviderConfig holds configuration for creating services
@@ -44,8 +47,11 @@ type ProviderConfig struct {
 
 // NewProvider creates a new service provider with all services initialized
 func NewProvider(cfg *ProviderConfig) *Provider {
-	// Create event bus
-	eventBus := events.NewEventBus()
+	// Create rpg-toolkit event bus adapter that replaces the old event bus
+	eventBusAdapter := rpgtoolkit.NewEventBusAdapter()
+	// The adapter now IS our event bus
+	eventBus := eventBusAdapter
+	rpgBus := eventBusAdapter.GetRPGBus()
 
 	// Use in-memory repository if none provided
 	charRepo := cfg.CharacterRepository
@@ -122,6 +128,7 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 	// Register D&D 5e abilities
 	abilities.RegisterAll(abilService, &abilities.RegistryConfig{
 		EventBus:         eventBus,
+		RPGEventBus:      rpgBus,
 		DiceRoller:       cfg.DiceRoller,
 		EncounterService: encService,
 		CharacterService: charService,
@@ -137,5 +144,6 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 		AbilityService:   abilService,
 		DiceRoller:       cfg.DiceRoller,
 		EventBus:         eventBus,
+		RPGEventBus:      rpgBus,
 	}
 }
