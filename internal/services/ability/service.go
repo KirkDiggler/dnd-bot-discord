@@ -7,17 +7,17 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
 	charService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	rpgevents "github.com/KirkDiggler/rpg-toolkit/events"
 )
 
 // service is the implementation without any hardcoded abilities
 type service struct {
 	characterService charService.Service
 	diceRoller       dice.Roller
-	eventBus         events.Bus
+	eventBus         *rpgevents.Bus
 	registry         *HandlerRegistry
 }
 
@@ -25,7 +25,7 @@ type service struct {
 type ServiceConfig struct {
 	CharacterService charService.Service
 	DiceRoller       dice.Roller
-	EventBus         events.Bus
+	EventBus         *rpgevents.Bus
 }
 
 // NewService creates a new ability service without any hardcoded abilities

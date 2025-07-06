@@ -2,15 +2,14 @@ package abilities
 
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
 	abilityService "github.com/KirkDiggler/dnd-bot-discord/internal/services/ability"
 	rpgevents "github.com/KirkDiggler/rpg-toolkit/events"
 )
 
 // RegistryConfig contains dependencies needed for ability handlers
 type RegistryConfig struct {
-	EventBus         events.Bus     // Now using the interface
-	RPGEventBus      *rpgevents.Bus // RPG toolkit event bus for future migration
+	EventBus         *rpgevents.Bus // Using rpg-toolkit directly
+	RPGEventBus      *rpgevents.Bus // Same bus instance for compatibility
 	DiceRoller       dice.Roller
 	EncounterService interface{} // Should have GetEncounter method
 	CharacterService interface{} // Should have UpdateEquipment method
@@ -20,15 +19,16 @@ type RegistryConfig struct {
 func RegisterAll(registry interface {
 	RegisterHandler(handler abilityService.Handler)
 }, cfg *RegistryConfig) {
-	// Register rage
-	rageHandler := NewRageHandler(cfg.EventBus)
-	if cfg.EncounterService != nil {
-		rageHandler.SetEncounterService(cfg.EncounterService)
-	}
-	if cfg.CharacterService != nil {
-		rageHandler.SetCharacterService(cfg.CharacterService)
-	}
-	registry.RegisterHandler(NewServiceHandlerAdapter(rageHandler))
+	// Register rage - temporarily disabled during migration
+	// TODO: Complete rage handler migration to rpg-toolkit
+	// rageHandler := rpgtoolkit.NewRageHandler(cfg.EventBus)
+	// if cfg.EncounterService != nil {
+	// 	rageHandler.SetEncounterService(cfg.EncounterService)
+	// }
+	// if cfg.CharacterService != nil {
+	// 	rageHandler.SetCharacterService(cfg.CharacterService)
+	// }
+	// registry.RegisterHandler(NewServiceHandlerAdapter(rageHandler))
 
 	// Register second wind
 	secondWindHandler := NewSecondWindHandler(cfg.DiceRoller)
@@ -46,6 +46,7 @@ func RegisterAll(registry interface {
 	divineSenseHandler := NewDivineSenseHandler()
 	registry.RegisterHandler(NewServiceHandlerAdapter(divineSenseHandler))
 
-	// Register vicious mockery (bard cantrip)
-	RegisterViciousMockeryHandler(registry, cfg)
+	// Register vicious mockery (bard cantrip) - temporarily disabled during migration
+	// TODO: Complete vicious mockery migration to rpg-toolkit
+	// RegisterViciousMockeryHandler(registry, cfg)
 }

@@ -13,11 +13,12 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/damage"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat/attack"
 	gameSession "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
+	"github.com/KirkDiggler/rpg-toolkit/core"
+	rpgevents "github.com/KirkDiggler/rpg-toolkit/events"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/effects"
@@ -195,7 +196,7 @@ type service struct {
 	characterService charService.Service
 	uuidGenerator    uuid.Generator
 	diceRoller       dice.Roller
-	eventBus         events.Bus
+	eventBus         *rpgevents.Bus
 }
 
 // ServiceConfig holds configuration for the service
@@ -205,7 +206,7 @@ type ServiceConfig struct {
 	CharacterService charService.Service
 	UUIDGenerator    uuid.Generator
 	DiceRoller       dice.Roller
-	EventBus         events.Bus
+	EventBus         *rpgevents.Bus
 }
 
 // NewService creates a new encounter service
@@ -239,17 +240,12 @@ func NewService(cfg *ServiceConfig) Service {
 		svc.diceRoller = dice.NewRandomRoller()
 	}
 
-	// Register event handlers if event bus is available
-	if cfg.EventBus != nil {
-		// Old style handlers still work
-		spellDamageHandler := NewSpellDamageHandler(svc)
-		cfg.EventBus.Subscribe(events.OnSpellDamage, spellDamageHandler)
-
-		// Status effect handler
-		statusEffectHandler := NewStatusEffectHandler(svc)
-		cfg.EventBus.Subscribe(events.OnStatusApplied, statusEffectHandler)
-
-	}
+	// TODO: Register event handlers when they are migrated to rpg-toolkit
+	// - Migrate local spell damage handler to use rpg-toolkit events
+	// - Migrate status effect handler to rpg-toolkit
+	// - Migrate local proficiency handler to use rpg-toolkit events
+	// Note: The proficiency bonus is already calculated in character.Attack()
+	// These handlers demonstrate event-driven architecture for future enhancements
 
 	return svc
 }
@@ -699,14 +695,14 @@ func (s *service) NextTurn(ctx context.Context, encounterID, userID string) erro
 			if char, err := s.characterService.GetByID(newCurrent.CharacterID); err == nil {
 				// Calculate total turns (rounds * combatants + current turn index)
 				totalTurns := (encounter.Round-1)*len(encounter.TurnOrder) + encounter.Turn
-				turnEvent := events.NewGameEvent(events.OnTurnStart).
-					WithActor(char).
-					WithContext(events.ContextTurnCount, totalTurns).
-					WithContext(events.ContextRound, encounter.Round).
-					WithContext(events.ContextNumCombatants, len(encounter.TurnOrder))
+				contextData := map[string]interface{}{
+					rpgtoolkit.ContextTurnCount:     totalTurns,
+					rpgtoolkit.ContextRound:         encounter.Round,
+					rpgtoolkit.ContextNumCombatants: len(encounter.TurnOrder),
+				}
 
-				if err := s.eventBus.Emit(turnEvent); err != nil {
-					log.Printf("Failed to emit OnTurnStart event: %v", err)
+				if err := rpgtoolkit.EmitEvent(s.eventBus, rpgevents.EventOnTurnStart, char, nil, contextData); err != nil {
+					rpgtoolkit.LogEventError("OnTurnStart", err)
 				}
 			}
 		}
@@ -841,18 +837,24 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 				weaponName = char.EquippedSlots[shared.SlotTwoHanded].GetName()
 			}
 
-			beforeAttackEvent := events.NewGameEvent(events.BeforeAttackRoll).
-				WithActor(char).
-				WithTarget(targetChar).
-				WithContext("weapon", weaponName).
-				WithContext("attack_bonus", 0) // Will be calculated by char.Attack()
+			beforeAttackContext := map[string]interface{}{
+				"weapon":       weaponName,
+				"attack_bonus": 0, // Will be calculated by char.Attack()
+			}
 
-			if emitErr := s.eventBus.Emit(beforeAttackEvent); emitErr != nil {
-				log.Printf("Failed to emit BeforeAttackRoll event: %v", emitErr)
+			beforeAttackEvent, emitErr := rpgtoolkit.CreateAndEmitEvent(
+				s.eventBus,
+				rpgevents.EventBeforeAttackRoll,
+				char,
+				targetChar,
+				beforeAttackContext,
+			)
+			if emitErr != nil {
+				rpgtoolkit.LogEventError("BeforeAttackRoll", emitErr)
 			}
 
 			// Check if event was cancelled
-			if beforeAttackEvent.IsCancelled() {
+			if beforeAttackEvent != nil && beforeAttackEvent.IsCancelled() {
 				result.Hit = false
 				result.Damage = 0
 				result.AttackRoll = 0
@@ -924,22 +926,32 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 
 		// Emit OnAttackRoll event
 		if s.eventBus != nil {
-			onAttackEvent := events.NewGameEvent(events.OnAttackRoll).
-				WithActor(char).
-				WithTarget(targetChar).
-				WithContext("weapon", result.WeaponName).
-				WithContext("attack_roll", result.AttackRoll).
-				WithContext("attack_bonus", result.AttackBonus).
-				WithContext("total_attack", result.TotalAttack).
-				WithContext("target_ac", target.AC)
+			onAttackContext := map[string]interface{}{
+				"weapon":       result.WeaponName,
+				"attack_roll":  result.AttackRoll,
+				"attack_bonus": result.AttackBonus,
+				"total_attack": result.TotalAttack,
+				"target_ac":    target.AC,
+			}
 
-			if err := s.eventBus.Emit(onAttackEvent); err != nil {
-				log.Printf("Failed to emit OnAttackRoll event: %v", err)
+			onAttackEvent, emitErr := rpgtoolkit.CreateAndEmitEvent(
+				s.eventBus,
+				rpgevents.EventOnAttackRoll,
+				char,
+				targetChar,
+				onAttackContext,
+			)
+			if emitErr != nil {
+				rpgtoolkit.LogEventError("OnAttackRoll", emitErr)
 			}
 
 			// Update attack values from event context if modified
-			if modifiedTotal, ok := onAttackEvent.GetIntContext("total_attack"); ok {
-				result.TotalAttack = modifiedTotal
+			if onAttackEvent != nil {
+				if val, ok := onAttackEvent.Context().Get("total_attack"); ok {
+					if modifiedTotal, ok := val.(int); ok {
+						result.TotalAttack = modifiedTotal
+					}
+				}
 			}
 		}
 
@@ -949,27 +961,39 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 
 		// Emit AfterAttackRoll event
 		if s.eventBus != nil {
-			afterAttackEvent := events.NewGameEvent(events.AfterAttackRoll).
-				WithActor(char).
-				WithTarget(targetChar).
-				WithContext("weapon", result.WeaponName).
-				WithContext("attack_roll", result.AttackRoll).
-				WithContext("attack_bonus", result.AttackBonus).
-				WithContext("total_attack", result.TotalAttack).
-				WithContext("target_ac", target.AC).
-				WithContext("hit", result.Hit).
-				WithContext("critical", result.Critical)
+			afterAttackContext := map[string]interface{}{
+				"weapon":       result.WeaponName,
+				"attack_roll":  result.AttackRoll,
+				"attack_bonus": result.AttackBonus,
+				"total_attack": result.TotalAttack,
+				"target_ac":    target.AC,
+				"hit":          result.Hit,
+				"critical":     result.Critical,
+			}
 
-			if err := s.eventBus.Emit(afterAttackEvent); err != nil {
-				log.Printf("Failed to emit AfterAttackRoll event: %v", err)
+			afterAttackEvent, emitErr := rpgtoolkit.CreateAndEmitEvent(
+				s.eventBus,
+				rpgevents.EventAfterAttackRoll,
+				char,
+				targetChar,
+				afterAttackContext,
+			)
+			if emitErr != nil {
+				rpgtoolkit.LogEventError("AfterAttackRoll", emitErr)
 			}
 
 			// Update hit/critical from event context if modified
-			if modifiedHit, ok := afterAttackEvent.GetBoolContext("hit"); ok {
-				result.Hit = modifiedHit
-			}
-			if modifiedCrit, ok := afterAttackEvent.GetBoolContext("critical"); ok {
-				result.Critical = modifiedCrit
+			if afterAttackEvent != nil {
+				if val, ok := afterAttackEvent.Context().Get("hit"); ok {
+					if modifiedHit, ok := val.(bool); ok {
+						result.Hit = modifiedHit
+					}
+				}
+				if val, ok := afterAttackEvent.Context().Get("critical"); ok {
+					if modifiedCrit, ok := val.(bool); ok {
+						result.Critical = modifiedCrit
+					}
+				}
 			}
 		}
 
@@ -989,16 +1013,16 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 
 			// Emit OnDamageRoll event for damage modifiers (like rage and sneak attack)
 			if s.eventBus != nil {
-				damageEvent := events.NewGameEvent(events.OnDamageRoll).
-					WithActor(char).
-					WithContext(events.ContextAttackType, attackResult.AttackType).
-					WithContext(events.ContextDamage, result.Damage).
-					WithContext(events.ContextTargetID, target.ID).
-					WithContext(events.ContextIsCritical, result.Critical)
+				damageContext := map[string]interface{}{
+					rpgtoolkit.ContextAttackType: attackResult.AttackType,
+					rpgtoolkit.ContextDamage:     result.Damage,
+					rpgtoolkit.ContextTargetID:   target.ID,
+					rpgtoolkit.ContextIsCritical: result.Critical,
+				}
 
 				// Add weapon information for sneak attack
 				if attackResult.WeaponKey != "" {
-					damageEvent.WithContext(events.ContextWeaponKey, attackResult.WeaponKey)
+					damageContext[rpgtoolkit.ContextWeaponKey] = attackResult.WeaponKey
 
 					// Check weapon type (ranged vs melee)
 					weaponType := "melee"
@@ -1010,36 +1034,51 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 							// Check for finesse property
 							for _, prop := range weapon.Properties {
 								if prop != nil && prop.Key == "finesse" {
-									damageEvent.WithContext(events.ContextWeaponHasFinesse, true)
+									damageContext[rpgtoolkit.ContextWeaponHasFinesse] = true
 									break
 								}
 							}
 						}
 					}
-					damageEvent.WithContext(events.ContextWeaponType, weaponType)
+					damageContext[rpgtoolkit.ContextWeaponType] = weaponType
 				}
 
 				// Add combat conditions (these would need to be passed in via input)
 				// For now, we'll use defaults - this should be enhanced later
-				damageEvent.WithContext(events.ContextHasAdvantage, false)
-				damageEvent.WithContext(events.ContextHasDisadvantage, false)
-				damageEvent.WithContext(events.ContextAllyAdjacent, false)
+				damageContext[rpgtoolkit.ContextHasAdvantage] = false
+				damageContext[rpgtoolkit.ContextHasDisadvantage] = false
+				damageContext[rpgtoolkit.ContextAllyAdjacent] = false
 
-				if err := s.eventBus.Emit(damageEvent); err != nil {
-					log.Printf("Failed to emit OnDamageRoll event: %v", err)
+				damageEvent, emitErr := rpgtoolkit.CreateAndEmitEvent(
+					s.eventBus,
+					rpgevents.EventOnDamageRoll,
+					char,
+					nil, // No target for damage roll
+					damageContext,
+				)
+				if emitErr != nil {
+					rpgtoolkit.LogEventError("OnDamageRoll", emitErr)
 				}
 
 				// Update damage from event
-				if modifiedDamage, exists := damageEvent.GetIntContext(events.ContextDamage); exists {
-					result.Damage = modifiedDamage
-				}
+				if damageEvent != nil {
+					if val, ok := damageEvent.Context().Get(rpgtoolkit.ContextDamage); ok {
+						if modifiedDamage, ok := val.(int); ok {
+							result.Damage = modifiedDamage
+						}
+					}
 
-				// Check if sneak attack was applied
-				if sneakDamage, exists := damageEvent.GetIntContext(events.ContextSneakAttackDamage); exists && sneakDamage > 0 {
-					result.SneakAttackDamage = sneakDamage
-					if sneakDice, exists := damageEvent.GetStringContext(events.ContextSneakAttackDice); exists {
-						// Extract dice count from format like "3d6"
-						_, _ = fmt.Sscanf(sneakDice, "%dd6", &result.SneakAttackDice) //nolint:errcheck
+					// Check if sneak attack was applied
+					if val, ok := damageEvent.Context().Get(rpgtoolkit.ContextSneakAttackDamage); ok {
+						if sneakDamage, ok := val.(int); ok && sneakDamage > 0 {
+							result.SneakAttackDamage = sneakDamage
+							if val2, ok := damageEvent.Context().Get(rpgtoolkit.ContextSneakAttackDice); ok {
+								if sneakDice, ok := val2.(string); ok {
+									// Extract dice count from format like "3d6"
+									_, _ = fmt.Sscanf(sneakDice, "%dd6", &result.SneakAttackDice) //nolint:errcheck
+								}
+							}
+						}
 					}
 				}
 			}
@@ -1113,29 +1152,29 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 
 			// Create event using rpgtoolkit.CreateEntityAdapter for the monster
 			actorAdapter := rpgtoolkit.CreateEntityAdapter(attacker)
-			var actorChar *character.Character
-			if charAdapter, ok := actorAdapter.(*rpgtoolkit.CharacterEntityAdapter); ok {
-				actorChar = charAdapter.Character
-			} else {
-				// For monster adapters, we need to create a minimal Character for the current event system
-				actorChar = &character.Character{
-					ID:   attacker.ID,
-					Name: attacker.Name,
-				}
+			var targetCharAdapter core.Entity
+			if targetChar != nil {
+				targetCharAdapter = rpgtoolkit.WrapCharacter(targetChar)
 			}
 
-			beforeAttackEvent := events.NewGameEvent(events.BeforeAttackRoll).
-				WithActor(actorChar).
-				WithTarget(targetChar).
-				WithContext("weapon", action.Name).
-				WithContext("attack_bonus", action.AttackBonus)
+			beforeAttackContext := map[string]interface{}{
+				"weapon":       action.Name,
+				"attack_bonus": action.AttackBonus,
+			}
 
-			if err := s.eventBus.Emit(beforeAttackEvent); err != nil {
-				log.Printf("Failed to emit BeforeAttackRoll event: %v", err)
+			beforeAttackEvent, emitErr := rpgtoolkit.CreateAndEmitEventWithEntities(
+				s.eventBus,
+				rpgevents.EventBeforeAttackRoll,
+				actorAdapter,
+				targetCharAdapter,
+				beforeAttackContext,
+			)
+			if emitErr != nil {
+				rpgtoolkit.LogEventError("BeforeAttackRoll", emitErr)
 			}
 
 			// Check if event was cancelled
-			if beforeAttackEvent.IsCancelled() {
+			if beforeAttackEvent != nil && beforeAttackEvent.IsCancelled() {
 				result.Hit = false
 				result.Damage = 0
 				result.AttackRoll = 0
@@ -1144,8 +1183,12 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			}
 
 			// Update attack bonus from event context if modified
-			if modifiedBonus, ok := beforeAttackEvent.GetIntContext("attack_bonus"); ok {
-				action.AttackBonus = modifiedBonus
+			if beforeAttackEvent != nil {
+				if val, ok := beforeAttackEvent.Context().Get("attack_bonus"); ok {
+					if modifiedBonus, ok := val.(int); ok {
+						action.AttackBonus = modifiedBonus
+					}
+				}
 			}
 		}
 
@@ -1226,47 +1269,41 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		if s.eventBus != nil {
 			// Reuse the actor from the previous event preparation
 			actorAdapter := rpgtoolkit.CreateEntityAdapter(attacker)
-			var actorChar *character.Character
-			if charAdapter, ok := actorAdapter.(*rpgtoolkit.CharacterEntityAdapter); ok {
-				actorChar = charAdapter.Character
-			} else {
-				// For monster adapters, create a minimal Character for the current event system
-				actorChar = &character.Character{
-					ID:   attacker.ID,
-					Name: attacker.Name,
-				}
-			}
-
-			var targetChar *character.Character
+			var targetCharAdapter core.Entity
 			if target.Type == combat.CombatantTypePlayer && target.CharacterID != "" {
-				var err error
-				targetChar, err = s.characterService.GetByID(target.CharacterID)
-				if err != nil {
+				if targetChar, err := s.characterService.GetByID(target.CharacterID); err == nil {
+					targetCharAdapter = rpgtoolkit.WrapCharacter(targetChar)
+				} else {
 					log.Printf("Failed to get target character: %v", err)
 				}
-			} else {
-				targetChar = &character.Character{
-					ID:   target.ID,
-					Name: target.Name,
-				}
 			}
 
-			onAttackEvent := events.NewGameEvent(events.OnAttackRoll).
-				WithActor(actorChar).
-				WithTarget(targetChar).
-				WithContext("weapon", action.Name).
-				WithContext("attack_roll", result.AttackRoll).
-				WithContext("attack_bonus", result.AttackBonus).
-				WithContext("total_attack", result.TotalAttack).
-				WithContext("target_ac", target.AC)
+			onAttackContext := map[string]interface{}{
+				"weapon":       action.Name,
+				"attack_roll":  result.AttackRoll,
+				"attack_bonus": result.AttackBonus,
+				"total_attack": result.TotalAttack,
+				"target_ac":    target.AC,
+			}
 
-			if err := s.eventBus.Emit(onAttackEvent); err != nil {
-				log.Printf("Failed to emit OnAttackRoll event: %v", err)
+			onAttackEvent, emitErr := rpgtoolkit.CreateAndEmitEventWithEntities(
+				s.eventBus,
+				rpgevents.EventOnAttackRoll,
+				actorAdapter,
+				targetCharAdapter,
+				onAttackContext,
+			)
+			if emitErr != nil {
+				rpgtoolkit.LogEventError("OnAttackRoll", emitErr)
 			}
 
 			// Update attack values from event context if modified
-			if modifiedTotal, ok := onAttackEvent.GetIntContext("total_attack"); ok {
-				result.TotalAttack = modifiedTotal
+			if onAttackEvent != nil {
+				if val, ok := onAttackEvent.Context().Get("total_attack"); ok {
+					if modifiedTotal, ok := val.(int); ok {
+						result.TotalAttack = modifiedTotal
+					}
+				}
 			}
 		}
 
@@ -1278,52 +1315,48 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		if s.eventBus != nil {
 			// Reuse the actor from the previous event preparation
 			actorAdapter := rpgtoolkit.CreateEntityAdapter(attacker)
-			var actorChar *character.Character
-			if charAdapter, ok := actorAdapter.(*rpgtoolkit.CharacterEntityAdapter); ok {
-				actorChar = charAdapter.Character
-			} else {
-				// For monster adapters, create a minimal Character for the current event system
-				actorChar = &character.Character{
-					ID:   attacker.ID,
-					Name: attacker.Name,
-				}
-			}
-
-			var targetChar *character.Character
+			var targetCharAdapter core.Entity
 			if target.Type == combat.CombatantTypePlayer && target.CharacterID != "" {
-				var err error
-				targetChar, err = s.characterService.GetByID(target.CharacterID)
-				if err != nil {
+				if targetChar, err := s.characterService.GetByID(target.CharacterID); err == nil {
+					targetCharAdapter = rpgtoolkit.WrapCharacter(targetChar)
+				} else {
 					log.Printf("Failed to get target character: %v", err)
 				}
-			} else {
-				targetChar = &character.Character{
-					ID:   target.ID,
-					Name: target.Name,
-				}
 			}
 
-			afterAttackEvent := events.NewGameEvent(events.AfterAttackRoll).
-				WithActor(actorChar).
-				WithTarget(targetChar).
-				WithContext("weapon", action.Name).
-				WithContext("attack_roll", result.AttackRoll).
-				WithContext("attack_bonus", result.AttackBonus).
-				WithContext("total_attack", result.TotalAttack).
-				WithContext("target_ac", target.AC).
-				WithContext("hit", result.Hit).
-				WithContext("critical", result.Critical)
+			afterAttackContext := map[string]interface{}{
+				"weapon":       action.Name,
+				"attack_roll":  result.AttackRoll,
+				"attack_bonus": result.AttackBonus,
+				"total_attack": result.TotalAttack,
+				"target_ac":    target.AC,
+				"hit":          result.Hit,
+				"critical":     result.Critical,
+			}
 
-			if err := s.eventBus.Emit(afterAttackEvent); err != nil {
-				log.Printf("Failed to emit AfterAttackRoll event: %v", err)
+			afterAttackEvent, emitErr := rpgtoolkit.CreateAndEmitEventWithEntities(
+				s.eventBus,
+				rpgevents.EventAfterAttackRoll,
+				actorAdapter,
+				targetCharAdapter,
+				afterAttackContext,
+			)
+			if emitErr != nil {
+				rpgtoolkit.LogEventError("AfterAttackRoll", emitErr)
 			}
 
 			// Update hit/critical from event context if modified
-			if modifiedHit, ok := afterAttackEvent.GetBoolContext("hit"); ok {
-				result.Hit = modifiedHit
-			}
-			if modifiedCrit, ok := afterAttackEvent.GetBoolContext("critical"); ok {
-				result.Critical = modifiedCrit
+			if afterAttackEvent != nil {
+				if val, ok := afterAttackEvent.Context().Get("hit"); ok {
+					if modifiedHit, ok := val.(bool); ok {
+						result.Hit = modifiedHit
+					}
+				}
+				if val, ok := afterAttackEvent.Context().Get("critical"); ok {
+					if modifiedCrit, ok := val.(bool); ok {
+						result.Critical = modifiedCrit
+					}
+				}
 			}
 		}
 
@@ -1481,16 +1514,16 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		// Emit BeforeTakeDamage event for damage resistance (like rage)
 		if s.eventBus != nil && finalDamage > 0 {
 			// Get target character for event
-			var targetChar *character.Character
+			var targetCharAdapter core.Entity
 			if target.Type == combat.CombatantTypePlayer && target.CharacterID != "" {
-				var err error
-				targetChar, err = s.characterService.GetByID(target.CharacterID)
-				if err != nil {
+				if targetChar, err := s.characterService.GetByID(target.CharacterID); err == nil {
+					targetCharAdapter = rpgtoolkit.WrapCharacter(targetChar)
+				} else {
 					log.Printf("Failed to get target character for BeforeTakeDamage event: %v", err)
 				}
 			}
 
-			if targetChar != nil {
+			if targetCharAdapter != nil {
 				damageType := damage.TypeBludgeoning // Default
 				if result.DamageType != "" {
 					switch strings.ToLower(result.DamageType) {
@@ -1503,19 +1536,30 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 					}
 				}
 
-				takeDamageEvent := events.NewGameEvent(events.BeforeTakeDamage).
-					WithTarget(targetChar).
-					WithContext("damage", finalDamage).
-					WithContext("damage_type", string(damageType))
+				takeDamageContext := map[string]interface{}{
+					"damage":      finalDamage,
+					"damage_type": string(damageType),
+				}
 
-				if err := s.eventBus.Emit(takeDamageEvent); err != nil {
-					log.Printf("Failed to emit BeforeTakeDamage event: %v", err)
+				takeDamageEvent, emitErr := rpgtoolkit.CreateAndEmitEventWithEntities(
+					s.eventBus,
+					rpgevents.EventBeforeTakeDamage,
+					nil, // No actor for damage taken
+					targetCharAdapter,
+					takeDamageContext,
+				)
+				if emitErr != nil {
+					rpgtoolkit.LogEventError("BeforeTakeDamage", emitErr)
 				}
 
 				// Update damage from event
-				if modifiedDamage, exists := takeDamageEvent.GetIntContext("damage"); exists {
-					finalDamage = modifiedDamage
-					result.Damage = finalDamage
+				if takeDamageEvent != nil {
+					if val, ok := takeDamageEvent.Context().Get("damage"); ok {
+						if modifiedDamage, ok := val.(int); ok {
+							finalDamage = modifiedDamage
+							result.Damage = finalDamage
+						}
+					}
 				}
 			}
 		}
@@ -1641,27 +1685,75 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			sneakAttackStr = fmt.Sprintf(" + 🗡️ %dd6 Sneak Attack: %d", diceCount, result.SneakAttackDamage)
 		}
 
+		// Add proficiency indicator
+		profIndicator := ""
+		if attacker.Type == combat.CombatantTypePlayer && attacker.CharacterID != "" && result.WeaponName != "Unarmed Strike" {
+			// Check proficiency again for log message
+			if char, err := s.characterService.GetByID(attacker.CharacterID); err == nil {
+				isProficient := true
+				if char.EquippedSlots != nil {
+					if item := char.EquippedSlots[shared.SlotMainHand]; item != nil {
+						if w, ok := item.(*equipment.Weapon); ok {
+							isProficient = char.HasWeaponProficiency(w.Base.Key)
+						}
+					} else if item := char.EquippedSlots[shared.SlotTwoHanded]; item != nil {
+						if w, ok := item.(*equipment.Weapon); ok {
+							isProficient = char.HasWeaponProficiency(w.Base.Key)
+						}
+					}
+				}
+				if !isProficient {
+					profIndicator = " ⚠️ NO PROF"
+				}
+			}
+		}
+
 		if result.Critical {
-			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | 💥 CRIT! 🩸 **%d** ||d20:**%d**%+d=%d vs AC:%d, dmg:%s%s||",
+			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | 💥 CRIT! 🩸 **%d** ||d20:**%d**%+d=%d vs AC:%d, dmg:%s%s||%s",
 				result.AttackerName, result.TargetName,
 				result.Damage,
 				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
-				damageRollStr, sneakAttackStr)
+				damageRollStr, sneakAttackStr, profIndicator)
 		} else {
-			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | HIT 🩸 **%d** ||d20:%d%+d=%d vs AC:%d, dmg:%s%s||",
+			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | HIT 🩸 **%d** ||d20:%d%+d=%d vs AC:%d, dmg:%s%s||%s",
 				result.AttackerName, result.TargetName,
 				result.Damage,
 				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
-				damageRollStr, sneakAttackStr)
+				damageRollStr, sneakAttackStr, profIndicator)
 		}
 
 		if result.TargetDefeated {
 			result.LogEntry += " 💀"
 		}
 	} else {
-		result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | ❌ MISS ||d20:%d%+d=%d vs AC:%d||",
+		// Add proficiency indicator for misses too
+		profIndicator := ""
+		if attacker.Type == combat.CombatantTypePlayer && attacker.CharacterID != "" {
+			if char, err := s.characterService.GetByID(attacker.CharacterID); err == nil {
+				var weapon *equipment.Weapon
+				isProficient := true // Default to true for unarmed strikes
+
+				if char.EquippedSlots[shared.SlotMainHand] != nil {
+					if w, ok := char.EquippedSlots[shared.SlotMainHand].(*equipment.Weapon); ok {
+						weapon = w
+						isProficient = char.HasWeaponProficiency(w.Base.Key)
+					}
+				} else if char.EquippedSlots[shared.SlotTwoHanded] != nil {
+					if w, ok := char.EquippedSlots[shared.SlotTwoHanded].(*equipment.Weapon); ok {
+						weapon = w
+						isProficient = char.HasWeaponProficiency(w.Base.Key)
+					}
+				}
+
+				if !isProficient && weapon != nil {
+					profIndicator = " ⚠️ NO PROF"
+				}
+			}
+		}
+
+		result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | ❌ MISS ||d20:%d%+d=%d vs AC:%d||%s",
 			result.AttackerName, result.TargetName,
-			result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC)
+			result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC, profIndicator)
 	}
 
 	// Add to combat log
@@ -2040,23 +2132,42 @@ func NewStatusEffectHandler(service Service) *StatusEffectHandler {
 }
 
 // HandleEvent processes status applied events
-func (h *StatusEffectHandler) HandleEvent(event *events.GameEvent) error {
+func (h *StatusEffectHandler) HandleEvent(event rpgevents.Event) error {
 	// Only handle status applied events
-	if event.Type != events.OnStatusApplied {
+	if event.Type() != rpgevents.EventOnStatusApplied {
 		return nil
 	}
 
 	// Get target ID
-	targetID, exists := event.GetStringContext(events.ContextTargetID)
-	if !exists || targetID == "" {
+	var targetID string
+	if val, ok := event.Context().Get(rpgtoolkit.ContextTargetID); ok {
+		if id, ok := val.(string); ok {
+			targetID = id
+		}
+	}
+	if targetID == "" {
 		log.Printf("StatusEffectHandler: No target ID for status effect")
 		return nil
 	}
 
 	// Get effect details
-	effectName, _ := event.GetStringContext("effect_name")
-	effectType, _ := event.GetStringContext("effect_type")
-	duration, _ := event.GetIntContext("effect_duration")
+	var effectName, effectType string
+	var duration int
+	if val, ok := event.Context().Get("effect_name"); ok {
+		if name, ok := val.(string); ok {
+			effectName = name
+		}
+	}
+	if val, ok := event.Context().Get("effect_type"); ok {
+		if eType, ok := val.(string); ok {
+			effectType = eType
+		}
+	}
+	if val, ok := event.Context().Get("effect_duration"); ok {
+		if d, ok := val.(int); ok {
+			duration = d
+		}
+	}
 
 	// Check if this is vicious mockery disadvantage
 	if effectType == "disadvantage_next_attack" && effectName == "Vicious Mockery Disadvantage" {
@@ -2064,19 +2175,27 @@ func (h *StatusEffectHandler) HandleEvent(event *events.GameEvent) error {
 		log.Printf("StatusEffectHandler: Applying vicious mockery disadvantage to target %s", targetID)
 
 		// First check if target is a player character
-		// If event.Target is not nil, it's a player character (CharacterEntityAdapter)
-		// If event.Target is nil, the target is a monster (MonsterEntityAdapter)
-		if event.Target != nil && event.Target.OwnerID != "" {
-			// For players, the effect is handled through character.Resources.ActiveEffects
-			// This is already done in the vicious_mockery.go ApplyViciousMockeryDisadvantage function
-			log.Printf("StatusEffectHandler: Target is a player, effect already applied to character")
-			return nil
+		// If event.Target is not nil, it's a player character
+		if event.Target() != nil {
+			if targetEntity := event.Target(); targetEntity != nil {
+				if char, ok := rpgtoolkit.ExtractCharacter(targetEntity); ok && char != nil && char.OwnerID != "" {
+					// For players, the effect is handled through character.Resources.ActiveEffects
+					// This is already done in the vicious_mockery.go ApplyViciousMockeryDisadvantage function
+					log.Printf("StatusEffectHandler: Target is a player, effect already applied to character")
+					return nil
+				}
+			}
 		}
 
 		// For monsters, we need to find them in an active encounter
 		// Get encounter ID from context if available
-		encounterID, exists := event.GetStringContext(events.ContextEncounterID)
-		if !exists || encounterID == "" {
+		var encounterID string
+		if val, ok := event.Context().Get(rpgtoolkit.ContextEncounterID); ok {
+			if encID, ok := val.(string); ok {
+				encounterID = encID
+			}
+		}
+		if encounterID == "" {
 			// Try to find an active encounter containing this target
 			// This would require additional context or a repository method to search
 			log.Printf("StatusEffectHandler: No encounter ID, cannot apply effect to monster")
