@@ -249,6 +249,10 @@ func NewService(cfg *ServiceConfig) Service {
 		statusEffectHandler := NewStatusEffectHandler(svc)
 		cfg.EventBus.Subscribe(events.OnStatusApplied, statusEffectHandler)
 
+		// Proficiency handler - register as event listener
+		// Note: The proficiency bonus is already calculated in character.Attack()
+		// This handler is for future event-driven enhancements
+		_ = NewProficiencyHandler(svc) // Reserved for future use
 	}
 
 	return svc
@@ -1641,27 +1645,75 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 			sneakAttackStr = fmt.Sprintf(" + 🗡️ %dd6 Sneak Attack: %d", diceCount, result.SneakAttackDamage)
 		}
 
+		// Add proficiency indicator
+		profIndicator := ""
+		if attacker.Type == combat.CombatantTypePlayer && attacker.CharacterID != "" && result.WeaponName != "Unarmed Strike" {
+			// Check proficiency again for log message
+			if char, err := s.characterService.GetByID(attacker.CharacterID); err == nil {
+				isProficient := true
+				if char.EquippedSlots != nil {
+					if item := char.EquippedSlots[shared.SlotMainHand]; item != nil {
+						if w, ok := item.(*equipment.Weapon); ok {
+							isProficient = char.HasWeaponProficiency(w.Base.Key)
+						}
+					} else if item := char.EquippedSlots[shared.SlotTwoHanded]; item != nil {
+						if w, ok := item.(*equipment.Weapon); ok {
+							isProficient = char.HasWeaponProficiency(w.Base.Key)
+						}
+					}
+				}
+				if !isProficient {
+					profIndicator = " ⚠️ NO PROF"
+				}
+			}
+		}
+
 		if result.Critical {
-			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | 💥 CRIT! 🩸 **%d** ||d20:**%d**%+d=%d vs AC:%d, dmg:%s%s||",
+			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | 💥 CRIT! 🩸 **%d** ||d20:**%d**%+d=%d vs AC:%d, dmg:%s%s||%s",
 				result.AttackerName, result.TargetName,
 				result.Damage,
 				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
-				damageRollStr, sneakAttackStr)
+				damageRollStr, sneakAttackStr, profIndicator)
 		} else {
-			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | HIT 🩸 **%d** ||d20:%d%+d=%d vs AC:%d, dmg:%s%s||",
+			result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | HIT 🩸 **%d** ||d20:%d%+d=%d vs AC:%d, dmg:%s%s||%s",
 				result.AttackerName, result.TargetName,
 				result.Damage,
 				result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC,
-				damageRollStr, sneakAttackStr)
+				damageRollStr, sneakAttackStr, profIndicator)
 		}
 
 		if result.TargetDefeated {
 			result.LogEntry += " 💀"
 		}
 	} else {
-		result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | ❌ MISS ||d20:%d%+d=%d vs AC:%d||",
+		// Add proficiency indicator for misses too
+		profIndicator := ""
+		if attacker.Type == combat.CombatantTypePlayer && attacker.CharacterID != "" {
+			if char, err := s.characterService.GetByID(attacker.CharacterID); err == nil {
+				var weapon *equipment.Weapon
+				isProficient := true // Default to true for unarmed strikes
+
+				if char.EquippedSlots[shared.SlotMainHand] != nil {
+					if w, ok := char.EquippedSlots[shared.SlotMainHand].(*equipment.Weapon); ok {
+						weapon = w
+						isProficient = char.HasWeaponProficiency(w.Base.Key)
+					}
+				} else if char.EquippedSlots[shared.SlotTwoHanded] != nil {
+					if w, ok := char.EquippedSlots[shared.SlotTwoHanded].(*equipment.Weapon); ok {
+						weapon = w
+						isProficient = char.HasWeaponProficiency(w.Base.Key)
+					}
+				}
+
+				if !isProficient && weapon != nil {
+					profIndicator = " ⚠️ NO PROF"
+				}
+			}
+		}
+
+		result.LogEntry = fmt.Sprintf("⚔️ **%s** → **%s** | ❌ MISS ||d20:%d%+d=%d vs AC:%d||%s",
 			result.AttackerName, result.TargetName,
-			result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC)
+			result.AttackRoll, result.AttackBonus, result.TotalAttack, result.TargetAC, profIndicator)
 	}
 
 	// Add to combat log
