@@ -116,6 +116,10 @@ func (tb *ToolkitBus) Clear() {
 
 	// Clear tracking
 	tb.subscriptions = make(map[EventType]map[EventListener]string)
+
+	// Replace the underlying bus with a fresh instance to ensure
+	// any direct subscriptions are also cleared
+	tb.bus = rpgevents.NewBus()
 }
 
 // ListenerCount returns the number of listeners for an event type

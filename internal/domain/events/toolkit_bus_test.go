@@ -161,6 +161,53 @@ func TestToolkitBus_Clear(t *testing.T) {
 	assert.Equal(t, 0, bus.ListenerCount(OnDamageRoll))
 }
 
+func TestToolkitBus_ClearAlsoClearsDirectSubscriptions(t *testing.T) {
+	bus := NewToolkitBus()
+	rpgBus := bus.GetRPGBus()
+
+	// Track if handlers are called
+	trackedHandlerCalled := false
+	directHandlerCalled := false
+
+	// Add a tracked subscription through ToolkitBus
+	listener := &customMockListener{
+		priority: 100,
+		handler: func(event *GameEvent) error {
+			trackedHandlerCalled = true
+			return nil
+		},
+	}
+	bus.Subscribe(OnAttackRoll, listener)
+
+	// Add a direct subscription to the underlying rpg-toolkit bus
+	rpgBus.SubscribeFunc(rpgevents.EventOnAttackRoll, 50, func(_ context.Context, e rpgevents.Event) error {
+		directHandlerCalled = true
+		return nil
+	})
+
+	// Emit an event - both handlers should be called
+	event := &GameEvent{Type: OnAttackRoll, Context: make(map[string]interface{})}
+	err := bus.Emit(event)
+	require.NoError(t, err)
+
+	assert.True(t, trackedHandlerCalled, "Tracked handler should be called")
+	assert.True(t, directHandlerCalled, "Direct handler should be called")
+
+	// Reset flags
+	trackedHandlerCalled = false
+	directHandlerCalled = false
+
+	// Clear the bus
+	bus.Clear()
+
+	// Emit again - neither handler should be called
+	err = bus.Emit(event)
+	require.NoError(t, err)
+
+	assert.False(t, trackedHandlerCalled, "Tracked handler should not be called after Clear")
+	assert.False(t, directHandlerCalled, "Direct handler should not be called after Clear")
+}
+
 func TestToolkitBus_DirectToolkitUsage(t *testing.T) {
 	// This test shows that new code can use the toolkit bus directly
 	// alongside old DND bot event handlers
