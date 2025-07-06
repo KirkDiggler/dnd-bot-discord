@@ -39,6 +39,7 @@ func (h *SpellDamageHandler) HandleEvent(event *events.GameEvent) error {
 	}
 
 	if targetID == "" {
+		log.Printf("SpellDamageHandler: Missing targetID for spell damage event of type %s", event.Type)
 		return nil // No target ID for spell damage
 	}
 

@@ -1,7 +1,6 @@
 package services
 
 import (
-	"github.com/KirkDiggler/dnd-bot-discord/internal/adapters/rpgtoolkit"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
@@ -47,11 +46,10 @@ type ProviderConfig struct {
 
 // NewProvider creates a new service provider with all services initialized
 func NewProvider(cfg *ProviderConfig) *Provider {
-	// Create rpg-toolkit event bus adapter that replaces the old event bus
-	eventBusAdapter := rpgtoolkit.NewEventBusAdapter()
-	// The adapter now IS our event bus
-	eventBus := eventBusAdapter
-	rpgBus := eventBusAdapter.GetRPGBus()
+	// Use toolkit event bus directly - no adapter needed
+	toolkitBus := events.NewToolkitBus()
+	eventBus := toolkitBus
+	rpgBus := toolkitBus.GetRPGBus() // Share the same underlying bus instance
 
 	// Use in-memory repository if none provided
 	charRepo := cfg.CharacterRepository

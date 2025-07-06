@@ -241,13 +241,14 @@ func NewService(cfg *ServiceConfig) Service {
 
 	// Register event handlers if event bus is available
 	if cfg.EventBus != nil {
-		// Spell damage handler
+		// Old style handlers still work
 		spellDamageHandler := NewSpellDamageHandler(svc)
 		cfg.EventBus.Subscribe(events.OnSpellDamage, spellDamageHandler)
 
 		// Status effect handler
 		statusEffectHandler := NewStatusEffectHandler(svc)
 		cfg.EventBus.Subscribe(events.OnStatusApplied, statusEffectHandler)
+
 	}
 
 	return svc
@@ -829,6 +830,8 @@ func (s *service) PerformAttack(ctx context.Context, input *AttackInput) (*Attac
 		}
 
 		// Emit BeforeAttackRoll event
+		// TODO: Extract event emission logic into helper function to reduce duplication
+		// This pattern is repeated for BeforeAttackRoll, OnAttackRoll, and AfterAttackRoll
 		if s.eventBus != nil {
 			// Get weapon name for the event
 			weaponName := "Unarmed Strike"
@@ -2061,6 +2064,8 @@ func (h *StatusEffectHandler) HandleEvent(event *events.GameEvent) error {
 		log.Printf("StatusEffectHandler: Applying vicious mockery disadvantage to target %s", targetID)
 
 		// First check if target is a player character
+		// If event.Target is not nil, it's a player character (CharacterEntityAdapter)
+		// If event.Target is nil, the target is a monster (MonsterEntityAdapter)
 		if event.Target != nil && event.Target.OwnerID != "" {
 			// For players, the effect is handled through character.Resources.ActiveEffects
 			// This is already done in the vicious_mockery.go ApplyViciousMockeryDisadvantage function
