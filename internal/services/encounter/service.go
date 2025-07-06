@@ -2066,10 +2066,10 @@ func (h *StatusEffectHandler) HandleEvent(event *events.GameEvent) error {
 		// First check if target is a player character
 		// If event.Target is not nil, it's a player character (CharacterEntityAdapter)
 		// If event.Target is nil, the target is a monster (MonsterEntityAdapter)
-		if event.Target != nil {
+		if event.Target != nil && event.Target.OwnerID != "" {
 			// For players, the effect is handled through character.Resources.ActiveEffects
 			// This is already done in the vicious_mockery.go ApplyViciousMockeryDisadvantage function
-			log.Printf("StatusEffectHandler: Target is a player character, effect already applied to character")
+			log.Printf("StatusEffectHandler: Target is a player, effect already applied to character")
 			return nil
 		}
 
