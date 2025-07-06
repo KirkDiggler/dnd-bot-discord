@@ -241,13 +241,14 @@ func NewService(cfg *ServiceConfig) Service {
 
 	// Register event handlers if event bus is available
 	if cfg.EventBus != nil {
-		// Spell damage handler
+		// Old style handlers still work
 		spellDamageHandler := NewSpellDamageHandler(svc)
 		cfg.EventBus.Subscribe(events.OnSpellDamage, spellDamageHandler)
 
 		// Status effect handler
 		statusEffectHandler := NewStatusEffectHandler(svc)
 		cfg.EventBus.Subscribe(events.OnStatusApplied, statusEffectHandler)
+
 	}
 
 	return svc
