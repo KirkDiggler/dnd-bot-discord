@@ -223,33 +223,13 @@ func (h *RageHandler) registerRageHandlers(char *character.Character) {
 	})
 
 	// Subscribe to before take damage events for resistance
-	h.eventBus.SubscribeFunc(rpgevents.EventBeforeTakeDamage, 30, func(ctx context.Context, event rpgevents.Event) error {
-		// Check if this is our character taking damage
-		target, ok := rpgtoolkit.ExtractCharacter(event.Target())
-		if !ok || target == nil || target.ID != char.ID {
-			return nil
-		}
+	// NOTE: Rage resistance is now handled by the character's effect system
+	// This event handler is disabled to prevent double resistance application
+	// The rage effect added to char.Resources.ActiveEffects already provides resistance
+	// through the character's ApplyDamageResistance method
 
-		// Check if character is raging
-		ability := char.Resources.Abilities[shared.AbilityKeyRage]
-		if ability == nil || !ability.IsActive {
-			return nil
-		}
-
-		// Check damage type
-		damageType, _ := rpgtoolkit.GetStringContext(event, "damage_type")
-		if damageType == "bludgeoning" || damageType == "piercing" || damageType == "slashing" {
-			// Apply resistance (half damage)
-			currentDamage, _ := rpgtoolkit.GetIntContext(event, rpgtoolkit.ContextDamage)
-			resistedDamage := currentDamage / 2
-			event.Context().Set(rpgtoolkit.ContextDamage, resistedDamage)
-			event.Context().Set("resistance_applied", true)
-			event.Context().Set("resistance_source", "Rage")
-
-			log.Printf("[RAGE] %s takes %d damage (reduced from %d by rage resistance)",
-				target.Name, resistedDamage, currentDamage)
-		}
-
-		return nil
-	})
+	// DISABLED: Double resistance bug fix
+	// h.eventBus.SubscribeFunc(rpgevents.EventBeforeTakeDamage, 30, func(ctx context.Context, event rpgevents.Event) error {
+	// 	... resistance logic ...
+	// })
 }
