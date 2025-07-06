@@ -3,7 +3,7 @@
 Part of #74
 
 ## Summary
-This PR implements a comprehensive D&D 5e feats system using the rpg-toolkit event bus. The feat system is designed to be modular and event-driven, allowing feats to modify character abilities without tightly coupling to game mechanics.
+This PR implements a comprehensive D&D 5e feats system and restores the rage ability handler using the rpg-toolkit event bus. The feat system is designed to be modular and event-driven, allowing feats and class abilities to modify character mechanics without tight coupling.
 
 ## What's Implemented
 
@@ -20,6 +20,13 @@ This PR implements a comprehensive D&D 5e feats system using the rpg-toolkit eve
 5. **Tough** (+2 HP per level)
 6. **War Caster** (advantage on concentration saves, cast with hands full, spell opportunity attacks)
 
+### Restored Class Abilities
+1. **Rage** (Barbarian) - Fully implemented with event handlers for:
+   - +2/+3/+4 damage bonus on melee attacks (level-based)
+   - Resistance to bludgeoning, piercing, and slashing damage
+   - Proper activation/deactivation with resource tracking
+   - Event-driven damage and resistance calculations
+
 ## Technical Details
 - All feats use the event-driven architecture with rpg-toolkit
 - Feats are stored as character features with type "feat"
@@ -31,6 +38,9 @@ This PR implements a comprehensive D&D 5e feats system using the rpg-toolkit eve
 - [ ] Registry properly registers all feats on init
 - [ ] Event handlers are registered when character joins encounter
 - [ ] Feats can be applied to characters (via code - no UI yet)
+- [ ] Rage ability activates and applies damage bonus
+- [ ] Rage resistance properly reduces physical damage
+- [ ] Rage event handlers register correctly
 
 ## Next Steps (Future PRs)
 1. Add feat selection to character creation (Variant Human gets feat at level 1)
