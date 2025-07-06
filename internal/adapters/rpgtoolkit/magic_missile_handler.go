@@ -1,4 +1,4 @@
-package spells
+package rpgtoolkit
 
 import (
 	"context"
@@ -6,12 +6,12 @@ import (
 	"log"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
+	rpgevents "github.com/KirkDiggler/rpg-toolkit/events"
 )
 
-// MagicMissileHandler implements the magic missile spell
+// MagicMissileHandler implements the magic missile spell using rpg-toolkit
 type MagicMissileHandler struct {
-	eventBus   events.Bus
+	eventBus   *rpgevents.Bus
 	diceRoller interface {
 		Roll(numDice, sides, modifier int) (struct{ Total int }, error)
 	}
@@ -22,7 +22,7 @@ type MagicMissileHandler struct {
 }
 
 // NewMagicMissileHandler creates a new magic missile handler
-func NewMagicMissileHandler(eventBus events.Bus) *MagicMissileHandler {
+func NewMagicMissileHandler(eventBus *rpgevents.Bus) *MagicMissileHandler {
 	return &MagicMissileHandler{
 		eventBus: eventBus,
 	}
@@ -104,13 +104,13 @@ func (m *MagicMissileHandler) Execute(ctx context.Context, caster *character.Cha
 
 	// Emit spell cast event
 	if m.eventBus != nil {
-		spellEvent := events.NewGameEvent(events.OnSpellCast).
-			WithActor(caster).
-			WithContext(events.ContextSpellLevel, input.SpellLevel).
-			WithContext(events.ContextSpellName, "Magic Missile").
-			WithContext(events.ContextSpellSchool, "evocation")
+		spellCastContext := map[string]interface{}{
+			ContextSpellLevel: input.SpellLevel,
+			ContextSpellName:  "Magic Missile",
+			"spell_school":    "evocation",
+		}
 
-		if err := m.eventBus.Emit(spellEvent); err != nil {
+		if err := EmitEvent(m.eventBus, rpgevents.EventOnSpellCast, caster, nil, spellCastContext); err != nil {
 			log.Printf("Failed to emit OnSpellCast event: %v", err)
 		}
 	}
@@ -148,23 +148,31 @@ func (m *MagicMissileHandler) Execute(ctx context.Context, caster *character.Cha
 
 		// Emit damage event for each target
 		if m.eventBus != nil && target != nil {
-			damageEvent := events.NewGameEvent(events.OnSpellDamage).
-				WithActor(caster).
-				WithTarget(target).
-				WithContext(events.ContextDamage, totalDamage).
-				WithContext(events.ContextDamageType, "force").
-				WithContext(events.ContextSpellName, "Magic Missile").
-				WithContext("num_missiles", missiles).
-				WithContext(events.ContextEncounterID, input.EncounterID).
-				WithContext(events.ContextTargetID, targetID)
+			damageContext := map[string]interface{}{
+				ContextDamage:      totalDamage,
+				ContextDamageType:  "force",
+				ContextSpellName:   "Magic Missile",
+				"num_missiles":     missiles,
+				ContextEncounterID: input.EncounterID,
+				ContextTargetID:    targetID,
+			}
 
-			if err := m.eventBus.Emit(damageEvent); err != nil {
+			damageEvent, err := CreateAndEmitEvent(
+				m.eventBus,
+				rpgevents.EventOnSpellDamage,
+				caster,
+				target,
+				damageContext,
+			)
+			if err != nil {
 				log.Printf("Failed to emit OnSpellDamage event: %v", err)
 			}
 
 			// Check if damage was modified
-			if modifiedDamage, exists := damageEvent.GetIntContext(events.ContextDamage); exists {
-				totalDamage = modifiedDamage
+			if damageEvent != nil {
+				if modifiedDamage, ok := GetIntContext(damageEvent, ContextDamage); ok {
+					totalDamage = modifiedDamage
+				}
 			}
 		}
 

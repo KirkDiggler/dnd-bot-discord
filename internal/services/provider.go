@@ -3,7 +3,6 @@ package services
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/events"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e/abilities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e/calculators"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
@@ -30,8 +29,7 @@ type Provider struct {
 	LootService      lootService.Service
 	AbilityService   abilityService.Service
 	DiceRoller       dice.Roller
-	EventBus         events.Bus // Now using the interface
-	RPGEventBus      *rpgevents.Bus
+	EventBus         *rpgevents.Bus // Using rpg-toolkit directly
 }
 
 // ProviderConfig holds configuration for creating services
@@ -46,10 +44,8 @@ type ProviderConfig struct {
 
 // NewProvider creates a new service provider with all services initialized
 func NewProvider(cfg *ProviderConfig) *Provider {
-	// Use toolkit event bus directly - no adapter needed
-	toolkitBus := events.NewToolkitBus()
-	eventBus := toolkitBus
-	rpgBus := toolkitBus.GetRPGBus() // Share the same underlying bus instance
+	// Use rpg-toolkit event bus directly
+	eventBus := rpgevents.NewBus()
 
 	// Use in-memory repository if none provided
 	charRepo := cfg.CharacterRepository
@@ -126,7 +122,7 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 	// Register D&D 5e abilities
 	abilities.RegisterAll(abilService, &abilities.RegistryConfig{
 		EventBus:         eventBus,
-		RPGEventBus:      rpgBus,
+		RPGEventBus:      eventBus, // Same bus instance
 		DiceRoller:       cfg.DiceRoller,
 		EncounterService: encService,
 		CharacterService: charService,
@@ -142,6 +138,5 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 		AbilityService:   abilService,
 		DiceRoller:       cfg.DiceRoller,
 		EventBus:         eventBus,
-		RPGEventBus:      rpgBus,
 	}
 }
