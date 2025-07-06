@@ -160,7 +160,7 @@ func GetStringContext(event rpgevents.Event, key string) (string, bool) {
 }
 
 // GetBoolContext safely extracts a bool from event context
-func GetBoolContext(event rpgevents.Event, key string) (bool, bool) {
+func GetBoolContext(event rpgevents.Event, key string) (value, exists bool) {
 	if val, ok := event.Context().Get(key); ok {
 		if boolVal, ok := val.(bool); ok {
 			return boolVal, true

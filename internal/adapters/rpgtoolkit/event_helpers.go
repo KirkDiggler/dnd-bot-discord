@@ -10,7 +10,7 @@ import (
 )
 
 // EmitEvent is a helper to emit events using rpg-toolkit style
-func EmitEvent(bus *rpgevents.Bus, eventType string, actor *character.Character, target *character.Character, contextData map[string]interface{}) error {
+func EmitEvent(bus *rpgevents.Bus, eventType string, actor, target *character.Character, contextData map[string]interface{}) error {
 	if bus == nil {
 		return nil
 	}
@@ -37,7 +37,7 @@ func EmitEvent(bus *rpgevents.Bus, eventType string, actor *character.Character,
 }
 
 // CreateAndEmitEvent creates an event, emits it, and returns the event for checking cancellation
-func CreateAndEmitEvent(bus *rpgevents.Bus, eventType string, actor *character.Character, target *character.Character, contextData map[string]interface{}) (rpgevents.Event, error) {
+func CreateAndEmitEvent(bus *rpgevents.Bus, eventType string, actor, target *character.Character, contextData map[string]interface{}) (rpgevents.Event, error) {
 	if bus == nil {
 		return nil, nil
 	}
@@ -125,7 +125,7 @@ const (
 )
 
 // CreateAndEmitEventWithEntities creates an event with Entity types, emits it, and returns the event
-func CreateAndEmitEventWithEntities(bus *rpgevents.Bus, eventType string, actor core.Entity, target core.Entity, contextData map[string]interface{}) (rpgevents.Event, error) {
+func CreateAndEmitEventWithEntities(bus *rpgevents.Bus, eventType string, actor, target core.Entity, contextData map[string]interface{}) (rpgevents.Event, error) {
 	if bus == nil {
 		return nil, nil
 	}

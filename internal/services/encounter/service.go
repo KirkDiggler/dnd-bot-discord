@@ -240,23 +240,12 @@ func NewService(cfg *ServiceConfig) Service {
 		svc.diceRoller = dice.NewRandomRoller()
 	}
 
-	// Register event handlers if event bus is available
-	if cfg.EventBus != nil {
-		// TODO: Migrate local spell damage handler to use rpg-toolkit events
-		// spellDamageHandler := NewSpellDamageHandler(svc)
-		// spellDamageHandler.RegisterWithBus(cfg.EventBus)
-
-		// Status effect handler - TODO: migrate to rpg-toolkit
-		// statusEffectHandler := NewStatusEffectHandler(svc)
-		// cfg.EventBus.Subscribe(rpgevents.EventOnStatusApplied, statusEffectHandler)
-
-		// Proficiency handler
-		// Note: The proficiency bonus is already calculated in character.Attack()
-		// This handler demonstrates event-driven architecture for future enhancements
-		// TODO: Migrate local proficiency handler to use rpg-toolkit events
-		// proficiencyHandler := NewProficiencyHandler(svc)
-		// proficiencyHandler.RegisterWithBus(cfg.EventBus)
-	}
+	// TODO: Register event handlers when they are migrated to rpg-toolkit
+	// - Migrate local spell damage handler to use rpg-toolkit events
+	// - Migrate status effect handler to rpg-toolkit
+	// - Migrate local proficiency handler to use rpg-toolkit events
+	// Note: The proficiency bonus is already calculated in character.Attack()
+	// These handlers demonstrate event-driven architecture for future enhancements
 
 	return svc
 }
@@ -2152,7 +2141,9 @@ func (h *StatusEffectHandler) HandleEvent(event rpgevents.Event) error {
 	// Get target ID
 	var targetID string
 	if val, ok := event.Context().Get(rpgtoolkit.ContextTargetID); ok {
-		targetID, _ = val.(string)
+		if id, ok := val.(string); ok {
+			targetID = id
+		}
 	}
 	if targetID == "" {
 		log.Printf("StatusEffectHandler: No target ID for status effect")
@@ -2163,13 +2154,19 @@ func (h *StatusEffectHandler) HandleEvent(event rpgevents.Event) error {
 	var effectName, effectType string
 	var duration int
 	if val, ok := event.Context().Get("effect_name"); ok {
-		effectName, _ = val.(string)
+		if name, ok := val.(string); ok {
+			effectName = name
+		}
 	}
 	if val, ok := event.Context().Get("effect_type"); ok {
-		effectType, _ = val.(string)
+		if eType, ok := val.(string); ok {
+			effectType = eType
+		}
 	}
 	if val, ok := event.Context().Get("effect_duration"); ok {
-		duration, _ = val.(int)
+		if d, ok := val.(int); ok {
+			duration = d
+		}
 	}
 
 	// Check if this is vicious mockery disadvantage
@@ -2194,7 +2191,9 @@ func (h *StatusEffectHandler) HandleEvent(event rpgevents.Event) error {
 		// Get encounter ID from context if available
 		var encounterID string
 		if val, ok := event.Context().Get(rpgtoolkit.ContextEncounterID); ok {
-			encounterID, _ = val.(string)
+			if encID, ok := val.(string); ok {
+				encounterID = encID
+			}
 		}
 		if encounterID == "" {
 			// Try to find an active encounter containing this target
