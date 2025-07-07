@@ -3,6 +3,7 @@ package character_test
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -147,7 +148,7 @@ func TestRaceClassProficiencyOverlap(t *testing.T) {
 				if len(choices[i].Options) > 0 {
 					hasSkills := false
 					for _, opt := range choices[i].Options {
-						if len(opt.Key) > 6 && opt.Key[:6] == "skill-" {
+						if strings.HasPrefix(opt.Key, "skill-") {
 							hasSkills = true
 							break
 						}

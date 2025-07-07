@@ -3,6 +3,7 @@ package character_test
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -264,7 +265,7 @@ func TestMonkProficiencyChoices(t *testing.T) {
 		choice := &choices[i]
 		if choice.Choose == 2 && choice.Type == "proficiency" {
 			// Check if this is skills by looking at first option
-			if len(choice.Options) > 0 && len(choice.Options[0].Key) > 6 && choice.Options[0].Key[:6] == "skill-" {
+			if len(choice.Options) > 0 && strings.HasPrefix(choice.Options[0].Key, "skill-") {
 				skillChoice = choice
 			}
 		} else if choice.Choose == 1 && choice.Type == "proficiency" {
