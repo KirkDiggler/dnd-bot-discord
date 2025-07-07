@@ -40,6 +40,14 @@ func NewChoiceResolver(dndClient dnd5e.Client) ChoiceResolver {
 func (r *choiceResolver) ResolveProficiencyChoices(ctx context.Context, race *rulebook.Race, class *rulebook.Class) ([]SimplifiedChoice, error) {
 	choices := []SimplifiedChoice{}
 
+	// Build map of racial proficiencies for filtering
+	racialProficiencies := make(map[string]bool)
+	if race != nil {
+		for _, prof := range race.StartingProficiencies {
+			racialProficiencies[prof.Key] = true
+		}
+	}
+
 	// Process class proficiency choices
 	for i, choice := range class.ProficiencyChoices {
 		if choice == nil || len(choice.Options) == 0 {
@@ -63,6 +71,9 @@ func (r *choiceResolver) ResolveProficiencyChoices(ctx context.Context, race *ru
 			}
 			// For other classes, skip nested choices for now
 			// TODO: Properly handle nested choices for all classes
+		} else if choice.Type == shared.ChoiceTypeProficiency {
+			// Filter out racial proficiencies from class choices
+			simplified.Options = r.filterDuplicateProficiencies(simplified.Options, racialProficiencies)
 		}
 
 		choices = append(choices, simplified)
@@ -424,4 +435,16 @@ func (r *choiceResolver) flattenNestedChoice(classKey string, index int, choice 
 		Choose:      choice.Count,
 		Options:     []ChoiceOption{},
 	}
+}
+
+// filterDuplicateProficiencies removes proficiencies that the character already has from their race
+func (r *choiceResolver) filterDuplicateProficiencies(options []ChoiceOption, existingProficiencies map[string]bool) []ChoiceOption {
+	filtered := []ChoiceOption{}
+	for _, opt := range options {
+		// Only include proficiencies that aren't already granted
+		if !existingProficiencies[opt.Key] {
+			filtered = append(filtered, opt)
+		}
+	}
+	return filtered
 }
