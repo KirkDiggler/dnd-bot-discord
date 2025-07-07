@@ -80,21 +80,12 @@ func (h *FlowHandler) routeToStepHandler(s *discordgo.Session, i *discordgo.Inte
 		return h.handleCreationComplete(s, i, characterID)
 
 	case character.StepTypeRaceSelection:
-		// TODO: Use existing race handler
-		// handler := NewShowRaceHandler(h.services.CharacterService)
-		// return handler.Handle(s, i)
-		return respondWithError(s, i, "Race selection not yet integrated with flow")
+		// Use generic step renderer for race selection
+		return h.renderGenericStep(s, i, step, characterID)
 
 	case character.StepTypeClassSelection:
-		// TODO: Use existing class handler
-		// handler := NewShowClassesHandler(h.services.CharacterService)
-		// req := &ShowClassesRequest{
-		// 	Session:     s,
-		// 	Interaction: i,
-		// 	CharacterID: characterID,
-		// }
-		// return handler.Handle(req)
-		return respondWithError(s, i, "Class selection not yet integrated with flow")
+		// Use generic step renderer for class selection
+		return h.renderGenericStep(s, i, step, characterID)
 
 	case character.StepTypeAbilityScores:
 		// TODO: Use existing ability handler

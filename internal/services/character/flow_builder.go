@@ -25,37 +25,96 @@ func NewFlowBuilder(dndClient dnd5e.Client) character.FlowBuilder {
 func (b *FlowBuilderImpl) BuildFlow(ctx context.Context, char *character.Character) (*character.CreationFlow, error) {
 	var steps []character.CreationStep
 
-	// Base steps for all characters
-	steps = append(steps,
-		// 1. Race Selection
-		character.CreationStep{
+	// 1. Race Selection (with options if not yet selected)
+	if char.Race == nil && b.dndClient != nil {
+		races, err := b.dndClient.ListRaces()
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch races: %w", err)
+		}
+
+		var raceOptions []character.CreationOption
+		for _, race := range races {
+			raceOptions = append(raceOptions, character.CreationOption{
+				Key:         race.Key,
+				Name:        race.Name,
+				Description: fmt.Sprintf("Speed: %d ft", race.Speed),
+			})
+		}
+
+		steps = append(steps, character.CreationStep{
+			Type:        character.StepTypeRaceSelection,
+			Title:       "Choose Your Race",
+			Description: "Select your character's race, which determines starting abilities and traits.",
+			Options:     raceOptions,
+			MinChoices:  1,
+			MaxChoices:  1,
+			Required:    true,
+		})
+	} else if char.Race == nil {
+		// Fallback if no client available
+		steps = append(steps, character.CreationStep{
 			Type:        character.StepTypeRaceSelection,
 			Title:       "Choose Your Race",
 			Description: "Select your character's race, which determines starting abilities and traits.",
 			Required:    true,
-		},
-		// 2. Class Selection
-		character.CreationStep{
+		})
+	}
+
+	// 2. Class Selection (with options if not yet selected)
+	if char.Class == nil && b.dndClient != nil {
+		classes, err := b.dndClient.ListClasses()
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch classes: %w", err)
+		}
+
+		var classOptions []character.CreationOption
+		for _, class := range classes {
+			classOptions = append(classOptions, character.CreationOption{
+				Key:         class.Key,
+				Name:        class.Name,
+				Description: fmt.Sprintf("Hit Die: d%d", class.HitDie),
+			})
+		}
+
+		steps = append(steps, character.CreationStep{
+			Type:        character.StepTypeClassSelection,
+			Title:       "Choose Your Class",
+			Description: "Select your character's class, which determines abilities, proficiencies, and features.",
+			Options:     classOptions,
+			MinChoices:  1,
+			MaxChoices:  1,
+			Required:    true,
+		})
+	} else if char.Class == nil {
+		// Fallback if no client available
+		steps = append(steps, character.CreationStep{
 			Type:        character.StepTypeClassSelection,
 			Title:       "Choose Your Class",
 			Description: "Select your character's class, which determines abilities, proficiencies, and features.",
 			Required:    true,
-		},
+		})
+	}
+
+	// Only add subsequent steps if race and class are selected
+	if char.Race != nil && char.Class != nil {
 		// 3. Ability Scores
-		character.CreationStep{
+		steps = append(steps, character.CreationStep{
 			Type:        character.StepTypeAbilityScores,
 			Title:       "Roll Ability Scores",
 			Description: "Generate your character's six ability scores.",
 			Required:    true,
-		},
-		// 4. Ability Assignment
-		character.CreationStep{
-			Type:        character.StepTypeAbilityAssignment,
-			Title:       "Assign Ability Scores",
-			Description: "Assign your rolled scores to the six abilities.",
-			Required:    true,
-		},
-	)
+		})
+
+		// 4. Ability Assignment (only if scores exist but not assigned)
+		if len(char.Attributes) == 0 {
+			steps = append(steps, character.CreationStep{
+				Type:        character.StepTypeAbilityAssignment,
+				Title:       "Assign Ability Scores",
+				Description: "Assign your rolled scores to the six abilities.",
+				Required:    true,
+			})
+		}
+	}
 
 	// 5. Class-specific features (dynamic based on class)
 	if char.Class != nil {
@@ -66,30 +125,32 @@ func (b *FlowBuilderImpl) BuildFlow(ctx context.Context, char *character.Charact
 		steps = append(steps, classSteps...)
 	}
 
-	// Final steps for all characters
-	steps = append(steps,
-		// 6. Proficiency Selection
-		character.CreationStep{
-			Type:        character.StepTypeProficiencySelection,
-			Title:       "Choose Proficiencies",
-			Description: "Select your character's skill and tool proficiencies.",
-			Required:    true,
-		},
-		// 7. Equipment Selection
-		character.CreationStep{
-			Type:        character.StepTypeEquipmentSelection,
-			Title:       "Choose Equipment",
-			Description: "Select your starting equipment and gear.",
-			Required:    true,
-		},
-		// 8. Character Details
-		character.CreationStep{
-			Type:        character.StepTypeCharacterDetails,
-			Title:       "Character Details",
-			Description: "Choose your character's name and other details.",
-			Required:    true,
-		},
-	)
+	// Final steps - only add if character has race, class, and abilities
+	if char.Race != nil && char.Class != nil && len(char.Attributes) > 0 {
+		steps = append(steps,
+			// 6. Proficiency Selection
+			character.CreationStep{
+				Type:        character.StepTypeProficiencySelection,
+				Title:       "Choose Proficiencies",
+				Description: "Select your character's skill and tool proficiencies.",
+				Required:    true,
+			},
+			// 7. Equipment Selection
+			character.CreationStep{
+				Type:        character.StepTypeEquipmentSelection,
+				Title:       "Choose Equipment",
+				Description: "Select your starting equipment and gear.",
+				Required:    true,
+			},
+			// 8. Character Details
+			character.CreationStep{
+				Type:        character.StepTypeCharacterDetails,
+				Title:       "Character Details",
+				Description: "Choose your character's name and other details.",
+				Required:    true,
+			},
+		)
+	}
 
 	return &character.CreationFlow{
 		Steps: steps,
