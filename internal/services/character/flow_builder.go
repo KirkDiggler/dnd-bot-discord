@@ -3,6 +3,7 @@ package character
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
@@ -45,10 +46,22 @@ func (b *FlowBuilderImpl) BuildFlow(ctx context.Context, char *character.Charact
 
 			var raceOptions []character.CreationOption
 			for _, race := range races {
+				// Build ability bonus description
+				var bonuses []string
+				for _, bonus := range race.AbilityBonuses {
+					if bonus.Bonus > 0 {
+						bonuses = append(bonuses, fmt.Sprintf("%s +%d", bonus.Attribute, bonus.Bonus))
+					}
+				}
+				bonusText := "No ability bonuses"
+				if len(bonuses) > 0 {
+					bonusText = strings.Join(bonuses, ", ")
+				}
+
 				raceOptions = append(raceOptions, character.CreationOption{
 					Key:         race.Key,
 					Name:        race.Name,
-					Description: fmt.Sprintf("Speed: %d ft", race.Speed),
+					Description: bonusText,
 				})
 			}
 			step.Options = raceOptions
@@ -77,10 +90,41 @@ func (b *FlowBuilderImpl) BuildFlow(ctx context.Context, char *character.Charact
 
 			var classOptions []character.CreationOption
 			for _, class := range classes {
+				// Build a more useful description
+				desc := fmt.Sprintf("Hit Die: d%d", class.HitDie)
+
+				// Add primary abilities based on class
+				switch class.Key {
+				case "barbarian":
+					desc = "STR primary • " + desc
+				case "bard":
+					desc = "CHA primary • " + desc
+				case "cleric":
+					desc = "WIS primary • " + desc
+				case "druid":
+					desc = "WIS primary • " + desc
+				case "fighter":
+					desc = "STR or DEX primary • " + desc
+				case "monk":
+					desc = "DEX & WIS primary • " + desc
+				case "paladin":
+					desc = "STR & CHA primary • " + desc
+				case "ranger":
+					desc = "DEX & WIS primary • " + desc
+				case "rogue":
+					desc = "DEX primary • " + desc
+				case "sorcerer":
+					desc = "CHA primary • " + desc
+				case "warlock":
+					desc = "CHA primary • " + desc
+				case "wizard":
+					desc = "INT primary • " + desc
+				}
+
 				classOptions = append(classOptions, character.CreationOption{
 					Key:         class.Key,
 					Name:        class.Name,
-					Description: fmt.Sprintf("Hit Die: d%d", class.HitDie),
+					Description: desc,
 				})
 			}
 			step.Options = classOptions

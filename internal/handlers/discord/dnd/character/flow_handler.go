@@ -25,6 +25,7 @@ func NewFlowHandler(serviceProvider *services.Provider) *FlowHandler {
 
 // HandleContinue continues character creation from where it left off
 func (h *FlowHandler) HandleContinue(s *discordgo.Session, i *discordgo.InteractionCreate, characterID string) error {
+	log.Printf("FlowHandler.HandleContinue called for character %s", characterID)
 	ctx := context.Background()
 
 	// Get the next step from the service
@@ -33,6 +34,8 @@ func (h *FlowHandler) HandleContinue(s *discordgo.Session, i *discordgo.Interact
 		log.Printf("Error getting next step for character %s: %v", characterID, err)
 		return respondWithError(s, i, "Failed to determine next creation step")
 	}
+
+	log.Printf("Next step for character %s is %s", characterID, step.Type)
 
 	// Route to appropriate handler based on step type
 	return h.routeToStepHandler(s, i, characterID, step)
@@ -88,15 +91,43 @@ func (h *FlowHandler) routeToStepHandler(s *discordgo.Session, i *discordgo.Inte
 		return h.renderGenericStep(s, i, step, characterID)
 
 	case character.StepTypeAbilityScores:
-		// TODO: Use existing ability handler
-		// handler := NewAbilityScoresHandler(h.services.CharacterService)
-		// req := &CharacterIDRequest{
-		// 	Session:     s,
-		// 	Interaction: i,
-		// 	CharacterID: characterID,
-		// }
-		// return handler.ShowAbilityOptions(req)
-		return respondWithError(s, i, "Ability scores not yet integrated with flow")
+		// Get character to extract race and class keys
+		char, err := h.services.CharacterService.GetByID(characterID)
+		if err != nil {
+			return respondWithError(s, i, "Failed to get character for ability scores")
+		}
+
+		// Use existing ability scores handler
+		handler := NewAbilityScoresHandler(&AbilityScoresHandlerConfig{
+			CharacterService: h.services.CharacterService,
+		})
+		req := &AbilityScoresRequest{
+			Session:     s,
+			Interaction: i,
+			RaceKey:     char.Race.Key,
+			ClassKey:    char.Class.Key,
+		}
+		return handler.Handle(req)
+
+	case character.StepTypeAbilityAssignment:
+		// Get character to extract race and class keys
+		char, err := h.services.CharacterService.GetByID(characterID)
+		if err != nil {
+			return respondWithError(s, i, "Failed to get character for ability assignment")
+		}
+
+		// Use existing ability assignment handler
+		handler := NewAssignAbilitiesHandler(&AssignAbilitiesHandlerConfig{
+			CharacterService: h.services.CharacterService,
+		})
+		req := &AssignAbilitiesRequest{
+			Session:     s,
+			Interaction: i,
+			RaceKey:     char.Race.Key,
+			ClassKey:    char.Class.Key,
+			AutoAssign:  false,
+		}
+		return handler.Handle(req)
 
 	case character.StepTypeProficiencySelection:
 		// Get character to extract race and class keys
@@ -218,8 +249,28 @@ func (h *FlowHandler) renderGenericStep(s *discordgo.Session, i *discordgo.Inter
 		Color:       h.getStepColor(step.Type),
 	}
 
-	// Add progress field
+	// Get character to show current selections
 	ctx := context.Background()
+	char, err := h.services.CharacterService.GetByID(characterID)
+	if err == nil {
+		// Show current selections
+		var currentInfo []string
+		if char.Race != nil {
+			currentInfo = append(currentInfo, fmt.Sprintf("**Race:** %s", char.Race.Name))
+		}
+		if char.Class != nil {
+			currentInfo = append(currentInfo, fmt.Sprintf("**Class:** %s", char.Class.Name))
+		}
+		if len(currentInfo) > 0 {
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "Current Character",
+				Value:  strings.Join(currentInfo, "\n"),
+				Inline: false,
+			})
+		}
+	}
+
+	// Add progress field
 	if progressSteps, err := h.services.CreationFlowService.GetProgressSteps(ctx, characterID); err == nil {
 		var lines []string
 		for idx, stepInfo := range progressSteps {
