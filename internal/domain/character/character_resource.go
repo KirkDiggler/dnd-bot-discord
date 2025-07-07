@@ -113,7 +113,7 @@ func (r *CharacterResources) LongRest() {
 	r.HP.Current = r.HP.Max
 	r.HP.Temporary = 0
 
-	// Restore all abilities
+	// Restore all abilities (RestoreUses also deactivates active abilities)
 	for _, ability := range r.Abilities {
 		ability.RestoreUses(shared.RestTypeLong)
 	}
@@ -137,14 +137,14 @@ func (r *CharacterResources) LongRest() {
 		r.HitDice.Remaining = r.HitDice.Max
 	}
 
-	// Remove effects that end on rest
-	var persistentEffects []*shared.ActiveEffect
+	// Clear temporary effects but keep permanent ones
+	var permanentEffects []*shared.ActiveEffect
 	for _, effect := range r.ActiveEffects {
-		if effect.DurationType != shared.DurationTypeUntilRest {
-			persistentEffects = append(persistentEffects, effect)
+		if effect.DurationType == shared.DurationTypePermanent {
+			permanentEffects = append(permanentEffects, effect)
 		}
 	}
-	r.ActiveEffects = persistentEffects
+	r.ActiveEffects = permanentEffects
 }
 
 // AddEffect adds a new active effect

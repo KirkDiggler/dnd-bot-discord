@@ -16,6 +16,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/combat/attack"
 	gameSession "github.com/KirkDiggler/dnd-bot-discord/internal/domain/game/session"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e/feats"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"github.com/KirkDiggler/rpg-toolkit/core"
 	rpgevents "github.com/KirkDiggler/rpg-toolkit/events"
@@ -445,6 +446,12 @@ func (s *service) AddPlayer(ctx context.Context, encounterID, playerID, characte
 	// Save character to persist the reset action economy
 	if err := s.characterService.UpdateEquipment(char); err != nil {
 		log.Printf("Failed to save character after action economy reset: %v", err)
+	}
+
+	// Register feat event handlers if event bus is available
+	if s.eventBus != nil {
+		// Register handlers for all character feats
+		feats.GlobalRegistry.RegisterAllHandlers(char, s.eventBus)
 	}
 
 	// Verify character belongs to player

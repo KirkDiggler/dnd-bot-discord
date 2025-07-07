@@ -3,6 +3,7 @@ package abilities
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	abilityService "github.com/KirkDiggler/dnd-bot-discord/internal/services/ability"
+	charService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	rpgevents "github.com/KirkDiggler/rpg-toolkit/events"
 )
 
@@ -19,16 +20,13 @@ type RegistryConfig struct {
 func RegisterAll(registry interface {
 	RegisterHandler(handler abilityService.Handler)
 }, cfg *RegistryConfig) {
-	// Register rage - temporarily disabled during migration
-	// TODO: Complete rage handler migration to rpg-toolkit
-	// rageHandler := rpgtoolkit.NewRageHandler(cfg.EventBus)
-	// if cfg.EncounterService != nil {
-	// 	rageHandler.SetEncounterService(cfg.EncounterService)
-	// }
-	// if cfg.CharacterService != nil {
-	// 	rageHandler.SetCharacterService(cfg.CharacterService)
-	// }
-	// registry.RegisterHandler(NewServiceHandlerAdapter(rageHandler))
+	// Register rage
+	if cfg.CharacterService != nil {
+		if charSvc, ok := cfg.CharacterService.(charService.Service); ok {
+			rageHandler := NewRageHandler(cfg.EventBus, charSvc)
+			registry.RegisterHandler(NewServiceHandlerAdapter(rageHandler))
+		}
+	}
 
 	// Register second wind
 	secondWindHandler := NewSecondWindHandler(cfg.DiceRoller)
