@@ -1801,6 +1801,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 				}
 			}
 		}
+	} else if ctx == "character" && action == "continue" {
+		// Handle character creation continuation
+		if len(parts) >= 3 {
+			characterID := parts[2]
+			if h.characterFlowHandler != nil {
+				if err := h.characterFlowHandler.HandleContinue(s, i, characterID); err != nil {
+					log.Printf("Error continuing character creation flow: %v", err)
+				}
+			}
+		}
 	} else if ctx == "character" && action == "delete_select" {
 		// Handle character selection for deletion
 		if len(parts) >= 3 {
