@@ -1,8 +1,10 @@
 package character
 
 import (
+	"context"
 	"fmt"
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 	"log"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
@@ -49,7 +51,9 @@ func (h *ClassFeaturesHandler) Handle(req *ClassFeaturesRequest) error {
 		err = h.handleNaturalExplorer(req, char)
 	case "fighting_style":
 		err = h.handleFightingStyle(req, char)
-	// Add other class features here (divine_domain, patron, etc.)
+	case "divine_domain":
+		err = h.handleDivineDomain(req, char)
+	// Add other class features here (patron, sorcerous_origin, etc.)
 	default:
 		err = fmt.Errorf("unknown feature type: %s", req.FeatureType)
 	}
@@ -297,42 +301,21 @@ func (h *ClassFeaturesHandler) ShowNaturalExplorerSelection(req *InteractionRequ
 
 // ShouldShowClassFeatures checks if a character needs to select class features
 func (h *ClassFeaturesHandler) ShouldShowClassFeatures(char *character2.Character) (needsSelection bool, featureType string) {
-	if char.Class == nil {
+	if char.Class == nil || char.ID == "" {
 		return false, ""
 	}
 
-	// Check each class for required selections
-	switch char.Class.Key {
-	case "ranger":
-		// Check if ranger has selected favored enemy
-		for _, feature := range char.Features {
-			if feature.Key == "favored_enemy" {
-				if feature.Metadata == nil || feature.Metadata["enemy_type"] == nil {
-					return true, "favored_enemy"
-				}
-			}
-			if feature.Key == "natural_explorer" {
-				if feature.Metadata == nil || feature.Metadata["terrain_type"] == nil {
-					return true, "natural_explorer"
-				}
-			}
-		}
-	// Add other classes with level 1 choices here
-	case "cleric":
-		// TODO: Check for divine domain selection
-	case "fighter":
-		// Check if fighter has selected fighting style
-		for _, feature := range char.Features {
-			if feature.Key == "fighting_style" {
-				if feature.Metadata == nil || feature.Metadata["style"] == nil {
-					return true, "fighting_style"
-				}
-			}
-		}
-	case "warlock":
-		// TODO: Check for patron selection
-	case "sorcerer":
-		// TODO: Check for sorcerous origin selection
+	// Use the service to get pending feature choices
+	ctx := context.TODO() // TODO: Pass context properly
+	pendingChoices, err := h.characterService.GetPendingFeatureChoices(ctx, char.ID)
+	if err != nil {
+		log.Printf("Error getting pending feature choices: %v", err)
+		return false, ""
+	}
+
+	// If there are any pending choices, return the first one
+	if len(pendingChoices) > 0 {
+		return true, string(pendingChoices[0].Type)
 	}
 
 	return false, ""
@@ -346,20 +329,40 @@ func (h *ClassFeaturesHandler) ShowFightingStyleSelection(req *InteractionReques
 		return fmt.Errorf("failed to get character: %w", err)
 	}
 
-	// Fighting style options
-	styleOptions := []discordgo.SelectMenuOption{
-		{Label: "Archery", Value: "archery", Description: "+2 to attack rolls with ranged weapons"},
-		{Label: "Defense", Value: "defense", Description: "+1 to AC while wearing armor"},
-		{Label: "Dueling", Value: "dueling", Description: "+2 damage with one-handed weapons"},
-		{Label: "Great Weapon Fighting", Value: "great_weapon", Description: "Reroll 1s and 2s on damage with two-handed weapons"},
-		{Label: "Protection", Value: "protection", Description: "Use shield to impose disadvantage on attacks"},
-		{Label: "Two-Weapon Fighting", Value: "two_weapon", Description: "Add modifier to off-hand damage"},
+	// Get pending feature choices to find the fighting style choice
+	ctx := context.TODO()
+	pendingChoices, err := h.characterService.GetPendingFeatureChoices(ctx, req.CharacterID)
+	if err != nil {
+		return fmt.Errorf("failed to get pending choices: %w", err)
+	}
+
+	// Find the fighting style choice
+	var fightingStyleChoice *rulebook.FeatureChoice
+	for _, choice := range pendingChoices {
+		if choice.Type == rulebook.FeatureChoiceTypeFightingStyle {
+			fightingStyleChoice = choice
+			break
+		}
+	}
+
+	if fightingStyleChoice == nil {
+		return fmt.Errorf("no fighting style choice found for character")
+	}
+
+	// Convert rulebook options to Discord select menu options
+	var styleOptions []discordgo.SelectMenuOption
+	for _, option := range fightingStyleChoice.Options {
+		styleOptions = append(styleOptions, discordgo.SelectMenuOption{
+			Label:       option.Name,
+			Value:       option.Key,
+			Description: option.Description,
+		})
 	}
 
 	// Create embed
 	embed := &discordgo.MessageEmbed{
-		Title:       "Choose Your Fighting Style",
-		Description: fmt.Sprintf("**%s**, as a Fighter you adopt a particular style of fighting as your specialty.\n\nChoose the fighting style that matches your combat approach.", char.Name),
+		Title:       fmt.Sprintf("Choose Your %s", fightingStyleChoice.Name),
+		Description: fmt.Sprintf("**%s**, %s", char.Name, fightingStyleChoice.Description),
 		Color:       0x722F37, // Dark red for fighter
 		Fields: []*discordgo.MessageEmbedField{
 			{

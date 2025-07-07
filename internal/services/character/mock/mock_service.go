@@ -239,6 +239,21 @@ func (mr *MockServiceMockRecorder) GetOrCreateDraftCharacter(ctx, userID, realmI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrCreateDraftCharacter", reflect.TypeOf((*MockService)(nil).GetOrCreateDraftCharacter), ctx, userID, realmID)
 }
 
+// GetPendingFeatureChoices mocks base method.
+func (m *MockService) GetPendingFeatureChoices(ctx context.Context, characterID string) ([]*rulebook.FeatureChoice, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPendingFeatureChoices", ctx, characterID)
+	ret0, _ := ret[0].([]*rulebook.FeatureChoice)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPendingFeatureChoices indicates an expected call of GetPendingFeatureChoices.
+func (mr *MockServiceMockRecorder) GetPendingFeatureChoices(ctx, characterID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPendingFeatureChoices", reflect.TypeOf((*MockService)(nil).GetPendingFeatureChoices), ctx, characterID)
+}
+
 // GetRace mocks base method.
 func (m *MockService) GetRace(ctx context.Context, raceKey string) (*rulebook.Race, error) {
 	m.ctrl.T.Helper()

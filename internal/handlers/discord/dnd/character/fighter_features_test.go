@@ -3,23 +3,28 @@ package character
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
+	mockcharacters "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 func TestClassFeaturesHandler_ShouldShowClassFeatures_Fighter(t *testing.T) {
-	handler := &ClassFeaturesHandler{}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
 	tests := []struct {
 		name            string
 		character       *character.Character
+		pendingChoices  []*rulebook.FeatureChoice
 		expectedNeed    bool
 		expectedFeature string
 	}{
 		{
 			name: "fighter without fighting style selection",
 			character: &character.Character{
+				ID:    "test-fighter",
 				Class: &rulebook.Class{Key: "fighter"},
 				Features: []*rulebook.CharacterFeature{
 					{
@@ -29,12 +34,20 @@ func TestClassFeaturesHandler_ShouldShowClassFeatures_Fighter(t *testing.T) {
 					},
 				},
 			},
+			pendingChoices: []*rulebook.FeatureChoice{
+				{
+					Type:       rulebook.FeatureChoiceTypeFightingStyle,
+					FeatureKey: "fighting_style",
+					Name:       "Fighting Style",
+				},
+			},
 			expectedNeed:    true,
 			expectedFeature: "fighting_style",
 		},
 		{
 			name: "fighter with fighting style selected",
 			character: &character.Character{
+				ID:    "test-fighter-2",
 				Class: &rulebook.Class{Key: "fighter"},
 				Features: []*rulebook.CharacterFeature{
 					{
@@ -46,14 +59,17 @@ func TestClassFeaturesHandler_ShouldShowClassFeatures_Fighter(t *testing.T) {
 					},
 				},
 			},
+			pendingChoices:  []*rulebook.FeatureChoice{}, // No pending choices
 			expectedNeed:    false,
 			expectedFeature: "",
 		},
 		{
 			name: "non-fighter class",
 			character: &character.Character{
+				ID:    "test-wizard",
 				Class: &rulebook.Class{Key: "wizard"},
 			},
+			pendingChoices:  []*rulebook.FeatureChoice{}, // No pending choices
 			expectedNeed:    false,
 			expectedFeature: "",
 		},
@@ -61,6 +77,16 @@ func TestClassFeaturesHandler_ShouldShowClassFeatures_Fighter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			mockCharService := mockcharacters.NewMockService(ctrl)
+			handler := &ClassFeaturesHandler{
+				characterService: mockCharService,
+			}
+
+			// Set up mock expectation
+			mockCharService.EXPECT().
+				GetPendingFeatureChoices(gomock.Any(), tt.character.ID).
+				Return(tt.pendingChoices, nil)
+
 			needsSelection, featureType := handler.ShouldShowClassFeatures(tt.character)
 			assert.Equal(t, tt.expectedNeed, needsSelection)
 			assert.Equal(t, tt.expectedFeature, featureType)
