@@ -22,7 +22,7 @@ func GetDivineDomains() []DivineDomain {
 		{
 			Key:         "knowledge",
 			Name:        "Knowledge Domain",
-			Description: "The gods of knowledge value learning and understanding above all. You gain proficiency in two skills and languages.",
+			Description: "Value learning and understanding. Gain proficiency in two skills and languages.",
 			DomainSpells: map[int][]string{
 				1: {"command", "identify"},
 				3: {"augury", "suggestion"},
@@ -34,7 +34,7 @@ func GetDivineDomains() []DivineDomain {
 		{
 			Key:         "life",
 			Name:        "Life Domain",
-			Description: "The Life domain focuses on the vibrant positive energy that sustains all life. You gain heavy armor proficiency and improved healing.",
+			Description: "Channel positive energy. Gain heavy armor proficiency and improved healing.",
 			DomainSpells: map[int][]string{
 				1: {"bless", "cure-wounds"},
 				3: {"lesser-restoration", "spiritual-weapon"},
@@ -46,7 +46,7 @@ func GetDivineDomains() []DivineDomain {
 		{
 			Key:         "light",
 			Name:        "Light Domain",
-			Description: "Gods of light promote the ideals of rebirth, renewal, truth, vigilance, and beauty. You gain the light cantrip and defensive abilities.",
+			Description: "Promote rebirth, truth, and beauty. Gain the light cantrip and defensive abilities.",
 			DomainSpells: map[int][]string{
 				1: {"burning-hands", "faerie-fire"},
 				3: {"flaming-sphere", "scorching-ray"},
@@ -58,7 +58,7 @@ func GetDivineDomains() []DivineDomain {
 		{
 			Key:         "nature",
 			Name:        "Nature Domain",
-			Description: "Gods of nature are as varied as the natural world itself. You gain a druid cantrip and proficiency with heavy armor.",
+			Description: "Command the natural world. Gain a druid cantrip and heavy armor proficiency.",
 			DomainSpells: map[int][]string{
 				1: {"animal-friendship", "speak-with-animals"},
 				3: {"barkskin", "spike-growth"},
@@ -70,7 +70,7 @@ func GetDivineDomains() []DivineDomain {
 		{
 			Key:         "tempest",
 			Name:        "Tempest Domain",
-			Description: "Gods of the tempest govern storms, sea, and sky. You gain proficiency with martial weapons and heavy armor.",
+			Description: "Govern storms and sea. Gain proficiency with martial weapons and heavy armor.",
 			DomainSpells: map[int][]string{
 				1: {"fog-cloud", "thunderwave"},
 				3: {"gust-of-wind", "shatter"},
@@ -82,7 +82,7 @@ func GetDivineDomains() []DivineDomain {
 		{
 			Key:         "trickery",
 			Name:        "Trickery Domain",
-			Description: "Gods of trickery are mischief-makers and instigators. You can use your Channel Divinity to create an illusory duplicate.",
+			Description: "Masters of mischief. Use Channel Divinity to create an illusory duplicate.",
 			DomainSpells: map[int][]string{
 				1: {"charm-person", "disguise-self"},
 				3: {"mirror-image", "pass-without-trace"},
@@ -94,7 +94,7 @@ func GetDivineDomains() []DivineDomain {
 		{
 			Key:         "war",
 			Name:        "War Domain",
-			Description: "Gods of war watch over warriors and reward acts of violence. You gain proficiency with martial weapons and heavy armor.",
+			Description: "Reward violence and battle. Gain proficiency with martial weapons and heavy armor.",
 			DomainSpells: map[int][]string{
 				1: {"divine-favor", "shield-of-faith"},
 				3: {"magic-weapon", "spiritual-weapon"},
