@@ -13,8 +13,6 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/handlers/discord/utils"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services"
 	"github.com/bwmarrin/discordgo"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 // SheetHandler handles the character sheet display command
@@ -289,70 +287,12 @@ func buildFeatureSummary(char *character.Character) []string {
 	// Add class features
 	if len(classFeatures) > 0 {
 		lines = append(lines, "**Class Features:**")
-		caser := cases.Title(language.English)
 		for _, feat := range classFeatures {
 			featName := feat.Name
-			// Add specific selections from metadata
-			if feat.Key == "favored_enemy" && feat.Metadata != nil {
-				if enemyType, ok := feat.Metadata["enemy_type"].(string); ok {
-					// Capitalize the enemy type for display
-					enemyDisplay := caser.String(enemyType)
-					if enemyType == "humanoids" {
-						enemyDisplay = "Two Humanoid Races"
-					}
-					featName = fmt.Sprintf("%s (%s)", feat.Name, enemyDisplay)
-				}
-			} else if feat.Key == "natural_explorer" && feat.Metadata != nil {
-				if terrainType, ok := feat.Metadata["terrain_type"].(string); ok {
-					// Capitalize the terrain type
-					terrainDisplay := caser.String(terrainType)
-					featName = fmt.Sprintf("%s (%s)", feat.Name, terrainDisplay)
-				}
-			} else if feat.Key == "fighting_style" && feat.Metadata != nil {
-				if style, ok := feat.Metadata["style"].(string); ok {
-					// Format fighting style for display
-					styleDisplay := ""
-					switch style {
-					case "archery":
-						styleDisplay = "Archery"
-					case "defense":
-						styleDisplay = "Defense"
-					case "dueling":
-						styleDisplay = "Dueling"
-					case "great_weapon":
-						styleDisplay = "Great Weapon Fighting"
-					case "protection":
-						styleDisplay = "Protection"
-					case "two_weapon":
-						styleDisplay = "Two-Weapon Fighting"
-					default:
-						styleDisplay = caser.String(style)
-					}
-					featName = fmt.Sprintf("%s (%s)", feat.Name, styleDisplay)
-				}
-			} else if feat.Key == "divine_domain" && feat.Metadata != nil {
-				if domain, ok := feat.Metadata["domain"].(string); ok {
-					// Format divine domain for display
-					domainDisplay := ""
-					switch domain {
-					case "knowledge":
-						domainDisplay = "Knowledge"
-					case "life":
-						domainDisplay = "Life"
-					case "light":
-						domainDisplay = "Light"
-					case "nature":
-						domainDisplay = "Nature"
-					case "tempest":
-						domainDisplay = "Tempest"
-					case "trickery":
-						domainDisplay = "Trickery"
-					case "war":
-						domainDisplay = "War"
-					default:
-						domainDisplay = caser.String(domain)
-					}
-					featName = fmt.Sprintf("%s (%s)", feat.Name, domainDisplay)
+			// If there's a selection display in metadata, append it
+			if feat.Metadata != nil {
+				if selection, ok := feat.Metadata["selection_display"].(string); ok && selection != "" {
+					featName = fmt.Sprintf("%s (%s)", feat.Name, selection)
 				}
 			}
 			lines = append(lines, fmt.Sprintf("• %s", featName))
