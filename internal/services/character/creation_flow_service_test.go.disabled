@@ -1,0 +1,176 @@
+package character
+
+import (
+	"context"
+	"testing"
+
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
+)
+
+func TestCreationFlowService_GetNextStep_EmptyCharacter(t *testing.T) {
+	// Create mock services
+	mockCharacterService := &MockService{}
+	mockFlowBuilder := &MockFlowBuilder{}
+	
+	service := NewCreationFlowService(mockCharacterService, mockFlowBuilder)
+	
+	// Create empty character
+	char := &character.Character{
+		ID: "test-char-id",
+	}
+	
+	// Set up mocks
+	mockCharacterService.characters["test-char-id"] = char
+	mockFlowBuilder.flow = &character.CreationFlow{
+		Steps: []character.CreationStep{
+			{
+				Type:        character.StepTypeRaceSelection,
+				Title:       "Choose Your Race",
+				Description: "Select your character's race",
+				Required:    true,
+			},
+		},
+	}
+	
+	// Test
+	step, err := service.GetNextStep(context.Background(), "test-char-id")
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	
+	if step.Type != character.StepTypeRaceSelection {
+		t.Errorf("Expected StepTypeRaceSelection, got: %v", step.Type)
+	}
+}
+
+func TestCreationFlowService_GetNextStep_KnowledgeDomainCleric(t *testing.T) {
+	mockCharacterService := &MockService{}
+	mockFlowBuilder := &MockFlowBuilder{}
+	
+	service := NewCreationFlowService(mockCharacterService, mockFlowBuilder)
+	
+	// Create cleric with Knowledge domain selected
+	char := &character.Character{
+		ID: "test-char-id",
+		Race: &rulebook.Race{Key: "human", Name: "Human"},
+		Class: &rulebook.Class{Key: "cleric", Name: "Cleric"},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength: {Score: 10, Bonus: 0},
+		},
+		Features: []*rulebook.CharacterFeature{
+			{
+				Key:  "divine_domain",
+				Name: "Divine Domain",
+				Type: rulebook.FeatureTypeClass,
+				Metadata: map[string]any{
+					"domain": "knowledge",
+				},
+			},
+		},
+	}
+	
+	mockCharacterService.characters["test-char-id"] = char
+	mockFlowBuilder.flow = &character.CreationFlow{
+		Steps: []character.CreationStep{
+			{Type: character.StepTypeRaceSelection, Required: true},
+			{Type: character.StepTypeClassSelection, Required: true},
+			{Type: character.StepTypeAbilityScores, Required: true},
+			{Type: character.StepTypeAbilityAssignment, Required: true},
+			{Type: character.StepTypeDivineDomainSelection, Required: true},
+			{
+				Type:        character.StepTypeSkillSelection,
+				Title:       "Choose Knowledge Domain Skills",
+				Description: "Choose 2 additional skill proficiencies",
+				MinChoices:  2,
+				MaxChoices:  2,
+				Required:    true,
+			},
+		},
+	}
+	
+	step, err := service.GetNextStep(context.Background(), "test-char-id")
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	
+	if step.Type != character.StepTypeSkillSelection {
+		t.Errorf("Expected StepTypeSkillSelection, got: %v", step.Type)
+	}
+	
+	if step.Title != "Choose Knowledge Domain Skills" {
+		t.Errorf("Expected 'Choose Knowledge Domain Skills', got: %v", step.Title)
+	}
+}
+
+func TestCreationFlowService_ProcessStepResult_SkillSelection(t *testing.T) {
+	mockCharacterService := &MockService{}
+	mockFlowBuilder := &MockFlowBuilder{}
+	
+	service := NewCreationFlowService(mockCharacterService, mockFlowBuilder)
+	
+	// Create character ready for skill selection
+	char := &character.Character{
+		ID: "test-char-id",
+		Features: []*rulebook.CharacterFeature{
+			{
+				Key:      "divine_domain",
+				Name:     "Divine Domain",
+				Type:     rulebook.FeatureTypeClass,
+				Metadata: map[string]any{"domain": "knowledge"},
+			},
+		},
+	}
+	
+	mockCharacterService.characters["test-char-id"] = char
+	
+	// Process skill selection result
+	result := &character.CreationStepResult{
+		StepType:   character.StepTypeSkillSelection,
+		Selections: []string{"arcana", "history"},
+	}
+	
+	_, err := service.ProcessStepResult(context.Background(), "test-char-id", result)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	
+	// Check that skills were added to character
+	feature := char.Features[0]
+	if bonusSkills, ok := feature.Metadata["bonus_skills"].([]string); !ok || len(bonusSkills) != 2 {
+		t.Errorf("Expected 2 bonus skills to be added, got: %v", bonusSkills)
+	}
+}
+
+// Mock implementations for testing
+
+type MockService struct {
+	characters map[string]*character.Character
+}
+
+func (m *MockService) GetByID(id string) (*character.Character, error) {
+	if m.characters == nil {
+		m.characters = make(map[string]*character.Character)
+	}
+	return m.characters[id], nil
+}
+
+func (m *MockService) UpdateEquipment(char *character.Character) error {
+	return nil
+}
+
+// Implement other required methods with no-op implementations
+func (m *MockService) CreateDraftCharacter(userID, guildID string) (*character.Character, error) { return nil, nil }
+func (m *MockService) GetCharactersByUser(userID string) ([]*character.Character, error) { return nil, nil }
+func (m *MockService) FinalizeDraftCharacter(characterID string) error { return nil }
+func (m *MockService) DeleteCharacter(characterID string) error { return nil }
+func (m *MockService) GetPendingFeatureChoices(ctx context.Context, characterID string) ([]*rulebook.FeatureChoice, error) { return nil, nil }
+
+type MockFlowBuilder struct {
+	flow *character.CreationFlow
+}
+
+func (m *MockFlowBuilder) BuildFlow(ctx context.Context, char *character.Character) (*character.CreationFlow, error) {
+	return m.flow, nil
+}
