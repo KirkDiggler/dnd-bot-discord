@@ -330,6 +330,30 @@ func buildFeatureSummary(char *character.Character) []string {
 					}
 					featName = fmt.Sprintf("%s (%s)", feat.Name, styleDisplay)
 				}
+			} else if feat.Key == "divine_domain" && feat.Metadata != nil {
+				if domain, ok := feat.Metadata["domain"].(string); ok {
+					// Format divine domain for display
+					domainDisplay := ""
+					switch domain {
+					case "knowledge":
+						domainDisplay = "Knowledge"
+					case "life":
+						domainDisplay = "Life"
+					case "light":
+						domainDisplay = "Light"
+					case "nature":
+						domainDisplay = "Nature"
+					case "tempest":
+						domainDisplay = "Tempest"
+					case "trickery":
+						domainDisplay = "Trickery"
+					case "war":
+						domainDisplay = "War"
+					default:
+						domainDisplay = caser.String(domain)
+					}
+					featName = fmt.Sprintf("%s (%s)", feat.Name, domainDisplay)
+				}
 			}
 			lines = append(lines, fmt.Sprintf("• %s", featName))
 		}
