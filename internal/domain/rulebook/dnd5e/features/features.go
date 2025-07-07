@@ -140,6 +140,24 @@ var ClassFeatures = map[string][]rulebook.CharacterFeature{
 			Source:      "Ranger",
 		},
 	},
+	"paladin": {
+		{
+			Key:         "divine_sense",
+			Name:        "Divine Sense",
+			Description: "The presence of strong evil registers on your senses like a noxious odor, and powerful good rings like heavenly music in your ears. As an action, you can open your awareness to detect such forces. Until the end of your next turn, you know the location of any celestial, fiend, or undead within 60 feet of you that is not behind total cover.",
+			Type:        rulebook.FeatureTypeClass,
+			Level:       1,
+			Source:      "Paladin",
+		},
+		{
+			Key:         "lay_on_hands",
+			Name:        "Lay on Hands",
+			Description: "Your blessed touch can heal wounds. You have a pool of healing power that replenishes when you take a long rest. With that pool, you can restore a total number of hit points equal to your paladin level × 5. As an action, you can touch a creature and draw power from the pool to restore a number of hit points to that creature, up to the maximum amount remaining in your pool.",
+			Type:        rulebook.FeatureTypeClass,
+			Level:       1,
+			Source:      "Paladin",
+		},
+	},
 }
 
 // RacialFeatures defines features for each race
