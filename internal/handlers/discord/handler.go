@@ -59,6 +59,7 @@ type Handler struct {
 	characterSheetHandler                 *character.SheetHandler
 	characterDeleteHandler                *character.DeleteHandler
 	characterClassFeaturesHandler         *character.ClassFeaturesHandler
+	characterFlowHandler                  *character.FlowHandler
 
 	// Test combat handler
 	testCombatHandler *testcombat.TestCombatHandler
@@ -144,6 +145,7 @@ func NewHandler(cfg *HandlerConfig) *Handler {
 		characterSheetHandler:         character.NewSheetHandler(cfg.ServiceProvider),
 		characterDeleteHandler:        character.NewDeleteHandler(cfg.ServiceProvider),
 		characterClassFeaturesHandler: character.NewClassFeaturesHandler(cfg.ServiceProvider.CharacterService),
+		characterFlowHandler:          character.NewFlowHandler(cfg.ServiceProvider),
 
 		// Initialize test combat handler
 		testCombatHandler: testcombat.NewTestCombatHandler(cfg.ServiceProvider),
@@ -1331,6 +1333,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						}
 					}
 
+					// Check if we should use the flow handler for special class features
+					// For Knowledge Domain clerics, we need additional steps
+					if featureType == "divine_domain" && h.characterFlowHandler != nil {
+						// Use flow handler to determine next step
+						if err := h.characterFlowHandler.HandleContinue(s, i, characterID); err != nil {
+							log.Printf("Error continuing with flow handler: %v", err)
+						}
+						return
+					}
+
 					// All class features selected, move to proficiencies
 					// Get race and class keys from the character
 					if char.Race != nil && char.Class != nil {
@@ -1345,6 +1357,13 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 						}
 					}
 				}
+			}
+		}
+	} else if ctx == "creation_flow" {
+		// Handle new service-driven character creation flow
+		if h.characterFlowHandler != nil {
+			if err := h.characterFlowHandler.HandleSelection(s, i); err != nil {
+				log.Printf("Error handling creation flow selection: %v", err)
 			}
 		}
 	} else if ctx == "character_manage" {
@@ -1599,9 +1618,12 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					return
 				}
 
-				// Analyze the draft to determine where to resume
-				// Follow the new step order: Race -> Class -> Abilities -> Proficiencies -> Equipment -> Features -> Name
-				if char.Race == nil {
+				// Use the new flow handler to continue from where the character left off
+				if h.characterFlowHandler != nil {
+					if err := h.characterFlowHandler.HandleContinue(s, i, characterID); err != nil {
+						log.Printf("Error continuing character creation flow: %v", err)
+					}
+				} else if char.Race == nil {
 					// Start from race selection
 					req := &character.CreateRequest{
 						Session:     s,

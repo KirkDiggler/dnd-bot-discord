@@ -6,6 +6,7 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 )
 
 // CreationFlowServiceImpl implements the CreationFlowService interface
@@ -132,11 +133,15 @@ func (s *CreationFlowServiceImpl) isStepComplete(char *character.Character, step
 	case character.StepTypeNaturalExplorerSelection:
 		return s.hasSelectedNaturalExplorer(char)
 	case character.StepTypeProficiencySelection:
-		return len(char.Proficiencies) > 0
+		// Check if user has made proficiency choices beyond automatic ones
+		// This is a simplified check - ideally we'd track which are from choices
+		return s.hasUserSelectedProficiencies(char)
 	case character.StepTypeEquipmentSelection:
-		return len(char.EquippedSlots) > 0 || len(char.Inventory) > 0
+		// Check if equipment has been selected (not just starting equipment)
+		return s.hasUserSelectedEquipment(char)
 	case character.StepTypeCharacterDetails:
-		return char.Name != ""
+		// Character needs a name AND to be finalized
+		return char.Name != "" && char.Status != shared.CharacterStatusDraft
 	default:
 		return false
 	}
@@ -168,7 +173,11 @@ func (s *CreationFlowServiceImpl) hasCompletedDomainSkills(char *character.Chara
 		if feature.Key == "divine_domain" && feature.Metadata != nil {
 			if domain, ok := feature.Metadata["domain"].(string); ok && domain == "knowledge" {
 				// Check if bonus skills have been selected
+				// Check both []string and []interface{} since JSON unmarshaling can produce either
 				if skills, ok := feature.Metadata["bonus_skills"].([]string); ok && len(skills) >= 2 {
+					return true
+				}
+				if skills, ok := feature.Metadata["bonus_skills"].([]any); ok && len(skills) >= 2 {
 					return true
 				}
 				return false
@@ -187,7 +196,11 @@ func (s *CreationFlowServiceImpl) hasCompletedDomainLanguages(char *character.Ch
 	for _, feature := range char.Features {
 		if feature.Key == "divine_domain" && feature.Metadata != nil {
 			if domain, ok := feature.Metadata["domain"].(string); ok && domain == "knowledge" {
+				// Check both []string and []interface{} since JSON unmarshaling can produce either
 				if languages, ok := feature.Metadata["bonus_languages"].([]string); ok && len(languages) >= 2 {
+					return true
+				}
+				if languages, ok := feature.Metadata["bonus_languages"].([]any); ok && len(languages) >= 2 {
 					return true
 				}
 				return false
@@ -241,6 +254,18 @@ func (s *CreationFlowServiceImpl) hasSelectedNaturalExplorer(char *character.Cha
 	return false
 }
 
+func (s *CreationFlowServiceImpl) hasUserSelectedProficiencies(char *character.Character) bool {
+	// For now, return false to ensure the step is shown
+	// In the future, track which proficiencies are from user choices vs automatic
+	return false
+}
+
+func (s *CreationFlowServiceImpl) hasUserSelectedEquipment(char *character.Character) bool {
+	// For now, return false to ensure the step is shown
+	// In the future, track which equipment is from user choices vs starting equipment
+	return false
+}
+
 // applyStepResult applies the result of a step to the character
 func (s *CreationFlowServiceImpl) applyStepResult(ctx context.Context, characterID string, result *character.CreationStepResult) error {
 	char, err := s.characterService.GetByID(characterID)
@@ -263,24 +288,29 @@ func (s *CreationFlowServiceImpl) applyStepResult(ctx context.Context, character
 func (s *CreationFlowServiceImpl) applySkillSelection(char *character.Character, result *character.CreationStepResult) error {
 	// Find the divine domain feature and add bonus skills
 	for _, feature := range char.Features {
-		if feature.Key == "divine_domain" && feature.Metadata != nil {
-			if feature.Metadata == nil {
-				feature.Metadata = make(map[string]any)
-			}
-			feature.Metadata["bonus_skills"] = result.Selections
-
-			// Also add to character proficiencies
-			for _, skillKey := range result.Selections {
-				// Convert skill key to proficiency (this would need proper mapping)
-				prof := &rulebook.Proficiency{
-					Key:  skillKey,
-					Name: skillKey, // This should be proper name mapping
-					Type: rulebook.ProficiencyTypeSkill,
-				}
-				char.AddProficiency(prof)
-			}
-			break
+		if feature.Key != "divine_domain" {
+			continue
 		}
+
+		if feature.Metadata == nil {
+			feature.Metadata = make(map[string]any)
+		}
+		feature.Metadata["bonus_skills"] = result.Selections
+
+		// Also add to character proficiencies
+		for _, skillKey := range result.Selections {
+			// Convert skill key to proficiency (this would need proper mapping)
+			prof := &rulebook.Proficiency{
+				Key:  skillKey,
+				Name: skillKey, // This should be proper name mapping
+				Type: rulebook.ProficiencyTypeSkill,
+			}
+			char.AddProficiency(prof)
+		}
+
+		// Log for debugging
+		fmt.Printf("Applied skill selections to character %s: %v\n", char.ID, result.Selections)
+		break
 	}
 
 	// Save the character
@@ -290,16 +320,18 @@ func (s *CreationFlowServiceImpl) applySkillSelection(char *character.Character,
 func (s *CreationFlowServiceImpl) applyLanguageSelection(char *character.Character, result *character.CreationStepResult) error {
 	// Find the divine domain feature and add bonus languages
 	for _, feature := range char.Features {
-		if feature.Key == "divine_domain" && feature.Metadata != nil {
-			if feature.Metadata == nil {
-				feature.Metadata = make(map[string]any)
-			}
-			feature.Metadata["bonus_languages"] = result.Selections
-
-			// Also add to character languages (would need proper language system)
-			// For now just store in metadata
-			break
+		if feature.Key != "divine_domain" {
+			continue
 		}
+
+		if feature.Metadata == nil {
+			feature.Metadata = make(map[string]any)
+		}
+		feature.Metadata["bonus_languages"] = result.Selections
+
+		// Also add to character languages (would need proper language system)
+		// For now just store in metadata
+		break
 	}
 
 	// Save the character

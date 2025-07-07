@@ -123,5 +123,13 @@ func (h *ClassFeaturesHandler) handleDivineDomain(req *ClassFeaturesRequest, cha
 
 	// TODO: Add domain spells to character's known spells when spellcasting is implemented
 
+	// After saving domain selection, check if this requires additional steps
+	// For Knowledge Domain, we need to trigger skill and language selection
+	if req.Selection == "knowledge" {
+		log.Printf("Knowledge Domain selected, flow service should handle next steps")
+		// The flow service will handle showing the skill/language selection steps
+		// when the character progresses to the next step
+	}
+
 	return nil
 }
