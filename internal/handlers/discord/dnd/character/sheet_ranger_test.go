@@ -19,7 +19,8 @@ func TestBuildFeatureSummary_RangerWithSelections(t *testing.T) {
 				Type:        rulebook.FeatureTypeClass,
 				Description: "You have significant experience studying, tracking, hunting, and even talking to a certain type of enemy.",
 				Metadata: map[string]any{
-					"enemy_type": "undead",
+					"enemy_type":        "undead",
+					"selection_display": "Undead",
 				},
 			},
 			{
@@ -28,7 +29,8 @@ func TestBuildFeatureSummary_RangerWithSelections(t *testing.T) {
 				Type:        rulebook.FeatureTypeClass,
 				Description: "You are particularly familiar with one type of natural environment and are adept at traveling and surviving in such regions.",
 				Metadata: map[string]any{
-					"terrain_type": "forest",
+					"terrain_type":      "forest",
+					"selection_display": "Forest",
 				},
 			},
 		},
@@ -54,7 +56,7 @@ func TestBuildFeatureSummary_RangerWithSelections(t *testing.T) {
 	}
 
 	if !foundNaturalExplorer {
-		t.Errorf("Expected to find 'Natural Explorer (forest)' in feature summary, got: %v", lines)
+		t.Errorf("Expected to find 'Natural Explorer (Forest)' in feature summary, got: %v", lines)
 	}
 }
 
@@ -101,7 +103,8 @@ func TestBuildFeatureSummary_RangerHumanoids(t *testing.T) {
 				Type:        rulebook.FeatureTypeClass,
 				Description: "You have significant experience studying, tracking, hunting, and even talking to a certain type of enemy.",
 				Metadata: map[string]any{
-					"enemy_type": "humanoids",
+					"enemy_type":        "humanoids",
+					"selection_display": "Two Humanoid Races",
 				},
 			},
 		},

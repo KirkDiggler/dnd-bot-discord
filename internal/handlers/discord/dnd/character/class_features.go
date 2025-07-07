@@ -78,40 +78,71 @@ func (h *ClassFeaturesHandler) Handle(req *ClassFeaturesRequest) error {
 	return nil
 }
 
-// handleFavoredEnemy stores the ranger's favored enemy selection
-func (h *ClassFeaturesHandler) handleFavoredEnemy(req *ClassFeaturesRequest, char *character2.Character) error {
-	// Find the favored enemy feature and update its metadata
+// updateFeatureMetadata updates the metadata for a specific feature on a character
+func updateFeatureMetadata(char *character2.Character, featureKey string, metadata map[string]any) {
 	for _, feature := range char.Features {
-		if feature.Key == "favored_enemy" {
+		if feature.Key == featureKey {
 			if feature.Metadata == nil {
 				feature.Metadata = make(map[string]any)
 			}
-			feature.Metadata["enemy_type"] = req.Selection
-
-			// Log for debugging
-			log.Printf("Set favored enemy for %s to %s", char.Name, req.Selection)
+			for k, v := range metadata {
+				feature.Metadata[k] = v
+			}
 			break
 		}
 	}
+}
+
+// handleFavoredEnemy stores the ranger's favored enemy selection
+func (h *ClassFeaturesHandler) handleFavoredEnemy(req *ClassFeaturesRequest, char *character2.Character) error {
+	// Get the favored enemy choice to find the display name
+	choice := rulebook.GetFavoredEnemyChoice()
+	var selectedName string
+	for _, option := range choice.Options {
+		if option.Key == req.Selection {
+			selectedName = option.Name
+			break
+		}
+	}
+
+	// If we couldn't find the display name, use the key
+	if selectedName == "" {
+		selectedName = req.Selection
+	}
+
+	// Find the favored enemy feature and update its metadata
+	updateFeatureMetadata(char, "favored_enemy", map[string]any{
+		"enemy_type":        req.Selection,
+		"selection_display": selectedName,
+	})
+	log.Printf("Set favored enemy for %s to %s", char.Name, selectedName)
 
 	return nil
 }
 
 // handleNaturalExplorer stores the ranger's natural explorer terrain selection
 func (h *ClassFeaturesHandler) handleNaturalExplorer(req *ClassFeaturesRequest, char *character2.Character) error {
-	// Find the natural explorer feature and update its metadata
-	for _, feature := range char.Features {
-		if feature.Key == "natural_explorer" {
-			if feature.Metadata == nil {
-				feature.Metadata = make(map[string]any)
-			}
-			feature.Metadata["terrain_type"] = req.Selection
-
-			// Log for debugging
-			log.Printf("Set natural explorer terrain for %s to %s", char.Name, req.Selection)
+	// Get the natural explorer choice to find the display name
+	choice := rulebook.GetNaturalExplorerChoice()
+	var selectedName string
+	for _, option := range choice.Options {
+		if option.Key == req.Selection {
+			selectedName = option.Name
 			break
 		}
 	}
+
+	// If we couldn't find the display name, use the key
+	if selectedName == "" {
+		selectedName = req.Selection
+	}
+
+	// Find the natural explorer feature and update its metadata
+	updateFeatureMetadata(char, "natural_explorer", map[string]any{
+		"terrain_type":      req.Selection,
+		"selection_display": selectedName,
+	})
+	log.Printf("Set natural explorer terrain for %s to %s", char.Name, selectedName)
 
 	return nil
 }
@@ -120,25 +151,48 @@ func (h *ClassFeaturesHandler) handleNaturalExplorer(req *ClassFeaturesRequest, 
 func (h *ClassFeaturesHandler) handleFightingStyle(req *ClassFeaturesRequest, char *character2.Character) error {
 	log.Printf("DEBUG: handleFightingStyle called with selection: %s", req.Selection)
 
+	// Get the class name from the character
+	className := ""
+	if char.Class != nil {
+		className = char.Class.Key
+	}
+
+	// Get the fighting styles to find the display name
+	styles := rulebook.GetFightingStylesForClass(className)
+	var selectedName string
+	for _, style := range styles {
+		if style.Key == req.Selection {
+			selectedName = style.Name
+			break
+		}
+	}
+
+	// If we couldn't find the display name, use the key
+	if selectedName == "" {
+		selectedName = req.Selection
+	}
+
 	// Find the fighting style feature and update its metadata
 	found := false
 	for _, feature := range char.Features {
 		log.Printf("DEBUG: Checking feature %s (key=%s)", feature.Name, feature.Key)
-		if feature.Key == "fighting_style" {
-			found = true
-			log.Printf("DEBUG: Found fighting_style feature, current metadata: %v", feature.Metadata)
-			if feature.Metadata == nil {
-				log.Printf("DEBUG: Creating new metadata map")
-				feature.Metadata = make(map[string]any)
-			}
-			log.Printf("DEBUG: Setting style to: %s", req.Selection)
-			feature.Metadata["style"] = req.Selection
-			log.Printf("DEBUG: Metadata after setting: %v", feature.Metadata)
-
-			// Log for debugging
-			log.Printf("Set fighting style for %s to %s", char.Name, req.Selection)
-			break
+		if feature.Key != "fighting_style" {
+			continue
 		}
+		found = true
+		log.Printf("DEBUG: Found fighting_style feature, current metadata: %v", feature.Metadata)
+		if feature.Metadata == nil {
+			log.Printf("DEBUG: Creating new metadata map")
+			feature.Metadata = make(map[string]any)
+		}
+		log.Printf("DEBUG: Setting style to: %s", req.Selection)
+		feature.Metadata["style"] = req.Selection
+		feature.Metadata["selection_display"] = selectedName
+		log.Printf("DEBUG: Metadata after setting: %v", feature.Metadata)
+
+		// Log for debugging
+		log.Printf("Set fighting style for %s to %s", char.Name, selectedName)
+		break
 	}
 
 	if !found {

@@ -2,7 +2,7 @@ package character
 
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
+	rulebook "github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 	"strings"
 	"testing"
 )
@@ -19,7 +19,8 @@ func TestBuildFeatureSummary_ClericWithDivineDomain(t *testing.T) {
 				Type:        rulebook.FeatureTypeClass,
 				Description: "Choose one domain related to your deity.",
 				Metadata: map[string]any{
-					"domain": "life",
+					"domain":            "life",
+					"selection_display": "Life Domain",
 				},
 			},
 		},
@@ -30,61 +31,48 @@ func TestBuildFeatureSummary_ClericWithDivineDomain(t *testing.T) {
 	// Check that the feature shows the selected domain
 	foundDivineDomain := false
 	for _, line := range lines {
-		if strings.Contains(line, "Divine Domain (Life)") {
+		if strings.Contains(line, "Divine Domain (Life Domain)") {
 			foundDivineDomain = true
 		}
 	}
 
 	if !foundDivineDomain {
-		t.Errorf("Expected to find 'Divine Domain (Life)' in feature summary, got: %v", lines)
+		t.Errorf("Expected to find 'Divine Domain (Life Domain)' in feature summary, got: %v", lines)
 	}
 }
 
-func TestBuildFeatureSummary_ClericAllDomains(t *testing.T) {
-	// Test all domain names are properly capitalized
-	domains := map[string]string{
-		"knowledge": "Knowledge",
-		"life":      "Life",
-		"light":     "Light",
-		"nature":    "Nature",
-		"tempest":   "Tempest",
-		"trickery":  "Trickery",
-		"war":       "War",
-	}
-
-	for domainKey, expectedDisplay := range domains {
-		cleric := &character.Character{
-			Name:  "Test Cleric",
-			Level: 1,
-			Features: []*rulebook.CharacterFeature{
-				{
-					Key:         "divine_domain",
-					Name:        "Divine Domain",
-					Type:        rulebook.FeatureTypeClass,
-					Description: "Choose one domain related to your deity.",
-					Metadata: map[string]any{
-						"domain": domainKey,
-					},
+func TestBuildFeatureSummary_WithSelectionDisplay(t *testing.T) {
+	// Test that the handler properly renders whatever is in selection_display
+	char := &character.Character{
+		Name:  "Test Character",
+		Level: 1,
+		Features: []*rulebook.CharacterFeature{
+			{
+				Key:         "some_feature",
+				Name:        "Some Feature",
+				Type:        rulebook.FeatureTypeClass,
+				Description: "A feature with a selection",
+				Metadata: map[string]any{
+					"selection_key":     "some_key",
+					"selection_display": "Display Name",
 				},
 			},
-		}
+		},
+	}
 
-		lines := buildFeatureSummary(cleric)
+	lines := buildFeatureSummary(char)
 
-		// Check that the feature shows the properly formatted domain
-		expectedText := "Divine Domain (" + expectedDisplay + ")"
-		foundDomain := false
-		for _, line := range lines {
-			if strings.Contains(line, expectedText) {
-				foundDomain = true
-				break
-			}
+	// Check that the feature shows the selection display
+	foundFeature := false
+	for _, line := range lines {
+		if strings.Contains(line, "Some Feature (Display Name)") {
+			foundFeature = true
+			break
 		}
+	}
 
-		if !foundDomain {
-			t.Errorf("Expected to find '%s' in feature summary for domain '%s', got: %v",
-				expectedText, domainKey, lines)
-		}
+	if !foundFeature {
+		t.Errorf("Expected to find 'Some Feature (Display Name)' in feature summary, got: %v", lines)
 	}
 }
 

@@ -99,21 +99,29 @@ func (h *ClassFeaturesHandler) ShowDivineDomainSelection(req *InteractionRequest
 
 // handleDivineDomain stores the cleric's divine domain selection
 func (h *ClassFeaturesHandler) handleDivineDomain(req *ClassFeaturesRequest, char *character2.Character) error {
-	// Find the divine domain feature and update its metadata
-	for _, feature := range char.Features {
-		if feature.Key == "divine_domain" {
-			if feature.Metadata == nil {
-				feature.Metadata = make(map[string]any)
-			}
-			feature.Metadata["domain"] = req.Selection
-
-			// Log for debugging
-			log.Printf("Set divine domain for %s to %s", char.Name, req.Selection)
-
-			// TODO: Add domain spells to character's known spells when spellcasting is implemented
+	// Get the divine domains to find the display name
+	domains := rulebook.GetDivineDomains()
+	var selectedName string
+	for _, domain := range domains {
+		if domain.Key == req.Selection {
+			selectedName = domain.Name
 			break
 		}
 	}
+
+	// If we couldn't find the display name, use the key
+	if selectedName == "" {
+		selectedName = req.Selection
+	}
+
+	// Find the divine domain feature and update its metadata
+	updateFeatureMetadata(char, "divine_domain", map[string]any{
+		"domain":            req.Selection,
+		"selection_display": selectedName,
+	})
+	log.Printf("Set divine domain for %s to %s", char.Name, selectedName)
+
+	// TODO: Add domain spells to character's known spells when spellcasting is implemented
 
 	return nil
 }
