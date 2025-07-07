@@ -26,25 +26,25 @@ func GetFightingStyles() []FightingStyle {
 		{
 			Key:         "dueling",
 			Name:        "Dueling",
-			Description: "When you are wielding a melee weapon in one hand and no other weapons, you gain a +2 bonus to damage rolls with that weapon.",
+			Description: "+2 damage when wielding a melee weapon in one hand with no other weapons.",
 			Classes:     []string{"fighter", "ranger", "paladin"},
 		},
 		{
 			Key:         "great_weapon_fighting",
 			Name:        "Great Weapon Fighting",
-			Description: "When you roll a 1 or 2 on a damage die for an attack you make with a melee weapon that you are wielding with two hands, you can reroll the die and must use the new roll. The weapon must have the two-handed or versatile property.",
+			Description: "Reroll 1-2 on damage dice with two-handed or versatile weapons.",
 			Classes:     []string{"fighter", "paladin"},
 		},
 		{
 			Key:         "protection",
 			Name:        "Protection",
-			Description: "When a creature you can see attacks a target other than you that is within 5 feet of you, you can use your reaction to impose disadvantage on the attack roll. You must be wielding a shield.",
+			Description: "Use reaction with shield to impose disadvantage on an attack near you.",
 			Classes:     []string{"fighter", "paladin"},
 		},
 		{
 			Key:         "two_weapon_fighting",
 			Name:        "Two-Weapon Fighting",
-			Description: "When you engage in two-weapon fighting, you can add your ability modifier to the damage of the second attack.",
+			Description: "Add ability modifier to off-hand weapon damage.",
 			Classes:     []string{"fighter", "ranger"},
 		},
 	}
