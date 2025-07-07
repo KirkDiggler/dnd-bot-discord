@@ -274,6 +274,10 @@ func (s *CreationFlowServiceImpl) applyStepResult(ctx context.Context, character
 	}
 
 	switch result.StepType {
+	case character.StepTypeRaceSelection:
+		return s.applyRaceSelection(ctx, char, result)
+	case character.StepTypeClassSelection:
+		return s.applyClassSelection(ctx, char, result)
 	case character.StepTypeSkillSelection:
 		return s.applySkillSelection(char, result)
 	case character.StepTypeLanguageSelection:
@@ -336,4 +340,44 @@ func (s *CreationFlowServiceImpl) applyLanguageSelection(char *character.Charact
 
 	// Save the character
 	return s.characterService.UpdateEquipment(char)
+}
+
+func (s *CreationFlowServiceImpl) applyRaceSelection(ctx context.Context, char *character.Character, result *character.CreationStepResult) error {
+	if len(result.Selections) == 0 {
+		return fmt.Errorf("no race selected")
+	}
+
+	raceKey := result.Selections[0]
+
+	// Update the character with the selected race
+	updateInput := &UpdateDraftInput{
+		RaceKey: &raceKey,
+	}
+
+	_, err := s.characterService.UpdateDraftCharacter(ctx, char.ID, updateInput)
+	if err != nil {
+		return fmt.Errorf("failed to update character race: %w", err)
+	}
+
+	return nil
+}
+
+func (s *CreationFlowServiceImpl) applyClassSelection(ctx context.Context, char *character.Character, result *character.CreationStepResult) error {
+	if len(result.Selections) == 0 {
+		return fmt.Errorf("no class selected")
+	}
+
+	classKey := result.Selections[0]
+
+	// Update the character with the selected class
+	updateInput := &UpdateDraftInput{
+		ClassKey: &classKey,
+	}
+
+	_, err := s.characterService.UpdateDraftCharacter(ctx, char.ID, updateInput)
+	if err != nil {
+		return fmt.Errorf("failed to update character class: %w", err)
+	}
+
+	return nil
 }
