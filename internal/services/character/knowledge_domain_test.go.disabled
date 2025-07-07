@@ -1,0 +1,246 @@
+package character
+
+import (
+	"context"
+	"testing"
+
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
+)
+
+// TestKnowledgeDomainFlow tests the complete Knowledge Domain character creation flow
+func TestKnowledgeDomainFlow(t *testing.T) {
+	// This test demonstrates how Knowledge Domain selection would work
+	// with the new service-driven architecture
+	
+	// Create a Knowledge Domain cleric character
+	char := &character.Character{
+		ID:   "test-knowledge-cleric",
+		Name: "Test Cleric",
+		Race: &rulebook.Race{Key: "human", Name: "Human"},
+		Class: &rulebook.Class{Key: "cleric", Name: "Cleric"},
+		Attributes: map[shared.Attribute]*character.AbilityScore{
+			shared.AttributeStrength:     {Score: 12, Bonus: 1},
+			shared.AttributeDexterity:    {Score: 14, Bonus: 2},
+			shared.AttributeConstitution: {Score: 13, Bonus: 1},
+			shared.AttributeIntelligence: {Score: 15, Bonus: 2},
+			shared.AttributeWisdom:       {Score: 16, Bonus: 3},
+			shared.AttributeCharisma:     {Score: 10, Bonus: 0},
+		},
+		Features: []*rulebook.CharacterFeature{
+			{
+				Key:  "divine_domain",
+				Name: "Divine Domain",
+				Type: rulebook.FeatureTypeClass,
+				Metadata: map[string]any{
+					"domain":            "knowledge",
+					"selection_display": "Knowledge Domain",
+				},
+			},
+		},
+	}
+
+	// Create mock services (in a real implementation, we'd use actual services)
+	mockCharService := &MockCharacterService{
+		characters: map[string]*character.Character{
+			"test-knowledge-cleric": char,
+		},
+	}
+
+	flowBuilder := &TestFlowBuilder{}
+	flowService := NewCreationFlowService(mockCharService, flowBuilder)
+
+	ctx := context.Background()
+
+	// Test 1: GetNextStep should return skill selection for Knowledge domain cleric
+	step, err := flowService.GetNextStep(ctx, "test-knowledge-cleric")
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if step.Type != character.StepTypeSkillSelection {
+		t.Errorf("Expected StepTypeSkillSelection, got: %v", step.Type)
+	}
+
+	if len(step.Options) != 4 {
+		t.Errorf("Expected 4 skill options (Arcana, History, Nature, Religion), got: %d", len(step.Options))
+	}
+
+	if step.MinChoices != 2 || step.MaxChoices != 2 {
+		t.Errorf("Expected min=2, max=2 choices, got min=%d, max=%d", step.MinChoices, step.MaxChoices)
+	}
+
+	// Verify skill options
+	expectedSkills := map[string]bool{
+		"arcana":   false,
+		"history":  false,
+		"nature":   false,
+		"religion": false,
+	}
+
+	for _, option := range step.Options {
+		if _, exists := expectedSkills[option.Key]; exists {
+			expectedSkills[option.Key] = true
+		} else {
+			t.Errorf("Unexpected skill option: %s", option.Key)
+		}
+	}
+
+	for skill, found := range expectedSkills {
+		if !found {
+			t.Errorf("Missing expected skill option: %s", skill)
+		}
+	}
+
+	// Test 2: Process skill selection
+	skillResult := &character.CreationStepResult{
+		StepType:   character.StepTypeSkillSelection,
+		Selections: []string{"arcana", "history"},
+	}
+
+	nextStep, err := flowService.ProcessStepResult(ctx, "test-knowledge-cleric", skillResult)
+	if err != nil {
+		t.Fatalf("Expected no error processing skill selection, got: %v", err)
+	}
+
+	// Should now get language selection
+	if nextStep.Type != character.StepTypeLanguageSelection {
+		t.Errorf("Expected StepTypeLanguageSelection after skill selection, got: %v", nextStep.Type)
+	}
+
+	if nextStep.MinChoices != 2 || nextStep.MaxChoices != 2 {
+		t.Errorf("Expected min=2, max=2 language choices, got min=%d, max=%d", nextStep.MinChoices, nextStep.MaxChoices)
+	}
+
+	// Test 3: Verify skills were added to character
+	updatedChar := mockCharService.characters["test-knowledge-cleric"]
+	domainFeature := updatedChar.Features[0]
+	
+	bonusSkills, ok := domainFeature.Metadata["bonus_skills"].([]string)
+	if !ok || len(bonusSkills) != 2 {
+		t.Errorf("Expected 2 bonus skills in metadata, got: %v", bonusSkills)
+	}
+
+	expectedSelectedSkills := []string{"arcana", "history"}
+	for i, expected := range expectedSelectedSkills {
+		if bonusSkills[i] != expected {
+			t.Errorf("Expected skill %s at index %d, got %s", expected, i, bonusSkills[i])
+		}
+	}
+
+	// Test 4: Process language selection
+	languageResult := &character.CreationStepResult{
+		StepType:   character.StepTypeLanguageSelection,
+		Selections: []string{"draconic", "celestial"},
+	}
+
+	finalStep, err := flowService.ProcessStepResult(ctx, "test-knowledge-cleric", languageResult)
+	if err != nil {
+		t.Fatalf("Expected no error processing language selection, got: %v", err)
+	}
+
+	// Should now proceed to next step (proficiencies)
+	if finalStep.Type == character.StepTypeComplete {
+		t.Error("Character creation should not be complete yet - still need proficiencies, equipment, details")
+	}
+
+	// Test 5: Verify languages were added
+	bonusLanguages, ok := domainFeature.Metadata["bonus_languages"].([]string)
+	if !ok || len(bonusLanguages) != 2 {
+		t.Errorf("Expected 2 bonus languages in metadata, got: %v", bonusLanguages)
+	}
+
+	t.Logf("Successfully tested Knowledge Domain flow:")
+	t.Logf("  - Skills selected: %v", bonusSkills)
+	t.Logf("  - Languages selected: %v", bonusLanguages)
+	t.Logf("  - Next step: %v", finalStep.Type)
+}
+
+// TestFlowBuilder creates flows for testing
+type TestFlowBuilder struct{}
+
+func (b *TestFlowBuilder) BuildFlow(ctx context.Context, char *character.Character) (*character.CreationFlow, error) {
+	var steps []character.CreationStep
+
+	// Basic steps
+	steps = append(steps,
+		character.CreationStep{Type: character.StepTypeRaceSelection, Required: true},
+		character.CreationStep{Type: character.StepTypeClassSelection, Required: true},
+		character.CreationStep{Type: character.StepTypeAbilityScores, Required: true},
+		character.CreationStep{Type: character.StepTypeAbilityAssignment, Required: true},
+	)
+
+	// Add Knowledge Domain steps if applicable
+	if char.Class != nil && char.Class.Key == "cleric" {
+		// Divine Domain
+		steps = append(steps, character.CreationStep{
+			Type:     character.StepTypeDivineDomainSelection,
+			Required: true,
+		})
+
+		// Check if Knowledge Domain is selected
+		for _, feature := range char.Features {
+			if feature.Key == "divine_domain" && feature.Metadata != nil {
+				if domain, ok := feature.Metadata["domain"].(string); ok && domain == "knowledge" {
+					// Add Knowledge Domain specific steps
+					steps = append(steps,
+						character.CreationStep{
+							Type:       character.StepTypeSkillSelection,
+							Title:      "Choose Knowledge Domain Skills",
+							MinChoices: 2,
+							MaxChoices: 2,
+							Required:   true,
+							Options: []character.CreationOption{
+								{Key: "arcana", Name: "Arcana", Description: "Your knowledge of magic and magical theory"},
+								{Key: "history", Name: "History", Description: "Your knowledge of historical events and lore"},
+								{Key: "nature", Name: "Nature", Description: "Your knowledge of the natural world"},
+								{Key: "religion", Name: "Religion", Description: "Your knowledge of deities and religious practices"},
+							},
+						},
+						character.CreationStep{
+							Type:       character.StepTypeLanguageSelection,
+							Title:      "Choose Knowledge Domain Languages",
+							MinChoices: 2,
+							MaxChoices: 2,
+							Required:   true,
+							Options: []character.CreationOption{
+								{Key: "draconic", Name: "Draconic", Description: "The language of dragons"},
+								{Key: "celestial", Name: "Celestial", Description: "The language of celestials"},
+								{Key: "abyssal", Name: "Abyssal", Description: "The language of demons"},
+								{Key: "infernal", Name: "Infernal", Description: "The language of devils"},
+							},
+						},
+					)
+				}
+			}
+		}
+	}
+
+	// Final steps
+	steps = append(steps,
+		character.CreationStep{Type: character.StepTypeProficiencySelection, Required: true},
+		character.CreationStep{Type: character.StepTypeEquipmentSelection, Required: true},
+		character.CreationStep{Type: character.StepTypeCharacterDetails, Required: true},
+	)
+
+	return &character.CreationFlow{Steps: steps}, nil
+}
+
+// MockCharacterService for testing
+type MockCharacterService struct {
+	characters map[string]*character.Character
+}
+
+func (m *MockCharacterService) GetByID(id string) (*character.Character, error) {
+	return m.characters[id], nil
+}
+
+func (m *MockCharacterService) UpdateEquipment(char *character.Character) error {
+	m.characters[char.ID] = char
+	return nil
+}
+
+func (m *MockCharacterService) FinalizeDraftCharacter(id string) error {
+	return nil
+}

@@ -3,6 +3,7 @@ package services
 import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e/abilities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e/calculators"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
@@ -21,15 +22,16 @@ import (
 
 // Provider holds all service instances
 type Provider struct {
-	CharacterService characterService.Service
-	SessionService   sessionService.Service
-	EncounterService encounterService.Service
-	DungeonService   dungeonService.Service
-	MonsterService   monsterService.Service
-	LootService      lootService.Service
-	AbilityService   abilityService.Service
-	DiceRoller       dice.Roller
-	EventBus         *rpgevents.Bus // Using rpg-toolkit directly
+	CharacterService    characterService.Service
+	CreationFlowService character.CreationFlowService
+	SessionService      sessionService.Service
+	EncounterService    encounterService.Service
+	DungeonService      dungeonService.Service
+	MonsterService      monsterService.Service
+	LootService         lootService.Service
+	AbilityService      abilityService.Service
+	DiceRoller          dice.Roller
+	EventBus            *rpgevents.Bus // Using rpg-toolkit directly
 }
 
 // ProviderConfig holds configuration for creating services
@@ -77,6 +79,10 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 		Repository:   charRepo,
 		ACCalculator: acCalculator,
 	})
+
+	// Create flow builder and creation flow service
+	flowBuilder := characterService.NewFlowBuilder(cfg.DNDClient)
+	creationFlowService := characterService.NewCreationFlowService(charService, flowBuilder)
 
 	// Create session service
 	sessService := sessionService.NewService(&sessionService.ServiceConfig{
@@ -129,14 +135,15 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 	})
 
 	return &Provider{
-		CharacterService: charService,
-		SessionService:   sessService,
-		EncounterService: encService,
-		DungeonService:   dungService,
-		MonsterService:   monstService,
-		LootService:      ltService,
-		AbilityService:   abilService,
-		DiceRoller:       cfg.DiceRoller,
-		EventBus:         eventBus,
+		CharacterService:    charService,
+		CreationFlowService: creationFlowService,
+		SessionService:      sessService,
+		EncounterService:    encService,
+		DungeonService:      dungService,
+		MonsterService:      monstService,
+		LootService:         ltService,
+		AbilityService:      abilService,
+		DiceRoller:          cfg.DiceRoller,
+		EventBus:            eventBus,
 	}
 }
