@@ -723,6 +723,10 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 								if err := h.characterClassFeaturesHandler.ShowFightingStyleSelection(req); err != nil {
 									log.Printf("Error showing fighting style selection: %v", err)
 								}
+							case "divine_domain":
+								if err := h.characterClassFeaturesHandler.ShowDivineDomainSelection(req); err != nil {
+									log.Printf("Error showing divine domain selection: %v", err)
+								}
 							default:
 								log.Printf("Unknown feature type to show: %s", featureType)
 							}
@@ -823,6 +827,10 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 									case "fighting_style":
 										if featErr := h.characterClassFeaturesHandler.ShowFightingStyleSelection(req); featErr != nil {
 											log.Printf("Error showing fighting style selection: %v", featErr)
+										}
+									case "divine_domain":
+										if featErr := h.characterClassFeaturesHandler.ShowDivineDomainSelection(req); featErr != nil {
+											log.Printf("Error showing divine domain selection: %v", featErr)
 										}
 									default:
 										log.Printf("Unknown feature type to show: %s", featureType)

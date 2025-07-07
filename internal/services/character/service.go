@@ -71,6 +71,9 @@ type Service interface {
 	// UpdateEquipment saves equipment changes for a character
 	UpdateEquipment(character *charDomain.Character) error
 
+	// GetPendingFeatureChoices returns feature choices that need to be made for a character
+	GetPendingFeatureChoices(ctx context.Context, characterID string) ([]*rulebook.FeatureChoice, error)
+
 	// Delete deletes a character
 	Delete(characterID string) error
 
@@ -1102,6 +1105,62 @@ func (s *service) Delete(characterID string) error {
 	}
 
 	return nil
+}
+
+// GetPendingFeatureChoices returns feature choices that need to be made for a character
+func (s *service) GetPendingFeatureChoices(ctx context.Context, characterID string) ([]*rulebook.FeatureChoice, error) {
+	if strings.TrimSpace(characterID) == "" {
+		return nil, dnderr.InvalidArgument("character ID is required")
+	}
+
+	// Get the character
+	char, err := s.repository.Get(ctx, characterID)
+	if err != nil {
+		return nil, dnderr.Wrapf(err, "failed to get character '%s'", characterID).
+			WithMeta("character_id", characterID)
+	}
+
+	if char.Class == nil {
+		return nil, nil // No class, no choices
+	}
+
+	// Get all feature choices for this class at current level
+	allChoices := rulebook.GetClassFeatureChoices(char.Class.Key, char.Level)
+
+	var pendingChoices []*rulebook.FeatureChoice
+
+	// Check which choices have already been made
+	for _, choice := range allChoices {
+		// Find the corresponding feature in the character
+		var featureFound *rulebook.CharacterFeature
+		for _, feature := range char.Features {
+			if feature.Key == choice.FeatureKey {
+				featureFound = feature
+				break
+			}
+		}
+
+		// Check if choice has been made
+		choiceMade := false
+		if featureFound != nil && featureFound.Metadata != nil {
+			switch choice.Type {
+			case rulebook.FeatureChoiceTypeFightingStyle:
+				_, choiceMade = featureFound.Metadata["style"]
+			case rulebook.FeatureChoiceTypeDivineDomain:
+				_, choiceMade = featureFound.Metadata["domain"]
+			case rulebook.FeatureChoiceTypeFavoredEnemy:
+				_, choiceMade = featureFound.Metadata["enemy_type"]
+			case rulebook.FeatureChoiceTypeNaturalExplorer:
+				_, choiceMade = featureFound.Metadata["terrain_type"]
+			}
+		}
+
+		if !choiceMade {
+			pendingChoices = append(pendingChoices, choice)
+		}
+	}
+
+	return pendingChoices, nil
 }
 
 // ListByOwner lists all characters for a specific owner
