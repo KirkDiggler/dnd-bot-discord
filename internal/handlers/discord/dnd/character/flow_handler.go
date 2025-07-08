@@ -25,6 +25,7 @@ func NewFlowHandler(serviceProvider *services.Provider) *FlowHandler {
 
 // HandleContinue continues character creation from where it left off
 func (h *FlowHandler) HandleContinue(s *discordgo.Session, i *discordgo.InteractionCreate, characterID string) error {
+	log.Printf("FlowHandler.HandleContinue called for character %s", characterID)
 	ctx := context.Background()
 
 	// Get the next step from the service
@@ -34,41 +35,65 @@ func (h *FlowHandler) HandleContinue(s *discordgo.Session, i *discordgo.Interact
 		return respondWithError(s, i, "Failed to determine next creation step")
 	}
 
+	log.Printf("Next step for character %s is %s", characterID, step.Type)
+
 	// Route to appropriate handler based on step type
 	return h.routeToStepHandler(s, i, characterID, step)
 }
 
 // HandleSelection processes a selection from a creation flow step
 func (h *FlowHandler) HandleSelection(s *discordgo.Session, i *discordgo.InteractionCreate) error {
-	// Parse the custom ID: creation_flow:{characterID}:{stepType}
+	// Parse the custom ID: creation_flow:{characterID}:{action}
 	parts := strings.Split(i.MessageComponentData().CustomID, ":")
 	if len(parts) < 3 {
 		return respondWithError(s, i, "Invalid selection")
 	}
 
 	characterID := parts[1]
-	stepType := character.CreationStepType(parts[2])
+	action := parts[2]
 
-	// Get selections from the interaction
-	selections := i.MessageComponentData().Values
+	// Handle special cases for race/class selection
+	switch action {
+	case "race_select":
+		if len(i.MessageComponentData().Values) == 0 {
+			return respondWithError(s, i, "No race selected")
+		}
+		handler := NewRaceClassSelectionHandler(h.services)
+		return handler.HandleRaceSelect(s, i, characterID, i.MessageComponentData().Values[0])
 
-	ctx := context.Background()
+	case "class_select":
+		if len(i.MessageComponentData().Values) == 0 {
+			return respondWithError(s, i, "No class selected")
+		}
+		handler := NewRaceClassSelectionHandler(h.services)
+		return handler.HandleClassSelect(s, i, characterID, i.MessageComponentData().Values[0])
 
-	// Create step result
-	result := &character.CreationStepResult{
-		StepType:   stepType,
-		Selections: selections,
+	case "continue":
+		// Continue to next step after race/class selection
+		return h.HandleContinue(s, i, characterID)
+
+	default:
+		// Original flow for other step types
+		stepType := character.CreationStepType(action)
+		selections := i.MessageComponentData().Values
+		ctx := context.Background()
+
+		// Create step result
+		result := &character.CreationStepResult{
+			StepType:   stepType,
+			Selections: selections,
+		}
+
+		// Process the result and get next step
+		nextStep, err := h.services.CreationFlowService.ProcessStepResult(ctx, characterID, result)
+		if err != nil {
+			log.Printf("Error processing step result for character %s: %v", characterID, err)
+			return respondWithError(s, i, "Failed to process selection")
+		}
+
+		// Route to next step handler
+		return h.routeToStepHandler(s, i, characterID, nextStep)
 	}
-
-	// Process the result and get next step
-	nextStep, err := h.services.CreationFlowService.ProcessStepResult(ctx, characterID, result)
-	if err != nil {
-		log.Printf("Error processing step result for character %s: %v", characterID, err)
-		return respondWithError(s, i, "Failed to process selection")
-	}
-
-	// Route to next step handler
-	return h.routeToStepHandler(s, i, characterID, nextStep)
 }
 
 // routeToStepHandler routes to the appropriate handler for a step type
@@ -79,33 +104,49 @@ func (h *FlowHandler) routeToStepHandler(s *discordgo.Session, i *discordgo.Inte
 	case character.StepTypeComplete:
 		return h.handleCreationComplete(s, i, characterID)
 
-	case character.StepTypeRaceSelection:
-		// TODO: Use existing race handler
-		// handler := NewShowRaceHandler(h.services.CharacterService)
-		// return handler.Handle(s, i)
-		return respondWithError(s, i, "Race selection not yet integrated with flow")
-
-	case character.StepTypeClassSelection:
-		// TODO: Use existing class handler
-		// handler := NewShowClassesHandler(h.services.CharacterService)
-		// req := &ShowClassesRequest{
-		// 	Session:     s,
-		// 	Interaction: i,
-		// 	CharacterID: characterID,
-		// }
-		// return handler.Handle(req)
-		return respondWithError(s, i, "Class selection not yet integrated with flow")
+	case character.StepTypeRaceSelection, character.StepTypeClassSelection:
+		// Use combined race/class selection handler
+		handler := NewRaceClassSelectionHandler(h.services)
+		return handler.Handle(s, i, characterID)
 
 	case character.StepTypeAbilityScores:
-		// TODO: Use existing ability handler
-		// handler := NewAbilityScoresHandler(h.services.CharacterService)
-		// req := &CharacterIDRequest{
-		// 	Session:     s,
-		// 	Interaction: i,
-		// 	CharacterID: characterID,
-		// }
-		// return handler.ShowAbilityOptions(req)
-		return respondWithError(s, i, "Ability scores not yet integrated with flow")
+		// Get character to extract race and class keys
+		char, err := h.services.CharacterService.GetByID(characterID)
+		if err != nil {
+			return respondWithError(s, i, "Failed to get character for ability scores")
+		}
+
+		// Use existing ability scores handler
+		handler := NewAbilityScoresHandler(&AbilityScoresHandlerConfig{
+			CharacterService: h.services.CharacterService,
+		})
+		req := &AbilityScoresRequest{
+			Session:     s,
+			Interaction: i,
+			RaceKey:     char.Race.Key,
+			ClassKey:    char.Class.Key,
+		}
+		return handler.Handle(req)
+
+	case character.StepTypeAbilityAssignment:
+		// Get character to extract race and class keys
+		char, err := h.services.CharacterService.GetByID(characterID)
+		if err != nil {
+			return respondWithError(s, i, "Failed to get character for ability assignment")
+		}
+
+		// Use existing ability assignment handler
+		handler := NewAssignAbilitiesHandler(&AssignAbilitiesHandlerConfig{
+			CharacterService: h.services.CharacterService,
+		})
+		req := &AssignAbilitiesRequest{
+			Session:     s,
+			Interaction: i,
+			RaceKey:     char.Race.Key,
+			ClassKey:    char.Class.Key,
+			AutoAssign:  false,
+		}
+		return handler.Handle(req)
 
 	case character.StepTypeProficiencySelection:
 		// Get character to extract race and class keys
@@ -221,14 +262,42 @@ func (h *FlowHandler) renderGenericStep(s *discordgo.Session, i *discordgo.Inter
 	step *character.CreationStep, characterID string) error {
 
 	// Build embed
+	// Get color from step context or use default
+	color := 0x3498db // Default blue
+	if step.Context != nil {
+		if c, ok := step.Context["color"].(int); ok {
+			color = c
+		}
+	}
+
 	embed := &discordgo.MessageEmbed{
 		Title:       step.Title,
 		Description: step.Description,
-		Color:       h.getStepColor(step.Type),
+		Color:       color,
+	}
+
+	// Get character to show current selections
+	ctx := context.Background()
+	char, err := h.services.CharacterService.GetByID(characterID)
+	if err == nil {
+		// Show current selections
+		var currentInfo []string
+		if char.Race != nil {
+			currentInfo = append(currentInfo, fmt.Sprintf("**Race:** %s", char.Race.Name))
+		}
+		if char.Class != nil {
+			currentInfo = append(currentInfo, fmt.Sprintf("**Class:** %s", char.Class.Name))
+		}
+		if len(currentInfo) > 0 {
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:   "Current Character",
+				Value:  strings.Join(currentInfo, "\n"),
+				Inline: false,
+			})
+		}
 	}
 
 	// Add progress field
-	ctx := context.Background()
 	if progressSteps, err := h.services.CreationFlowService.GetProgressSteps(ctx, characterID); err == nil {
 		var lines []string
 		for idx, stepInfo := range progressSteps {
@@ -279,12 +348,20 @@ func (h *FlowHandler) renderGenericStep(s *discordgo.Session, i *discordgo.Inter
 
 	customID := fmt.Sprintf("creation_flow:%s:%s", characterID, step.Type)
 
+	// Get placeholder from step context or use default
+	placeholder := "Make your selection..."
+	if step.Context != nil {
+		if p, ok := step.Context["placeholder"].(string); ok {
+			placeholder = p
+		}
+	}
+
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.SelectMenu{
 					CustomID:    customID,
-					Placeholder: h.getStepPlaceholder(step),
+					Placeholder: placeholder,
 					Options:     selectOptions,
 					MinValues:   &minValues,
 					MaxValues:   maxValues,
@@ -349,37 +426,4 @@ func (h *FlowHandler) handleCreationComplete(s *discordgo.Session, i *discordgo.
 			Flags:      discordgo.MessageFlagsEphemeral,
 		},
 	})
-}
-
-// Helper methods
-func (h *FlowHandler) getStepColor(stepType character.CreationStepType) int {
-	switch stepType {
-	case character.StepTypeSkillSelection:
-		return 0x9b59b6 // Purple
-	case character.StepTypeLanguageSelection:
-		return 0xe67e22 // Orange
-	case character.StepTypeDivineDomainSelection:
-		return 0xf1c40f // Gold
-	case character.StepTypeFightingStyleSelection:
-		return 0xe74c3c // Red
-	default:
-		return 0x3498db // Blue
-	}
-}
-
-func (h *FlowHandler) getStepPlaceholder(step *character.CreationStep) string {
-	switch step.Type {
-	case character.StepTypeSkillSelection:
-		if step.MaxChoices > 1 {
-			return fmt.Sprintf("Select %d skills...", step.MaxChoices)
-		}
-		return "Select a skill..."
-	case character.StepTypeLanguageSelection:
-		if step.MaxChoices > 1 {
-			return fmt.Sprintf("Select %d languages...", step.MaxChoices)
-		}
-		return "Select a language..."
-	default:
-		return "Make your selection..."
-	}
 }

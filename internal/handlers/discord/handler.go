@@ -442,12 +442,98 @@ func (h *Handler) handleCommand(s *discordgo.Session, i *discordgo.InteractionCr
 
 		switch subcommand.Name {
 		case "create":
-			req := &character.CreateRequest{
-				Session:     s,
-				Interaction: i,
-			}
-			if err := h.characterCreateHandler.Handle(req); err != nil {
-				log.Printf("Error handling character create: %v", err)
+			// Use the new flow handler for character creation
+			if h.characterFlowHandler != nil {
+				// Get or create draft character
+				char, err := h.ServiceProvider.CharacterService.GetOrCreateDraftCharacter(
+					context.Background(),
+					i.Member.User.ID,
+					i.GuildID,
+				)
+				if err != nil {
+					log.Printf("Error creating draft character: %v", err)
+					// Fall back to old handler
+					req := &character.CreateRequest{
+						Session:     s,
+						Interaction: i,
+					}
+					if handleErr := h.characterCreateHandler.Handle(req); handleErr != nil {
+						log.Printf("Error handling character create: %v", handleErr)
+					}
+					return
+				}
+
+				// Defer the response for slash command
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Flags: discordgo.MessageFlagsEphemeral,
+					},
+				})
+				if err != nil {
+					log.Printf("Error deferring response: %v", err)
+					return
+				}
+
+				// Verify the flow service is available
+				ctx := context.Background()
+				_, err = h.ServiceProvider.CreationFlowService.GetNextStep(ctx, char.ID)
+				if err != nil {
+					log.Printf("Error getting first step: %v", err)
+					content := "Failed to start character creation"
+					_, editErr := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+						Content: &content,
+					})
+					if editErr != nil {
+						log.Printf("Error editing response: %v", editErr)
+					}
+					return
+				}
+
+				// Create initial message with start button
+				embed := &discordgo.MessageEmbed{
+					Title:       "Create New Character",
+					Description: "Welcome to the D&D 5e Character Creator! Let's build your character step by step.",
+					Color:       0x5865F2, // Discord blurple
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:   "Character Creation Process",
+							Value:  "• Choose your race\n• Select your class\n• Roll ability scores\n• Pick proficiencies\n• Select equipment\n• Name your character",
+							Inline: false,
+						},
+					},
+				}
+
+				components := []discordgo.MessageComponent{
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label:    "Start Character Creation",
+								Style:    discordgo.PrimaryButton,
+								CustomID: fmt.Sprintf("character:continue:%s", char.ID),
+								Emoji:    &discordgo.ComponentEmoji{Name: "🎲"},
+							},
+						},
+					},
+				}
+
+				_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+					Embeds:     &[]*discordgo.MessageEmbed{embed},
+					Components: &components,
+				})
+				if err != nil {
+					log.Printf("Error sending initial message: %v", err)
+					return
+				}
+			} else {
+				// Fall back to old handler
+				req := &character.CreateRequest{
+					Session:     s,
+					Interaction: i,
+				}
+				if err := h.characterCreateHandler.Handle(req); err != nil {
+					log.Printf("Error handling character create: %v", err)
+				}
 			}
 		case "list":
 			req := &character.ListRequest{
@@ -1712,6 +1798,16 @@ func (h *Handler) handleComponent(s *discordgo.Session, i *discordgo.Interaction
 					if err := h.characterShowHandler.Handle(req); err != nil {
 						log.Printf("Error showing draft character: %v", err)
 					}
+				}
+			}
+		}
+	} else if ctx == "character" && action == "continue" {
+		// Handle character creation continuation
+		if len(parts) >= 3 {
+			characterID := parts[2]
+			if h.characterFlowHandler != nil {
+				if err := h.characterFlowHandler.HandleContinue(s, i, characterID); err != nil {
+					log.Printf("Error continuing character creation flow: %v", err)
 				}
 			}
 		}

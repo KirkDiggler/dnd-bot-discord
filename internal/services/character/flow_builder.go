@@ -3,6 +3,7 @@ package character
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
@@ -25,71 +26,162 @@ func NewFlowBuilder(dndClient dnd5e.Client) character.FlowBuilder {
 func (b *FlowBuilderImpl) BuildFlow(ctx context.Context, char *character.Character) (*character.CreationFlow, error) {
 	var steps []character.CreationStep
 
-	// Base steps for all characters
-	steps = append(steps,
-		// 1. Race Selection
-		character.CreationStep{
+	// 1. Race Selection (with options if not yet selected)
+	if char.Race == nil {
+		step := character.CreationStep{
 			Type:        character.StepTypeRaceSelection,
 			Title:       "Choose Your Race",
 			Description: "Select your character's race, which determines starting abilities and traits.",
 			Required:    true,
-		},
-		// 2. Class Selection
-		character.CreationStep{
+			MinChoices:  1,
+			MaxChoices:  1,
+		}
+
+		// Fetch race options if client is available
+		if b.dndClient != nil {
+			races, err := b.dndClient.ListRaces()
+			if err != nil {
+				return nil, fmt.Errorf("failed to fetch races: %w", err)
+			}
+
+			var raceOptions []character.CreationOption
+			for _, race := range races {
+				// Build ability bonus description
+				var bonuses []string
+				for _, bonus := range race.AbilityBonuses {
+					if bonus.Bonus > 0 {
+						bonuses = append(bonuses, fmt.Sprintf("%s +%d", bonus.Attribute, bonus.Bonus))
+					}
+				}
+				bonusText := "No ability bonuses"
+				if len(bonuses) > 0 {
+					bonusText = strings.Join(bonuses, ", ")
+				}
+
+				raceOptions = append(raceOptions, character.CreationOption{
+					Key:         race.Key,
+					Name:        race.Name,
+					Description: bonusText,
+				})
+			}
+			step.Options = raceOptions
+		}
+
+		steps = append(steps, step)
+	}
+
+	// 2. Class Selection (with options if not yet selected)
+	if char.Class == nil {
+		step := character.CreationStep{
 			Type:        character.StepTypeClassSelection,
 			Title:       "Choose Your Class",
 			Description: "Select your character's class, which determines abilities, proficiencies, and features.",
 			Required:    true,
-		},
+			MinChoices:  1,
+			MaxChoices:  1,
+		}
+
+		// Fetch class options if client is available
+		if b.dndClient != nil {
+			classes, err := b.dndClient.ListClasses()
+			if err != nil {
+				return nil, fmt.Errorf("failed to fetch classes: %w", err)
+			}
+
+			var classOptions []character.CreationOption
+			for _, class := range classes {
+				// Build a more useful description
+				desc := fmt.Sprintf("Hit Die: d%d", class.HitDie)
+
+				// Add primary abilities from class definition
+				primaryAbility := class.GetPrimaryAbility()
+				if primaryAbility != "" {
+					// Convert full names to abbreviations for compact display
+					abbrev := primaryAbility
+					abbrev = strings.ReplaceAll(abbrev, "Strength", "STR")
+					abbrev = strings.ReplaceAll(abbrev, "Dexterity", "DEX")
+					abbrev = strings.ReplaceAll(abbrev, "Constitution", "CON")
+					abbrev = strings.ReplaceAll(abbrev, "Intelligence", "INT")
+					abbrev = strings.ReplaceAll(abbrev, "Wisdom", "WIS")
+					abbrev = strings.ReplaceAll(abbrev, "Charisma", "CHA")
+					abbrev = strings.ReplaceAll(abbrev, " and ", " & ")
+					desc = abbrev + " primary • " + desc
+				}
+
+				// Add class-specific features preview
+				features := b.getClassFeaturesPreview(class.Key)
+				if features != "" {
+					desc += " • " + features
+				}
+
+				classOptions = append(classOptions, character.CreationOption{
+					Key:         class.Key,
+					Name:        class.Name,
+					Description: desc,
+				})
+			}
+			step.Options = classOptions
+		}
+
+		steps = append(steps, step)
+	}
+
+	// Only add subsequent steps if race and class are selected
+	if char.Race != nil && char.Class != nil {
 		// 3. Ability Scores
-		character.CreationStep{
+		steps = append(steps, character.CreationStep{
 			Type:        character.StepTypeAbilityScores,
 			Title:       "Roll Ability Scores",
 			Description: "Generate your character's six ability scores.",
 			Required:    true,
-		},
-		// 4. Ability Assignment
-		character.CreationStep{
-			Type:        character.StepTypeAbilityAssignment,
-			Title:       "Assign Ability Scores",
-			Description: "Assign your rolled scores to the six abilities.",
-			Required:    true,
-		},
-	)
+		})
 
-	// 5. Class-specific features (dynamic based on class)
-	if char.Class != nil {
-		classSteps, err := b.buildClassSpecificSteps(ctx, char)
-		if err != nil {
-			return nil, fmt.Errorf("failed to build class steps: %w", err)
+		// 4. Ability Assignment (only if scores exist but not assigned)
+		if len(char.Attributes) == 0 {
+			steps = append(steps, character.CreationStep{
+				Type:        character.StepTypeAbilityAssignment,
+				Title:       "Assign Ability Scores",
+				Description: "Assign your rolled scores to the six abilities.",
+				Required:    true,
+			})
 		}
-		steps = append(steps, classSteps...)
-	}
 
-	// Final steps for all characters
-	steps = append(steps,
-		// 6. Proficiency Selection
-		character.CreationStep{
-			Type:        character.StepTypeProficiencySelection,
-			Title:       "Choose Proficiencies",
-			Description: "Select your character's skill and tool proficiencies.",
-			Required:    true,
-		},
-		// 7. Equipment Selection
-		character.CreationStep{
-			Type:        character.StepTypeEquipmentSelection,
-			Title:       "Choose Equipment",
-			Description: "Select your starting equipment and gear.",
-			Required:    true,
-		},
-		// 8. Character Details
-		character.CreationStep{
-			Type:        character.StepTypeCharacterDetails,
-			Title:       "Character Details",
-			Description: "Choose your character's name and other details.",
-			Required:    true,
-		},
-	)
+		// 5. Class-specific features (dynamic based on class)
+		if char.Class != nil {
+			classSteps, err := b.buildClassSpecificSteps(ctx, char)
+			if err != nil {
+				return nil, fmt.Errorf("failed to build class steps: %w", err)
+			}
+			steps = append(steps, classSteps...)
+		}
+
+		// Final steps - only add if character has race, class, and abilities
+		if len(char.Attributes) > 0 {
+			steps = append(steps,
+				// 6. Proficiency Selection
+				character.CreationStep{
+					Type:        character.StepTypeProficiencySelection,
+					Title:       "Choose Proficiencies",
+					Description: "Select your character's skill and tool proficiencies.",
+					Required:    true,
+				},
+				// 7. Equipment Selection
+				character.CreationStep{
+					Type:        character.StepTypeEquipmentSelection,
+					Title:       "Choose Equipment",
+					Description: "Select your starting equipment and gear.",
+					Required:    true,
+				},
+				// 8. Character Details
+				character.CreationStep{
+					Type:        character.StepTypeCharacterDetails,
+					Title:       "Character Details",
+					Description: "Choose your character's name and other details.",
+					Required:    true,
+				},
+			)
+		}
+	}
 
 	return &character.CreationFlow{
 		Steps: steps,
@@ -137,6 +229,10 @@ func (b *FlowBuilderImpl) buildClericSteps(ctx context.Context, char *character.
 		MinChoices:  1,
 		MaxChoices:  1,
 		Required:    true,
+		Context: map[string]any{
+			"color":       0xf1c40f, // Gold
+			"placeholder": "Make your selection...",
+		},
 	})
 
 	// Knowledge Domain specific steps
@@ -158,7 +254,9 @@ func (b *FlowBuilderImpl) buildClericSteps(ctx context.Context, char *character.
 			MaxChoices:  2,
 			Required:    true,
 			Context: map[string]any{
-				"source": "knowledge_domain",
+				"source":      "knowledge_domain",
+				"color":       0x9b59b6, // Purple
+				"placeholder": "Select 2 skills...",
 			},
 		})
 
@@ -181,7 +279,9 @@ func (b *FlowBuilderImpl) buildClericSteps(ctx context.Context, char *character.
 			MaxChoices:  2,
 			Required:    true,
 			Context: map[string]any{
-				"source": "knowledge_domain",
+				"source":      "knowledge_domain",
+				"color":       0xe67e22, // Orange
+				"placeholder": "Select 2 languages...",
 			},
 		})
 	}
@@ -213,6 +313,10 @@ func (b *FlowBuilderImpl) buildFighterSteps(ctx context.Context, char *character
 		MinChoices:  1,
 		MaxChoices:  1,
 		Required:    true,
+		Context: map[string]any{
+			"color":       0xe74c3c, // Red
+			"placeholder": "Make your selection...",
+		},
 	})
 
 	return steps
@@ -279,4 +383,36 @@ func (b *FlowBuilderImpl) hasSelectedDomain(char *character.Character, domain st
 		}
 	}
 	return false
+}
+
+// getClassFeaturesPreview returns a short preview of class features and choices
+func (b *FlowBuilderImpl) getClassFeaturesPreview(classKey string) string {
+	switch classKey {
+	case "barbarian":
+		return "Rage, Unarmored Defense"
+	case "bard":
+		return "Bardic Inspiration, Spellcasting, 3 skills"
+	case "cleric":
+		return "Choose Domain, Spellcasting, 2 skills"
+	case "druid":
+		return "Druidic, Spellcasting, 2 skills"
+	case "fighter":
+		return "Choose Fighting Style, Second Wind, 2 skills"
+	case "monk":
+		return "Martial Arts, Unarmored Defense, 2 skills"
+	case "paladin":
+		return "Divine Sense, Lay on Hands, 2 skills"
+	case "ranger":
+		return "Choose Favored Enemy & Terrain, 3 skills"
+	case "rogue":
+		return "Sneak Attack, Expertise, 4 skills"
+	case "sorcerer":
+		return "Sorcerous Origin, Spellcasting, 2 skills"
+	case "warlock":
+		return "Otherworldly Patron, Pact Magic, 2 skills"
+	case "wizard":
+		return "Arcane Recovery, Spellcasting, 2 skills"
+	default:
+		return ""
+	}
 }
