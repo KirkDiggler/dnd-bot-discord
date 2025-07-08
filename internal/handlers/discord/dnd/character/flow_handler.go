@@ -43,35 +43,57 @@ func (h *FlowHandler) HandleContinue(s *discordgo.Session, i *discordgo.Interact
 
 // HandleSelection processes a selection from a creation flow step
 func (h *FlowHandler) HandleSelection(s *discordgo.Session, i *discordgo.InteractionCreate) error {
-	// Parse the custom ID: creation_flow:{characterID}:{stepType}
+	// Parse the custom ID: creation_flow:{characterID}:{action}
 	parts := strings.Split(i.MessageComponentData().CustomID, ":")
 	if len(parts) < 3 {
 		return respondWithError(s, i, "Invalid selection")
 	}
 
 	characterID := parts[1]
-	stepType := character.CreationStepType(parts[2])
+	action := parts[2]
 
-	// Get selections from the interaction
-	selections := i.MessageComponentData().Values
+	// Handle special cases for race/class selection
+	switch action {
+	case "race_select":
+		if len(i.MessageComponentData().Values) == 0 {
+			return respondWithError(s, i, "No race selected")
+		}
+		handler := NewRaceClassSelectionHandler(h.services)
+		return handler.HandleRaceSelect(s, i, characterID, i.MessageComponentData().Values[0])
 
-	ctx := context.Background()
+	case "class_select":
+		if len(i.MessageComponentData().Values) == 0 {
+			return respondWithError(s, i, "No class selected")
+		}
+		handler := NewRaceClassSelectionHandler(h.services)
+		return handler.HandleClassSelect(s, i, characterID, i.MessageComponentData().Values[0])
 
-	// Create step result
-	result := &character.CreationStepResult{
-		StepType:   stepType,
-		Selections: selections,
+	case "continue":
+		// Continue to next step after race/class selection
+		return h.HandleContinue(s, i, characterID)
+
+	default:
+		// Original flow for other step types
+		stepType := character.CreationStepType(action)
+		selections := i.MessageComponentData().Values
+		ctx := context.Background()
+
+		// Create step result
+		result := &character.CreationStepResult{
+			StepType:   stepType,
+			Selections: selections,
+		}
+
+		// Process the result and get next step
+		nextStep, err := h.services.CreationFlowService.ProcessStepResult(ctx, characterID, result)
+		if err != nil {
+			log.Printf("Error processing step result for character %s: %v", characterID, err)
+			return respondWithError(s, i, "Failed to process selection")
+		}
+
+		// Route to next step handler
+		return h.routeToStepHandler(s, i, characterID, nextStep)
 	}
-
-	// Process the result and get next step
-	nextStep, err := h.services.CreationFlowService.ProcessStepResult(ctx, characterID, result)
-	if err != nil {
-		log.Printf("Error processing step result for character %s: %v", characterID, err)
-		return respondWithError(s, i, "Failed to process selection")
-	}
-
-	// Route to next step handler
-	return h.routeToStepHandler(s, i, characterID, nextStep)
 }
 
 // routeToStepHandler routes to the appropriate handler for a step type
@@ -82,13 +104,10 @@ func (h *FlowHandler) routeToStepHandler(s *discordgo.Session, i *discordgo.Inte
 	case character.StepTypeComplete:
 		return h.handleCreationComplete(s, i, characterID)
 
-	case character.StepTypeRaceSelection:
-		// Use generic step renderer for race selection
-		return h.renderGenericStep(s, i, step, characterID)
-
-	case character.StepTypeClassSelection:
-		// Use generic step renderer for class selection
-		return h.renderGenericStep(s, i, step, characterID)
+	case character.StepTypeRaceSelection, character.StepTypeClassSelection:
+		// Use combined race/class selection handler
+		handler := NewRaceClassSelectionHandler(h.services)
+		return handler.Handle(s, i, characterID)
 
 	case character.StepTypeAbilityScores:
 		// Get character to extract race and class keys
@@ -243,10 +262,18 @@ func (h *FlowHandler) renderGenericStep(s *discordgo.Session, i *discordgo.Inter
 	step *character.CreationStep, characterID string) error {
 
 	// Build embed
+	// Get color from step context or use default
+	color := 0x3498db // Default blue
+	if step.Context != nil {
+		if c, ok := step.Context["color"].(int); ok {
+			color = c
+		}
+	}
+
 	embed := &discordgo.MessageEmbed{
 		Title:       step.Title,
 		Description: step.Description,
-		Color:       h.getStepColor(step.Type),
+		Color:       color,
 	}
 
 	// Get character to show current selections
@@ -321,12 +348,20 @@ func (h *FlowHandler) renderGenericStep(s *discordgo.Session, i *discordgo.Inter
 
 	customID := fmt.Sprintf("creation_flow:%s:%s", characterID, step.Type)
 
+	// Get placeholder from step context or use default
+	placeholder := "Make your selection..."
+	if step.Context != nil {
+		if p, ok := step.Context["placeholder"].(string); ok {
+			placeholder = p
+		}
+	}
+
 	components := []discordgo.MessageComponent{
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.SelectMenu{
 					CustomID:    customID,
-					Placeholder: h.getStepPlaceholder(step),
+					Placeholder: placeholder,
 					Options:     selectOptions,
 					MinValues:   &minValues,
 					MaxValues:   maxValues,
@@ -391,41 +426,4 @@ func (h *FlowHandler) handleCreationComplete(s *discordgo.Session, i *discordgo.
 			Flags:      discordgo.MessageFlagsEphemeral,
 		},
 	})
-}
-
-// Helper methods
-func (h *FlowHandler) getStepColor(stepType character.CreationStepType) int {
-	switch stepType {
-	case character.StepTypeSkillSelection:
-		return 0x9b59b6 // Purple
-	case character.StepTypeLanguageSelection:
-		return 0xe67e22 // Orange
-	case character.StepTypeDivineDomainSelection:
-		return 0xf1c40f // Gold
-	case character.StepTypeFightingStyleSelection:
-		return 0xe74c3c // Red
-	default:
-		return 0x3498db // Blue
-	}
-}
-
-func (h *FlowHandler) getStepPlaceholder(step *character.CreationStep) string {
-	switch step.Type {
-	case character.StepTypeSkillSelection:
-		if step.MaxChoices > 1 {
-			return fmt.Sprintf("Select %d skills...", step.MaxChoices)
-		}
-		return "Select a skill..."
-	case character.StepTypeLanguageSelection:
-		if step.MaxChoices > 1 {
-			return fmt.Sprintf("Select %d languages...", step.MaxChoices)
-		}
-		return "Select a language..."
-	case character.StepTypeRaceSelection:
-		return "Select your race..."
-	case character.StepTypeClassSelection:
-		return "Select your class..."
-	default:
-		return "Make your selection..."
-	}
 }

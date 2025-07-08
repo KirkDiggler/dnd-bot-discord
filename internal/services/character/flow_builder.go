@@ -93,32 +93,25 @@ func (b *FlowBuilderImpl) BuildFlow(ctx context.Context, char *character.Charact
 				// Build a more useful description
 				desc := fmt.Sprintf("Hit Die: d%d", class.HitDie)
 
-				// Add primary abilities based on class
-				switch class.Key {
-				case "barbarian":
-					desc = "STR primary • " + desc
-				case "bard":
-					desc = "CHA primary • " + desc
-				case "cleric":
-					desc = "WIS primary • " + desc
-				case "druid":
-					desc = "WIS primary • " + desc
-				case "fighter":
-					desc = "STR or DEX primary • " + desc
-				case "monk":
-					desc = "DEX & WIS primary • " + desc
-				case "paladin":
-					desc = "STR & CHA primary • " + desc
-				case "ranger":
-					desc = "DEX & WIS primary • " + desc
-				case "rogue":
-					desc = "DEX primary • " + desc
-				case "sorcerer":
-					desc = "CHA primary • " + desc
-				case "warlock":
-					desc = "CHA primary • " + desc
-				case "wizard":
-					desc = "INT primary • " + desc
+				// Add primary abilities from class definition
+				primaryAbility := class.GetPrimaryAbility()
+				if primaryAbility != "" {
+					// Convert full names to abbreviations for compact display
+					abbrev := primaryAbility
+					abbrev = strings.ReplaceAll(abbrev, "Strength", "STR")
+					abbrev = strings.ReplaceAll(abbrev, "Dexterity", "DEX")
+					abbrev = strings.ReplaceAll(abbrev, "Constitution", "CON")
+					abbrev = strings.ReplaceAll(abbrev, "Intelligence", "INT")
+					abbrev = strings.ReplaceAll(abbrev, "Wisdom", "WIS")
+					abbrev = strings.ReplaceAll(abbrev, "Charisma", "CHA")
+					abbrev = strings.ReplaceAll(abbrev, " and ", " & ")
+					desc = abbrev + " primary • " + desc
+				}
+
+				// Add class-specific features preview
+				features := b.getClassFeaturesPreview(class.Key)
+				if features != "" {
+					desc += " • " + features
 				}
 
 				classOptions = append(classOptions, character.CreationOption{
@@ -236,6 +229,10 @@ func (b *FlowBuilderImpl) buildClericSteps(ctx context.Context, char *character.
 		MinChoices:  1,
 		MaxChoices:  1,
 		Required:    true,
+		Context: map[string]any{
+			"color":       0xf1c40f, // Gold
+			"placeholder": "Make your selection...",
+		},
 	})
 
 	// Knowledge Domain specific steps
@@ -257,7 +254,9 @@ func (b *FlowBuilderImpl) buildClericSteps(ctx context.Context, char *character.
 			MaxChoices:  2,
 			Required:    true,
 			Context: map[string]any{
-				"source": "knowledge_domain",
+				"source":      "knowledge_domain",
+				"color":       0x9b59b6, // Purple
+				"placeholder": "Select 2 skills...",
 			},
 		})
 
@@ -280,7 +279,9 @@ func (b *FlowBuilderImpl) buildClericSteps(ctx context.Context, char *character.
 			MaxChoices:  2,
 			Required:    true,
 			Context: map[string]any{
-				"source": "knowledge_domain",
+				"source":      "knowledge_domain",
+				"color":       0xe67e22, // Orange
+				"placeholder": "Select 2 languages...",
 			},
 		})
 	}
@@ -312,6 +313,10 @@ func (b *FlowBuilderImpl) buildFighterSteps(ctx context.Context, char *character
 		MinChoices:  1,
 		MaxChoices:  1,
 		Required:    true,
+		Context: map[string]any{
+			"color":       0xe74c3c, // Red
+			"placeholder": "Make your selection...",
+		},
 	})
 
 	return steps
@@ -378,4 +383,36 @@ func (b *FlowBuilderImpl) hasSelectedDomain(char *character.Character, domain st
 		}
 	}
 	return false
+}
+
+// getClassFeaturesPreview returns a short preview of class features and choices
+func (b *FlowBuilderImpl) getClassFeaturesPreview(classKey string) string {
+	switch classKey {
+	case "barbarian":
+		return "Rage, Unarmored Defense"
+	case "bard":
+		return "Bardic Inspiration, Spellcasting, 3 skills"
+	case "cleric":
+		return "Choose Domain, Spellcasting, 2 skills"
+	case "druid":
+		return "Druidic, Spellcasting, 2 skills"
+	case "fighter":
+		return "Choose Fighting Style, Second Wind, 2 skills"
+	case "monk":
+		return "Martial Arts, Unarmored Defense, 2 skills"
+	case "paladin":
+		return "Divine Sense, Lay on Hands, 2 skills"
+	case "ranger":
+		return "Choose Favored Enemy & Terrain, 3 skills"
+	case "rogue":
+		return "Sneak Attack, Expertise, 4 skills"
+	case "sorcerer":
+		return "Sorcerous Origin, Spellcasting, 2 skills"
+	case "warlock":
+		return "Otherworldly Patron, Pact Magic, 2 skills"
+	case "wizard":
+		return "Arcane Recovery, Spellcasting, 2 skills"
+	default:
+		return ""
+	}
 }
