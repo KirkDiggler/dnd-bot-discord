@@ -199,6 +199,8 @@ func (b *FlowBuilderImpl) buildClassSpecificSteps(ctx context.Context, char *cha
 		steps = append(steps, b.buildFighterSteps(ctx, char)...)
 	case "ranger":
 		steps = append(steps, b.buildRangerSteps(ctx, char)...)
+	case "wizard":
+		steps = append(steps, b.buildWizardSteps(ctx, char)...)
 		// Add other classes as needed
 	}
 
@@ -385,6 +387,61 @@ func (b *FlowBuilderImpl) hasSelectedDomain(char *character.Character, domain st
 	return false
 }
 
+// buildWizardSteps creates wizard-specific steps
+func (b *FlowBuilderImpl) buildWizardSteps(ctx context.Context, char *character.Character) []character.CreationStep {
+	var steps []character.CreationStep
+
+	// Spell Selection - Wizards start with 6 1st-level spells in their spellbook
+	if b.dndClient != nil {
+		spells, err := b.dndClient.ListSpellsByClassAndLevel("wizard", 1)
+		if err == nil && len(spells) > 0 {
+			var spellOptions []character.CreationOption
+			for _, spell := range spells {
+				// Get full spell details to show description
+				fullSpell, err := b.dndClient.GetSpell(spell.Key)
+				if err != nil {
+					// Fallback to just name if we can't get details
+					spellOptions = append(spellOptions, character.CreationOption{
+						Key:         spell.Key,
+						Name:        spell.Name,
+						Description: "1st-level spell",
+					})
+					continue
+				}
+
+				// Truncate description for Discord's 100 char limit
+				desc := fmt.Sprintf("%s • %s", fullSpell.School, fullSpell.CastingTime)
+				if len(desc) > 100 {
+					desc = desc[:97] + "..."
+				}
+
+				spellOptions = append(spellOptions, character.CreationOption{
+					Key:         spell.Key,
+					Name:        spell.Name,
+					Description: desc,
+				})
+			}
+
+			steps = append(steps, character.CreationStep{
+				Type:        character.StepTypeSpellSelection,
+				Title:       "Choose Spells for Your Spellbook",
+				Description: "As a wizard, you start with 6 1st-level spells in your spellbook. Choose wisely!",
+				Options:     spellOptions,
+				MinChoices:  6,
+				MaxChoices:  6,
+				Required:    true,
+				Context: map[string]any{
+					"source":      "wizard_spellbook",
+					"color":       0x7289DA, // Discord blurple for wizards
+					"placeholder": "Select 6 spells...",
+				},
+			})
+		}
+	}
+
+	return steps
+}
+
 // getClassFeaturesPreview returns a short preview of class features and choices
 func (b *FlowBuilderImpl) getClassFeaturesPreview(classKey string) string {
 	switch classKey {
@@ -411,7 +468,7 @@ func (b *FlowBuilderImpl) getClassFeaturesPreview(classKey string) string {
 	case "warlock":
 		return "Otherworldly Patron, Pact Magic, 2 skills"
 	case "wizard":
-		return "Arcane Recovery, Spellcasting, 2 skills"
+		return "Arcane Recovery, Choose 6 Spells, 2 skills"
 	default:
 		return ""
 	}

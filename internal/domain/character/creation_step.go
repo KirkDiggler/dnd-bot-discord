@@ -14,6 +14,7 @@ const (
 	StepTypeDivineDomainSelection    CreationStepType = "divine_domain_selection"
 	StepTypeFavoredEnemySelection    CreationStepType = "favored_enemy_selection"
 	StepTypeNaturalExplorerSelection CreationStepType = "natural_explorer_selection"
+	StepTypeSpellSelection           CreationStepType = "spell_selection"
 	StepTypeProficiencySelection     CreationStepType = "proficiency_selection"
 	StepTypeEquipmentSelection       CreationStepType = "equipment_selection"
 	StepTypeCharacterDetails         CreationStepType = "character_details"

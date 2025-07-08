@@ -84,6 +84,16 @@ func (h *FlowHandler) HandleSelection(s *discordgo.Session, i *discordgo.Interac
 			Selections: selections,
 		}
 
+		// Get the current step to check for context metadata
+		currentStep, err := h.services.CreationFlowService.GetCurrentStep(ctx, characterID)
+		if err == nil && currentStep != nil && currentStep.Context != nil {
+			// Pass through context metadata (like spell source)
+			result.Metadata = make(map[string]any)
+			if source, ok := currentStep.Context["source"]; ok {
+				result.Metadata["source"] = source
+			}
+		}
+
 		// Process the result and get next step
 		nextStep, err := h.services.CreationFlowService.ProcessStepResult(ctx, characterID, result)
 		if err != nil {
@@ -248,7 +258,8 @@ func (h *FlowHandler) routeToStepHandler(s *discordgo.Session, i *discordgo.Inte
 
 	// New step types that need generic rendering
 	case character.StepTypeSkillSelection,
-		character.StepTypeLanguageSelection:
+		character.StepTypeLanguageSelection,
+		character.StepTypeSpellSelection:
 		return h.renderGenericStep(s, i, step, characterID)
 
 	default:

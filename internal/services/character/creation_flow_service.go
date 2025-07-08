@@ -132,6 +132,8 @@ func (s *CreationFlowServiceImpl) isStepComplete(char *character.Character, step
 		return s.hasSelectedFavoredEnemy(char)
 	case character.StepTypeNaturalExplorerSelection:
 		return s.hasSelectedNaturalExplorer(char)
+	case character.StepTypeSpellSelection:
+		return s.hasSelectedSpells(char)
 	case character.StepTypeProficiencySelection:
 		// Check if user has made proficiency choices beyond automatic ones
 		// This is a simplified check - ideally we'd track which are from choices
@@ -266,6 +268,31 @@ func (s *CreationFlowServiceImpl) hasUserSelectedEquipment(char *character.Chara
 	return false
 }
 
+func (s *CreationFlowServiceImpl) hasSelectedSpells(char *character.Character) bool {
+	if char.Spells == nil {
+		return false
+	}
+
+	// Check based on class
+	switch char.Class.Key {
+	case "wizard":
+		// Wizards need 6 spells in spellbook
+		return len(char.Spells.KnownSpells) >= 6
+	case "sorcerer":
+		// Sorcerers know 2 spells at level 1
+		return len(char.Spells.KnownSpells) >= 2
+	case "bard":
+		// Bards know 4 spells at level 1
+		return len(char.Spells.KnownSpells) >= 4
+	case "warlock":
+		// Warlocks know 2 spells at level 1
+		return len(char.Spells.KnownSpells) >= 2
+	default:
+		// Other classes don't choose spells at creation
+		return true
+	}
+}
+
 // applyStepResult applies the result of a step to the character
 func (s *CreationFlowServiceImpl) applyStepResult(ctx context.Context, characterID string, result *character.CreationStepResult) error {
 	char, err := s.characterService.GetByID(characterID)
@@ -282,6 +309,8 @@ func (s *CreationFlowServiceImpl) applyStepResult(ctx context.Context, character
 		return s.applySkillSelection(char, result)
 	case character.StepTypeLanguageSelection:
 		return s.applyLanguageSelection(char, result)
+	case character.StepTypeSpellSelection:
+		return s.applySpellSelection(char, result)
 	// Add other step result handlers as needed
 	default:
 		// For steps handled by existing handlers, we don't need to do anything here
@@ -336,6 +365,32 @@ func (s *CreationFlowServiceImpl) applyLanguageSelection(char *character.Charact
 		// Also add to character languages (would need proper language system)
 		// For now just store in metadata
 		break
+	}
+
+	// Save the character
+	return s.characterService.UpdateEquipment(char)
+}
+
+func (s *CreationFlowServiceImpl) applySpellSelection(char *character.Character, result *character.CreationStepResult) error {
+	// Initialize spells if needed
+	if char.Spells == nil {
+		char.Spells = &character.SpellList{}
+	}
+
+	// Handle different spell selection contexts
+	if result.Metadata != nil {
+		if source, ok := result.Metadata["source"].(string); ok && source == "wizard_spellbook" {
+			// Wizard spellbook - these are known spells
+			for _, spellKey := range result.Selections {
+				char.AddKnownSpell(spellKey)
+			}
+		}
+		// Could add other contexts here (sorcerer known spells, etc.)
+	} else {
+		// Default: add as known spells
+		for _, spellKey := range result.Selections {
+			char.AddKnownSpell(spellKey)
+		}
 	}
 
 	// Save the character
