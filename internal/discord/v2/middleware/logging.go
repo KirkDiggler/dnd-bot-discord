@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -118,7 +119,7 @@ func MetricsMiddleware(collector MetricsCollector) core.Middleware {
 
 				// Add error type
 				if handlerErr, ok := err.(*core.HandlerError); ok {
-					errorLabels["error_code"] = string(rune(handlerErr.Code))
+					errorLabels["error_code"] = fmt.Sprintf("%d", handlerErr.Code)
 				} else {
 					errorLabels["error_code"] = "500"
 				}

@@ -2,6 +2,8 @@ package routers
 
 import (
 	"fmt"
+	"log"
+	"strconv"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/discord/v2/builders"
@@ -42,7 +44,7 @@ func NewCharacterRouter(pipeline *core.Pipeline, provider *services.Provider) *C
 	creationHandler, err := handlers.NewCharacterCreationHandler(creationConfig)
 	if err != nil {
 		// Log error but continue - creation won't work but other features will
-		fmt.Printf("Failed to create character creation handler: %v\n", err)
+		log.Printf("Failed to create character creation handler: %v", err)
 	} else {
 		cr.creationHandler = creationHandler
 	}
@@ -345,10 +347,13 @@ func (r *CharacterRouter) handlePageChange(ctx *core.InteractionContext) (*core.
 		return nil, core.NewValidationError("Invalid page number")
 	}
 
-	page := 1
-	// TODO: Parse page from args[0]
+	page, err := strconv.Atoi(customID.Args[0])
+	if err != nil {
+		return nil, core.NewValidationError("Invalid page number")
+	}
 
-	// For now, just show page 1
+	// TODO: Implement pagination support in handleList
+	// For now, just show the list (which defaults to page 1)
 	_ = page
 
 	return r.handleList(ctx)

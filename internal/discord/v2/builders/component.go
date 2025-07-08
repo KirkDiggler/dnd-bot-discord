@@ -1,6 +1,8 @@
 package builders
 
 import (
+	"fmt"
+
 	"github.com/KirkDiggler/dnd-bot-discord/internal/discord/v2/core"
 	"github.com/bwmarrin/discordgo"
 )
@@ -222,17 +224,17 @@ func (b *ComponentBuilder) DangerButton(label, action string, args ...string) *C
 func (b *ComponentBuilder) PaginationButtons(currentPage, totalPages int, baseAction string) *ComponentBuilder {
 	// Previous button
 	if currentPage > 1 {
-		b.EmojiButton("Previous", "⬅️", discordgo.SecondaryButton, baseAction+"_prev", string(rune(currentPage-1)))
+		b.EmojiButton("Previous", "⬅️", discordgo.SecondaryButton, baseAction+"_prev", fmt.Sprintf("%d", currentPage-1))
 	} else {
 		b.DisabledButton("Previous", discordgo.SecondaryButton)
 	}
 
 	// Page indicator
-	b.DisabledButton(string(rune(currentPage))+"/"+string(rune(totalPages)), discordgo.SecondaryButton)
+	b.DisabledButton(fmt.Sprintf("%d/%d", currentPage, totalPages), discordgo.SecondaryButton)
 
 	// Next button
 	if currentPage < totalPages {
-		b.EmojiButton("Next", "➡️", discordgo.SecondaryButton, baseAction+"_next", string(rune(currentPage+1)))
+		b.EmojiButton("Next", "➡️", discordgo.SecondaryButton, baseAction+"_next", fmt.Sprintf("%d", currentPage+1))
 	} else {
 		b.DisabledButton("Next", discordgo.SecondaryButton)
 	}
