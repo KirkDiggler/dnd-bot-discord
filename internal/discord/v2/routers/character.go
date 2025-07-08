@@ -88,6 +88,9 @@ func (r *CharacterRouter) registerRoutes() {
 		r.router.ComponentFunc("creation:equipment", r.creationHandler.HandleStepSelection)
 		r.router.ComponentFunc("creation:name", r.creationHandler.HandleStepSelection)
 		r.router.ComponentFunc("creation:option", r.creationHandler.HandleStepSelection)
+
+		// Register additional enhanced handlers
+		r.creationHandler.RegisterAdditionalHandlers(r.router)
 	}
 }
 

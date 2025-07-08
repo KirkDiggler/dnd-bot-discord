@@ -56,7 +56,7 @@ func (h *CharacterCreationHandler) StartCreation(ctx *core.InteractionContext) (
 	}
 
 	// Build response for current step
-	response, err := h.buildStepResponse(char, currentStep)
+	response, err := h.buildEnhancedStepResponse(char, currentStep)
 	if err != nil {
 		return nil, core.NewInternalError(err)
 	}
@@ -156,7 +156,7 @@ func (h *CharacterCreationHandler) HandleStepSelection(ctx *core.InteractionCont
 	}
 
 	// Build response for next step
-	response, err := h.buildStepResponse(updatedChar, nextStep)
+	response, err := h.buildEnhancedStepResponse(updatedChar, nextStep)
 	if err != nil {
 		return nil, core.NewInternalError(err)
 	}
@@ -184,7 +184,7 @@ func (h *CharacterCreationHandler) handleBack(ctx *core.InteractionContext, char
 	}
 
 	// Build response for previous step
-	response, err := h.buildStepResponse(updatedChar, prevStep)
+	response, err := h.buildEnhancedStepResponse(updatedChar, prevStep)
 	if err != nil {
 		return nil, core.NewInternalError(err)
 	}
@@ -194,130 +194,6 @@ func (h *CharacterCreationHandler) handleBack(ctx *core.InteractionContext, char
 	return &core.HandlerResult{
 		Response: response,
 	}, nil
-}
-
-// buildStepResponse builds the Discord response for a creation step
-func (h *CharacterCreationHandler) buildStepResponse(char *domainCharacter.Character, step *domainCharacter.CreationStep) (*core.Response, error) {
-	// Build embed
-	embed := builders.NewEmbed().
-		Title(fmt.Sprintf("Character Creation - %s", step.Title)).
-		Description(step.Description).
-		Color(builders.ColorPrimary)
-
-	// Add current progress
-	if char.Name != "" {
-		embed.AddField("Name", char.Name, true)
-	}
-	if char.Race != nil {
-		embed.AddField("Race", char.Race.Name, true)
-	}
-	if char.Class != nil {
-		embed.AddField("Class", char.Class.Name, true)
-	}
-
-	// Build components based on step type
-	components := builders.NewComponentBuilder(h.customIDBuilder)
-
-	switch step.Type {
-	case domainCharacter.StepTypeRaceSelection, domainCharacter.StepTypeClassSelection,
-		domainCharacter.StepTypeDivineDomainSelection, domainCharacter.StepTypeFightingStyleSelection,
-		domainCharacter.StepTypeFavoredEnemySelection, domainCharacter.StepTypeNaturalExplorerSelection:
-		// Single-choice selection menus
-		if len(step.Options) > 0 {
-			options := make([]builders.SelectOption, 0, len(step.Options))
-			for _, opt := range step.Options {
-				options = append(options, builders.SelectOption{
-					Label:       opt.Name,
-					Value:       opt.Key,
-					Description: opt.Description,
-				})
-			}
-
-			placeholder := "Choose an option..."
-			if step.Context != nil {
-				if ph, ok := step.Context["placeholder"].(string); ok {
-					placeholder = ph
-				}
-			}
-
-			components.SelectMenu(
-				placeholder,
-				fmt.Sprintf("select_%s", char.ID),
-				options,
-			)
-		}
-
-	case domainCharacter.StepTypeSkillSelection, domainCharacter.StepTypeLanguageSelection:
-		// Multi-choice selection menus
-		if len(step.Options) > 0 {
-			options := make([]builders.SelectOption, 0, len(step.Options))
-			for _, opt := range step.Options {
-				options = append(options, builders.SelectOption{
-					Label:       opt.Name,
-					Value:       opt.Key,
-					Description: opt.Description,
-				})
-			}
-
-			placeholder := fmt.Sprintf("Select %d options...", step.MinChoices)
-			if step.Context != nil {
-				if ph, ok := step.Context["placeholder"].(string); ok {
-					placeholder = ph
-				}
-			}
-
-			components.SelectMenuWithOptions(
-				placeholder,
-				fmt.Sprintf("select_%s", char.ID),
-				options,
-				step.MinChoices,
-				step.MaxChoices,
-			)
-		}
-
-	case domainCharacter.StepTypeAbilityScores:
-		// For ability scores, add a roll button
-		components.PrimaryButton("Roll Ability Scores", "roll", char.ID)
-
-	case domainCharacter.StepTypeAbilityAssignment:
-		// For ability assignment, add an assign button
-		components.PrimaryButton("Assign Abilities", "assign", char.ID)
-
-	case domainCharacter.StepTypeProficiencySelection:
-		// For proficiency selection, add a select button
-		components.PrimaryButton("Choose Proficiencies", "proficiencies", char.ID)
-
-	case domainCharacter.StepTypeEquipmentSelection:
-		// For equipment selection, add a select button
-		components.PrimaryButton("Choose Equipment", "equipment", char.ID)
-
-	case domainCharacter.StepTypeCharacterDetails:
-		// For final details, add a name button
-		components.PrimaryButton("Set Character Name", "name", char.ID)
-
-	default:
-		// For other steps, build based on options
-		if len(step.Options) > 0 {
-			for i, opt := range step.Options {
-				if i > 0 && i%5 == 0 {
-					components.NewRow() // Discord limit of 5 buttons per row
-				}
-				components.PrimaryButton(opt.Name, fmt.Sprintf("option_%s", opt.Key), char.ID)
-			}
-		}
-	}
-
-	// Add navigation buttons
-	// TODO: Add back button when CreationState is available
-	// components.NewRow()
-	// components.SecondaryButton("⬅️ Back", "back", char.ID)
-
-	response := core.NewResponse("").
-		WithEmbeds(embed.Build()).
-		WithComponents(components.Build()...).
-		AsEphemeral()
-
-	return response, nil
 }
 
 // completeCreation finalizes the character creation
