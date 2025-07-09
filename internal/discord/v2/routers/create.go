@@ -81,7 +81,6 @@ func (r *CreateRouter) registerRoutes() {
 	// Core flow components
 	r.router.ComponentFunc("select", r.creationHandler.HandleStepSelection)
 	r.router.ComponentFunc("back", r.creationHandler.HandleStepSelection)
-	r.router.ComponentFunc("roll", r.creationHandler.HandleStepSelection)
 	r.router.ComponentFunc("assign", r.creationHandler.HandleStepSelection)
 	r.router.ComponentFunc("proficiencies", r.creationHandler.HandleStepSelection)
 	r.router.ComponentFunc("equipment", r.creationHandler.HandleStepSelection)
@@ -93,6 +92,29 @@ func (r *CreateRouter) registerRoutes() {
 	r.router.ComponentFunc("race_random", r.creationHandler.HandleRandomRace)
 	r.router.ComponentFunc("preview_race", r.creationHandler.HandleRacePreview)
 	r.router.ComponentFunc("confirm_race", r.creationHandler.HandleConfirmRace)
+
+	// Ability scores handlers
+	r.router.ComponentFunc("roll", r.creationHandler.HandleRollAbilityScores)
+	r.router.ComponentFunc("standard", r.creationHandler.HandleStandardArray)
+	r.router.ComponentFunc("ability_info", r.creationHandler.HandleAbilityInfo)
+	r.router.ComponentFunc("confirm_rolled_scores", r.creationHandler.HandleConfirmRolledScores)
+	r.router.ComponentFunc("assign_standard_array", r.creationHandler.HandleAssignStandardArray)
+	r.router.ComponentFunc("start_ability_assignment", r.creationHandler.HandleStartAbilityAssignment)
+	r.router.ComponentFunc("start_fresh", r.creationHandler.HandleStartFresh)
+	r.router.ComponentFunc("back_to_abilities", r.creationHandler.HandleBackToAbilities)
+
+	// Manual assignment handlers
+	r.router.ComponentFunc("auto_assign_and_continue", r.creationHandler.HandleAutoAssignAndContinue)
+	r.router.ComponentFunc("start_manual_assignment", r.creationHandler.HandleStartManualAssignment)
+	r.router.ComponentFunc("assign_to_ability", r.creationHandler.HandleAssignToAbility)
+	r.router.ComponentFunc("apply_ability_assignment", r.creationHandler.HandleApplyAbilityAssignment)
+	r.router.ComponentFunc("apply_direct_assignment", r.creationHandler.HandleApplyDirectAssignment)
+	r.router.ComponentFunc("confirm_ability_assignment", r.creationHandler.HandleConfirmAbilityAssignment)
+
+	// One-at-a-time rolling handlers
+	r.router.ComponentFunc("roll_single_ability", r.creationHandler.HandleRollSingleAbility)
+	r.router.ComponentFunc("continue_rolling", r.creationHandler.HandleContinueRolling)
+	r.router.ComponentFunc("start_interactive_assignment", r.creationHandler.HandleStartInteractiveAssignment)
 
 	// Future: /dnd create encounter, /dnd create item, etc.
 	// r.router.ActionFunc("encounter", r.handleCreateEncounter)
