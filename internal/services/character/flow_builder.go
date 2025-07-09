@@ -3,6 +3,7 @@ package character
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
@@ -39,31 +40,94 @@ func (b *FlowBuilderImpl) BuildFlow(ctx context.Context, char *character.Charact
 
 		// Fetch race options if client is available
 		if b.dndClient != nil {
-			races, err := b.dndClient.ListRaces()
+			raceRefs, err := b.dndClient.ListRaces()
 			if err != nil {
 				return nil, fmt.Errorf("failed to fetch races: %w", err)
 			}
 
+			// Fetch full race details concurrently
+			type raceResult struct {
+				race *rulebook.Race
+				err  error
+			}
+
+			results := make(chan raceResult, len(raceRefs))
+			for _, raceRef := range raceRefs {
+				go func(key string) {
+					race, err := b.dndClient.GetRace(key)
+					results <- raceResult{race: race, err: err}
+				}(raceRef.Key)
+			}
+
+			// Collect results
+			races := make([]*rulebook.Race, 0, len(raceRefs))
+			for i := 0; i < len(raceRefs); i++ {
+				result := <-results
+				if result.err != nil {
+					// Log error but continue with other races
+					fmt.Printf("Warning: Failed to fetch race details: %v\n", result.err)
+					continue
+				}
+				if result.race != nil {
+					races = append(races, result.race)
+				}
+			}
+			close(results)
+
 			var raceOptions []character.CreationOption
 			for _, race := range races {
-				// Build ability bonus description
+				// Build comprehensive race details
+				var details []string
+
+				// Ability bonuses
 				var bonuses []string
 				for _, bonus := range race.AbilityBonuses {
 					if bonus.Bonus > 0 {
 						bonuses = append(bonuses, fmt.Sprintf("%s +%d", bonus.Attribute, bonus.Bonus))
 					}
 				}
-				bonusText := "No ability bonuses"
 				if len(bonuses) > 0 {
-					bonusText = strings.Join(bonuses, ", ")
+					details = append(details, strings.Join(bonuses, ", "))
 				}
+
+				// Speed
+				if race.Speed > 0 {
+					details = append(details, fmt.Sprintf("%dft", race.Speed))
+				}
+
+				// Add key proficiencies if any
+				if len(race.StartingProficiencies) > 0 {
+					// Just show count to keep it concise
+					details = append(details, fmt.Sprintf("%d prof", len(race.StartingProficiencies)))
+				}
+
+				// Build description (Discord limits to 100 chars)
+				description := "No special traits"
+				if len(details) > 0 {
+					description = strings.Join(details, " • ")
+					if len(description) > 100 {
+						description = description[:97] + "..."
+					}
+				}
+
+				// Store full race data in metadata for later use
+				metadata := make(map[string]any)
+				metadata["race"] = race
+				metadata["bonuses"] = bonuses
 
 				raceOptions = append(raceOptions, character.CreationOption{
 					Key:         race.Key,
 					Name:        race.Name,
-					Description: bonusText,
+					Description: description,
+					Metadata:    metadata,
 				})
 			}
+
+			// Sort race options alphabetically by name
+			sort.Slice(raceOptions, func(i, j int) bool {
+				return raceOptions[i].Name < raceOptions[j].Name
+			})
+
 			step.Options = raceOptions
 		}
 

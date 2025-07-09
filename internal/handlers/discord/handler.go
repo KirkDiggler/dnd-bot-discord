@@ -212,19 +212,40 @@ func (h *Handler) RegisterCommands(s *discordgo.Session, guildID string) error {
 			Description: "D&D 5e bot commands",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
+					Name:        "create",
+					Description: "Create new things",
+					Type:        discordgo.ApplicationCommandOptionSubCommandGroup,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Name:        "character",
+							Description: "Create a new character",
+							Type:        discordgo.ApplicationCommandOptionSubCommand,
+						},
+						// Future: encounter, item, etc.
+					},
+				},
+				{
 					Name:        "character",
 					Description: "Character management commands",
 					Type:        discordgo.ApplicationCommandOptionSubCommandGroup,
 					Options: []*discordgo.ApplicationCommandOption{
 						{
-							Name:        "create",
-							Description: "Create a new character",
-							Type:        discordgo.ApplicationCommandOptionSubCommand,
-						},
-						{
 							Name:        "list",
 							Description: "List all your characters",
 							Type:        discordgo.ApplicationCommandOptionSubCommand,
+						},
+						{
+							Name:        "show",
+							Description: "Show a specific character",
+							Type:        discordgo.ApplicationCommandOptionSubCommand,
+							Options: []*discordgo.ApplicationCommandOption{
+								{
+									Type:        discordgo.ApplicationCommandOptionString,
+									Name:        "name",
+									Description: "Character name",
+									Required:    true,
+								},
+							},
 						},
 						{
 							Name:        "delete",

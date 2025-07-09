@@ -20,6 +20,10 @@ type CreationFlowService interface {
 
 	// GetProgressSteps returns all steps with their completion status
 	GetProgressSteps(ctx context.Context, characterID string) ([]ProgressStepInfo, error)
+
+	// PreviewStepResult creates a preview of what the character would look like with the given selection
+	// without actually applying the changes
+	PreviewStepResult(ctx context.Context, characterID string, result *CreationStepResult) (*Character, error)
 }
 
 // ProgressStepInfo represents a step in the progress display

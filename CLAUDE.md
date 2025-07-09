@@ -277,7 +277,30 @@ The project lives in `/home/kirk/personal/` with related projects:
 Proto files already exist in dnd-bot-discord:
 - `character.proto`, `combat.proto`, `combat_streaming.proto`, `game.proto`
 
-### Current Work: Weapon Equipping (Issue #37) - COMPLETE ✅
+### Current Work: Enhanced Character Creation with V2 Handler System - IN PROGRESS
+- **Branch**: `implement-wizard-spell-selection` (continuing work)
+- **Goal**: Rich character creation experience with preview functionality
+- **Status**: 
+  - ✅ V2 handler system implemented (PR #295 merged)
+  - ✅ Race preview functionality working
+  - ✅ Rich character sheet display
+  - ✅ Concurrent race data fetching from API
+  - 🔧 Class preview next
+
+#### What Was Implemented (July 8, 2025):
+1. **V2 Handler System**: Modular Discord interaction handlers with domain routing
+2. **Race Preview**: Select races to preview before confirming
+3. **Rich Character Sheet**: Sections for race, class, abilities, proficiencies
+4. **API Fix**: ListRaces() returns references only - now fetch full details concurrently
+5. **Documentation**: Created `/internal/discord/v2/README.md` for v2 system
+
+#### Key Learnings:
+- Always use integration tests to verify API data flow
+- CustomID format must be consistent: `domain:action:target:args...`
+- Router domain must match Discord command name
+- Component handlers need full pattern with domain prefix
+
+### Previous Work: Weapon Equipping (Issue #37) - COMPLETE ✅
 - **Branch**: `implement-weapon-equipping`
 - **PR**: #44 - Ready for merge
 - **Goal**: Allow players to equip weapons from inventory for proper attack calculations
