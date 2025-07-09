@@ -176,7 +176,8 @@ func (s *CreationFlowServiceImpl) isStepComplete(char *character.Character, step
 	case character.StepTypeClassSelection:
 		return char.Class != nil
 	case character.StepTypeAbilityScores:
-		return len(char.Attributes) > 0
+		// Check if abilities have been rolled (not if they're assigned to attributes)
+		return len(char.AbilityRolls) >= 6
 	case character.StepTypeAbilityAssignment:
 		// Check if all ability scores are assigned (not default values)
 		return s.hasAssignedAbilities(char)
@@ -211,17 +212,20 @@ func (s *CreationFlowServiceImpl) isStepComplete(char *character.Character, step
 
 // Helper methods for checking step completion
 func (s *CreationFlowServiceImpl) hasAssignedAbilities(char *character.Character) bool {
-	// Check if abilities are set to non-default values
-	if len(char.Attributes) < 6 {
+	// Check if all 6 ability scores have been assigned
+	if len(char.AbilityAssignments) != 6 {
 		return false
 	}
-	// For now, just check if any ability score is > 8 (default)
-	for _, attr := range char.Attributes {
-		if attr.Score > 8 {
-			return true
+
+	// Verify each ability has an assignment
+	requiredAbilities := []string{"STR", "DEX", "CON", "INT", "WIS", "CHA"}
+	for _, ability := range requiredAbilities {
+		if _, exists := char.AbilityAssignments[ability]; !exists {
+			return false
 		}
 	}
-	return false
+
+	return true
 }
 
 func (s *CreationFlowServiceImpl) hasCompletedDomainSkills(char *character.Character) bool {

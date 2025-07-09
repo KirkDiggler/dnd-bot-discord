@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/discord/v2/builders"
@@ -10,6 +11,8 @@ import (
 	domainCharacter "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	rulebook "github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
+	characterService "github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
+	"github.com/bwmarrin/discordgo"
 )
 
 // buildEnhancedStepResponse builds a rich Discord response for a creation step
@@ -94,9 +97,10 @@ func (h *CharacterCreationHandler) buildEnhancedStepResponse(char *domainCharact
 			}
 
 			components.NewRow()
-			components.SelectMenu(
+			components.SelectMenuWithTarget(
 				"Select a class...",
-				fmt.Sprintf("select_%s", char.ID),
+				"select",
+				char.ID,
 				options,
 			)
 		}
@@ -121,20 +125,30 @@ func (h *CharacterCreationHandler) buildEnhancedStepResponse(char *domainCharact
 		components.SecondaryButton("📊 Use Standard Array", "standard", char.ID)
 		components.NewRow()
 		components.SecondaryButton("❓ About Ability Scores", "ability_info", char.ID)
+		components.DangerButton("🗑️ Start Fresh", "start_fresh", char.ID)
 
 	case domainCharacter.StepTypeAbilityAssignment:
-		embed.Description("Assign your rolled scores to your abilities. Consider your class's primary abilities!")
+		embed.Description("Your ability scores have been rolled! Now assign them to your abilities.")
+
+		// Show rolled scores if available
+		if len(char.AbilityRolls) > 0 {
+			var scoreDisplay []string
+			for _, roll := range char.AbilityRolls {
+				scoreDisplay = append(scoreDisplay, fmt.Sprintf("**%d**", roll.Value))
+			}
+			embed.AddField("🎯 Available Scores", strings.Join(scoreDisplay, " • "), false)
+		}
 
 		// Show class recommendations
 		if char.Class != nil {
 			primary := getClassPrimaryAbilities(char.Class.Key)
 			if primary != "" {
-				embed.AddField("💡 Recommended", primary, true)
+				embed.AddField("💡 Class Recommendations", primary, false)
 			}
 		}
 
-		components.PrimaryButton("📋 Assign Abilities", "assign", char.ID)
-		components.SecondaryButton("🔄 Reroll", "reroll", char.ID)
+		components.SuccessButton("🤖 Auto-Assign & Continue", "auto_assign_and_continue", char.ID)
+		components.PrimaryButton("📝 Manual Assignment", "start_manual_assignment", char.ID)
 
 	case domainCharacter.StepTypeProficiencySelection:
 		embed.Description("Choose your character's proficiencies. These determine what skills and tools you're trained in.")
@@ -397,12 +411,15 @@ func (h *CharacterCreationHandler) buildDefaultStepComponents(components *builde
 				placeholder = fmt.Sprintf("Select %d-%d options...", step.MinChoices, step.MaxChoices)
 			}
 
-			components.SelectMenuWithOptions(
+			components.SelectMenuWithTarget(
 				placeholder,
-				fmt.Sprintf("select_%s", char.ID),
+				"select",
+				char.ID,
 				options,
-				step.MinChoices,
-				step.MaxChoices,
+				builders.SelectConfig{
+					MinValues: step.MinChoices,
+					MaxValues: step.MaxChoices,
+				},
 			)
 		} else {
 			// Single select with buttons
@@ -421,20 +438,28 @@ func (h *CharacterCreationHandler) canGoBack(char *domainCharacter.Character) bo
 	return false
 }
 
-// buildDynamicProgressTracker creates a visual progress tracker that shows completed and remaining steps
+// buildDynamicProgressTracker creates an inline visual progress tracker
 func (h *CharacterCreationHandler) buildDynamicProgressTracker(char *domainCharacter.Character, currentStep *domainCharacter.CreationStep, allSteps []domainCharacter.CreationStep) string {
-	var tracker []string
-
-	// Define the base steps that everyone goes through
-	baseSteps := []struct {
+	// Define all possible steps in order
+	allPossibleSteps := []struct {
 		stepType domainCharacter.CreationStepType
 		name     string
 		emoji    string
+		classes  []string // empty means universal step
 	}{
-		{domainCharacter.StepTypeRaceSelection, "Race", "🎭"},
-		{domainCharacter.StepTypeClassSelection, "Class", "⚔️"},
-		{domainCharacter.StepTypeAbilityScores, "Abilities", "🎲"},
-		{domainCharacter.StepTypeAbilityAssignment, "Assign", "📊"},
+		{domainCharacter.StepTypeRaceSelection, "Race", "🎭", nil},
+		{domainCharacter.StepTypeClassSelection, "Class", "⚔️", nil},
+		{domainCharacter.StepTypeAbilityScores, "Abilities", "🎲", nil},
+		{domainCharacter.StepTypeAbilityAssignment, "Assign", "📊", nil},
+		{domainCharacter.StepTypeDivineDomainSelection, "Domain", "⛪", []string{"cleric"}},
+		{domainCharacter.StepTypeFightingStyleSelection, "Fighting", "🛡️", []string{"fighter", "ranger", "paladin"}},
+		{domainCharacter.StepTypeFavoredEnemySelection, "Enemy", "🎯", []string{"ranger"}},
+		{domainCharacter.StepTypeNaturalExplorerSelection, "Explorer", "🏔️", []string{"ranger"}},
+		{domainCharacter.StepTypeSkillSelection, "Skills", "🎯", []string{"wizard", "rogue", "bard"}},
+		{domainCharacter.StepTypeLanguageSelection, "Languages", "📚", []string{"wizard", "cleric"}},
+		{domainCharacter.StepTypeProficiencySelection, "Proficiencies", "🛠️", nil},
+		{domainCharacter.StepTypeEquipmentSelection, "Equipment", "🎒", nil},
+		{domainCharacter.StepTypeCharacterDetails, "Details", "📝", nil},
 	}
 
 	// Track completed steps
@@ -450,87 +475,82 @@ func (h *CharacterCreationHandler) buildDynamicProgressTracker(char *domainChara
 		completedSteps[domainCharacter.StepTypeAbilityAssignment] = true
 	}
 
-	// Build the base progress
-	for _, step := range baseSteps {
-		if completedSteps[step.stepType] {
-			tracker = append(tracker, fmt.Sprintf("✅ %s %s", step.emoji, step.name))
-		} else if currentStep.Type == step.stepType {
-			tracker = append(tracker, fmt.Sprintf("▶️ **%s %s**", step.emoji, step.name))
-		} else {
-			tracker = append(tracker, fmt.Sprintf("⬜ %s %s", step.emoji, step.name))
-		}
-	}
-
-	// Add class-specific steps dynamically
-	if char.Class != nil {
-		// Check for class-specific steps in allSteps
-		classSpecificSteps := []struct {
-			stepType domainCharacter.CreationStepType
-			name     string
-			emoji    string
-			classes  []string
-		}{
-			{domainCharacter.StepTypeDivineDomainSelection, "Divine Domain", "⛪", []string{"cleric"}},
-			{domainCharacter.StepTypeFightingStyleSelection, "Fighting Style", "🛡️", []string{"fighter", "ranger", "paladin"}},
-			{domainCharacter.StepTypeFavoredEnemySelection, "Favored Enemy", "🎯", []string{"ranger"}},
-			{domainCharacter.StepTypeNaturalExplorerSelection, "Natural Explorer", "🏔️", []string{"ranger"}},
-		}
-
-		for _, specStep := range classSpecificSteps {
-			// Check if this step applies to the character's class
-			if contains(specStep.classes, char.Class.Key) {
-				// Check if this step exists in allSteps
-				for _, step := range allSteps {
-					if step.Type == specStep.stepType {
-						if h.isStepComplete(char, specStep.stepType) {
-							tracker = append(tracker, fmt.Sprintf("✅ %s %s", specStep.emoji, specStep.name))
-						} else if currentStep.Type == specStep.stepType {
-							tracker = append(tracker, fmt.Sprintf("▶️ **%s %s**", specStep.emoji, specStep.name))
-						} else {
-							tracker = append(tracker, fmt.Sprintf("⬜ %s %s", specStep.emoji, specStep.name))
-						}
-						break
-					}
-				}
-			}
-		}
-	}
-
-	// Add remaining universal steps
-	universalSteps := []struct {
+	// Build list of steps that apply to this character
+	var applicableSteps []struct {
 		stepType domainCharacter.CreationStepType
 		name     string
 		emoji    string
-	}{
-		{domainCharacter.StepTypeProficiencySelection, "Proficiencies", "🛠️"},
-		{domainCharacter.StepTypeEquipmentSelection, "Equipment", "🎒"},
-		{domainCharacter.StepTypeCharacterDetails, "Details", "📝"},
+		status   string // "completed", "current", "pending"
 	}
 
-	for _, step := range universalSteps {
+	for _, step := range allPossibleSteps {
+		// Check if this step applies to the character
+		if step.classes != nil && char.Class != nil && !contains(step.classes, char.Class.Key) {
+			continue // Skip class-specific steps that don't apply
+		}
+
+		// For class-specific steps, also check if it exists in allSteps
+		if step.classes != nil {
+			found := false
+			for _, actualStep := range allSteps {
+				if actualStep.Type == step.stepType {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
+		// Determine step status
+		var status string
 		if h.isStepComplete(char, step.stepType) {
-			tracker = append(tracker, fmt.Sprintf("✅ %s %s", step.emoji, step.name))
+			status = "completed"
 		} else if currentStep.Type == step.stepType {
-			tracker = append(tracker, fmt.Sprintf("▶️ **%s %s**", step.emoji, step.name))
+			status = "current"
 		} else {
-			tracker = append(tracker, fmt.Sprintf("⬜ %s %s", step.emoji, step.name))
+			status = "pending"
 		}
+
+		applicableSteps = append(applicableSteps, struct {
+			stepType domainCharacter.CreationStepType
+			name     string
+			emoji    string
+			status   string
+		}{step.stepType, step.name, step.emoji, status})
 	}
 
-	// Add step counter
-	totalSteps := len(tracker)
+	// Build inline progress tracker
+	var parts []string
 	completedCount := 0
-	for _, t := range tracker {
-		if strings.HasPrefix(t, "✅") {
+
+	for i, step := range applicableSteps {
+		var stepDisplay string
+		switch step.status {
+		case "completed":
+			stepDisplay = fmt.Sprintf("%s %s ✅", step.emoji, step.name)
 			completedCount++
+		case "current":
+			stepDisplay = fmt.Sprintf("**%s %s** ▶️", step.emoji, step.name)
+		case "pending":
+			stepDisplay = fmt.Sprintf("%s %s ⬜", step.emoji, step.name)
+		}
+
+		parts = append(parts, stepDisplay)
+
+		// Add arrow between steps (except for the last one)
+		if i < len(applicableSteps)-1 {
+			parts = append(parts, "→")
 		}
 	}
 
-	// Build the final tracker with counter
+	// Build the result with step counter and inline progress
+	totalSteps := len(applicableSteps)
 	result := fmt.Sprintf("**Step %d of %d**\n\n", completedCount+1, totalSteps)
-	result += strings.Join(tracker, "\n")
+	result += strings.Join(parts, " ")
 
-	// Add estimated time remaining
+	// Add estimated time remaining on a new line
 	stepsRemaining := totalSteps - completedCount
 	if stepsRemaining > 0 {
 		minutesRemaining := stepsRemaining * 2 // Estimate 2 minutes per step
@@ -588,7 +608,15 @@ func (h *CharacterCreationHandler) buildMockAllSteps(char *domainCharacter.Chara
 	if char.Class != nil {
 		switch char.Class.Key {
 		case "cleric":
-			steps = append(steps, domainCharacter.CreationStep{Type: domainCharacter.StepTypeDivineDomainSelection})
+			steps = append(steps,
+				domainCharacter.CreationStep{Type: domainCharacter.StepTypeDivineDomainSelection},
+				domainCharacter.CreationStep{Type: domainCharacter.StepTypeLanguageSelection},
+			)
+		case "wizard":
+			steps = append(steps,
+				domainCharacter.CreationStep{Type: domainCharacter.StepTypeSkillSelection},
+				domainCharacter.CreationStep{Type: domainCharacter.StepTypeLanguageSelection},
+			)
 		case "fighter", "paladin":
 			steps = append(steps, domainCharacter.CreationStep{Type: domainCharacter.StepTypeFightingStyleSelection})
 		case "ranger":
@@ -597,6 +625,8 @@ func (h *CharacterCreationHandler) buildMockAllSteps(char *domainCharacter.Chara
 				domainCharacter.CreationStep{Type: domainCharacter.StepTypeFavoredEnemySelection},
 				domainCharacter.CreationStep{Type: domainCharacter.StepTypeNaturalExplorerSelection},
 			)
+		case "rogue", "bard":
+			steps = append(steps, domainCharacter.CreationStep{Type: domainCharacter.StepTypeSkillSelection})
 		}
 	}
 
@@ -911,4 +941,1558 @@ func getRaceEmoji(raceKey string) string {
 		return emoji
 	}
 	return "🎭" // Default race emoji
+}
+
+// HandleRollAbilityScores handles rolling all ability scores at once
+func (h *CharacterCreationHandler) HandleRollAbilityScores(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// Roll all ability scores at once (4d6 drop lowest for each)
+	abilities := []string{"Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"}
+	rolledScores := make([]int, 6)
+	rollDetails := make([]string, 6)
+
+	for i := range abilities {
+		// Roll 4d6 and drop the lowest
+		rolls := make([]int, 4)
+		for j := 0; j < 4; j++ {
+			rolls[j] = 1 + (rand.Intn(6)) // 1-6
+		}
+
+		// Sort and drop lowest
+		sort.Ints(rolls)
+		total := rolls[1] + rolls[2] + rolls[3] // Sum the 3 highest
+		rolledScores[i] = total
+		rollDetails[i] = fmt.Sprintf("**%d** [%d,%d,%d,~~%d~~]", total, rolls[3], rolls[2], rolls[1], rolls[0])
+	}
+
+	// Create AbilityRolls from the rolled scores
+	abilityRolls := make([]domainCharacter.AbilityRoll, 6)
+	for i, score := range rolledScores {
+		abilityRolls[i] = domainCharacter.AbilityRoll{
+			ID:    fmt.Sprintf("roll_%d", i+1),
+			Value: score,
+		}
+	}
+
+	// Store the rolled scores in the character
+	updateInput := &characterService.UpdateDraftInput{
+		AbilityRolls: abilityRolls,
+	}
+
+	_, err = h.service.UpdateDraftCharacter(ctx.Context, char.ID, updateInput)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Build response showing all rolled scores
+	embed := builders.NewEmbed().
+		Title("🎲 Ability Scores Rolled!").
+		Color(builders.ColorSuccess).
+		Description("Here are your rolled ability scores. You can auto-assign them based on your class or assign them manually.")
+
+	// Add rolled scores in a clean format
+	embed.AddField("🎯 Your Rolls", strings.Join(rollDetails, "  •  "), false)
+
+	// Calculate total and average
+	total := 0
+	for _, score := range rolledScores {
+		total += score
+	}
+	average := float64(total) / 6.0
+	embed.AddField("📊 Stats", fmt.Sprintf("**Total**: %d • **Average**: %.1f", total, average), true)
+
+	// Show what racial bonuses will apply
+	if char.Race != nil {
+		var bonuses []string
+		for _, bonus := range char.Race.AbilityBonuses {
+			if bonus.Bonus > 0 {
+				bonuses = append(bonuses, fmt.Sprintf("%s +%d", getAbilityAbbrev(string(bonus.Attribute)), bonus.Bonus))
+			}
+		}
+		if len(bonuses) > 0 {
+			embed.AddField("🎭 Racial Bonuses", strings.Join(bonuses, ", "), true)
+		}
+	}
+
+	// Build components
+	components := builders.NewComponentBuilder(h.customIDBuilder)
+	components.SuccessButton("🤖 Auto-Assign & Continue", "auto_assign_and_continue", char.ID)
+	components.PrimaryButton("📝 Manual Assignment", "start_manual_assignment", char.ID)
+	components.NewRow()
+	components.SecondaryButton("📊 Use Standard Array Instead", "standard", char.ID)
+	components.DangerButton("🗑️ Start Fresh", "start_fresh", char.ID)
+
+	response := core.NewResponse("").
+		WithEmbeds(embed.Build()).
+		WithComponents(components.Build()...).
+		AsUpdate()
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
+// HandleAutoAssignAndContinue auto-assigns abilities and continues to next step
+func (h *CharacterCreationHandler) HandleAutoAssignAndContinue(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// Create smart auto-assignment
+	assignments := h.createSmartAutoAssignment(char)
+
+	// Update character with assignments
+	updateInput := &characterService.UpdateDraftInput{
+		AbilityAssignments: assignments,
+	}
+
+	_, err = h.service.UpdateDraftCharacter(ctx.Context, char.ID, updateInput)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Get next step from flow service
+	nextStep, err := h.flowService.GetNextStep(ctx.Context, char.ID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Re-fetch character to get updated state
+	char, err = h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Build response for next step
+	response, err := h.buildEnhancedStepResponse(char, nextStep)
+	if err != nil {
+		return nil, err
+	}
+
+	response.AsUpdate()
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
+// HandleStartManualAssignment shows the manual assignment UI with buttons per ability
+func (h *CharacterCreationHandler) HandleStartManualAssignment(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// Start with smart auto-assignment as the base
+	assignments := h.createSmartAutoAssignment(char)
+
+	// Store initial assignments
+	updateInput := &characterService.UpdateDraftInput{
+		AbilityAssignments: assignments,
+	}
+
+	_, err = h.service.UpdateDraftCharacter(ctx.Context, char.ID, updateInput)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Show the manual assignment UI
+	return h.buildManualAssignmentUI(ctx, char, assignments)
+}
+
+// buildManualAssignmentUI creates the manual assignment interface with buttons per ability
+func (h *CharacterCreationHandler) buildManualAssignmentUI(ctx *core.InteractionContext, char *domainCharacter.Character, assignments map[string]string) (*core.HandlerResult, error) {
+	// Build embed
+	embed := builders.NewEmbed().
+		Title("📊 Assign Ability Scores").
+		Color(builders.ColorPrimary).
+		Description("Click on any ability below to change its assigned score. Auto-assignment is applied based on your class - tweak as needed!")
+
+	// Show available scores (clean format)
+	var scoreDisplay []string
+	for i, roll := range char.AbilityRolls {
+		scoreDisplay = append(scoreDisplay, fmt.Sprintf("**%d**", roll.Value))
+		if i < len(char.AbilityRolls)-1 {
+			scoreDisplay = append(scoreDisplay, "•")
+		}
+	}
+	embed.AddField("🎯 Available Scores", strings.Join(scoreDisplay, " "), false)
+
+	// Show current assignments
+	var assignmentDisplay []string
+	abilities := []struct{ name, abbrev, emoji string }{
+		{"Strength", "STR", "💪"},
+		{"Dexterity", "DEX", "🏃"},
+		{"Constitution", "CON", "❤️"},
+		{"Intelligence", "INT", "🧠"},
+		{"Wisdom", "WIS", "👁️"},
+		{"Charisma", "CHA", "💬"},
+	}
+
+	for _, ability := range abilities {
+		if rollID, exists := assignments[ability.abbrev]; exists {
+			// Find the score for this roll ID
+			for _, roll := range char.AbilityRolls {
+				if roll.ID == rollID {
+					// Show final score with racial bonuses
+					finalScore := roll.Value
+					if char.Race != nil {
+						for _, bonus := range char.Race.AbilityBonuses {
+							if getAbilityAbbrev(string(bonus.Attribute)) == ability.abbrev {
+								finalScore += bonus.Bonus
+								break
+							}
+						}
+					}
+
+					if finalScore != roll.Value {
+						assignmentDisplay = append(assignmentDisplay, fmt.Sprintf("%s **%s**: %d (%d+%d)",
+							ability.emoji, ability.abbrev, finalScore, roll.Value, finalScore-roll.Value))
+					} else {
+						assignmentDisplay = append(assignmentDisplay, fmt.Sprintf("%s **%s**: %d",
+							ability.emoji, ability.abbrev, roll.Value))
+					}
+					break
+				}
+			}
+		}
+	}
+	embed.AddField("🎯 Current Assignment", strings.Join(assignmentDisplay, "\n"), false)
+
+	// Show class recommendations
+	if char.Class != nil {
+		primary := getClassPrimaryAbilities(char.Class.Key)
+		if primary != "" {
+			embed.AddField("💡 Class Recommendations", primary, false)
+		}
+	}
+
+	// Build assignment interface with buttons for each ability
+	components := builders.NewComponentBuilder(h.customIDBuilder)
+
+	// Create buttons for each ability in two rows
+	for i, ability := range abilities {
+		if i == 3 {
+			components.NewRow()
+		}
+
+		// Find current assigned score for display
+		currentScore := "?"
+		if rollID, exists := assignments[ability.abbrev]; exists {
+			for _, roll := range char.AbilityRolls {
+				if roll.ID == rollID {
+					currentScore = fmt.Sprintf("%d", roll.Value)
+					break
+				}
+			}
+		}
+
+		components.SecondaryButton(fmt.Sprintf("%s %s: %s", ability.emoji, ability.abbrev, currentScore),
+			"assign_to_ability", char.ID, ability.abbrev)
+	}
+
+	// Action buttons
+	components.NewRow()
+	components.SuccessButton("✅ Confirm Assignment", "confirm_ability_assignment", char.ID)
+	components.SecondaryButton("🤖 Re-Auto-Assign", "auto_assign_abilities", char.ID)
+	components.SecondaryButton("⬅️ Back to Rolling", "roll", char.ID)
+
+	response := core.NewResponse("").
+		WithEmbeds(embed.Build()).
+		WithComponents(components.Build()...).
+		AsUpdate()
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
+// HandleStandardArray handles using the standard array for ability scores
+func (h *CharacterCreationHandler) HandleStandardArray(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// Standard array values
+	standardArray := []int{15, 14, 13, 12, 10, 8}
+
+	// Build response showing standard array
+	embed := builders.NewEmbed().
+		Title("📊 Standard Array Selected").
+		Color(builders.ColorPrimary).
+		Description("You've chosen to use the standard array. Now assign these scores to your abilities based on your class and playstyle.")
+
+	// Show the standard array
+	var arrayDisplay []string
+	for _, score := range standardArray {
+		arrayDisplay = append(arrayDisplay, fmt.Sprintf("**%d**", score))
+	}
+	embed.AddField("🎯 Available Scores", strings.Join(arrayDisplay, " • "), false)
+
+	// Show class recommendations
+	if char.Class != nil {
+		primary := getClassPrimaryAbilities(char.Class.Key)
+		if primary != "" {
+			embed.AddField("💡 Class Recommendations", primary, false)
+		}
+	}
+
+	// Show what racial bonuses will apply
+	if char.Race != nil {
+		var bonuses []string
+		for _, bonus := range char.Race.AbilityBonuses {
+			if bonus.Bonus > 0 {
+				bonuses = append(bonuses, fmt.Sprintf("%s +%d", getAbilityAbbrev(string(bonus.Attribute)), bonus.Bonus))
+			}
+		}
+		if len(bonuses) > 0 {
+			embed.AddField("🎭 Racial Bonuses", strings.Join(bonuses, ", "), true)
+		}
+	}
+
+	// Build components for assignment
+	components := builders.NewComponentBuilder(h.customIDBuilder)
+	components.PrimaryButton("📝 Assign Scores", "assign_standard_array", char.ID)
+	components.SecondaryButton("🎲 Roll Instead", "roll", char.ID)
+	components.NewRow()
+	components.SecondaryButton("❓ About Standard Array", "ability_info", char.ID)
+
+	response := core.NewResponse("").
+		WithEmbeds(embed.Build()).
+		WithComponents(components.Build()...).
+		AsUpdate()
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
+// HandleAbilityInfo shows information about ability scores
+func (h *CharacterCreationHandler) HandleAbilityInfo(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// Build informational embed
+	embed := builders.NewEmbed().
+		Title("❓ About Ability Scores").
+		Color(builders.ColorInfo).
+		Description("Ability scores determine your character's capabilities. Here's what you need to know:")
+
+	// Explain the two methods
+	embed.AddField("🎲 Rolling Method",
+		"• Roll 4d6 for each ability\n• Drop the lowest die\n• Sum the remaining 3 dice\n• More random, can get very high or low scores\n• Average total: ~72-73", false)
+
+	embed.AddField("📊 Standard Array",
+		"• Use predetermined scores: 15, 14, 13, 12, 10, 8\n• Assign them to abilities as you choose\n• More balanced and predictable\n• Total: 72", false)
+
+	// Explain ability score effects
+	embed.AddField("💪 What Abilities Do",
+		"• **Strength**: Melee attacks, Athletics, carrying capacity\n• **Dexterity**: Ranged attacks, AC, Stealth, Initiative\n• **Constitution**: Hit points, concentration saves\n• **Intelligence**: Spells (Wizard), Investigation, History\n• **Wisdom**: Spells (Cleric/Druid), Perception, Insight\n• **Charisma**: Spells (Bard/Sorcerer), social skills", false)
+
+	// Explain modifiers
+	embed.AddField("🔢 Ability Modifiers",
+		"• Score 8-9 = -1 modifier\n• Score 10-11 = +0 modifier\n• Score 12-13 = +1 modifier\n• Score 14-15 = +2 modifier\n• Score 16-17 = +3 modifier\n• Score 18-19 = +4 modifier", false)
+
+	// Build components
+	components := builders.NewComponentBuilder(h.customIDBuilder)
+	components.PrimaryButton("🎲 Roll Ability Scores", "roll", char.ID)
+	components.SecondaryButton("📊 Use Standard Array", "standard", char.ID)
+	components.NewRow()
+	components.SecondaryButton("⬅️ Back", "back_to_abilities", char.ID)
+
+	response := core.NewResponse("").
+		WithEmbeds(embed.Build()).
+		WithComponents(components.Build()...).
+		AsUpdate()
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
+// HandleConfirmRolledScores handles confirming the rolled ability scores
+func (h *CharacterCreationHandler) HandleConfirmRolledScores(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// For now, we'll re-roll the scores since we don't have them stored
+	// TODO: In the future, we should store them in the interaction or character
+	rolledScores := make([]int, 6)
+	for i := range rolledScores {
+		// Roll 4d6 and drop the lowest
+		rolls := make([]int, 4)
+		for j := 0; j < 4; j++ {
+			rolls[j] = 1 + (rand.Intn(6)) // 1-6
+		}
+
+		// Sort and drop lowest
+		sort.Ints(rolls)
+		rolledScores[i] = rolls[1] + rolls[2] + rolls[3] // Sum the 3 highest
+	}
+
+	// Create AbilityRolls from the rolled scores
+	abilityRolls := make([]domainCharacter.AbilityRoll, 6)
+	for i, score := range rolledScores {
+		abilityRolls[i] = domainCharacter.AbilityRoll{
+			ID:    fmt.Sprintf("roll_%d", i+1),
+			Value: score,
+		}
+	}
+
+	// Store the rolled scores in the character
+	updateInput := &characterService.UpdateDraftInput{
+		AbilityRolls: abilityRolls,
+	}
+
+	_, err = h.service.UpdateDraftCharacter(ctx.Context, char.ID, updateInput)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Show assignment UI
+	return h.buildAbilityAssignmentUI(ctx, char, abilityRolls)
+}
+
+// HandleAssignStandardArray handles assigning the standard array scores
+func (h *CharacterCreationHandler) HandleAssignStandardArray(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// Standard array values
+	standardArray := []int{15, 14, 13, 12, 10, 8}
+
+	// Create AbilityRolls from the standard array
+	abilityRolls := make([]domainCharacter.AbilityRoll, 6)
+	for i, score := range standardArray {
+		abilityRolls[i] = domainCharacter.AbilityRoll{
+			ID:    fmt.Sprintf("standard_%d", i+1),
+			Value: score,
+		}
+	}
+
+	// Store the standard array in the character
+	updateInput := &characterService.UpdateDraftInput{
+		AbilityRolls: abilityRolls,
+	}
+
+	_, err = h.service.UpdateDraftCharacter(ctx.Context, char.ID, updateInput)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Show assignment UI
+	return h.buildAbilityAssignmentUI(ctx, char, abilityRolls)
+}
+
+// HandleBackToAbilities handles going back to ability selection
+func (h *CharacterCreationHandler) HandleBackToAbilities(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// Get current step
+	currentStep, err := h.flowService.GetCurrentStep(ctx.Context, char.ID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Build the response for the ability scores step
+	response, err := h.buildEnhancedStepResponse(char, currentStep)
+	if err != nil {
+		return nil, err
+	}
+
+	response.AsUpdate()
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
+// buildAbilityAssignmentUI builds the UI for assigning ability scores
+func (h *CharacterCreationHandler) buildAbilityAssignmentUI(ctx *core.InteractionContext, char *domainCharacter.Character, abilityRolls []domainCharacter.AbilityRoll) (*core.HandlerResult, error) {
+	// Build embed
+	embed := builders.NewEmbed().
+		Title("📊 Assign Ability Scores").
+		Color(builders.ColorPrimary).
+		Description("Assign your rolled/standard scores to your abilities. Choose wisely based on your class and playstyle!")
+
+	// Show available scores
+	var scoreDisplay []string
+	for _, roll := range abilityRolls {
+		scoreDisplay = append(scoreDisplay, fmt.Sprintf("**%d** (ID: %s)", roll.Value, roll.ID))
+	}
+	embed.AddField("🎯 Available Scores", strings.Join(scoreDisplay, " • "), false)
+
+	// Show class recommendations
+	if char.Class != nil {
+		primary := getClassPrimaryAbilities(char.Class.Key)
+		if primary != "" {
+			embed.AddField("💡 Class Recommendations", primary, false)
+		}
+	}
+
+	// Show racial bonuses
+	if char.Race != nil {
+		var bonuses []string
+		for _, bonus := range char.Race.AbilityBonuses {
+			if bonus.Bonus > 0 {
+				bonuses = append(bonuses, fmt.Sprintf("%s +%d", getAbilityAbbrev(string(bonus.Attribute)), bonus.Bonus))
+			}
+		}
+		if len(bonuses) > 0 {
+			embed.AddField("🎭 Racial Bonuses", strings.Join(bonuses, ", "), true)
+		}
+	}
+
+	// Build assignment components
+	components := builders.NewComponentBuilder(h.customIDBuilder)
+
+	// For now, we'll use buttons to start the assignment process
+	// In a full implementation, we'd need multiple select menus or a more complex UI
+	components.PrimaryButton("📝 Start Assignment", "start_ability_assignment", char.ID)
+	components.SecondaryButton("← Back to Abilities", "back_to_abilities", char.ID)
+
+	embed.AddField("⚠️ Next Steps", "Click 'Start Assignment' to begin assigning your scores to abilities.", false)
+
+	response := core.NewResponse("").
+		WithEmbeds(embed.Build()).
+		WithComponents(components.Build()...).
+		AsUpdate()
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
+// HandleStartAbilityAssignment handles starting the ability assignment process
+func (h *CharacterCreationHandler) HandleStartAbilityAssignment(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// For now, we'll do a simple automatic assignment based on class
+	// In a full implementation, this would be an interactive UI
+	if len(char.AbilityRolls) == 0 {
+		return nil, core.NewValidationError("No ability rolls found. Please generate scores first.")
+	}
+
+	// Sort rolls by value (highest first)
+	sortedRolls := make([]domainCharacter.AbilityRoll, len(char.AbilityRolls))
+	copy(sortedRolls, char.AbilityRolls)
+	sort.Slice(sortedRolls, func(i, j int) bool {
+		return sortedRolls[i].Value > sortedRolls[j].Value
+	})
+
+	// Create a basic assignment (this is simplified - in practice we'd want user interaction)
+	assignments := make(map[string]string)
+
+	// Basic assignment logic based on class
+	if char.Class != nil {
+		switch char.Class.Key {
+		case "wizard":
+			assignments["INT"] = sortedRolls[0].ID // Highest to INT
+			assignments["DEX"] = sortedRolls[1].ID // Second highest to DEX
+			assignments["CON"] = sortedRolls[2].ID // Third highest to CON
+			assignments["WIS"] = sortedRolls[3].ID
+			assignments["CHA"] = sortedRolls[4].ID
+			assignments["STR"] = sortedRolls[5].ID // Lowest to STR
+		case "fighter":
+			assignments["STR"] = sortedRolls[0].ID // Highest to STR
+			assignments["CON"] = sortedRolls[1].ID // Second highest to CON
+			assignments["DEX"] = sortedRolls[2].ID // Third highest to DEX
+			assignments["WIS"] = sortedRolls[3].ID
+			assignments["CHA"] = sortedRolls[4].ID
+			assignments["INT"] = sortedRolls[5].ID // Lowest to INT
+		case "rogue":
+			assignments["DEX"] = sortedRolls[0].ID // Highest to DEX
+			assignments["CON"] = sortedRolls[1].ID // Second highest to CON
+			assignments["INT"] = sortedRolls[2].ID // Third highest to INT
+			assignments["WIS"] = sortedRolls[3].ID
+			assignments["CHA"] = sortedRolls[4].ID
+			assignments["STR"] = sortedRolls[5].ID // Lowest to STR
+		default:
+			// Default assignment
+			assignments["STR"] = sortedRolls[0].ID
+			assignments["DEX"] = sortedRolls[1].ID
+			assignments["CON"] = sortedRolls[2].ID
+			assignments["INT"] = sortedRolls[3].ID
+			assignments["WIS"] = sortedRolls[4].ID
+			assignments["CHA"] = sortedRolls[5].ID
+		}
+	} else {
+		// Default assignment without class
+		assignments["STR"] = sortedRolls[0].ID
+		assignments["DEX"] = sortedRolls[1].ID
+		assignments["CON"] = sortedRolls[2].ID
+		assignments["INT"] = sortedRolls[3].ID
+		assignments["WIS"] = sortedRolls[4].ID
+		assignments["CHA"] = sortedRolls[5].ID
+	}
+
+	// Update character with assignments
+	updateInput := &characterService.UpdateDraftInput{
+		AbilityAssignments: assignments,
+	}
+
+	_, err = h.service.UpdateDraftCharacter(ctx.Context, char.ID, updateInput)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Get next step from flow service
+	nextStep, err := h.flowService.GetNextStep(ctx.Context, char.ID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Re-fetch character to get updated state
+	char, err = h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Build response for next step
+	response, err := h.buildEnhancedStepResponse(char, nextStep)
+	if err != nil {
+		return nil, err
+	}
+
+	response.AsUpdate()
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
+// HandleStartFresh handles starting fresh character creation
+func (h *CharacterCreationHandler) HandleStartFresh(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character to verify ownership
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// Clear ability rolls and assignments from the CURRENT character (not create new one)
+	_, err = h.service.UpdateDraftCharacter(ctx.Context, char.ID, &characterService.UpdateDraftInput{
+		AbilityRolls:       []domainCharacter.AbilityRoll{},
+		AbilityAssignments: map[string]string{},
+	})
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Get the updated character
+	freshChar, err := h.service.GetCharacter(ctx.Context, char.ID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Get the current step (should be ability scores since we cleared them)
+	currentStep, err := h.flowService.GetCurrentStep(ctx.Context, freshChar.ID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Build response for the current step
+	response, err := h.buildEnhancedStepResponse(freshChar, currentStep)
+	if err != nil {
+		return nil, err
+	}
+
+	response.AsUpdate()
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
+// HandleRollSingleAbility handles rolling a single ability score
+func (h *CharacterCreationHandler) HandleRollSingleAbility(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID and ability index
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+	if len(customID.Args) == 0 {
+		return nil, core.NewValidationError("No ability index provided")
+	}
+
+	abilityIndex := 0
+	if len(customID.Args) > 0 {
+		// Parse ability index from args
+		switch customID.Args[0] {
+		case "0":
+			abilityIndex = 0
+		case "1":
+			abilityIndex = 1
+		case "2":
+			abilityIndex = 2
+		case "3":
+			abilityIndex = 3
+		case "4":
+			abilityIndex = 4
+		case "5":
+			abilityIndex = 5
+		}
+	}
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	abilities := []string{"Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"}
+
+	// Roll 4d6 drop lowest for this ability
+	rolls := make([]int, 4)
+	for j := 0; j < 4; j++ {
+		rolls[j] = 1 + (rand.Intn(6)) // 1-6
+	}
+
+	// Sort and drop lowest
+	sort.Ints(rolls)
+	total := rolls[1] + rolls[2] + rolls[3] // Sum the 3 highest
+
+	// Ensure we have enough rolls array space
+	for len(char.AbilityRolls) <= abilityIndex {
+		char.AbilityRolls = append(char.AbilityRolls, domainCharacter.AbilityRoll{})
+	}
+
+	// Store this roll
+	char.AbilityRolls[abilityIndex] = domainCharacter.AbilityRoll{
+		ID:    fmt.Sprintf("roll_%d", abilityIndex+1),
+		Value: total,
+	}
+
+	// Update character with the new roll
+	updateInput := &characterService.UpdateDraftInput{
+		AbilityRolls: char.AbilityRolls,
+	}
+
+	_, err = h.service.UpdateDraftCharacter(ctx.Context, char.ID, updateInput)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Show the roll result
+	embed := builders.NewEmbed().
+		Title(fmt.Sprintf("🎲 %s Rolled!", abilities[abilityIndex])).
+		Color(builders.ColorSuccess).
+		Description(fmt.Sprintf("You rolled **%d** for %s!", total, abilities[abilityIndex]))
+
+	// Show the detailed roll
+	embed.AddField("🎯 Roll Details",
+		fmt.Sprintf("Rolled: [%d, %d, %d, ~~%d~~]\nKeeping highest 3: **%d**",
+			rolls[3], rolls[2], rolls[1], rolls[0], total), false)
+
+	// Build components
+	components := builders.NewComponentBuilder(h.customIDBuilder)
+
+	// Continue to next ability or assignment
+	if abilityIndex < 5 {
+		components.PrimaryButton("➡️ Continue to Next Ability", "continue_rolling", char.ID, fmt.Sprintf("%d", abilityIndex+1))
+	} else {
+		components.SuccessButton("📝 Assign Abilities", "start_interactive_assignment", char.ID)
+	}
+
+	// Option to start fresh if you don't like your rolls
+	components.NewRow()
+	components.DangerButton("🗑️ Start Fresh", "start_fresh", char.ID)
+
+	response := core.NewResponse("").
+		WithEmbeds(embed.Build()).
+		WithComponents(components.Build()...).
+		AsUpdate()
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
+// HandleContinueRolling continues to the next ability in the rolling sequence
+func (h *CharacterCreationHandler) HandleContinueRolling(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID and next ability index
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+	nextIndex := 0
+	if len(customID.Args) > 0 {
+		// Parse next ability index from args
+		switch customID.Args[0] {
+		case "1":
+			nextIndex = 1
+		case "2":
+			nextIndex = 2
+		case "3":
+			nextIndex = 3
+		case "4":
+			nextIndex = 4
+		case "5":
+			nextIndex = 5
+		}
+	}
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// Continue to the next ability
+	return h.buildRollingUI(ctx, char, nextIndex)
+}
+
+// HandleStartInteractiveAssignment starts the interactive assignment UI
+func (h *CharacterCreationHandler) HandleStartInteractiveAssignment(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// Show the interactive assignment UI
+	return h.buildInteractiveAssignmentUI(ctx, char)
+}
+
+// buildInteractiveAssignmentUI creates an interactive assignment interface
+func (h *CharacterCreationHandler) buildInteractiveAssignmentUI(ctx *core.InteractionContext, char *domainCharacter.Character) (*core.HandlerResult, error) {
+	// Build embed
+	embed := builders.NewEmbed().
+		Title("📊 Assign Ability Scores").
+		Color(builders.ColorPrimary).
+		Description("Great! Now assign your rolled scores to your abilities. You can swap assignments around until you are happy with them.")
+
+	// Show available scores (without IDs!)
+	var scoreDisplay []string
+	for i, roll := range char.AbilityRolls {
+		scoreDisplay = append(scoreDisplay, fmt.Sprintf("**%d**", roll.Value))
+		if i < len(char.AbilityRolls)-1 {
+			scoreDisplay = append(scoreDisplay, "•")
+		}
+	}
+	embed.AddField("🎯 Your Rolled Scores", strings.Join(scoreDisplay, " "), false)
+
+	// Show current assignments (start with auto-assignment)
+	assignments := h.createSmartAutoAssignment(char)
+
+	var assignmentDisplay []string
+	abilities := []string{"STR", "DEX", "CON", "INT", "WIS", "CHA"}
+	abilityEmojis := []string{"💪", "🏃", "❤️", "🧠", "👁️", "💬"}
+
+	for i, ability := range abilities {
+		if rollID, exists := assignments[ability]; exists {
+			// Find the score for this roll ID
+			for _, roll := range char.AbilityRolls {
+				if roll.ID == rollID {
+					assignmentDisplay = append(assignmentDisplay, fmt.Sprintf("%s **%s**: %d", abilityEmojis[i], ability, roll.Value))
+					break
+				}
+			}
+		}
+	}
+	embed.AddField("🎯 Current Assignment", strings.Join(assignmentDisplay, "\n"), false)
+
+	// Show what racial bonuses will apply
+	if char.Race != nil {
+		var bonuses []string
+		for _, bonus := range char.Race.AbilityBonuses {
+			if bonus.Bonus > 0 {
+				bonuses = append(bonuses, fmt.Sprintf("%s +%d", getAbilityAbbrev(string(bonus.Attribute)), bonus.Bonus))
+			}
+		}
+		if len(bonuses) > 0 {
+			embed.AddField("🎭 Racial Bonuses (will be applied)", strings.Join(bonuses, ", "), true)
+		}
+	}
+
+	// Show class recommendations
+	if char.Class != nil {
+		primary := getClassPrimaryAbilities(char.Class.Key)
+		if primary != "" {
+			embed.AddField("💡 Class Recommendations", primary, false)
+		}
+	}
+
+	// Build assignment interface components
+	components := builders.NewComponentBuilder(h.customIDBuilder)
+
+	// For now, use auto-assignment with option to proceed
+	components.SuccessButton("✅ Confirm Assignment", "confirm_ability_assignment", char.ID)
+	components.SecondaryButton("🔄 Auto-Assign", "auto_assign_abilities", char.ID)
+	components.SecondaryButton("⬅️ Back to Rolling", "roll", char.ID)
+
+	response := core.NewResponse("").
+		WithEmbeds(embed.Build()).
+		WithComponents(components.Build()...).
+		AsUpdate()
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
+// createSmartAutoAssignment creates an intelligent auto-assignment based on class and race
+func (h *CharacterCreationHandler) createSmartAutoAssignment(char *domainCharacter.Character) map[string]string {
+	if len(char.AbilityRolls) != 6 {
+		return make(map[string]string)
+	}
+
+	// Sort rolls by value (highest first)
+	sortedRolls := make([]domainCharacter.AbilityRoll, len(char.AbilityRolls))
+	copy(sortedRolls, char.AbilityRolls)
+	sort.Slice(sortedRolls, func(i, j int) bool {
+		return sortedRolls[i].Value > sortedRolls[j].Value
+	})
+
+	assignments := make(map[string]string)
+
+	// Smart assignment based on class
+	if char.Class != nil {
+		switch char.Class.Key {
+		case "wizard":
+			assignments["INT"] = sortedRolls[0].ID // Highest to INT
+			assignments["DEX"] = sortedRolls[1].ID // Second highest to DEX
+			assignments["CON"] = sortedRolls[2].ID // Third highest to CON
+			assignments["WIS"] = sortedRolls[3].ID
+			assignments["CHA"] = sortedRolls[4].ID
+			assignments["STR"] = sortedRolls[5].ID // Lowest to STR
+		case "fighter":
+			assignments["STR"] = sortedRolls[0].ID // Highest to STR
+			assignments["CON"] = sortedRolls[1].ID // Second highest to CON
+			assignments["DEX"] = sortedRolls[2].ID // Third highest to DEX
+			assignments["WIS"] = sortedRolls[3].ID
+			assignments["CHA"] = sortedRolls[4].ID
+			assignments["INT"] = sortedRolls[5].ID // Lowest to INT
+		case "rogue":
+			assignments["DEX"] = sortedRolls[0].ID // Highest to DEX
+			assignments["CON"] = sortedRolls[1].ID // Second highest to CON
+			assignments["INT"] = sortedRolls[2].ID // Third highest to INT (for skills)
+			assignments["WIS"] = sortedRolls[3].ID
+			assignments["CHA"] = sortedRolls[4].ID
+			assignments["STR"] = sortedRolls[5].ID // Lowest to STR
+		case "cleric":
+			assignments["WIS"] = sortedRolls[0].ID // Highest to WIS
+			assignments["CON"] = sortedRolls[1].ID // Second highest to CON
+			assignments["STR"] = sortedRolls[2].ID // Third highest to STR
+			assignments["DEX"] = sortedRolls[3].ID
+			assignments["CHA"] = sortedRolls[4].ID
+			assignments["INT"] = sortedRolls[5].ID // Lowest to INT
+		default:
+			// Default assignment
+			assignments["STR"] = sortedRolls[0].ID
+			assignments["DEX"] = sortedRolls[1].ID
+			assignments["CON"] = sortedRolls[2].ID
+			assignments["INT"] = sortedRolls[3].ID
+			assignments["WIS"] = sortedRolls[4].ID
+			assignments["CHA"] = sortedRolls[5].ID
+		}
+	} else {
+		// Default assignment without class
+		assignments["STR"] = sortedRolls[0].ID
+		assignments["DEX"] = sortedRolls[1].ID
+		assignments["CON"] = sortedRolls[2].ID
+		assignments["INT"] = sortedRolls[3].ID
+		assignments["WIS"] = sortedRolls[4].ID
+		assignments["CHA"] = sortedRolls[5].ID
+	}
+
+	return assignments
+}
+
+// HandleConfirmAbilityAssignment confirms the ability assignment and proceeds
+func (h *CharacterCreationHandler) HandleConfirmAbilityAssignment(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// Create smart auto-assignment
+	assignments := h.createSmartAutoAssignment(char)
+
+	// Update character with assignments
+	updateInput := &characterService.UpdateDraftInput{
+		AbilityAssignments: assignments,
+	}
+
+	_, err = h.service.UpdateDraftCharacter(ctx.Context, char.ID, updateInput)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Get next step from flow service
+	nextStep, err := h.flowService.GetNextStep(ctx.Context, char.ID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Re-fetch character to get updated state
+	char, err = h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Build response for next step
+	response, err := h.buildEnhancedStepResponse(char, nextStep)
+	if err != nil {
+		return nil, err
+	}
+
+	response.AsUpdate()
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
+// HandleAssignToAbility shows dropdown for assigning a score to specific ability
+func (h *CharacterCreationHandler) HandleAssignToAbility(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID and ability
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+	if len(customID.Args) == 0 {
+		return nil, core.NewValidationError("No ability specified")
+	}
+	targetAbility := customID.Args[0]
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// Get current assignments
+	var currentAssignments map[string]string
+	if len(char.AbilityAssignments) > 0 {
+		currentAssignments = char.AbilityAssignments
+	} else {
+		// If no assignments, create smart auto-assignment
+		currentAssignments = h.createSmartAutoAssignment(char)
+	}
+
+	abilityNames := map[string]string{
+		"STR": "Strength",
+		"DEX": "Dexterity",
+		"CON": "Constitution",
+		"INT": "Intelligence",
+		"WIS": "Wisdom",
+		"CHA": "Charisma",
+	}
+
+	// Build embed for score selection
+	embed := builders.NewEmbed().
+		Title(fmt.Sprintf("📊 Assign Score to %s", abilityNames[targetAbility])).
+		Color(builders.ColorPrimary).
+		Description(fmt.Sprintf("Choose which score to assign to **%s**:", abilityNames[targetAbility]))
+
+	// Show current assignments for context
+	var assignmentDisplay []string
+	abilities := []string{"STR", "DEX", "CON", "INT", "WIS", "CHA"}
+	abilityEmojis := map[string]string{
+		"STR": "💪", "DEX": "🏃", "CON": "❤️",
+		"INT": "🧠", "WIS": "👁️", "CHA": "💬",
+	}
+
+	for _, ability := range abilities {
+		if rollID, exists := currentAssignments[ability]; exists {
+			for _, roll := range char.AbilityRolls {
+				if roll.ID == rollID {
+					status := ""
+					if ability == targetAbility {
+						status = " **(current)**"
+					}
+					assignmentDisplay = append(assignmentDisplay,
+						fmt.Sprintf("%s **%s**: %d%s", abilityEmojis[ability], ability, roll.Value, status))
+					break
+				}
+			}
+		}
+	}
+	embed.AddField("🎯 Current Assignments", strings.Join(assignmentDisplay, "\n"), false)
+
+	// Build dropdown with all available scores
+	components := builders.NewComponentBuilder(h.customIDBuilder)
+
+	var options []builders.SelectOption
+	for _, roll := range char.AbilityRolls {
+		// Find what this roll is currently assigned to
+		assignedTo := ""
+		for ability, assignedRollID := range currentAssignments {
+			if assignedRollID == roll.ID {
+				assignedTo = ability
+				break
+			}
+		}
+
+		label := fmt.Sprintf("Score: %d", roll.Value)
+		description := fmt.Sprintf("Assign %d to %s", roll.Value, abilityNames[targetAbility])
+
+		if assignedTo != "" {
+			if assignedTo == targetAbility {
+				label += " (current)"
+				description = fmt.Sprintf("Keep %d assigned to %s", roll.Value, abilityNames[targetAbility])
+			} else {
+				label += fmt.Sprintf(" (assigned to %s)", assignedTo)
+				description = fmt.Sprintf("Move %d from %s to %s", roll.Value, assignedTo, abilityNames[targetAbility])
+			}
+		}
+
+		options = append(options, builders.SelectOption{
+			Label:       label,
+			Value:       roll.ID,
+			Description: description,
+			Default:     assignedTo == targetAbility,
+		})
+	}
+
+	// Create button options for each available score instead of dropdown
+	// This allows us to pass both the roll ID and target ability
+	components.NewRow()
+	count := 0
+	for _, roll := range char.AbilityRolls {
+		if count > 0 && count%5 == 0 {
+			components.NewRow()
+		}
+
+		// Find what this roll is currently assigned to
+		assignedTo := ""
+		for ability, assignedRollID := range currentAssignments {
+			if assignedRollID == roll.ID {
+				assignedTo = ability
+				break
+			}
+		}
+
+		label := fmt.Sprintf("%d", roll.Value)
+		if assignedTo != "" {
+			label = fmt.Sprintf("%d (%s)", roll.Value, assignedTo)
+		}
+
+		// Pass both roll ID and target ability in args
+		components.SecondaryButton(label, "apply_direct_assignment", char.ID, roll.ID, targetAbility)
+		count++
+	}
+
+	// Add a note about what we're assigning to
+	components.NewRow()
+	components.DisabledButton(fmt.Sprintf("→ %s", abilityNames[targetAbility]), discordgo.SecondaryButton)
+
+	// Back button
+	components.NewRow()
+	components.SecondaryButton("⬅️ Back to Assignment", "start_manual_assignment", char.ID)
+
+	response := core.NewResponse("").
+		WithEmbeds(embed.Build()).
+		WithComponents(components.Build()...).
+		AsUpdate()
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
+// HandleApplyDirectAssignment handles direct assignment with both roll ID and target ability
+func (h *CharacterCreationHandler) HandleApplyDirectAssignment(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID, roll ID, and target ability
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+	if len(customID.Args) < 2 {
+		return nil, core.NewValidationError("Missing roll ID or target ability")
+	}
+	selectedRollID := customID.Args[0]
+	targetAbility := customID.Args[1]
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// Get current assignments
+	currentAssignments := make(map[string]string)
+	if len(char.AbilityAssignments) > 0 {
+		for k, v := range char.AbilityAssignments {
+			currentAssignments[k] = v
+		}
+	} else {
+		currentAssignments = h.createSmartAutoAssignment(char)
+	}
+
+	// Find what ability currently has the selected roll assigned (for swapping)
+	var previousAbility string
+	for ability, rollID := range currentAssignments {
+		if rollID == selectedRollID {
+			previousAbility = ability
+			break
+		}
+	}
+
+	// If target ability already has a roll assigned, we need to swap
+	var rollToSwap string
+	if currentRollID, exists := currentAssignments[targetAbility]; exists {
+		rollToSwap = currentRollID
+	}
+
+	// Perform the assignment (with swapping if needed)
+	currentAssignments[targetAbility] = selectedRollID
+
+	// If we need to swap, assign the displaced roll to the previous ability
+	if rollToSwap != "" && previousAbility != "" && previousAbility != targetAbility {
+		currentAssignments[previousAbility] = rollToSwap
+	}
+
+	// Store the updated assignments
+	updateInput := &characterService.UpdateDraftInput{
+		AbilityAssignments: currentAssignments,
+	}
+
+	_, err = h.service.UpdateDraftCharacter(ctx.Context, char.ID, updateInput)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Re-fetch character to get updated state
+	char, err = h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Return to manual assignment UI with updated assignments
+	return h.buildManualAssignmentUI(ctx, char, currentAssignments)
+}
+
+// HandleApplyAbilityAssignment applies the selected score assignment (with swapping)
+func (h *CharacterCreationHandler) HandleApplyAbilityAssignment(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// Get selected roll ID from the dropdown
+	var selectedRollID string
+	if ctx.IsComponent() && ctx.Interaction != nil {
+		data := ctx.Interaction.MessageComponentData()
+		if len(data.Values) > 0 {
+			selectedRollID = data.Values[0]
+		}
+	}
+
+	if selectedRollID == "" {
+		return nil, core.NewValidationError("No score selected")
+	}
+
+	// Get current assignments
+	currentAssignments := make(map[string]string)
+	if len(char.AbilityAssignments) > 0 {
+		for k, v := range char.AbilityAssignments {
+			currentAssignments[k] = v
+		}
+	} else {
+		currentAssignments = h.createSmartAutoAssignment(char)
+	}
+
+	// LIMITATION: Due to Discord interaction limitations, we can't easily track
+	// which specific ability the user was assigning to. For now, we'll just
+	// return to the manual assignment UI and let them try again.
+	//
+	// In a production system, you'd want to:
+	// 1. Store the target ability in Redis with a temporary key
+	// 2. Use a more sophisticated custom ID encoding
+	// 3. Or redesign the UI to be a single-step selection
+	//
+	// For this demo, we'll show them a message and return to the assignment UI
+
+	// Store the updated assignments
+	updateInput := &characterService.UpdateDraftInput{
+		AbilityAssignments: currentAssignments,
+	}
+
+	_, err = h.service.UpdateDraftCharacter(ctx.Context, char.ID, updateInput)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Re-fetch character to get updated state
+	char, err = h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Return to manual assignment UI with updated assignments
+	return h.buildManualAssignmentUI(ctx, char, currentAssignments)
+}
+
+// buildRollingUI builds the UI for rolling a specific ability (one-at-a-time rolling)
+func (h *CharacterCreationHandler) buildRollingUI(ctx *core.InteractionContext, char *domainCharacter.Character, abilityIndex int) (*core.HandlerResult, error) {
+	abilities := []string{"Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"}
+
+	if abilityIndex >= len(abilities) {
+		return nil, core.NewValidationError("Invalid ability index")
+	}
+
+	// Build embed for the ability to roll
+	embed := builders.NewEmbed().
+		Title(fmt.Sprintf("🎲 Roll %s", abilities[abilityIndex])).
+		Color(builders.ColorPrimary).
+		Description(fmt.Sprintf("Ready to roll for **%s**! Click the button below to roll 4d6 and drop the lowest.", abilities[abilityIndex]))
+
+	// Show progress
+	embed.AddField("📊 Progress", fmt.Sprintf("Rolling ability %d of 6", abilityIndex+1), true)
+
+	// Show previously rolled abilities if any
+	if len(char.AbilityRolls) > 0 {
+		var previousRolls []string
+		for i, roll := range char.AbilityRolls {
+			if i < abilityIndex {
+				previousRolls = append(previousRolls, fmt.Sprintf("**%s**: %d", abilities[i], roll.Value))
+			}
+		}
+		if len(previousRolls) > 0 {
+			embed.AddField("✅ Previous Rolls", strings.Join(previousRolls, " • "), false)
+		}
+	}
+
+	// Build components
+	components := builders.NewComponentBuilder(h.customIDBuilder)
+	components.PrimaryButton("🎲 Roll!", "roll_single_ability", char.ID, fmt.Sprintf("%d", abilityIndex))
+	components.NewRow()
+	components.SecondaryButton("📊 Use Standard Array Instead", "standard", char.ID)
+	components.DangerButton("🗑️ Start Fresh", "start_fresh", char.ID)
+
+	response := core.NewResponse("").
+		WithEmbeds(embed.Build()).
+		WithComponents(components.Build()...).
+		AsUpdate()
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
 }

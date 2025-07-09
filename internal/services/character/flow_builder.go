@@ -263,6 +263,8 @@ func (b *FlowBuilderImpl) buildClassSpecificSteps(ctx context.Context, char *cha
 		steps = append(steps, b.buildFighterSteps(ctx, char)...)
 	case "ranger":
 		steps = append(steps, b.buildRangerSteps(ctx, char)...)
+	case "wizard":
+		steps = append(steps, b.buildWizardSteps(ctx, char)...)
 		// Add other classes as needed
 	}
 
