@@ -9,13 +9,91 @@ import (
 func (b *FlowBuilderImpl) buildWizardSteps(ctx context.Context, char *character.Character) []character.CreationStep {
 	var steps []character.CreationStep
 
-	// For now, return empty until we add spell selection step types
-	// TODO: Add spell selection when StepTypeSpellSelection is added to domain
+	// Cantrip and spell selection steps
+	steps = append(steps,
+		// Cantrip selection (3 cantrips at level 1)
+		character.CreationStep{
+			Type:        character.StepTypeCantripsSelection,
+			Title:       "Choose Your Cantrips",
+			Description: "Cantrips are simple spells you can cast at will. Choose 3 cantrips from the wizard spell list.",
+			MinChoices:  3,
+			MaxChoices:  3,
+			Required:    true,
+			UIHints: &character.StepUIHints{
+				Actions: []character.StepAction{
+					{
+						ID:    "select_cantrips",
+						Label: "Choose Cantrips",
+						Style: "primary",
+						Icon:  "✨",
+					},
+					{
+						ID:    "suggested_cantrips",
+						Label: "Use Suggested",
+						Style: "secondary",
+						Icon:  "💡",
+					},
+				},
+				Layout:          "grid",
+				ShowRecommended: true,
+				Color:           0x6B46C1, // Purple for arcane
+			},
+		},
+		// Spell selection (6 1st-level spells for spellbook)
+		character.CreationStep{
+			Type:        character.StepTypeSpellbookSelection,
+			Title:       "Fill Your Spellbook",
+			Description: "Your spellbook contains all the spells you know. Choose 6 1st-level spells to start with. Your Intelligence modifier (if positive) grants additional spells.",
+			MinChoices:  6,
+			MaxChoices:  6,
+			Required:    true,
+			UIHints: &character.StepUIHints{
+				Actions: []character.StepAction{
+					{
+						ID:    "select_spells",
+						Label: "Choose Spells",
+						Style: "primary",
+						Icon:  "📜",
+					},
+					{
+						ID:          "quick_build",
+						Label:       "Quick Build",
+						Style:       "secondary",
+						Icon:        "⚡",
+						Description: "Recommended spell selection",
+					},
+				},
+				Layout:          "list",
+				ShowProgress:    true,
+				ProgressFormat:  "%d/%d spells selected",
+				ShowRecommended: true,
+				Color:           0x6B46C1,
+			},
+		})
 
-	// Future steps would include:
-	// 1. Cantrip selection (3 cantrips at level 1)
-	// 2. Spell selection (6 1st-level spells for spellbook)
-	// 3. Arcane tradition selection (at level 2)
+	// Note: Arcane tradition selection happens at level 2
+	if char.Level >= 2 {
+		steps = append(steps, character.CreationStep{
+			Type:        character.StepTypeSubclassSelection,
+			Title:       "Choose Your Arcane Tradition",
+			Description: "At 2nd level, you choose an arcane tradition, shaping your practice of magic.",
+			MinChoices:  1,
+			MaxChoices:  1,
+			Required:    true,
+			UIHints: &character.StepUIHints{
+				Actions: []character.StepAction{
+					{
+						ID:    "select_tradition",
+						Label: "Choose Tradition",
+						Style: "primary",
+						Icon:  "🔮",
+					},
+				},
+				Layout: "grid",
+				Color:  0x6B46C1,
+			},
+		})
+	}
 
 	return steps
 }
