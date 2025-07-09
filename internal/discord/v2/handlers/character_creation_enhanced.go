@@ -224,10 +224,11 @@ func (h *CharacterCreationHandler) buildProgressSummary(char *domainCharacter.Ch
 
 	// Class Section
 	if char.Class != nil {
-		var classDetails []string
-		classDetails = append(classDetails, fmt.Sprintf("**⚔️ Class:** %s", char.Class.Name))
-		classDetails = append(classDetails, fmt.Sprintf("• **Hit Die:** d%d", char.Class.HitDie))
-		classDetails = append(classDetails, fmt.Sprintf("• **Primary Ability:** %s", char.Class.GetPrimaryAbility()))
+		classDetails := []string{
+			fmt.Sprintf("**⚔️ Class:** %s", char.Class.Name),
+			fmt.Sprintf("• **Hit Die:** d%d", char.Class.HitDie),
+			fmt.Sprintf("• **Primary Ability:** %s", char.Class.GetPrimaryAbility()),
+		}
 
 		sections = append(sections, strings.Join(classDetails, "\n"))
 	} else {
@@ -269,29 +270,30 @@ func (h *CharacterCreationHandler) buildProgressSummary(char *domainCharacter.Ch
 
 		// Group by type
 		for profType, profs := range char.Proficiencies {
-			if len(profs) > 0 {
-				var profNames []string
-				for _, prof := range profs {
-					profNames = append(profNames, prof.Name)
-				}
-				typeLabel := string(profType)
-				// Make type label more readable
-				switch profType {
-				case rulebook.ProficiencyTypeArmor:
-					typeLabel = "Armor"
-				case rulebook.ProficiencyTypeWeapon:
-					typeLabel = "Weapons"
-				case rulebook.ProficiencyTypeSkill:
-					typeLabel = "Skills"
-				case rulebook.ProficiencyTypeTool:
-					typeLabel = "Tools"
-				case rulebook.ProficiencyTypeSavingThrow:
-					typeLabel = "Saving Throws"
-				case rulebook.ProficiencyTypeInstrument:
-					typeLabel = "Instruments"
-				}
-				profSection = append(profSection, fmt.Sprintf("• **%s:** %s", typeLabel, strings.Join(profNames, ", ")))
+			if len(profs) == 0 {
+				continue
 			}
+			var profNames []string
+			for _, prof := range profs {
+				profNames = append(profNames, prof.Name)
+			}
+			typeLabel := string(profType)
+			// Make type label more readable
+			switch profType {
+			case rulebook.ProficiencyTypeArmor:
+				typeLabel = "Armor"
+			case rulebook.ProficiencyTypeWeapon:
+				typeLabel = "Weapons"
+			case rulebook.ProficiencyTypeSkill:
+				typeLabel = "Skills"
+			case rulebook.ProficiencyTypeTool:
+				typeLabel = "Tools"
+			case rulebook.ProficiencyTypeSavingThrow:
+				typeLabel = "Saving Throws"
+			case rulebook.ProficiencyTypeInstrument:
+				typeLabel = "Instruments"
+			}
+			profSection = append(profSection, fmt.Sprintf("• **%s:** %s", typeLabel, strings.Join(profNames, ", ")))
 		}
 
 		sections = append(sections, strings.Join(profSection, "\n"))
@@ -308,15 +310,6 @@ func (h *CharacterCreationHandler) buildProgressSummary(char *domainCharacter.Ch
 	}
 
 	return strings.Join(sections, "\n\n")
-}
-
-// countProficiencies counts total proficiencies across all types
-func countProficiencies(proficiencies map[rulebook.ProficiencyType][]*rulebook.Proficiency) int {
-	count := 0
-	for _, profs := range proficiencies {
-		count += len(profs)
-	}
-	return count
 }
 
 // Helper functions

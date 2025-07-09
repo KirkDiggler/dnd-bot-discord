@@ -90,11 +90,13 @@ func (ic *InteractionContext) parseOptionsWithPath(options []*discordgo.Applicat
 	for _, opt := range options {
 		// If this option has sub-options, it's a subcommand or subcommand group
 		if len(opt.Options) > 0 {
-			newPath := append(path, opt.Name)
+			newPath := append(make([]string, 0, len(path)+1), path...)
+			newPath = append(newPath, opt.Name)
 			ic.parseOptionsWithPath(opt.Options, newPath)
 		} else if opt.Type == discordgo.ApplicationCommandOptionSubCommand {
 			// This is a subcommand leaf - store the full path
-			fullPath := append(path, opt.Name)
+			fullPath := append(make([]string, 0, len(path)+1), path...)
+			fullPath = append(fullPath, opt.Name)
 			ic.params["subcommand"] = strings.Join(fullPath, " ")
 		} else {
 			// Store the option value

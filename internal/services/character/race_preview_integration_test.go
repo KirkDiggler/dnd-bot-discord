@@ -30,7 +30,11 @@ func TestRacePreviewIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	client := redis.NewClient(opts)
-	defer client.Close()
+	defer func() {
+		if closeErr := client.Close(); closeErr != nil {
+			t.Logf("Error closing Redis client: %v", closeErr)
+		}
+	}()
 
 	// Verify Redis is available
 	ctx := context.Background()

@@ -125,7 +125,7 @@ func TestRouterIntegration(t *testing.T) {
 	var lastResponse *core.Response
 
 	// Register routes for the "test" domain
-	router.HandleFunc("cmd:test:list", func(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	router.HandleFunc("cmd:dnd:test:list", func(ctx *core.InteractionContext) (*core.HandlerResult, error) {
 		listCalled = true
 		lastResponse = core.NewResponse("List response")
 		return &core.HandlerResult{
@@ -133,7 +133,7 @@ func TestRouterIntegration(t *testing.T) {
 		}, nil
 	})
 
-	router.HandleFunc("cmd:test:show", func(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	router.HandleFunc("cmd:dnd:test:show", func(ctx *core.InteractionContext) (*core.HandlerResult, error) {
 		showCalled = true
 		id := ctx.GetStringParam("id")
 		lastResponse = core.NewResponse("Showing: " + id)
@@ -171,8 +171,8 @@ func TestRouterIntegration(t *testing.T) {
 
 		testCtx := core.NewTestInteractionContext().
 			WithUserID("user123").
-			AsCommand("test").
-			WithParam("subcommand", "list")
+			AsCommand("dnd").
+			WithParam("subcommand", "test list")
 
 		if handler.CanHandle(testCtx.InteractionContext) {
 			result, err := handler.Handle(testCtx.InteractionContext)
@@ -192,8 +192,8 @@ func TestRouterIntegration(t *testing.T) {
 
 		testCtx := core.NewTestInteractionContext().
 			WithUserID("user123").
-			AsCommand("test").
-			WithParam("subcommand", "show").
+			AsCommand("dnd").
+			WithParam("subcommand", "test show").
 			WithParam("id", "item123")
 
 		if handler.CanHandle(testCtx.InteractionContext) {

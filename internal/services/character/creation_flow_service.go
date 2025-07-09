@@ -142,9 +142,7 @@ func (s *CreationFlowServiceImpl) PreviewStepResult(ctx context.Context, charact
 	for k, v := range char.Proficiencies {
 		previewChar.Proficiencies[k] = v
 	}
-	for _, f := range char.Features {
-		previewChar.Features = append(previewChar.Features, f)
-	}
+	previewChar.Features = append(previewChar.Features, char.Features...)
 
 	// Apply the preview change based on step type
 	switch result.StepType {
