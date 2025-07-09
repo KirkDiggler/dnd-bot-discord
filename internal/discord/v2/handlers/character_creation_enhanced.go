@@ -2,13 +2,14 @@ package handlers
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/discord/v2/builders"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/discord/v2/core"
 	domainCharacter "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	rulebook "github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
-	_ "github.com/bwmarrin/discordgo"
 )
 
 // buildEnhancedStepResponse builds a rich Discord response for a creation step
@@ -43,31 +44,29 @@ func (h *CharacterCreationHandler) buildEnhancedStepResponse(char *domainCharact
 
 		// For race selection, we'll create a more detailed view
 		if len(step.Options) > 0 {
-			// Create buttons for each race that show details when clicked
+			// Random race button
 			components.NewRow()
-			components.PrimaryButton("📜 View All Races", "race_list", char.ID)
 			components.SecondaryButton("🎲 Random Race", "race_random", char.ID)
 
 			// Add select menu with enhanced descriptions
 			options := make([]builders.SelectOption, 0, len(step.Options))
 			for _, opt := range step.Options {
-				// Parse the bonuses for emoji representation
-				description := opt.Description
-				if strings.Contains(description, "+") {
-					description = "💪 " + description
-				}
+				// Get race-specific emoji
+				emoji := getRaceEmoji(opt.Key)
 
 				options = append(options, builders.SelectOption{
 					Label:       opt.Name,
 					Value:       opt.Key,
-					Description: description,
+					Description: opt.Description,
+					Emoji:       emoji,
 				})
 			}
 
 			components.NewRow()
-			components.SelectMenu(
+			components.SelectMenuWithTarget(
 				"Select a race...",
-				fmt.Sprintf("select_%s", char.ID),
+				"preview_race",
+				char.ID,
 				options,
 			)
 		}
@@ -173,24 +172,74 @@ func (h *CharacterCreationHandler) buildEnhancedStepResponse(char *domainCharact
 
 // buildProgressSummary creates a summary of character creation progress
 func (h *CharacterCreationHandler) buildProgressSummary(char *domainCharacter.Character) string {
-	var parts []string
+	var sections []string
 
+	// Name and Level Header
+	name := "Unnamed Hero"
 	if char.Name != "" && char.Name != "Draft Character" {
-		parts = append(parts, fmt.Sprintf("**Name:** %s", char.Name))
+		name = char.Name
 	}
-	if char.Race != nil {
-		parts = append(parts, fmt.Sprintf("**Race:** %s", char.Race.Name))
-	}
-	if char.Class != nil {
-		parts = append(parts, fmt.Sprintf("**Class:** %s", char.Class.Name))
-	}
+	level := 1
 	if char.Level > 0 {
-		parts = append(parts, fmt.Sprintf("**Level:** %d", char.Level))
+		level = char.Level
+	}
+	sections = append(sections, fmt.Sprintf("**%s** • Level %d", name, level))
+
+	// Race Section
+	if char.Race != nil {
+		var raceDetails []string
+		raceDetails = append(raceDetails, fmt.Sprintf("**🎭 Race:** %s", char.Race.Name))
+
+		// Ability bonuses
+		var bonuses []string
+		for _, bonus := range char.Race.AbilityBonuses {
+			if bonus.Bonus > 0 {
+				bonuses = append(bonuses, fmt.Sprintf("%s +%d", getAbilityAbbrev(string(bonus.Attribute)), bonus.Bonus))
+			}
+		}
+		if len(bonuses) > 0 {
+			raceDetails = append(raceDetails, fmt.Sprintf("• **Ability Bonuses:** %s", strings.Join(bonuses, ", ")))
+		}
+
+		// Speed
+		if char.Race.Speed > 0 {
+			raceDetails = append(raceDetails, fmt.Sprintf("• **Speed:** %d feet", char.Race.Speed))
+		}
+
+		// Starting proficiencies
+		if len(char.Race.StartingProficiencies) > 0 {
+			var profs []string
+			for _, prof := range char.Race.StartingProficiencies {
+				profs = append(profs, prof.Name)
+			}
+			if len(profs) > 0 {
+				raceDetails = append(raceDetails, fmt.Sprintf("• **Racial Proficiencies:** %s", strings.Join(profs, ", ")))
+			}
+		}
+
+		sections = append(sections, strings.Join(raceDetails, "\n"))
+	} else {
+		sections = append(sections, "**🎭 Race:** *Not selected*")
 	}
 
-	// Show ability scores if assigned
+	// Class Section
+	if char.Class != nil {
+		var classDetails []string
+		classDetails = append(classDetails, fmt.Sprintf("**⚔️ Class:** %s", char.Class.Name))
+		classDetails = append(classDetails, fmt.Sprintf("• **Hit Die:** d%d", char.Class.HitDie))
+		classDetails = append(classDetails, fmt.Sprintf("• **Primary Ability:** %s", char.Class.GetPrimaryAbility()))
+
+		sections = append(sections, strings.Join(classDetails, "\n"))
+	} else {
+		sections = append(sections, "**⚔️ Class:** *Not selected*")
+	}
+
+	// Ability Scores Section
 	if len(char.Attributes) > 0 {
-		var scores []string
+		var abilitySection []string
+		abilitySection = append(abilitySection, "**📊 Ability Scores:**")
+
+		// Create a formatted ability score display
 		for _, attr := range []shared.Attribute{
 			shared.AttributeStrength,
 			shared.AttributeDexterity,
@@ -200,15 +249,74 @@ func (h *CharacterCreationHandler) buildProgressSummary(char *domainCharacter.Ch
 			shared.AttributeCharisma,
 		} {
 			if score, ok := char.Attributes[attr]; ok {
-				scores = append(scores, fmt.Sprintf("%s %d", getAbilityAbbrev(string(attr)), score.Score))
+				modifier := (score.Score - 10) / 2
+				modStr := fmt.Sprintf("%+d", modifier)
+				if modifier >= 0 {
+					modStr = "+" + fmt.Sprintf("%d", modifier)
+				}
+				abilitySection = append(abilitySection,
+					fmt.Sprintf("• **%s:** %d (%s)", getAbilityAbbrev(string(attr)), score.Score, modStr))
 			}
 		}
-		if len(scores) > 0 {
-			parts = append(parts, fmt.Sprintf("**Abilities:** %s", strings.Join(scores, " | ")))
-		}
+
+		sections = append(sections, strings.Join(abilitySection, "\n"))
 	}
 
-	return strings.Join(parts, "\n")
+	// Proficiencies Section
+	if len(char.Proficiencies) > 0 {
+		var profSection []string
+		profSection = append(profSection, "**🛠️ Proficiencies:**")
+
+		// Group by type
+		for profType, profs := range char.Proficiencies {
+			if len(profs) > 0 {
+				var profNames []string
+				for _, prof := range profs {
+					profNames = append(profNames, prof.Name)
+				}
+				typeLabel := string(profType)
+				// Make type label more readable
+				switch profType {
+				case rulebook.ProficiencyTypeArmor:
+					typeLabel = "Armor"
+				case rulebook.ProficiencyTypeWeapon:
+					typeLabel = "Weapons"
+				case rulebook.ProficiencyTypeSkill:
+					typeLabel = "Skills"
+				case rulebook.ProficiencyTypeTool:
+					typeLabel = "Tools"
+				case rulebook.ProficiencyTypeSavingThrow:
+					typeLabel = "Saving Throws"
+				case rulebook.ProficiencyTypeInstrument:
+					typeLabel = "Instruments"
+				}
+				profSection = append(profSection, fmt.Sprintf("• **%s:** %s", typeLabel, strings.Join(profNames, ", ")))
+			}
+		}
+
+		sections = append(sections, strings.Join(profSection, "\n"))
+	}
+
+	// Features Section (if any)
+	if len(char.Features) > 0 {
+		var featureSection []string
+		featureSection = append(featureSection, "**✨ Features:**")
+		for _, feature := range char.Features {
+			featureSection = append(featureSection, fmt.Sprintf("• %s", feature.Name))
+		}
+		sections = append(sections, strings.Join(featureSection, "\n"))
+	}
+
+	return strings.Join(sections, "\n\n")
+}
+
+// countProficiencies counts total proficiencies across all types
+func countProficiencies(proficiencies map[rulebook.ProficiencyType][]*rulebook.Proficiency) int {
+	count := 0
+	for _, profs := range proficiencies {
+		count += len(profs)
+	}
+	return count
 }
 
 // Helper functions
@@ -511,6 +619,13 @@ func (h *CharacterCreationHandler) buildMockAllSteps(char *domainCharacter.Chara
 
 // HandleRaceDetails shows detailed information about races
 func (h *CharacterCreationHandler) HandleRaceDetails(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// This isn't needed since all races are in the dropdown
+	return nil, core.NewNotImplementedError("race details view")
+}
+
+// HandleRandomRace selects a random race
+func (h *CharacterCreationHandler) HandleRandomRace(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID
 	customID, err := core.ParseCustomID(ctx.GetCustomID())
 	if err != nil {
 		return nil, core.NewValidationError("Invalid selection")
@@ -518,42 +633,189 @@ func (h *CharacterCreationHandler) HandleRaceDetails(ctx *core.InteractionContex
 
 	characterID := customID.Target
 
-	// Get character and verify ownership
+	// Get character
 	char, err := h.service.GetCharacter(ctx.Context, characterID)
 	if err != nil {
 		return nil, core.NewInternalError(err)
 	}
 
+	// Verify ownership
 	if char.OwnerID != ctx.UserID {
-		return nil, core.NewForbiddenError("You can only view details for your own character")
+		return nil, core.NewForbiddenError("You can only edit your own characters")
 	}
 
-	// Build race overview embed
+	// Get current step to get race options
+	currentStep, err := h.flowService.GetCurrentStep(ctx.Context, char.ID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	if len(currentStep.Options) == 0 {
+		return nil, core.NewInternalError(fmt.Errorf("no race options available"))
+	}
+
+	// Select a random race
+	randomIndex := rand.Intn(len(currentStep.Options))
+	selectedRace := currentStep.Options[randomIndex]
+
+	// Process the selection
+	result := &domainCharacter.CreationStepResult{
+		StepType:   domainCharacter.StepTypeRaceSelection,
+		Selections: []string{selectedRace.Key},
+	}
+
+	nextStep, err := h.flowService.ProcessStepResult(ctx.Context, char.ID, result)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Re-fetch character to get updated state
+	char, err = h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Build the response for the next step
+	response, err := h.buildEnhancedStepResponse(char, nextStep)
+	if err != nil {
+		return nil, err
+	}
+
+	response.Ephemeral = true
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
+// HandleRacePreview shows a preview of the character with the selected race
+func (h *CharacterCreationHandler) HandleRacePreview(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// Get selected race value
+	var selectedRace string
+	if ctx.IsComponent() && ctx.Interaction != nil {
+		data := ctx.Interaction.MessageComponentData()
+		if len(data.Values) > 0 {
+			selectedRace = data.Values[0]
+		}
+	}
+
+	if selectedRace == "" {
+		return nil, core.NewValidationError("Please select a race")
+	}
+
+	// Get current step to fetch race options
+	currentStep, err := h.flowService.GetCurrentStep(ctx.Context, char.ID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Find the selected race in options for display info
+	var selectedRaceOption *domainCharacter.CreationOption
+	for _, opt := range currentStep.Options {
+		if opt.Key == selectedRace {
+			selectedRaceOption = &opt
+			break
+		}
+	}
+
+	if selectedRaceOption == nil {
+		return nil, core.NewValidationError("Invalid race selection")
+	}
+
+	// Use the flow service to preview the selection
+	previewResult := &domainCharacter.CreationStepResult{
+		StepType:   domainCharacter.StepTypeRaceSelection,
+		Selections: []string{selectedRace},
+	}
+
+	previewChar, err := h.flowService.PreviewStepResult(ctx.Context, char.ID, previewResult)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Build enhanced response showing the preview
 	embed := builders.NewEmbed().
-		Title("🎭 Race Overview").
-		Description("Each race in D&D provides unique traits and abilities. Here's what makes each one special:").
-		Color(builders.ColorInfo)
+		Title("🎭 Race Preview - " + selectedRaceOption.Name).
+		Color(builders.ColorPrimary).
+		Description("Here's how your character looks with this race. You can select a different race or click 'Confirm Race Selection' to proceed.")
 
-	// Add fields for each major race
-	raceDetails := map[string]string{
-		"Human":      "**Versatile and ambitious**\n+1 to all abilities\nExtra feat at 1st level\nExtra skill proficiency",
-		"Elf":        "**Graceful and long-lived**\n+2 DEX\nDarkvision 60ft\nKeen Senses\nFey Ancestry\nTrance",
-		"Dwarf":      "**Sturdy and enduring**\n+2 CON\nDarkvision 60ft\nDwarven Resilience\nStonecunning",
-		"Halfling":   "**Small but brave**\n+2 DEX\nLucky\nBrave\nHalfling Nimbleness",
-		"Dragonborn": "**Draconic heritage**\n+2 STR, +1 CHA\nDraconic Ancestry\nBreath Weapon\nDamage Resistance",
-		"Gnome":      "**Clever and curious**\n+2 INT\nDarkvision 60ft\nGnome Cunning",
-		"Half-Elf":   "**Best of both worlds**\n+2 CHA, +1 to two others\nDarkvision 60ft\nFey Ancestry\nExtra skills",
-		"Half-Orc":   "**Strong and resilient**\n+2 STR, +1 CON\nDarkvision 60ft\nRelentless Endurance\nSavage Attacks",
-		"Tiefling":   "**Infernal heritage**\n+2 CHA, +1 INT\nDarkvision 60ft\nHellish Resistance\nInfernal Legacy",
+	// Add race details
+	if previewChar.Race != nil {
+		var traits []string
+
+		// Ability bonuses
+		if bonuses, ok := selectedRaceOption.Metadata["bonuses"].([]string); ok && len(bonuses) > 0 {
+			traits = append(traits, "**Ability Bonuses:** "+strings.Join(bonuses, ", "))
+		}
+
+		// Speed
+		if previewChar.Race.Speed > 0 {
+			traits = append(traits, fmt.Sprintf("**Speed:** %d feet", previewChar.Race.Speed))
+		}
+
+		// Additional traits could be added here based on race key
+		// For example, we could have a mapping of race to size
+
+		if len(traits) > 0 {
+			embed.AddField("Race Traits", strings.Join(traits, "\n"), false)
+		}
 	}
 
-	for race, details := range raceDetails {
-		embed.AddField(race, details, true)
+	// Add character summary with preview
+	progressValue := h.buildProgressSummary(previewChar)
+	if progressValue != "" {
+		embed.AddField("📊 Character Preview", progressValue, false)
 	}
 
-	// Add back button
-	components := builders.NewComponentBuilder(h.customIDBuilder).
-		SecondaryButton("⬅️ Back to Selection", "back", characterID)
+	// Build components
+	components := builders.NewComponentBuilder(h.customIDBuilder)
+
+	// Race selection dropdown with current selection
+	if len(currentStep.Options) > 0 {
+		options := make([]builders.SelectOption, 0, len(currentStep.Options))
+		for _, opt := range currentStep.Options {
+			option := builders.SelectOption{
+				Label:       opt.Name,
+				Value:       opt.Key,
+				Description: opt.Description,
+			}
+			// Mark the currently selected option
+			if opt.Key == selectedRace {
+				option.Default = true
+			}
+			options = append(options, option)
+		}
+
+		components.SelectMenu(
+			"Preview a different race...",
+			h.customIDBuilder.Build("preview_race").WithTarget(char.ID).MustEncode(),
+			options,
+		)
+	}
+
+	// Action buttons
+	components.NewRow()
+	components.SuccessButton("✅ Confirm Race Selection", "confirm_race", char.ID, selectedRace)
+	components.SecondaryButton("🎲 Random Race", "race_random", char.ID)
 
 	response := core.NewResponse("").
 		WithEmbeds(embed.Build()).
@@ -565,15 +827,95 @@ func (h *CharacterCreationHandler) HandleRaceDetails(ctx *core.InteractionContex
 	}, nil
 }
 
-// HandleRandomRace selects a random race
-func (h *CharacterCreationHandler) HandleRandomRace(ctx *core.InteractionContext) (*core.HandlerResult, error) {
-	// TODO: Implement random race selection
-	return nil, core.NewInternalError(fmt.Errorf("random race selection not yet implemented"))
+// HandleConfirmRace processes the confirmed race selection
+func (h *CharacterCreationHandler) HandleConfirmRace(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get the selected race from the args (passed from the confirm button)
+	if len(customID.Args) == 0 {
+		return nil, core.NewValidationError("No race specified")
+	}
+	selectedRace := customID.Args[0]
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
+
+	// Create step result and process it
+	result := &domainCharacter.CreationStepResult{
+		StepType:   domainCharacter.StepTypeRaceSelection,
+		Selections: []string{selectedRace},
+	}
+
+	// Process the step result and get the next step
+	nextStep, err := h.flowService.ProcessStepResult(ctx.Context, char.ID, result)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Check if we're done
+	isComplete, err := h.flowService.IsCreationComplete(ctx.Context, char.ID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	if isComplete {
+		// Get the updated character
+		updatedChar, updateErr := h.service.GetCharacter(ctx.Context, char.ID)
+		if updateErr != nil {
+			return nil, core.NewInternalError(updateErr)
+		}
+		return h.completeCreation(ctx, updatedChar)
+	}
+
+	// Get updated character for display
+	updatedChar, err := h.service.GetCharacter(ctx.Context, char.ID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Build response for next step
+	response, err := h.buildEnhancedStepResponse(updatedChar, nextStep)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	response.AsUpdate() // Update the original message
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
 }
 
-// Add these handlers to the router registration
-func (h *CharacterCreationHandler) RegisterAdditionalHandlers(router *core.Router) {
-	router.ComponentFunc("race_list", h.HandleRaceDetails)
-	router.ComponentFunc("race_random", h.HandleRandomRace)
-	// Add more handlers as we implement them
+// getRaceEmoji returns an appropriate emoji for a race
+func getRaceEmoji(raceKey string) string {
+	emojiMap := map[string]string{
+		"dragonborn": "🐲",
+		"dwarf":      "⛏️",
+		"elf":        "🧝",
+		"gnome":      "🧙",
+		"half-elf":   "🌗",
+		"halfling":   "🍄",
+		"half-orc":   "💪",
+		"human":      "👤",
+		"tiefling":   "😈",
+	}
+
+	if emoji, ok := emojiMap[raceKey]; ok {
+		return emoji
+	}
+	return "🎭" // Default race emoji
 }

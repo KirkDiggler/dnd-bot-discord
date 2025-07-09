@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 )
@@ -104,6 +105,69 @@ func (s *CreationFlowServiceImpl) GetProgressSteps(ctx context.Context, characte
 	}
 
 	return progressSteps, nil
+}
+
+// PreviewStepResult creates a preview of what the character would look like with the given selection
+func (s *CreationFlowServiceImpl) PreviewStepResult(ctx context.Context, characterID string, result *character.CreationStepResult) (*character.Character, error) {
+	char, err := s.characterService.GetByID(characterID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get character: %w", err)
+	}
+
+	// Create a copy of the character for preview
+	previewChar := &character.Character{
+		ID:               char.ID,
+		Name:             char.Name,
+		OwnerID:          char.OwnerID,
+		RealmID:          char.RealmID,
+		Level:            char.Level,
+		Status:           char.Status,
+		Race:             char.Race,
+		Class:            char.Class,
+		Attributes:       make(map[shared.Attribute]*character.AbilityScore),
+		Proficiencies:    make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
+		Features:         make([]*rulebook.CharacterFeature, 0),
+		Inventory:        make(map[equipment.EquipmentType][]equipment.Equipment),
+		EquippedSlots:    make(map[shared.Slot]equipment.Equipment),
+		CurrentHitPoints: char.CurrentHitPoints,
+		MaxHitPoints:     char.MaxHitPoints,
+		AC:               char.AC,
+		Speed:            char.Speed,
+	}
+
+	// Copy existing data
+	for k, v := range char.Attributes {
+		previewChar.Attributes[k] = v
+	}
+	for k, v := range char.Proficiencies {
+		previewChar.Proficiencies[k] = v
+	}
+	for _, f := range char.Features {
+		previewChar.Features = append(previewChar.Features, f)
+	}
+
+	// Apply the preview change based on step type
+	switch result.StepType {
+	case character.StepTypeRaceSelection:
+		if len(result.Selections) > 0 {
+			// Get the race from the character service
+			race, err := s.characterService.GetRace(ctx, result.Selections[0])
+			if err == nil && race != nil {
+				previewChar.Race = race
+			}
+		}
+	case character.StepTypeClassSelection:
+		if len(result.Selections) > 0 {
+			// Get the class from the character service
+			class, err := s.characterService.GetClass(ctx, result.Selections[0])
+			if err == nil && class != nil {
+				previewChar.Class = class
+			}
+		}
+		// Add other preview cases as needed
+	}
+
+	return previewChar, nil
 }
 
 // isStepComplete checks if a step is complete for the given character

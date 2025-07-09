@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -66,6 +67,18 @@ func (r *Router) Command(name string, handler Handler) *Router {
 // CommandFunc registers a slash command handler function
 func (r *Router) CommandFunc(name string, fn func(*InteractionContext) (*HandlerResult, error)) *Router {
 	return r.Command(name, HandlerFunc(fn))
+}
+
+// Action registers an action handler for the router's domain
+// Example: router.Action("show", handler) on a "character" router handles /dnd character show
+func (r *Router) Action(action string, handler Handler) *Router {
+	pattern := fmt.Sprintf("cmd:dnd:%s:%s", r.domain, action)
+	return r.Handle(pattern, handler)
+}
+
+// ActionFunc registers an action handler function
+func (r *Router) ActionFunc(action string, fn func(*InteractionContext) (*HandlerResult, error)) *Router {
+	return r.Action(action, HandlerFunc(fn))
 }
 
 // Subcommand registers a subcommand handler
@@ -134,6 +147,9 @@ func (h *routerHandler) CanHandle(ctx *InteractionContext) bool {
 		return false
 	}
 
+	// Log for debugging
+	log.Printf("[Router %s] Pattern extracted: %s, Available handlers: %v", h.domain, pattern, h.getHandlerKeys())
+
 	// Check exact match
 	if _, ok := h.handlers[pattern]; ok {
 		return true
@@ -149,6 +165,15 @@ func (h *routerHandler) CanHandle(ctx *InteractionContext) bool {
 	}
 
 	return false
+}
+
+// getHandlerKeys returns all registered handler keys for debugging
+func (h *routerHandler) getHandlerKeys() []string {
+	keys := make([]string, 0, len(h.handlers))
+	for k := range h.handlers {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 // Handle processes the interaction
@@ -178,26 +203,67 @@ func (h *routerHandler) Handle(ctx *InteractionContext) (*HandlerResult, error) 
 // extractPattern extracts the routing pattern from the interaction
 func (h *routerHandler) extractPattern(ctx *InteractionContext) string {
 	if ctx.IsCommand() {
-		// Check if it's our domain command
-		if ctx.GetCommandName() != h.domain {
+		// For /dnd commands, the domain is the first part of the subcommand
+		// Example: /dnd character show -> domain="character", action="show"
+		if ctx.GetCommandName() != "dnd" {
+			// We only handle /dnd commands
 			return ""
 		}
 
-		// Build pattern from subcommand
 		sub := ctx.GetSubcommand()
-		if sub != "" {
-			return fmt.Sprintf("cmd:%s:%s", h.domain, sub)
+		if sub == "" {
+			// Just /dnd with no subcommand
+			return ""
 		}
-		return fmt.Sprintf("cmd:%s", h.domain)
+
+		// Split subcommand to extract domain and action
+		// "character show" -> ["character", "show"]
+		parts := strings.SplitN(sub, " ", 2)
+		domain := parts[0]
+
+		// Check if this router handles this domain
+		if domain != h.domain {
+			log.Printf("[Router %s] Command domain mismatch: got %s", h.domain, domain)
+			return ""
+		}
+
+		// Build pattern based on what we have
+		if len(parts) > 1 {
+			// Has action: /dnd character show
+			action := parts[1]
+			pattern := fmt.Sprintf("cmd:%s:%s:%s", "dnd", domain, action)
+			log.Printf("[Router %s] Command pattern: %s", h.domain, pattern)
+			return pattern
+		}
+
+		// No action: /dnd character (would be like an index)
+		pattern := fmt.Sprintf("cmd:%s:%s", "dnd", domain)
+		log.Printf("[Router %s] Command pattern (no action): %s", h.domain, pattern)
+		return pattern
 	}
 
 	if ctx.IsComponent() {
 		// Parse custom ID
-		customID, err := ParseCustomID(ctx.GetCustomID())
-		if err != nil || customID.Domain != h.domain {
+		rawCustomID := ctx.GetCustomID()
+		log.Printf("[Router %s] Parsing component customID: %s", h.domain, rawCustomID)
+
+		customID, err := ParseCustomID(rawCustomID)
+		if err != nil {
+			log.Printf("[Router %s] Failed to parse customID: %v", h.domain, err)
 			return ""
 		}
-		return fmt.Sprintf("component:%s", customID.Action)
+
+		log.Printf("[Router %s] Parsed - Domain: %s, Action: %s, Target: %s",
+			h.domain, customID.Domain, customID.Action, customID.Target)
+
+		if customID.Domain != h.domain {
+			log.Printf("[Router %s] Domain mismatch (want %s, got %s)", h.domain, h.domain, customID.Domain)
+			return ""
+		}
+
+		pattern := fmt.Sprintf("component:%s", customID.Action)
+		log.Printf("[Router %s] Returning pattern: %s", h.domain, pattern)
+		return pattern
 	}
 
 	if ctx.IsModal() {

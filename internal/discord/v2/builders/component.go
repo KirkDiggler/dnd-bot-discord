@@ -107,6 +107,23 @@ func (b *ComponentBuilder) SelectMenu(placeholder, action string, options []Sele
 		customID = core.NewCustomID("default", action).MustEncode()
 	}
 
+	return b.selectMenuWithCustomID(placeholder, customID, options, config...)
+}
+
+// SelectMenuWithTarget adds a select menu with a target ID
+func (b *ComponentBuilder) SelectMenuWithTarget(placeholder, action, target string, options []SelectOption, config ...SelectConfig) *ComponentBuilder {
+	customID := ""
+	if b.customIDBuilder != nil {
+		customID = b.customIDBuilder.Build(action).WithTarget(target).MustEncode()
+	} else {
+		customID = core.NewCustomID("default", action).WithTarget(target).MustEncode()
+	}
+
+	return b.selectMenuWithCustomID(placeholder, customID, options, config...)
+}
+
+// selectMenuWithCustomID is the internal method that builds the select menu
+func (b *ComponentBuilder) selectMenuWithCustomID(placeholder, customID string, options []SelectOption, config ...SelectConfig) *ComponentBuilder {
 	// Convert options
 	discordOptions := make([]discordgo.SelectMenuOption, len(options))
 	for i, opt := range options {

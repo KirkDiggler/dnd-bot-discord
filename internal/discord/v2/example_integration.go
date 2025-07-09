@@ -26,7 +26,13 @@ func SetupV2Handlers(dg *discordgo.Session, provider *services.Provider) *core.P
 	)
 
 	// Create routers
-	characterRouter := routers.NewCharacterRouter(pipeline, provider)
+	characterRouter, err := routers.NewCharacterRouter(&routers.CharacterRouterConfig{
+		Pipeline: pipeline,
+		Provider: provider,
+	})
+	if err != nil {
+		panic("Failed to create character router: " + err.Error())
+	}
 	_ = characterRouter // Router self-registers
 
 	// Add more routers as they're implemented

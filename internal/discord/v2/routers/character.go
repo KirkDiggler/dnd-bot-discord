@@ -1,6 +1,7 @@
 package routers
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -25,29 +26,55 @@ type CharacterRouter struct {
 	idBuilder       *core.CustomIDBuilder
 }
 
+type CharacterRouterConfig struct {
+	Pipeline *core.Pipeline
+	Provider *services.Provider
+}
+
+func (cr *CharacterRouterConfig) Validate() error {
+	if cr.Pipeline == nil {
+		return errors.New("pipeline is required")
+	}
+	if cr.Provider == nil {
+		return errors.New("provider is required")
+	}
+	if cr.Provider.CharacterService == nil {
+		return errors.New("provider.CharacterService is required")
+	}
+	if cr.Provider.CreationFlowService == nil {
+		return errors.New("provider.CreationFlowService is required")
+	}
+	return nil
+}
+
 // NewCharacterRouter creates a new character router
-func NewCharacterRouter(pipeline *core.Pipeline, provider *services.Provider) *CharacterRouter {
-	router := core.NewRouter("character", pipeline)
+func NewCharacterRouter(cfg *CharacterRouterConfig) (*CharacterRouter, error) {
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
+	router := core.NewRouter("character", cfg.Pipeline)
 
 	cr := &CharacterRouter{
 		router:      router,
-		service:     provider.CharacterService,
-		flowService: provider.CreationFlowService,
+		service:     cfg.Provider.CharacterService,
+		flowService: cfg.Provider.CreationFlowService,
 		idBuilder:   router.GetCustomIDBuilder(),
 	}
 
 	// Create character creation handler
 	creationConfig := &handlers.CharacterCreationHandlerConfig{
-		Service:     provider.CharacterService,
-		FlowService: provider.CreationFlowService,
+		Service:         cfg.Provider.CharacterService,
+		FlowService:     cfg.Provider.CreationFlowService,
+		CustomIDBuilder: router.GetCustomIDBuilder(),
 	}
 	creationHandler, err := handlers.NewCharacterCreationHandler(creationConfig)
 	if err != nil {
 		// Log error but continue - creation won't work but other features will
 		log.Printf("Failed to create character creation handler: %v", err)
-	} else {
-		cr.creationHandler = creationHandler
+		return nil, err
 	}
+	cr.creationHandler = creationHandler
 
 	// Apply router-specific middleware
 	router.Use(
@@ -60,15 +87,15 @@ func NewCharacterRouter(pipeline *core.Pipeline, provider *services.Provider) *C
 	// Register with pipeline
 	router.Register()
 
-	return cr
+	return cr, nil
 }
 
 // registerRoutes sets up all character routes
 func (r *CharacterRouter) registerRoutes() {
-	// Slash commands
-	r.router.SubcommandFunc("dnd", "character list", r.handleList)
-	r.router.SubcommandFunc("dnd", "character show", r.handleShow)
-	r.router.SubcommandFunc("dnd", "character create", r.handleCreate)
+	// Slash command actions (domain is "character")
+	r.router.ActionFunc("list", r.handleList)     // /dnd character list
+	r.router.ActionFunc("show", r.handleShow)     // /dnd character show
+	r.router.ActionFunc("create", r.handleCreate) // /dnd character create
 
 	// Component interactions
 	r.router.ComponentFunc("quickshow", r.handleQuickShow)
@@ -77,21 +104,8 @@ func (r *CharacterRouter) registerRoutes() {
 	r.router.ComponentFunc("delete_cancel", r.handleDeleteCancel)
 	r.router.ComponentFunc("page", r.handlePageChange)
 
-	// Character creation flow components (if handler is available)
-	if r.creationHandler != nil {
-		// Selection components - using wildcards to match any creation action
-		r.router.ComponentFunc("creation:select", r.creationHandler.HandleStepSelection)
-		r.router.ComponentFunc("creation:back", r.creationHandler.HandleStepSelection)
-		r.router.ComponentFunc("creation:roll", r.creationHandler.HandleStepSelection)
-		r.router.ComponentFunc("creation:assign", r.creationHandler.HandleStepSelection)
-		r.router.ComponentFunc("creation:proficiencies", r.creationHandler.HandleStepSelection)
-		r.router.ComponentFunc("creation:equipment", r.creationHandler.HandleStepSelection)
-		r.router.ComponentFunc("creation:name", r.creationHandler.HandleStepSelection)
-		r.router.ComponentFunc("creation:option", r.creationHandler.HandleStepSelection)
-
-		// Register additional enhanced handlers
-		r.creationHandler.RegisterAdditionalHandlers(r.router)
-	}
+	// Note: Character creation components are handled by CharacterCreationRouter
+	// This router only handles the initial slash command
 }
 
 // handleList handles the character list command

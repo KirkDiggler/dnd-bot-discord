@@ -18,8 +18,9 @@ type CharacterCreationHandler struct {
 
 // CharacterCreationHandlerConfig holds the configuration
 type CharacterCreationHandlerConfig struct {
-	Service     character.Service
-	FlowService domainCharacter.CreationFlowService
+	Service         character.Service
+	FlowService     domainCharacter.CreationFlowService
+	CustomIDBuilder *core.CustomIDBuilder
 }
 
 // NewCharacterCreationHandler creates a new character creation handler
@@ -34,10 +35,16 @@ func NewCharacterCreationHandler(cfg *CharacterCreationHandlerConfig) (*Characte
 		return nil, fmt.Errorf("flowService is required")
 	}
 
+	// Use provided CustomIDBuilder or create default
+	customIDBuilder := cfg.CustomIDBuilder
+	if customIDBuilder == nil {
+		customIDBuilder = core.NewCustomIDBuilder("creation")
+	}
+
 	return &CharacterCreationHandler{
 		service:         cfg.Service,
 		flowService:     cfg.FlowService,
-		customIDBuilder: core.NewCustomIDBuilder("creation"),
+		customIDBuilder: customIDBuilder,
 	}, nil
 }
 

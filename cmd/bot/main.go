@@ -178,8 +178,24 @@ func setupV2Handlers(dg *discordgo.Session, provider *services.Provider) *core.P
 		middleware.UserRateLimitMiddleware(60, 60), // 60 requests per minute per user
 	)
 
-	// Create character router (self-registers with pipeline)
-	_ = routers.NewCharacterRouter(pipeline, provider)
+	// Create routers (self-register with pipeline)
+	// TODO: Implement character router for /dnd character list, show, etc.
+	// _, err := routers.NewCharacterRouter(&routers.CharacterRouterConfig{
+	// 	Pipeline: pipeline,
+	// 	Provider: provider,
+	// })
+	// if err != nil {
+	// 	panic("Failed to create character router: " + err.Error())
+	// }
+
+	// Create router - handles /dnd create character (and future create commands)
+	_, err := routers.NewCreateRouter(&routers.CreateRouterConfig{
+		Pipeline: pipeline,
+		Provider: provider,
+	})
+	if err != nil {
+		panic("Failed to create create router: " + err.Error())
+	}
 
 	return pipeline
 }
@@ -189,10 +205,12 @@ func createHybridHandler(mainHandler *discord.Handler, v2Pipeline *core.Pipeline
 	return func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		// Route character creation commands to v2
 		if shouldUseV2(i) {
+			log.Printf("[V2] Executing V2 pipeline...")
 			if err := v2Pipeline.Execute(context.Background(), s, i); err != nil {
-				log.Printf("V2 handler error: %v", err)
-				// Fall back to main handler on error
-				mainHandler.HandleInteraction(s, i)
+				log.Printf("[V2] Pipeline error: %v", err)
+				// Don't fall back - let's see the actual error
+			} else {
+				log.Printf("[V2] Pipeline executed successfully")
 			}
 			return
 		}
@@ -208,12 +226,20 @@ func shouldUseV2(i *discordgo.InteractionCreate) bool {
 	if i.Type == discordgo.InteractionApplicationCommand {
 		data := i.ApplicationCommandData()
 
-		// Route /dnd character create to v2
+		// Log for debugging
+		log.Printf("[V2 Router] Command: %s", data.Name)
+		if len(data.Options) > 0 {
+			log.Printf("[V2 Router] First option: %s (type: %v)", data.Options[0].Name, data.Options[0].Type)
+			if len(data.Options[0].Options) > 0 {
+				log.Printf("[V2 Router] Sub option: %s (type: %v)", data.Options[0].Options[0].Name, data.Options[0].Options[0].Type)
+			}
+		}
+
+		// Route /dnd create commands to v2
 		if data.Name == "dnd" && len(data.Options) > 0 {
-			if data.Options[0].Name == "character" && len(data.Options[0].Options) > 0 {
-				if data.Options[0].Options[0].Name == "create" {
-					return true
-				}
+			if data.Options[0].Name == "create" {
+				log.Printf("[V2 Router] Routing to V2: /dnd create")
+				return true
 			}
 		}
 	}
@@ -221,10 +247,11 @@ func shouldUseV2(i *discordgo.InteractionCreate) bool {
 	// Check if this is a character creation component interaction
 	if i.Type == discordgo.InteractionMessageComponent {
 		customID := i.MessageComponentData().CustomID
+		log.Printf("[V2 Router] Component interaction with customID: %s", customID)
 
-		// Route creation components to v2
-		// These include: creation:, character:creation:, etc.
-		if strings.HasPrefix(customID, "creation:") || strings.Contains(customID, ":select_") {
+		// Route create domain components to v2
+		if strings.HasPrefix(customID, "create:") || strings.Contains(customID, ":select_") {
+			log.Printf("[V2 Router] Routing component to V2: %s", customID)
 			return true
 		}
 	}

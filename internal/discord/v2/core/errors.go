@@ -32,12 +32,13 @@ func (e *HandlerError) Unwrap() error {
 
 // Common error codes
 const (
-	ErrorCodeBadRequest   = 400
-	ErrorCodeUnauthorized = 401
-	ErrorCodeForbidden    = 403
-	ErrorCodeNotFound     = 404
-	ErrorCodeConflict     = 409
-	ErrorCodeInternal     = 500
+	ErrorCodeBadRequest     = 400
+	ErrorCodeUnauthorized   = 401
+	ErrorCodeForbidden      = 403
+	ErrorCodeNotFound       = 404
+	ErrorCodeConflict       = 409
+	ErrorCodeInternal       = 500
+	ErrorCodeNotImplemented = 501
 )
 
 // NewHandlerError creates a new handler error
@@ -102,5 +103,14 @@ func NewValidationError(message string) *HandlerError {
 		UserMessage: message,
 		ShowToUser:  true,
 		Code:        ErrorCodeBadRequest,
+	}
+}
+
+// NewNotImplementedError creates a not implemented error
+func NewNotImplementedError(feature string) *HandlerError {
+	return &HandlerError{
+		UserMessage: fmt.Sprintf("This feature is not yet implemented: %s", feature),
+		ShowToUser:  true,
+		Code:        ErrorCodeNotImplemented,
 	}
 }

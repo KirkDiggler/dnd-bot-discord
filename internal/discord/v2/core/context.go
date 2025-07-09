@@ -82,11 +82,20 @@ func (ic *InteractionContext) parseCommandParams() {
 
 // parseOptions recursively extracts command options
 func (ic *InteractionContext) parseOptions(options []*discordgo.ApplicationCommandInteractionDataOption) {
+	ic.parseOptionsWithPath(options, []string{})
+}
+
+// parseOptionsWithPath recursively extracts command options building the full path
+func (ic *InteractionContext) parseOptionsWithPath(options []*discordgo.ApplicationCommandInteractionDataOption, path []string) {
 	for _, opt := range options {
-		// If this option has sub-options, it's a subcommand
+		// If this option has sub-options, it's a subcommand or subcommand group
 		if len(opt.Options) > 0 {
-			ic.params["subcommand"] = opt.Name
-			ic.parseOptions(opt.Options)
+			newPath := append(path, opt.Name)
+			ic.parseOptionsWithPath(opt.Options, newPath)
+		} else if opt.Type == discordgo.ApplicationCommandOptionSubCommand {
+			// This is a subcommand leaf - store the full path
+			fullPath := append(path, opt.Name)
+			ic.params["subcommand"] = strings.Join(fullPath, " ")
 		} else {
 			// Store the option value
 			ic.params[opt.Name] = opt.Value

@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
@@ -86,6 +87,10 @@ func (p *Pipeline) Execute(ctx context.Context, s *discordgo.Session, i *discord
 	// Create interaction context
 	interactionCtx := NewInteractionContext(ctx, s, i)
 
+	log.Printf("[Pipeline] Executing for command: %s, subcommand: %s",
+		interactionCtx.GetCommandName(),
+		interactionCtx.GetSubcommand())
+
 	// Create responder
 	responder := NewDiscordResponder(s, i)
 	interactionCtx.WithValue("responder", responder)
@@ -97,14 +102,18 @@ func (p *Pipeline) Execute(ctx context.Context, s *discordgo.Session, i *discord
 	errorHandler := p.errorHandler
 	p.mu.RUnlock()
 
+	log.Printf("[Pipeline] Found %d handlers", len(handlers))
+
 	// Track if any handler processed the interaction
 	handled := false
 
 	// Execute handlers
-	for _, handler := range handlers {
+	for idx, handler := range handlers {
 		if !handler.CanHandle(interactionCtx) {
+			log.Printf("[Pipeline] Handler %d cannot handle this interaction", idx)
 			continue
 		}
+		log.Printf("[Pipeline] Handler %d can handle, executing...", idx)
 		result, err := handler.Handle(interactionCtx)
 
 		if err != nil {
