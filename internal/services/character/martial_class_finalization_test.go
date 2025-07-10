@@ -8,6 +8,7 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -56,6 +57,7 @@ func TestMartialClassFinalization_Proficiencies(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Use in-memory repository for testing
 			repo := characters.NewInMemoryRepository()
+			draftRepo := character_draft.NewInMemoryRepository()
 
 			// Use real D&D 5e API client
 			client, err := dnd5e.New(&dnd5e.Config{
@@ -67,8 +69,9 @@ func TestMartialClassFinalization_Proficiencies(t *testing.T) {
 
 			// Create service
 			svc := character.NewService(&character.ServiceConfig{
-				DNDClient:  client,
-				Repository: repo,
+				DNDClient:       client,
+				Repository:      repo,
+				DraftRepository: draftRepo,
 			})
 
 			// 1. Create draft character
@@ -233,6 +236,7 @@ func TestAllArmorProficiencyHandling(t *testing.T) {
 
 	// Create service with real API
 	repo := characters.NewInMemoryRepository()
+	draftRepo := character_draft.NewInMemoryRepository()
 	client, err := dnd5e.New(&dnd5e.Config{
 		HttpClient: &http.Client{
 			Timeout: 30 * time.Second,
@@ -241,8 +245,9 @@ func TestAllArmorProficiencyHandling(t *testing.T) {
 	require.NoError(t, err)
 
 	svc := character.NewService(&character.ServiceConfig{
-		DNDClient:  client,
-		Repository: repo,
+		DNDClient:       client,
+		Repository:      repo,
+		DraftRepository: draftRepo,
 	})
 
 	// Create a fighter (who gets "all-armor")

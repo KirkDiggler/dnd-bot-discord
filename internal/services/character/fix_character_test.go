@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
+	mockdraftrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft/mock"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -22,10 +23,12 @@ func TestFixCharacterAttributes(t *testing.T) {
 
 	mockClient := mockdnd5e.NewMockClient(ctrl)
 	mockRepo := mockcharrepo.NewMockRepository(ctrl)
+	mockDraftRepo := mockdraftrepo.NewMockRepository(ctrl)
 
 	svc := character.NewService(&character.ServiceConfig{
-		DNDClient:  mockClient,
-		Repository: mockRepo,
+		DNDClient:       mockClient,
+		Repository:      mockRepo,
+		DraftRepository: mockDraftRepo,
 	})
 
 	ctx := context.Background()
@@ -119,10 +122,12 @@ func TestFixCharacterAttributes_AlreadyHasAttributes(t *testing.T) {
 
 	mockClient := mockdnd5e.NewMockClient(ctrl)
 	mockRepo := mockcharrepo.NewMockRepository(ctrl)
+	mockDraftRepo := mockdraftrepo.NewMockRepository(ctrl)
 
 	svc := character.NewService(&character.ServiceConfig{
-		DNDClient:  mockClient,
-		Repository: mockRepo,
+		DNDClient:       mockClient,
+		Repository:      mockRepo,
+		DraftRepository: mockDraftRepo,
 	})
 
 	ctx := context.Background()

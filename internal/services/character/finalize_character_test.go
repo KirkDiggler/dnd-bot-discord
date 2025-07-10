@@ -5,6 +5,7 @@ import (
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/testutils"
@@ -15,8 +16,10 @@ import (
 func TestFinalizeDraftCharacter(t *testing.T) {
 	// Setup
 	repo := characters.NewInMemoryRepository()
+	draftRepo := character_draft.NewInMemoryRepository()
 	service := character.NewService(&character.ServiceConfig{
-		Repository: repo,
+		Repository:      repo,
+		DraftRepository: draftRepo,
 	})
 	ctx := context.Background()
 

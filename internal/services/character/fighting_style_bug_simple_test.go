@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
+	mockdraftrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft/mock"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -21,11 +22,13 @@ func TestFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 		defer ctrl.Finish()
 
 		mockRepo := mockcharrepo.NewMockRepository(ctrl)
+		mockDraftRepo := mockdraftrepo.NewMockRepository(ctrl)
 		mockDNDClient := mockdnd5e.NewMockClient(ctrl)
 
 		svc := character.NewService(&character.ServiceConfig{
-			DNDClient:  mockDNDClient,
-			Repository: mockRepo,
+			DNDClient:       mockDNDClient,
+			Repository:      mockRepo,
+			DraftRepository: mockDraftRepo,
 		})
 
 		ctx := context.Background()
@@ -89,6 +92,7 @@ func TestFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 
 		// Mock expectations
 		mockRepo.EXPECT().Get(ctx, characterID).Return(draftChar, nil)
+		mockDraftRepo.EXPECT().GetByCharacterID(ctx, characterID).Return(nil, nil) // No draft exists
 		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *character2.Character) error {
 			// This is where we'll capture the finalized character to verify the fix
 			// Copy the character back to draftChar so we can verify it

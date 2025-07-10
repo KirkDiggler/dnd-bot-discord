@@ -6,6 +6,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e/abilities"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e/calculators"
+	characterdraft "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/dungeons"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
@@ -36,12 +37,13 @@ type Provider struct {
 
 // ProviderConfig holds configuration for creating services
 type ProviderConfig struct {
-	DNDClient           dnd5e.Client
-	CharacterRepository characters.Repository
-	SessionRepository   gamesessions.Repository
-	EncounterRepository encounters.Repository
-	DungeonRepository   dungeons.Repository
-	DiceRoller          dice.Roller
+	DNDClient                dnd5e.Client
+	CharacterRepository      characters.Repository
+	CharacterDraftRepository characterdraft.Repository
+	SessionRepository        gamesessions.Repository
+	EncounterRepository      encounters.Repository
+	DungeonRepository        dungeons.Repository
+	DiceRoller               dice.Roller
 }
 
 // NewProvider creates a new service provider with all services initialized
@@ -53,6 +55,12 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 	charRepo := cfg.CharacterRepository
 	if charRepo == nil {
 		charRepo = characters.NewInMemoryRepository()
+	}
+
+	// Use in-memory draft repository if none provided
+	draftRepo := cfg.CharacterDraftRepository
+	if draftRepo == nil {
+		draftRepo = characterdraft.NewInMemoryRepository()
 	}
 
 	sessionRepo := cfg.SessionRepository
@@ -75,9 +83,10 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 
 	// Create character service
 	charService := characterService.NewService(&characterService.ServiceConfig{
-		DNDClient:    cfg.DNDClient,
-		Repository:   charRepo,
-		ACCalculator: acCalculator,
+		DNDClient:       cfg.DNDClient,
+		Repository:      charRepo,
+		DraftRepository: draftRepo,
+		ACCalculator:    acCalculator,
 	})
 
 	// Create flow builder and creation flow service

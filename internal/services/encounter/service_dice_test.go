@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/gamesessions"
@@ -35,8 +36,10 @@ func TestEncounterService_RollInitiative_WithMockDice(t *testing.T) {
 
 	// Create services with mock dice
 	charRepo := characters.NewInMemoryRepository()
+	draftRepo := character_draft.NewInMemoryRepository()
 	charService := character.NewService(&character.ServiceConfig{
-		Repository: charRepo,
+		Repository:      charRepo,
+		DraftRepository: draftRepo,
 	})
 
 	// Create a test character
@@ -207,8 +210,10 @@ func TestEncounterService_CombatScenario_WithMockDice(t *testing.T) {
 
 	// Create services
 	charRepo := characters.NewInMemoryRepository()
+	draftRepo := character_draft.NewInMemoryRepository()
 	charService := character.NewService(&character.ServiceConfig{
-		Repository: charRepo,
+		Repository:      charRepo,
+		DraftRepository: draftRepo,
 	})
 
 	// Create test character

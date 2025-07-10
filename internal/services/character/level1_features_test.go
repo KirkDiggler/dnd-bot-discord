@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
+	mockdraftrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft/mock"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -22,11 +23,13 @@ func TestLevel1Features(t *testing.T) {
 
 	ctx := context.Background()
 	mockRepo := mockcharrepo.NewMockRepository(ctrl)
+	mockDraftRepo := mockdraftrepo.NewMockRepository(ctrl)
 	mockDndClient := mockdnd5e.NewMockClient(ctrl)
 
 	svc := character.NewService(&character.ServiceConfig{
-		Repository: mockRepo,
-		DNDClient:  mockDndClient,
+		Repository:      mockRepo,
+		DraftRepository: mockDraftRepo,
+		DNDClient:       mockDndClient,
 	})
 
 	t.Run("Barbarian Unarmored Defense", func(t *testing.T) {
@@ -76,6 +79,11 @@ func TestLevel1Features(t *testing.T) {
 		mockRepo.EXPECT().
 			Get(ctx, characterID).
 			Return(barbarian, nil)
+
+		// Mock draft repository - no draft exists
+		mockDraftRepo.EXPECT().
+			GetByCharacterID(ctx, characterID).
+			Return(nil, nil)
 
 		// Mock repository Update
 		mockRepo.EXPECT().
@@ -163,6 +171,11 @@ func TestLevel1Features(t *testing.T) {
 		mockRepo.EXPECT().
 			Get(ctx, characterID).
 			Return(monk, nil)
+
+		// Mock draft repository - no draft exists
+		mockDraftRepo.EXPECT().
+			GetByCharacterID(ctx, characterID).
+			Return(nil, nil)
 
 		// Mock repository Update
 		mockRepo.EXPECT().
@@ -275,6 +288,11 @@ func TestLevel1Features(t *testing.T) {
 			Get(ctx, characterID).
 			Return(fighter, nil)
 
+		// Mock draft repository - no draft exists
+		mockDraftRepo.EXPECT().
+			GetByCharacterID(ctx, characterID).
+			Return(nil, nil)
+
 		// Mock repository Update
 		mockRepo.EXPECT().
 			Update(ctx, gomock.Any()).
@@ -340,6 +358,11 @@ func TestLevel1Features(t *testing.T) {
 		mockRepo.EXPECT().
 			Get(ctx, characterID).
 			Return(char, nil)
+
+		// Mock draft repository - no draft exists
+		mockDraftRepo.EXPECT().
+			GetByCharacterID(ctx, characterID).
+			Return(nil, nil)
 
 		// Mock getting barbarian class
 		barbarianClass := &rulebook.Class{

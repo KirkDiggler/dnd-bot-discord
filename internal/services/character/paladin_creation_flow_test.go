@@ -9,6 +9,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	charDomain "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -24,6 +25,7 @@ func TestPaladinCreationFlow(t *testing.T) {
 
 	// Use in-memory repository for testing
 	repo := characters.NewInMemoryRepository()
+	draftRepo := character_draft.NewInMemoryRepository()
 
 	// Use real D&D 5e API client
 	client, err := dnd5e.New(&dnd5e.Config{
@@ -35,8 +37,9 @@ func TestPaladinCreationFlow(t *testing.T) {
 
 	// Create service
 	svc := character.NewService(&character.ServiceConfig{
-		DNDClient:  client,
-		Repository: repo,
+		DNDClient:       client,
+		Repository:      repo,
+		DraftRepository: draftRepo,
 	})
 
 	t.Run("Paladin creation with proper ability assignment", func(t *testing.T) {

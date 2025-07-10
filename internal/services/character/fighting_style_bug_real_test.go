@@ -7,6 +7,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
+	inmemoryDraft "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,7 +22,8 @@ func TestActualFinalizeDraftCharacterPreservesMetadata(t *testing.T) {
 
 	mockRepo := mockcharacters.NewMockRepository(ctrl)
 	service := NewService(&ServiceConfig{
-		Repository: mockRepo,
+		Repository:      mockRepo,
+		DraftRepository: inmemoryDraft.NewInMemoryRepository(),
 	})
 
 	t.Run("Real FinalizeDraftCharacter preserves fighting style metadata", func(t *testing.T) {

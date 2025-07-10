@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
+	mockdraftrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft/mock"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -25,10 +26,12 @@ func TestProficiencyUpdateHandling(t *testing.T) {
 
 		mockDNDClient := mockdnd5e.NewMockClient(ctrl)
 		mockRepo := mockcharrepo.NewMockRepository(ctrl)
+		mockDraftRepo := mockdraftrepo.NewMockRepository(ctrl)
 
 		service := character.NewService(&character.ServiceConfig{
-			DNDClient:  mockDNDClient,
-			Repository: mockRepo,
+			DNDClient:       mockDNDClient,
+			Repository:      mockRepo,
+			DraftRepository: mockDraftRepo,
 		})
 
 		// Create a character with base proficiencies
@@ -59,6 +62,7 @@ func TestProficiencyUpdateHandling(t *testing.T) {
 
 		// Mock repository calls
 		mockRepo.EXPECT().Get(ctx, "test-char-1").Return(char, nil)
+		mockDraftRepo.EXPECT().GetByCharacterID(ctx, "test-char-1").Return(nil, nil)
 		mockRepo.EXPECT().Update(ctx, gomock.Any()).Return(nil)
 
 		// Mock proficiency lookups for new selections

@@ -10,6 +10,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -58,6 +59,7 @@ func TestDuplicateProficiencyPrevention(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create service
 			repo := characters.NewInMemoryRepository()
+			draftRepo := character_draft.NewInMemoryRepository()
 			client, err := dnd5e.New(&dnd5e.Config{
 				HttpClient: &http.Client{
 					Timeout: 30 * time.Second,
@@ -66,8 +68,9 @@ func TestDuplicateProficiencyPrevention(t *testing.T) {
 			require.NoError(t, err)
 
 			svc := character.NewService(&character.ServiceConfig{
-				DNDClient:  client,
-				Repository: repo,
+				DNDClient:       client,
+				Repository:      repo,
+				DraftRepository: draftRepo,
 			})
 
 			// Create draft and set race/class
@@ -154,6 +157,7 @@ func TestCharacterFinalizationDeduplication(t *testing.T) {
 
 	// Create service
 	repo := characters.NewInMemoryRepository()
+	draftRepo := character_draft.NewInMemoryRepository()
 	client, err := dnd5e.New(&dnd5e.Config{
 		HttpClient: &http.Client{
 			Timeout: 30 * time.Second,
@@ -162,8 +166,9 @@ func TestCharacterFinalizationDeduplication(t *testing.T) {
 	require.NoError(t, err)
 
 	svc := character.NewService(&character.ServiceConfig{
-		DNDClient:  client,
-		Repository: repo,
+		DNDClient:       client,
+		Repository:      repo,
+		DraftRepository: draftRepo,
 	})
 
 	// Create Half-Orc Barbarian
@@ -272,6 +277,7 @@ func TestRacialAbilityScoreImprovements(t *testing.T) {
 		t.Run(tc.raceKey+" ability bonuses", func(t *testing.T) {
 			// Create service
 			repo := characters.NewInMemoryRepository()
+			draftRepo := character_draft.NewInMemoryRepository()
 			client, err := dnd5e.New(&dnd5e.Config{
 				HttpClient: &http.Client{
 					Timeout: 30 * time.Second,
@@ -280,8 +286,9 @@ func TestRacialAbilityScoreImprovements(t *testing.T) {
 			require.NoError(t, err)
 
 			svc := character.NewService(&character.ServiceConfig{
-				DNDClient:  client,
-				Repository: repo,
+				DNDClient:       client,
+				Repository:      repo,
+				DraftRepository: draftRepo,
 			})
 
 			// Create character with base 10 in all stats

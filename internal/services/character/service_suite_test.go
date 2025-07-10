@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
+	mockdraftrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft/mock"
 	mockrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	mockcharacters "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
@@ -24,6 +25,7 @@ type CharacterServiceTestSuite struct {
 	mockDNDClient  *mockdnd5e.MockClient
 	mockResolver   *mockcharacters.MockChoiceResolver
 	mockRepository *mockrepo.MockRepository
+	mockDraftRepo  *mockdraftrepo.MockRepository
 	service        character.Service
 	ctx            context.Context
 }
@@ -34,12 +36,14 @@ func (s *CharacterServiceTestSuite) SetupTest() {
 	s.mockDNDClient = mockdnd5e.NewMockClient(s.ctrl)
 	s.mockResolver = mockcharacters.NewMockChoiceResolver(s.ctrl)
 	s.mockRepository = mockrepo.NewMockRepository(s.ctrl)
+	s.mockDraftRepo = mockdraftrepo.NewMockRepository(s.ctrl)
 	s.ctx = context.Background()
 
 	s.service = character.NewService(&character.ServiceConfig{
-		DNDClient:      s.mockDNDClient,
-		ChoiceResolver: s.mockResolver,
-		Repository:     s.mockRepository,
+		DNDClient:       s.mockDNDClient,
+		ChoiceResolver:  s.mockResolver,
+		Repository:      s.mockRepository,
+		DraftRepository: s.mockDraftRepo,
 	})
 }
 
