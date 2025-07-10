@@ -18,6 +18,7 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
+	draftRepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft"
 	characterRepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 )
 
@@ -175,10 +176,11 @@ type ChoiceOption struct {
 
 // service implements the Service interface
 type service struct {
-	dndClient      dnd5e.Client
-	choiceResolver ChoiceResolver
-	repository     Repository
-	acCalculator   charDomain.ACCalculator
+	dndClient       dnd5e.Client
+	choiceResolver  ChoiceResolver
+	repository      Repository
+	draftRepository draftRepo.Repository
+	acCalculator    charDomain.ACCalculator
 	// Temporary in-memory session store (should be Redis in production)
 	sessions map[string]*charDomain.CharacterCreationSession
 	// Later we'll add:
@@ -187,10 +189,11 @@ type service struct {
 
 // ServiceConfig holds configuration for the service
 type ServiceConfig struct {
-	DNDClient      dnd5e.Client
-	ChoiceResolver ChoiceResolver          // Optional, will create default if nil
-	Repository     Repository              // Required
-	ACCalculator   charDomain.ACCalculator // Optional, will use default if nil
+	DNDClient       dnd5e.Client
+	ChoiceResolver  ChoiceResolver          // Optional, will create default if nil
+	Repository      Repository              // Required
+	DraftRepository draftRepo.Repository    // Optional for now, will be required later
+	ACCalculator    charDomain.ACCalculator // Optional, will use default if nil
 }
 
 // NewService creates a new character service
@@ -200,9 +203,10 @@ func NewService(cfg *ServiceConfig) Service {
 	}
 
 	svc := &service{
-		dndClient:  cfg.DNDClient,
-		repository: cfg.Repository,
-		sessions:   make(map[string]*charDomain.CharacterCreationSession),
+		dndClient:       cfg.DNDClient,
+		repository:      cfg.Repository,
+		draftRepository: cfg.DraftRepository,
+		sessions:        make(map[string]*charDomain.CharacterCreationSession),
 	}
 
 	// Use provided choice resolver or create default
@@ -500,9 +504,73 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 		return nil, dnderr.InvalidArgument("realm ID is required")
 	}
 
-	// Skip the in-memory active draft check - let's rely on Redis
-	// The in-memory map doesn't work well with Redis persistence
+	// If draft repository is available, use it
+	if s.draftRepository != nil {
+		// Look for existing draft
+		draft, err := s.draftRepository.GetByOwnerAndRealm(ctx, userID, realmID)
+		if err == nil && draft != nil {
+			// Found existing draft, return the character
+			return draft.Character, nil
+		}
+		// If error is not "not found", return it
+		if err != nil && !dnderr.IsNotFound(err) {
+			return nil, dnderr.Wrap(err, "failed to get existing draft").
+				WithMeta("user_id", userID).
+				WithMeta("realm_id", realmID)
+		}
 
+		// No draft found, create a new one
+		character := &charDomain.Character{
+			ID:      generateID(),
+			OwnerID: userID,
+			RealmID: realmID,
+			Name:    "",
+			Status:  shared.CharacterStatusDraft,
+			Level:   1,
+			// Initialize empty maps
+			Attributes:    make(map[shared.Attribute]*charDomain.AbilityScore),
+			Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
+			Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
+			EquippedSlots: make(map[shared.Slot]equipment.Equipment),
+		}
+
+		// Create draft wrapper
+		newDraft := &charDomain.CharacterDraft{
+			ID:        fmt.Sprintf("draft_%d", time.Now().UnixNano()),
+			OwnerID:   userID,
+			Character: character,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			FlowState: &charDomain.FlowState{
+				CurrentStepID:  "race",
+				AllSteps:       []string{"race", "class", "abilities", "proficiencies", "equipment", "features", "name"},
+				CompletedSteps: []string{},
+				LastUpdated:    time.Now(),
+			},
+		}
+
+		// Save draft
+		if err := s.draftRepository.Create(ctx, newDraft); err != nil {
+			return nil, dnderr.Wrap(err, "failed to create draft").
+				WithMeta("draft_id", newDraft.ID).
+				WithMeta("owner_id", userID)
+		}
+
+		// Also save character to character repository for backward compatibility
+		if err := s.repository.Create(ctx, character); err != nil {
+			// Try to clean up the draft
+			if deleteErr := s.draftRepository.Delete(ctx, newDraft.ID); deleteErr != nil {
+				log.Printf("Failed to clean up draft after character creation failure: %v", deleteErr)
+			}
+			return nil, dnderr.Wrap(err, "failed to create character").
+				WithMeta("character_id", character.ID).
+				WithMeta("owner_id", userID)
+		}
+
+		return character, nil
+	}
+
+	// Fallback to old implementation if no draft repository
 	// Look for existing draft characters
 	chars, err := s.repository.GetByOwnerAndRealm(ctx, userID, realmID)
 	if err != nil {
@@ -570,6 +638,16 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 	}
 	if updates == nil {
 		return nil, dnderr.InvalidArgument("updates cannot be nil")
+	}
+
+	// Try to get draft first if draft repository is available
+	var draft *charDomain.CharacterDraft
+	if s.draftRepository != nil {
+		var err error
+		draft, err = s.draftRepository.GetByCharacterID(ctx, characterID)
+		if err != nil && !dnderr.IsNotFound(err) {
+			log.Printf("Failed to get draft for character %s: %v", characterID, err)
+		}
 	}
 
 	// Get the character
@@ -805,6 +883,46 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 			WithMeta("character_id", characterID)
 	}
 
+	// Update draft flow state if we have a draft
+	if draft != nil && draft.FlowState != nil {
+		// Track what steps were completed
+		if updates.RaceKey != nil && !contains(draft.FlowState.CompletedSteps, "race") {
+			draft.FlowState.CompletedSteps = append(draft.FlowState.CompletedSteps, "race")
+			draft.FlowState.CurrentStepID = "class"
+		}
+		if updates.ClassKey != nil && !contains(draft.FlowState.CompletedSteps, "class") {
+			draft.FlowState.CompletedSteps = append(draft.FlowState.CompletedSteps, "class")
+			draft.FlowState.CurrentStepID = "abilities"
+		}
+		if len(updates.AbilityAssignments) > 0 && !contains(draft.FlowState.CompletedSteps, "abilities") {
+			draft.FlowState.CompletedSteps = append(draft.FlowState.CompletedSteps, "abilities")
+			draft.FlowState.CurrentStepID = "proficiencies"
+		}
+		if len(updates.Proficiencies) > 0 && !contains(draft.FlowState.CompletedSteps, "proficiencies") {
+			draft.FlowState.CompletedSteps = append(draft.FlowState.CompletedSteps, "proficiencies")
+			draft.FlowState.CurrentStepID = "equipment"
+		}
+		if len(updates.Equipment) > 0 && !contains(draft.FlowState.CompletedSteps, "equipment") {
+			draft.FlowState.CompletedSteps = append(draft.FlowState.CompletedSteps, "equipment")
+			draft.FlowState.CurrentStepID = "features"
+		}
+		// Name is typically the last step
+		if updates.Name != nil && *updates.Name != "" && !contains(draft.FlowState.CompletedSteps, "name") {
+			draft.FlowState.CompletedSteps = append(draft.FlowState.CompletedSteps, "name")
+			draft.FlowState.CurrentStepID = "complete"
+		}
+
+		draft.FlowState.LastUpdated = time.Now()
+		draft.Character = char
+		draft.UpdatedAt = time.Now()
+
+		// Save draft updates
+		if err := s.draftRepository.Update(ctx, draft); err != nil {
+			// Log but don't fail - character is already saved
+			log.Printf("Failed to update draft flow state: %v", err)
+		}
+	}
+
 	return char, nil
 }
 
@@ -1012,6 +1130,18 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 	if err := s.repository.Update(ctx, char); err != nil {
 		return nil, dnderr.Wrap(err, "failed to finalize character").
 			WithMeta("character_id", characterID)
+	}
+
+	// Delete draft if we have a draft repository
+	if s.draftRepository != nil {
+		draft, err := s.draftRepository.GetByCharacterID(ctx, characterID)
+		if err == nil && draft != nil {
+			// Delete the draft now that character is finalized
+			if err := s.draftRepository.Delete(ctx, draft.ID); err != nil {
+				// Log but don't fail - character is already finalized
+				log.Printf("Failed to delete draft %s after finalization: %v", draft.ID, err)
+			}
+		}
 	}
 
 	return char, nil
@@ -1249,4 +1379,14 @@ func (s *service) StartFreshCharacterCreation(ctx context.Context, userID, realm
 	}
 
 	return draft, nil
+}
+
+// contains is a helper function to check if a slice contains a string
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }

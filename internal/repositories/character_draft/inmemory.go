@@ -108,6 +108,26 @@ func (r *InMemoryRepository) Update(ctx context.Context, draft *character.Charac
 	return nil
 }
 
+// GetByCharacterID retrieves a draft by the character ID it contains
+func (r *InMemoryRepository) GetByCharacterID(ctx context.Context, characterID string) (*character.CharacterDraft, error) {
+	if characterID == "" {
+		return nil, dnderr.InvalidArgument("character ID is required")
+	}
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	// Search through all drafts to find one with matching character ID
+	for _, draft := range r.drafts {
+		if draft.Character != nil && draft.Character.ID == characterID {
+			return draft, nil
+		}
+	}
+
+	return nil, dnderr.NotFoundf("draft for character ID '%s' not found", characterID).
+		WithMeta("character_id", characterID)
+}
+
 // Delete removes a character draft
 func (r *InMemoryRepository) Delete(ctx context.Context, id string) error {
 	if id == "" {

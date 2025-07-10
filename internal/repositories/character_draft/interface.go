@@ -18,6 +18,9 @@ type Repository interface {
 	// GetByOwnerAndRealm retrieves the active draft for an owner in a realm
 	GetByOwnerAndRealm(ctx context.Context, ownerID, realmID string) (*character.CharacterDraft, error)
 
+	// GetByCharacterID retrieves a draft by the character ID it contains
+	GetByCharacterID(ctx context.Context, characterID string) (*character.CharacterDraft, error)
+
 	// Update updates an existing character draft
 	Update(ctx context.Context, draft *character.CharacterDraft) error
 
