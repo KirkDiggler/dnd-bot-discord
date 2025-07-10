@@ -57,13 +57,20 @@ var StepOrder = []CreateStep{
 }
 
 type CharacterDraft struct {
-	ID             string     `json:"id"`
-	OwnerID        string     `json:"owner_id"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	ID        string    `json:"id"`
+	OwnerID   string    `json:"owner_id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+
+	// Character being created
+	Character *Character `json:"character"`
+
+	// Flow state - using the flexible approach
+	FlowState *FlowState `json:"flow_state"`
+
+	// Legacy step tracking (kept for now, can be removed later)
 	CurrentStep    CreateStep `json:"current_step"`
 	CompletedSteps CreateStep `json:"completed_steps"`
-	Character      *Character `json:"character"`
 }
 
 func (d *CharacterDraft) IsStepCompleted(step CreateStep) bool {
