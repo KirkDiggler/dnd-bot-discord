@@ -284,6 +284,21 @@ func (mr *MockServiceMockRecorder) GetRaces(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRaces", reflect.TypeOf((*MockService)(nil).GetRaces), ctx)
 }
 
+// GetSpell mocks base method.
+func (m *MockService) GetSpell(ctx context.Context, spellKey string) (*rulebook.Spell, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSpell", ctx, spellKey)
+	ret0, _ := ret[0].(*rulebook.Spell)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSpell indicates an expected call of GetSpell.
+func (mr *MockServiceMockRecorder) GetSpell(ctx, spellKey any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSpell", reflect.TypeOf((*MockService)(nil).GetSpell), ctx, spellKey)
+}
+
 // ListByOwner mocks base method.
 func (m *MockService) ListByOwner(ownerID string) ([]*character.Character, error) {
 	m.ctrl.T.Helper()
@@ -312,6 +327,36 @@ func (m *MockService) ListCharacters(ctx context.Context, userID string) ([]*cha
 func (mr *MockServiceMockRecorder) ListCharacters(ctx, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCharacters", reflect.TypeOf((*MockService)(nil).ListCharacters), ctx, userID)
+}
+
+// ListSpellsByClass mocks base method.
+func (m *MockService) ListSpellsByClass(ctx context.Context, classKey string) ([]*rulebook.SpellReference, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSpellsByClass", ctx, classKey)
+	ret0, _ := ret[0].([]*rulebook.SpellReference)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListSpellsByClass indicates an expected call of ListSpellsByClass.
+func (mr *MockServiceMockRecorder) ListSpellsByClass(ctx, classKey any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSpellsByClass", reflect.TypeOf((*MockService)(nil).ListSpellsByClass), ctx, classKey)
+}
+
+// ListSpellsByClassAndLevel mocks base method.
+func (m *MockService) ListSpellsByClassAndLevel(ctx context.Context, classKey string, level int) ([]*rulebook.SpellReference, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSpellsByClassAndLevel", ctx, classKey, level)
+	ret0, _ := ret[0].([]*rulebook.SpellReference)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListSpellsByClassAndLevel indicates an expected call of ListSpellsByClassAndLevel.
+func (mr *MockServiceMockRecorder) ListSpellsByClassAndLevel(ctx, classKey, level any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSpellsByClassAndLevel", reflect.TypeOf((*MockService)(nil).ListSpellsByClassAndLevel), ctx, classKey, level)
 }
 
 // ResolveChoices mocks base method.
