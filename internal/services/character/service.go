@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sort"
 	"strings"
 	"time"
 
@@ -192,7 +191,7 @@ type ServiceConfig struct {
 	DNDClient       dnd5e.Client
 	ChoiceResolver  ChoiceResolver          // Optional, will create default if nil
 	Repository      Repository              // Required
-	DraftRepository draftRepo.Repository    // Optional for now, will be required later
+	DraftRepository draftRepo.Repository    // Required
 	ACCalculator    charDomain.ACCalculator // Optional, will use default if nil
 }
 
@@ -200,6 +199,9 @@ type ServiceConfig struct {
 func NewService(cfg *ServiceConfig) Service {
 	if cfg.Repository == nil {
 		panic("repository is required")
+	}
+	if cfg.DraftRepository == nil {
+		panic("draft repository is required")
 	}
 
 	svc := &service{
@@ -504,106 +506,17 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 		return nil, dnderr.InvalidArgument("realm ID is required")
 	}
 
-	// If draft repository is available, use it
-	if s.draftRepository != nil {
-		// Look for existing draft
-		draft, err := s.draftRepository.GetByOwnerAndRealm(ctx, userID, realmID)
-		if err == nil && draft != nil {
-			// Found existing draft, return the character
-			return draft.Character, nil
-		}
-		// If error is not "not found", return it
-		if err != nil && !dnderr.IsNotFound(err) {
-			return nil, dnderr.Wrap(err, "failed to get existing draft").
-				WithMeta("user_id", userID).
-				WithMeta("realm_id", realmID)
-		}
-
-		// No draft found, create a new one
-		character := &charDomain.Character{
-			ID:      generateID(),
-			OwnerID: userID,
-			RealmID: realmID,
-			Name:    "",
-			Status:  shared.CharacterStatusDraft,
-			Level:   1,
-			// Initialize empty maps
-			Attributes:    make(map[shared.Attribute]*charDomain.AbilityScore),
-			Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
-			Inventory:     make(map[equipment.EquipmentType][]equipment.Equipment),
-			EquippedSlots: make(map[shared.Slot]equipment.Equipment),
-		}
-
-		// Create draft wrapper
-		newDraft := &charDomain.CharacterDraft{
-			ID:        fmt.Sprintf("draft_%d", time.Now().UnixNano()),
-			OwnerID:   userID,
-			Character: character,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-			FlowState: &charDomain.FlowState{
-				CurrentStepID:  "race",
-				AllSteps:       []string{"race", "class", "abilities", "proficiencies", "equipment", "features", "name"},
-				CompletedSteps: []string{},
-				LastUpdated:    time.Now(),
-			},
-		}
-
-		// Save draft
-		if err := s.draftRepository.Create(ctx, newDraft); err != nil {
-			return nil, dnderr.Wrap(err, "failed to create draft").
-				WithMeta("draft_id", newDraft.ID).
-				WithMeta("owner_id", userID)
-		}
-
-		// Also save character to character repository for backward compatibility
-		if err := s.repository.Create(ctx, character); err != nil {
-			// Try to clean up the draft
-			if deleteErr := s.draftRepository.Delete(ctx, newDraft.ID); deleteErr != nil {
-				log.Printf("Failed to clean up draft after character creation failure: %v", deleteErr)
-			}
-			return nil, dnderr.Wrap(err, "failed to create character").
-				WithMeta("character_id", character.ID).
-				WithMeta("owner_id", userID)
-		}
-
-		return character, nil
+	// Look for existing draft
+	draft, err := s.draftRepository.GetByOwnerAndRealm(ctx, userID, realmID)
+	if err == nil && draft != nil {
+		// Found existing draft, return the character
+		return draft.Character, nil
 	}
-
-	// Fallback to old implementation if no draft repository
-	// Look for existing draft characters
-	chars, err := s.repository.GetByOwnerAndRealm(ctx, userID, realmID)
-	if err != nil {
-		return nil, dnderr.Wrap(err, "failed to get existing characters").
+	// If error is not "not found", return it
+	if err != nil && !dnderr.IsNotFound(err) {
+		return nil, dnderr.Wrap(err, "failed to get existing draft").
 			WithMeta("user_id", userID).
 			WithMeta("realm_id", realmID)
-	}
-
-	// Find all draft characters
-	var drafts []*charDomain.Character
-	for _, char := range chars {
-		if char.Status == shared.CharacterStatusDraft {
-			drafts = append(drafts, char)
-		}
-	}
-
-	// If we have any drafts, use the most recent one
-	if len(drafts) > 0 {
-		// Sort drafts by ID (which includes timestamp) to find most recent
-		sort.Slice(drafts, func(i, j int) bool {
-			return drafts[i].ID > drafts[j].ID // Descending order
-		})
-
-		// Delete any extra drafts
-		if len(drafts) > 1 {
-			for i := 1; i < len(drafts); i++ {
-				if err := s.repository.Delete(ctx, drafts[i].ID); err != nil {
-					log.Printf("Failed to delete old draft character %s: %v", drafts[i].ID, err)
-				}
-			}
-		}
-
-		return drafts[0], nil
 	}
 
 	// No draft found, create a new one
@@ -611,7 +524,7 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 		ID:      generateID(),
 		OwnerID: userID,
 		RealmID: realmID,
-		Name:    "Draft Character",
+		Name:    "",
 		Status:  shared.CharacterStatusDraft,
 		Level:   1,
 		// Initialize empty maps
@@ -621,9 +534,35 @@ func (s *service) GetOrCreateDraftCharacter(ctx context.Context, userID, realmID
 		EquippedSlots: make(map[shared.Slot]equipment.Equipment),
 	}
 
-	// Save to repository
+	// Create draft wrapper
+	newDraft := &charDomain.CharacterDraft{
+		ID:        fmt.Sprintf("draft_%d", time.Now().UnixNano()),
+		OwnerID:   userID,
+		Character: character,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		FlowState: &charDomain.FlowState{
+			CurrentStepID:  "race",
+			AllSteps:       []string{"race", "class", "abilities", "proficiencies", "equipment", "features", "name"},
+			CompletedSteps: []string{},
+			LastUpdated:    time.Now(),
+		},
+	}
+
+	// Save draft
+	if err := s.draftRepository.Create(ctx, newDraft); err != nil {
+		return nil, dnderr.Wrap(err, "failed to create draft").
+			WithMeta("draft_id", newDraft.ID).
+			WithMeta("owner_id", userID)
+	}
+
+	// Also save character to character repository for backward compatibility
 	if err := s.repository.Create(ctx, character); err != nil {
-		return nil, dnderr.Wrap(err, "failed to create draft character").
+		// Try to clean up the draft
+		if deleteErr := s.draftRepository.Delete(ctx, newDraft.ID); deleteErr != nil {
+			log.Printf("Failed to clean up draft after character creation failure: %v", deleteErr)
+		}
+		return nil, dnderr.Wrap(err, "failed to create character").
 			WithMeta("character_id", character.ID).
 			WithMeta("owner_id", userID)
 	}
@@ -640,14 +579,10 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		return nil, dnderr.InvalidArgument("updates cannot be nil")
 	}
 
-	// Try to get draft first if draft repository is available
-	var draft *charDomain.CharacterDraft
-	if s.draftRepository != nil {
-		var err error
-		draft, err = s.draftRepository.GetByCharacterID(ctx, characterID)
-		if err != nil && !dnderr.IsNotFound(err) {
-			log.Printf("Failed to get draft for character %s: %v", characterID, err)
-		}
+	// Try to get draft first
+	draft, err := s.draftRepository.GetByCharacterID(ctx, characterID)
+	if err != nil && !dnderr.IsNotFound(err) {
+		log.Printf("Failed to get draft for character %s: %v", characterID, err)
 	}
 
 	// Get the character
@@ -1061,10 +996,10 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 	}
 
 	// Apply passive effects from all features
-	if err := features2.DefaultRegistry.ApplyAllPassiveEffects(char); err != nil {
+	if applyErr := features2.DefaultRegistry.ApplyAllPassiveEffects(char); applyErr != nil {
 		// Log error but don't fail finalization
 		log.Printf("Error applying passive effects for character %s (%s %s): %v",
-			char.ID, char.Race.Name, char.Class.Name, err)
+			char.ID, char.Race.Name, char.Class.Name, applyErr)
 	}
 
 	// Calculate AC using the features package
@@ -1081,8 +1016,8 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 		if !hasClassProficiencies {
 			for _, prof := range char.Class.Proficiencies {
 				if prof != nil {
-					proficiency, err := s.dndClient.GetProficiency(prof.Key)
-					if err == nil && proficiency != nil {
+					proficiency, profErr := s.dndClient.GetProficiency(prof.Key)
+					if profErr == nil && proficiency != nil {
 						char.AddProficiency(proficiency)
 					}
 				}
@@ -1094,8 +1029,8 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 	if s.dndClient != nil && char.Race != nil && char.Race.StartingProficiencies != nil {
 		for _, prof := range char.Race.StartingProficiencies {
 			if prof != nil {
-				proficiency, err := s.dndClient.GetProficiency(prof.Key)
-				if err == nil && proficiency != nil {
+				proficiency, profErr := s.dndClient.GetProficiency(prof.Key)
+				if profErr == nil && proficiency != nil {
 					char.AddProficiency(proficiency)
 				}
 			}
@@ -1106,10 +1041,10 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 	if s.dndClient != nil && char.Class != nil && char.Class.StartingEquipment != nil {
 		for _, se := range char.Class.StartingEquipment {
 			if se != nil && se.Equipment != nil {
-				equipmentValue, err := s.dndClient.GetEquipment(se.Equipment.Key)
-				if err != nil {
+				equipmentValue, eqErr := s.dndClient.GetEquipment(se.Equipment.Key)
+				if eqErr != nil {
 					// Log the error but don't fail the finalization
-					log.Printf("Failed to get starting equipment %s: %v", se.Equipment.Key, err)
+					log.Printf("Failed to get starting equipment %s: %v", se.Equipment.Key, eqErr)
 					continue
 				}
 				// If no error, equipment is valid
@@ -1127,20 +1062,18 @@ func (s *service) FinalizeDraftCharacter(ctx context.Context, characterID string
 	char.Status = shared.CharacterStatusActive
 
 	// Save changes
-	if err := s.repository.Update(ctx, char); err != nil {
-		return nil, dnderr.Wrap(err, "failed to finalize character").
+	if updateErr := s.repository.Update(ctx, char); updateErr != nil {
+		return nil, dnderr.Wrap(updateErr, "failed to finalize character").
 			WithMeta("character_id", characterID)
 	}
 
-	// Delete draft if we have a draft repository
-	if s.draftRepository != nil {
-		draft, err := s.draftRepository.GetByCharacterID(ctx, characterID)
-		if err == nil && draft != nil {
-			// Delete the draft now that character is finalized
-			if err := s.draftRepository.Delete(ctx, draft.ID); err != nil {
-				// Log but don't fail - character is already finalized
-				log.Printf("Failed to delete draft %s after finalization: %v", draft.ID, err)
-			}
+	// Delete draft now that character is finalized
+	draft, err := s.draftRepository.GetByCharacterID(ctx, characterID)
+	if err == nil && draft != nil {
+		// Delete the draft
+		if err := s.draftRepository.Delete(ctx, draft.ID); err != nil {
+			// Log but don't fail - character is already finalized
+			log.Printf("Failed to delete draft %s after finalization: %v", draft.ID, err)
 		}
 	}
 

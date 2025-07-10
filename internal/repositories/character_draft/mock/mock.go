@@ -84,6 +84,21 @@ func (mr *MockRepositoryMockRecorder) Get(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRepository)(nil).Get), ctx, id)
 }
 
+// GetByCharacterID mocks base method.
+func (m *MockRepository) GetByCharacterID(ctx context.Context, characterID string) (*character.CharacterDraft, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByCharacterID", ctx, characterID)
+	ret0, _ := ret[0].(*character.CharacterDraft)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetByCharacterID indicates an expected call of GetByCharacterID.
+func (mr *MockRepositoryMockRecorder) GetByCharacterID(ctx, characterID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByCharacterID", reflect.TypeOf((*MockRepository)(nil).GetByCharacterID), ctx, characterID)
+}
+
 // GetByOwnerAndRealm mocks base method.
 func (m *MockRepository) GetByOwnerAndRealm(ctx context.Context, ownerID, realmID string) (*character.CharacterDraft, error) {
 	m.ctrl.T.Helper()

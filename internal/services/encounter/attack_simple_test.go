@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
+	characterdraft "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/gamesessions"

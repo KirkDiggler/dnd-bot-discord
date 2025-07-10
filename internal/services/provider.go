@@ -57,11 +57,11 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 		charRepo = characters.NewInMemoryRepository()
 	}
 
-	// TODO: Wire up draft repository when updating creation flow service
-	// draftRepo := cfg.CharacterDraftRepository
-	// if draftRepo == nil {
-	// 	draftRepo = characterdraft.NewInMemoryRepository()
-	// }
+	// Use in-memory draft repository if none provided
+	draftRepo := cfg.CharacterDraftRepository
+	if draftRepo == nil {
+		draftRepo = characterdraft.NewInMemoryRepository()
+	}
 
 	sessionRepo := cfg.SessionRepository
 	if sessionRepo == nil {
@@ -83,9 +83,10 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 
 	// Create character service
 	charService := characterService.NewService(&characterService.ServiceConfig{
-		DNDClient:    cfg.DNDClient,
-		Repository:   charRepo,
-		ACCalculator: acCalculator,
+		DNDClient:       cfg.DNDClient,
+		Repository:      charRepo,
+		DraftRepository: draftRepo,
+		ACCalculator:    acCalculator,
 	})
 
 	// Create flow builder and creation flow service

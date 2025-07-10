@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
+	inmemoryDraft "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft"
 	mockrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	mockcharacters "github.com/KirkDiggler/dnd-bot-discord/internal/services/character/mock"
@@ -37,9 +38,10 @@ func (s *CharacterServiceTestSuite) SetupTest() {
 	s.ctx = context.Background()
 
 	s.service = character.NewService(&character.ServiceConfig{
-		DNDClient:      s.mockDNDClient,
-		ChoiceResolver: s.mockResolver,
-		Repository:     s.mockRepository,
+		DNDClient:       s.mockDNDClient,
+		ChoiceResolver:  s.mockResolver,
+		Repository:      s.mockRepository,
+		DraftRepository: inmemoryDraft.NewInMemoryRepository(),
 	})
 }
 
