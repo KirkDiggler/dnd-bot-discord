@@ -41,6 +41,12 @@ func (h *CharacterCreationHandler) buildEnhancedStepResponse(char *domainCharact
 	// Build components based on step type
 	components := builders.NewComponentBuilder(h.customIDBuilder)
 
+	// Check if step has UI hints - if so, use them
+	if step.UIHints != nil {
+		return h.buildUIHintsResponse(char, step, embed, components)
+	}
+
+	// Otherwise fall back to hardcoded UI
 	switch step.Type {
 	case domainCharacter.StepTypeRaceSelection:
 		embed.Description("Choose your character's race. Each race provides unique bonuses and traits that will shape your character's abilities.")
@@ -614,8 +620,8 @@ func (h *CharacterCreationHandler) buildMockAllSteps(char *domainCharacter.Chara
 			)
 		case "wizard":
 			steps = append(steps,
-				domainCharacter.CreationStep{Type: domainCharacter.StepTypeSkillSelection},
-				domainCharacter.CreationStep{Type: domainCharacter.StepTypeLanguageSelection},
+				domainCharacter.CreationStep{Type: domainCharacter.StepTypeCantripsSelection},
+				domainCharacter.CreationStep{Type: domainCharacter.StepTypeSpellbookSelection},
 			)
 		case "fighter", "paladin":
 			steps = append(steps, domainCharacter.CreationStep{Type: domainCharacter.StepTypeFightingStyleSelection})
@@ -2215,43 +2221,9 @@ func (h *CharacterCreationHandler) HandleAssignToAbility(ctx *core.InteractionCo
 	}
 	embed.AddField("🎯 Current Assignments", strings.Join(assignmentDisplay, "\n"), false)
 
-	// Build dropdown with all available scores
-	components := builders.NewComponentBuilder(h.customIDBuilder)
-
-	var options []builders.SelectOption
-	for _, roll := range char.AbilityRolls {
-		// Find what this roll is currently assigned to
-		assignedTo := ""
-		for ability, assignedRollID := range currentAssignments {
-			if assignedRollID == roll.ID {
-				assignedTo = ability
-				break
-			}
-		}
-
-		label := fmt.Sprintf("Score: %d", roll.Value)
-		description := fmt.Sprintf("Assign %d to %s", roll.Value, abilityNames[targetAbility])
-
-		if assignedTo != "" {
-			if assignedTo == targetAbility {
-				label += " (current)"
-				description = fmt.Sprintf("Keep %d assigned to %s", roll.Value, abilityNames[targetAbility])
-			} else {
-				label += fmt.Sprintf(" (assigned to %s)", assignedTo)
-				description = fmt.Sprintf("Move %d from %s to %s", roll.Value, assignedTo, abilityNames[targetAbility])
-			}
-		}
-
-		options = append(options, builders.SelectOption{
-			Label:       label,
-			Value:       roll.ID,
-			Description: description,
-			Default:     assignedTo == targetAbility,
-		})
-	}
-
-	// Create button options for each available score instead of dropdown
+	// Create button options for each available score
 	// This allows us to pass both the roll ID and target ability
+	components := builders.NewComponentBuilder(h.customIDBuilder)
 	components.NewRow()
 	count := 0
 	for _, roll := range char.AbilityRolls {
@@ -2495,4 +2467,90 @@ func (h *CharacterCreationHandler) buildRollingUI(ctx *core.InteractionContext, 
 	return &core.HandlerResult{
 		Response: response,
 	}, nil
+}
+
+// buildUIHintsResponse builds a dynamic response based on UI hints
+func (h *CharacterCreationHandler) buildUIHintsResponse(
+	char *domainCharacter.Character,
+	step *domainCharacter.CreationStep,
+	embed *builders.EmbedBuilder,
+	components *builders.ComponentBuilder,
+) (*core.Response, error) {
+	// Apply UI hints to embed
+	if step.UIHints.Color > 0 {
+		embed.Color(step.UIHints.Color)
+	}
+
+	// Add description if not already set
+	if step.Description != "" {
+		embed.Description(step.Description)
+	}
+
+	// Add progress indicator if requested
+	if step.UIHints.ShowProgress && step.UIHints.ProgressFormat != "" {
+		// TODO: Get actual progress from character state
+		progressText := fmt.Sprintf(step.UIHints.ProgressFormat, 0, step.MaxChoices)
+		embed.AddField("📊 Progress", progressText, false)
+	}
+
+	// Build action buttons from UI hints
+	for i, action := range step.UIHints.Actions {
+		// Start new row every 5 buttons (Discord limit)
+		if i > 0 && i%5 == 0 {
+			components.NewRow()
+		}
+
+		// Build button with appropriate style
+		switch action.Style {
+		case "primary":
+			components.PrimaryButton(
+				fmt.Sprintf("%s %s", action.Icon, action.Label),
+				action.ID,
+				char.ID,
+			)
+		case "secondary":
+			components.SecondaryButton(
+				fmt.Sprintf("%s %s", action.Icon, action.Label),
+				action.ID,
+				char.ID,
+			)
+		case "success":
+			components.SuccessButton(
+				fmt.Sprintf("%s %s", action.Icon, action.Label),
+				action.ID,
+				char.ID,
+			)
+		case "danger":
+			components.DangerButton(
+				fmt.Sprintf("%s %s", action.Icon, action.Label),
+				action.ID,
+				char.ID,
+			)
+		default:
+			// Default to secondary
+			components.SecondaryButton(
+				fmt.Sprintf("%s %s", action.Icon, action.Label),
+				action.ID,
+				char.ID,
+			)
+		}
+	}
+
+	// Add skip button if allowed
+	if step.UIHints.AllowSkip {
+		components.NewRow()
+		components.SecondaryButton("⏭️ Skip", "skip_step", char.ID)
+	}
+
+	// Add back button
+	components.NewRow()
+	components.SecondaryButton("⬅️ Back", "back", char.ID)
+
+	// Build and return response
+	response := core.NewResponse("").
+		WithEmbeds(embed.Build()).
+		WithComponents(components.Build()...).
+		AsUpdate()
+
+	return response, nil
 }

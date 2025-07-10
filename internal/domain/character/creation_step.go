@@ -18,6 +18,16 @@ const (
 	StepTypeEquipmentSelection       CreationStepType = "equipment_selection"
 	StepTypeCharacterDetails         CreationStepType = "character_details"
 	StepTypeComplete                 CreationStepType = "complete"
+
+	// Spellcaster steps
+	StepTypeCantripsSelection  CreationStepType = "cantrips_selection"
+	StepTypeSpellSelection     CreationStepType = "spell_selection"
+	StepTypeSpellbookSelection CreationStepType = "spellbook_selection"
+
+	// Subclass steps
+	StepTypeSubclassSelection        CreationStepType = "subclass_selection"
+	StepTypePatronSelection          CreationStepType = "patron_selection"
+	StepTypeSorcerousOriginSelection CreationStepType = "sorcerous_origin_selection"
 )
 
 // CreationStep represents a single step in character creation
@@ -29,7 +39,8 @@ type CreationStep struct {
 	MinChoices  int              `json:"min_choices,omitempty"`
 	MaxChoices  int              `json:"max_choices,omitempty"`
 	Required    bool             `json:"required"`
-	Context     map[string]any   `json:"context,omitempty"` // Additional context data
+	Context     map[string]any   `json:"context,omitempty"`  // Additional context data
+	UIHints     *StepUIHints     `json:"ui_hints,omitempty"` // UI customization hints
 }
 
 // CreationOption represents an option within a creation step
@@ -45,6 +56,27 @@ type CreationStepResult struct {
 	StepType   CreationStepType `json:"step_type"`
 	Selections []string         `json:"selections"`
 	Metadata   map[string]any   `json:"metadata,omitempty"`
+}
+
+// StepUIHints provides UI customization hints for a step
+type StepUIHints struct {
+	Actions         []StepAction `json:"actions,omitempty"`         // Available actions
+	Layout          string       `json:"layout,omitempty"`          // Layout style: "default", "grid", "list"
+	Color           int          `json:"color,omitempty"`           // Discord color
+	ShowProgress    bool         `json:"show_progress"`             // Show progress indicator
+	ProgressFormat  string       `json:"progress_format,omitempty"` // Custom progress format
+	AllowSkip       bool         `json:"allow_skip"`                // Can skip this step
+	ShowRecommended bool         `json:"show_recommended"`          // Show recommended choices
+}
+
+// StepAction represents an action available on a step
+type StepAction struct {
+	ID          string `json:"id"`                    // Action identifier
+	Label       string `json:"label"`                 // Display label
+	Description string `json:"description,omitempty"` // Optional description
+	Style       string `json:"style"`                 // Button style: "primary", "secondary", "success", "danger"
+	Icon        string `json:"icon,omitempty"`        // Optional emoji/icon
+	Handler     string `json:"handler,omitempty"`     // Handler identifier
 }
 
 // IsComplete returns true if the step has been completed

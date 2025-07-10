@@ -116,6 +116,13 @@ func (r *CreateRouter) registerRoutes() {
 	r.router.ComponentFunc("continue_rolling", r.creationHandler.HandleContinueRolling)
 	r.router.ComponentFunc("start_interactive_assignment", r.creationHandler.HandleStartInteractiveAssignment)
 
+	// Wizard-specific handlers (registered for UI hints actions)
+	r.router.ComponentFunc("select_cantrips", r.creationHandler.HandleStepSelection)
+	r.router.ComponentFunc("suggested_cantrips", r.creationHandler.HandleStepSelection)
+	r.router.ComponentFunc("select_spells", r.creationHandler.HandleStepSelection)
+	r.router.ComponentFunc("quick_build", r.creationHandler.HandleStepSelection)
+	r.router.ComponentFunc("select_tradition", r.creationHandler.HandleStepSelection)
+
 	// Future: /dnd create encounter, /dnd create item, etc.
 	// r.router.ActionFunc("encounter", r.handleCreateEncounter)
 	// r.router.ActionFunc("item", r.handleCreateItem)

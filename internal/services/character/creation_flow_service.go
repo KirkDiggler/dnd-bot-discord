@@ -205,6 +205,17 @@ func (s *CreationFlowServiceImpl) isStepComplete(char *character.Character, step
 	case character.StepTypeCharacterDetails:
 		// Character needs a name AND to be finalized
 		return char.Name != "" && char.Status != shared.CharacterStatusDraft
+
+	// Spellcaster steps
+	case character.StepTypeCantripsSelection:
+		return s.hasSelectedCantrips(char)
+	case character.StepTypeSpellSelection, character.StepTypeSpellbookSelection:
+		return s.hasSelectedSpells(char)
+
+	// Subclass steps
+	case character.StepTypeSubclassSelection, character.StepTypePatronSelection, character.StepTypeSorcerousOriginSelection:
+		return s.hasSelectedSubclass(char)
+
 	default:
 		return false
 	}
@@ -329,6 +340,24 @@ func (s *CreationFlowServiceImpl) hasUserSelectedProficiencies(char *character.C
 func (s *CreationFlowServiceImpl) hasUserSelectedEquipment(char *character.Character) bool {
 	// For now, return false to ensure the step is shown
 	// In the future, track which equipment is from user choices vs starting equipment
+	return false
+}
+
+func (s *CreationFlowServiceImpl) hasSelectedCantrips(char *character.Character) bool {
+	// TODO: Implement when we have spell tracking
+	// For now, return false to show the step
+	return false
+}
+
+func (s *CreationFlowServiceImpl) hasSelectedSpells(char *character.Character) bool {
+	// TODO: Implement when we have spell tracking
+	// For now, return false to show the step
+	return false
+}
+
+func (s *CreationFlowServiceImpl) hasSelectedSubclass(char *character.Character) bool {
+	// TODO: Implement when we have subclass tracking
+	// For now, return false to show the step
 	return false
 }
 
