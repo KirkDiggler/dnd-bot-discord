@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -20,6 +21,7 @@ func TestFighterWeaponPlusShieldFlow(t *testing.T) {
 	// Setup
 	ctx := context.Background()
 	mockRepo := characters.NewInMemoryRepository()
+	mockDraftRepo := character_draft.NewInMemoryRepository()
 
 	// Create mock D&D client
 	mockClient := &mockDndClient{
@@ -58,8 +60,9 @@ func TestFighterWeaponPlusShieldFlow(t *testing.T) {
 	}
 
 	service := character.NewService(&character.ServiceConfig{
-		Repository: mockRepo,
-		DNDClient:  mockClient,
+		Repository:      mockRepo,
+		DraftRepository: mockDraftRepo,
+		DNDClient:       mockClient,
 	})
 
 	// Create a draft character

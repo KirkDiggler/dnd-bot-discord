@@ -7,6 +7,7 @@ import (
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
 	charDomain "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
+	mockdraftrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft/mock"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -20,11 +21,13 @@ func TestGetPendingFeatureChoices(t *testing.T) {
 
 	ctx := context.Background()
 	mockRepo := mockcharrepo.NewMockRepository(ctrl)
+	mockDraftRepo := mockdraftrepo.NewMockRepository(ctrl)
 	mockDndClient := mockdnd5e.NewMockClient(ctrl)
 
 	svc := character.NewService(&character.ServiceConfig{
-		Repository: mockRepo,
-		DNDClient:  mockDndClient,
+		Repository:      mockRepo,
+		DraftRepository: mockDraftRepo,
+		DNDClient:       mockDndClient,
 	})
 
 	t.Run("Fighter with no fighting style selected", func(t *testing.T) {

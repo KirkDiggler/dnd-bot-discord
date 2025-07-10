@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
+	mockdraftrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft/mock"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -21,11 +22,13 @@ func TestFinalizeCharacterWithNameBug(t *testing.T) {
 		defer ctrl.Finish()
 
 		mockRepo := mockcharrepo.NewMockRepository(ctrl)
+		mockDraftRepo := mockdraftrepo.NewMockRepository(ctrl)
 		mockDNDClient := mockdnd5e.NewMockClient(ctrl)
 
 		svc := character.NewService(&character.ServiceConfig{
-			DNDClient:  mockDNDClient,
-			Repository: mockRepo,
+			DNDClient:       mockDNDClient,
+			Repository:      mockRepo,
+			DraftRepository: mockDraftRepo,
 		})
 
 		ctx := context.Background()
@@ -118,6 +121,7 @@ func TestFinalizeCharacterWithNameBug(t *testing.T) {
 
 		// Mock expectations for the FinalizeDraftCharacter call (second call)
 		mockRepo.EXPECT().Get(ctx, characterID).Return(draftChar, nil).Times(1)
+		mockDraftRepo.EXPECT().GetByCharacterID(ctx, characterID).Return(nil, nil).AnyTimes() // No draft exists
 
 		// Mock the second Update call (from FinalizeDraftCharacter)
 		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *character2.Character) error {

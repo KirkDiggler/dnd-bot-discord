@@ -13,6 +13,7 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice"
 	mockdice "github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/gamesessions"
@@ -36,8 +37,10 @@ func TestPerformAttack_PlayerVsMonster(t *testing.T) {
 
 	// Create services
 	charRepo := characters.NewInMemoryRepository()
+	draftRepo := character_draft.NewInMemoryRepository()
 	charService := character.NewService(&character.ServiceConfig{
-		Repository: charRepo,
+		Repository:      charRepo,
+		DraftRepository: draftRepo,
 	})
 
 	sessionRepo := gamesessions.NewInMemoryRepository()
@@ -181,8 +184,10 @@ func TestPerformAttack_MonsterVsPlayer(t *testing.T) {
 
 	// Create services
 	charRepo := characters.NewInMemoryRepository()
+	draftRepo := character_draft.NewInMemoryRepository()
 	charService := character.NewService(&character.ServiceConfig{
-		Repository: charRepo,
+		Repository:      charRepo,
+		DraftRepository: draftRepo,
 	})
 
 	sessionRepo := gamesessions.NewInMemoryRepository()
@@ -313,8 +318,10 @@ func TestPerformAttack_CriticalHit(t *testing.T) {
 
 	// Create services
 	charRepo := characters.NewInMemoryRepository()
+	draftRepo := character_draft.NewInMemoryRepository()
 	charService := character.NewService(&character.ServiceConfig{
-		Repository: charRepo,
+		Repository:      charRepo,
+		DraftRepository: draftRepo,
 	})
 
 	sessionRepo := gamesessions.NewInMemoryRepository()
@@ -400,8 +407,10 @@ func TestPerformAttack_Validations(t *testing.T) {
 
 	// Create services
 	charRepo := characters.NewInMemoryRepository()
+	draftRepo := character_draft.NewInMemoryRepository()
 	charService := character.NewService(&character.ServiceConfig{
-		Repository: charRepo,
+		Repository:      charRepo,
+		DraftRepository: draftRepo,
 	})
 
 	sessionRepo := gamesessions.NewInMemoryRepository()

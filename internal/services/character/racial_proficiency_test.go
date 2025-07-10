@@ -9,6 +9,7 @@ import (
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -102,6 +103,7 @@ func TestRaceClassProficiencyOverlap(t *testing.T) {
 	t.Run("Half-Orc Barbarian Intimidation overlap", func(t *testing.T) {
 		// Create service with real API
 		repo := characters.NewInMemoryRepository()
+		draftRepo := character_draft.NewInMemoryRepository()
 		client, err := dnd5e.New(&dnd5e.Config{
 			HttpClient: &http.Client{
 				Timeout: 30 * time.Second,
@@ -110,8 +112,9 @@ func TestRaceClassProficiencyOverlap(t *testing.T) {
 		require.NoError(t, err)
 
 		svc := character.NewService(&character.ServiceConfig{
-			DNDClient:  client,
-			Repository: repo,
+			DNDClient:       client,
+			Repository:      repo,
+			DraftRepository: draftRepo,
 		})
 
 		// Create draft character
@@ -292,6 +295,7 @@ func TestElfWeaponProficiencies(t *testing.T) {
 
 	// Create service
 	repo := characters.NewInMemoryRepository()
+	draftRepo := character_draft.NewInMemoryRepository()
 	client, err := dnd5e.New(&dnd5e.Config{
 		HttpClient: &http.Client{
 			Timeout: 30 * time.Second,
@@ -300,8 +304,9 @@ func TestElfWeaponProficiencies(t *testing.T) {
 	require.NoError(t, err)
 
 	svc := character.NewService(&character.ServiceConfig{
-		DNDClient:  client,
-		Repository: repo,
+		DNDClient:       client,
+		Repository:      repo,
+		DraftRepository: draftRepo,
 	})
 
 	// Create elf wizard

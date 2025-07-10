@@ -1,37 +1,22 @@
 package character_test
 
 import (
-	"context"
+	"testing"
+
 	character2 "github.com/KirkDiggler/dnd-bot-discord/internal/domain/character"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/equipment"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
-	"testing"
-
-	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
-	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
-	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 )
 
-func TestAbilityAssignmentBug_CharacterShowsZeroAttributes(t *testing.T) {
+func (s *CharacterServiceTestSuite) TestAbilityAssignmentBug_CharacterShowsZeroAttributes() {
 	// This test demonstrates the bug where characters show 0 attributes
 	// even after ability assignment is complete
 
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockClient := mockdnd5e.NewMockClient(ctrl)
-	mockRepo := mockcharrepo.NewMockRepository(ctrl)
-
-	svc := character.NewService(&character.ServiceConfig{
-		DNDClient:  mockClient,
-		Repository: mockRepo,
-	})
-
-	ctx := context.Background()
 	characterID := "char_123"
 
 	// Character state after ability assignment but before finalization
@@ -80,38 +65,46 @@ func TestAbilityAssignmentBug_CharacterShowsZeroAttributes(t *testing.T) {
 	}
 
 	// Mock the repository Get to return our test character
-	mockRepo.EXPECT().Get(ctx, characterID).Return(charAfterAssignment, nil).Times(1)
+	s.mockRepository.EXPECT().Get(s.ctx, characterID).Return(charAfterAssignment, nil).Times(1)
 
 	// Mock the Update call
-	mockRepo.EXPECT().Update(ctx, gomock.Any()).Return(nil).Times(1)
+	s.mockRepository.EXPECT().Update(s.ctx, gomock.Any()).Return(nil).Times(1)
 
 	// Mock getting class features
-	mockClient.EXPECT().GetClassFeatures("monk", 1).Return([]*rulebook.CharacterFeature{
+	s.mockDNDClient.EXPECT().GetClassFeatures("monk", 1).Return([]*rulebook.CharacterFeature{
 		{
 			Name: "Unarmored Defense",
 			Type: rulebook.FeatureTypeClass,
 		},
 	}, nil).AnyTimes()
 
+	// Mock draft repository calls
+	s.mockDraftRepo.EXPECT().GetByCharacterID(s.ctx, characterID).Return(nil, nil) // No draft found
+
 	// Call FinalizeDraftCharacter
-	finalChar, err := svc.FinalizeDraftCharacter(ctx, characterID)
-	require.NoError(t, err)
-	require.NotNil(t, finalChar)
+	finalChar, err := s.service.FinalizeDraftCharacter(s.ctx, characterID)
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), finalChar)
 
 	// BUG VERIFICATION: Character should have attributes but doesn't
-	t.Logf("Character after finalization - Name: %s, Attributes: %d, Status: %s",
+	s.T().Logf("Character after finalization - Name: %s, Attributes: %d, Status: %s",
 		finalChar.Name, len(finalChar.Attributes), finalChar.Status)
 
 	// These assertions would FAIL with the bug
-	assert.NotEmpty(t, finalChar.Attributes, "BUG: Character has 0 attributes after finalization")
-	assert.Len(t, finalChar.Attributes, 6, "BUG: Character missing ability scores")
+	assert.NotEmpty(s.T(), finalChar.Attributes, "BUG: Character has 0 attributes after finalization")
+	assert.Len(s.T(), finalChar.Attributes, 6, "BUG: Character missing ability scores")
 
 	// Verify specific conversions with racial bonuses
 	if len(finalChar.Attributes) > 0 {
-		assert.Equal(t, 16, finalChar.Attributes[shared.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
-		assert.Equal(t, 16, finalChar.Attributes[shared.AttributeIntelligence].Score, "INT should be 15 + 1 racial")
+		assert.Equal(s.T(), 16, finalChar.Attributes[shared.AttributeDexterity].Score, "DEX should be 14 + 2 racial")
+		assert.Equal(s.T(), 16, finalChar.Attributes[shared.AttributeIntelligence].Score, "INT should be 15 + 1 racial")
 	}
 
 	// Verify the character shows as complete
-	assert.True(t, finalChar.IsComplete(), "BUG: Character shows as incomplete due to missing ability scores")
+	assert.True(s.T(), finalChar.IsComplete(), "BUG: Character shows as incomplete due to missing ability scores")
+}
+
+// Run the suite
+func TestAbilityAssignmentBugSuite(t *testing.T) {
+	suite.Run(t, new(CharacterServiceTestSuite))
 }

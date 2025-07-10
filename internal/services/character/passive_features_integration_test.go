@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
+	mockdraftrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft/mock"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -21,11 +22,13 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 
 	ctx := context.Background()
 	mockRepo := mockcharrepo.NewMockRepository(ctrl)
+	mockDraftRepo := mockdraftrepo.NewMockRepository(ctrl)
 	mockDndClient := mockdnd5e.NewMockClient(ctrl)
 
 	svc := character.NewService(&character.ServiceConfig{
-		Repository: mockRepo,
-		DNDClient:  mockDndClient,
+		Repository:      mockRepo,
+		DraftRepository: mockDraftRepo,
+		DNDClient:       mockDndClient,
 	})
 
 	t.Run("Elf character gets Perception proficiency from Keen Senses", func(t *testing.T) {
@@ -75,6 +78,11 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 		mockRepo.EXPECT().
 			Get(ctx, characterID).
 			Return(elf, nil)
+
+		// Mock draft repository - no draft exists
+		mockDraftRepo.EXPECT().
+			GetByCharacterID(ctx, characterID).
+			Return(nil, nil)
 
 		// Mock repository Update
 		mockRepo.EXPECT().
@@ -148,6 +156,11 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 			Get(ctx, characterID).
 			Return(dwarf, nil)
 
+		// Mock draft repository - no draft exists
+		mockDraftRepo.EXPECT().
+			GetByCharacterID(ctx, characterID).
+			Return(nil, nil)
+
 		// Mock repository Update
 		mockRepo.EXPECT().
 			Update(ctx, gomock.Any()).
@@ -206,6 +219,11 @@ func TestPassiveFeaturesIntegration(t *testing.T) {
 			},
 			Proficiencies: make(map[rulebook.ProficiencyType][]*rulebook.Proficiency),
 		}
+
+		// Mock draft repository for UpdateDraftCharacter
+		mockDraftRepo.EXPECT().
+			GetByCharacterID(ctx, characterID).
+			Return(nil, nil)
 
 		// Mock repository Get
 		mockRepo.EXPECT().

@@ -10,6 +10,7 @@ import (
 	"github.com/KirkDiggler/dnd-bot-discord/internal/domain/shared"
 	"testing"
 
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/require"
@@ -269,9 +270,11 @@ func TestFinalizeDraftCharacter_AddsStartingEquipment(t *testing.T) {
 
 			// Create repository and service
 			repo := characters.NewInMemoryRepository()
+			draftRepo := character_draft.NewInMemoryRepository()
 			service := character.NewService(&character.ServiceConfig{
-				Repository: repo,
-				DNDClient:  mockClient,
+				Repository:      repo,
+				DraftRepository: draftRepo,
+				DNDClient:       mockClient,
 			})
 
 			// Store the character
@@ -372,9 +375,11 @@ func TestFinalizeDraftCharacter_HandlesEquipmentErrors(t *testing.T) {
 
 	// Create repository and service
 	repo := characters.NewInMemoryRepository()
+	draftRepo := character_draft.NewInMemoryRepository()
 	service := character.NewService(&character.ServiceConfig{
-		Repository: repo,
-		DNDClient:  mockClient,
+		Repository:      repo,
+		DraftRepository: draftRepo,
+		DNDClient:       mockClient,
 	})
 
 	// Store the character

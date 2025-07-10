@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -24,27 +25,30 @@ func TestAbilityAssignmentPersistence_SimulateDiscordFlow(t *testing.T) {
 
 	mockClient := mockdnd5e.NewMockClient(ctrl)
 	mockRepo := mockcharrepo.NewMockRepository(ctrl)
+	draftRepo := character_draft.NewInMemoryRepository()
 
 	svc := character.NewService(&character.ServiceConfig{
-		DNDClient:  mockClient,
-		Repository: mockRepo,
+		DNDClient:       mockClient,
+		Repository:      mockRepo,
+		DraftRepository: draftRepo,
 	})
 
 	ctx := context.Background()
 	userID := "discord_user_123"
 	realmID := "discord_realm"
-	characterID := "char_test"
 
 	// Step 1: GetOrCreateDraftCharacter
 	// This simulates what happens when user starts character creation
+	// Note: The service now uses DraftRepository for this
 
-	// Mock the repository calls for GetOrCreateDraftCharacter
-	mockRepo.EXPECT().GetByOwnerAndRealm(ctx, userID, realmID).Return([]*character2.Character{}, nil)
+	// Mock the repository Create call that happens when creating a new draft
 	mockRepo.EXPECT().Create(ctx, gomock.Any()).Return(nil)
 
 	draft, err := svc.GetOrCreateDraftCharacter(ctx, userID, realmID)
 	require.NoError(t, err)
 	assert.Equal(t, shared.CharacterStatusDraft, draft.Status)
+
+	characterID := draft.ID
 
 	// Step 2: UpdateDraftCharacter with ability assignments
 	// This simulates the assign_abilities handler

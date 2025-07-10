@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
+	mockdraftrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft/mock"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -24,10 +25,12 @@ func TestProficiencyDuplicationBugIntegration(t *testing.T) {
 
 		mockDNDClient := mockdnd5e.NewMockClient(ctrl)
 		mockRepo := mockcharrepo.NewMockRepository(ctrl)
+		mockDraftRepo := mockdraftrepo.NewMockRepository(ctrl)
 
 		service := character.NewService(&character.ServiceConfig{
-			DNDClient:  mockDNDClient,
-			Repository: mockRepo,
+			DNDClient:       mockDNDClient,
+			Repository:      mockRepo,
+			DraftRepository: mockDraftRepo,
 		})
 
 		// Create a rogue character with base proficiencies
@@ -62,6 +65,7 @@ func TestProficiencyDuplicationBugIntegration(t *testing.T) {
 
 		// First skill selection
 		mockRepo.EXPECT().Get(ctx, "test-rogue").Return(char, nil)
+		mockDraftRepo.EXPECT().GetByCharacterID(ctx, "test-rogue").Return(nil, nil)
 		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, c *character2.Character) error {
 			// Verify skills were set correctly
 			assert.Len(t, c.Proficiencies[rulebook.ProficiencyTypeSkill], 4)
@@ -92,6 +96,7 @@ func TestProficiencyDuplicationBugIntegration(t *testing.T) {
 
 		// Second skill selection - simulating user changing their mind
 		mockRepo.EXPECT().Get(ctx, "test-rogue").Return(updatedChar, nil)
+		mockDraftRepo.EXPECT().GetByCharacterID(ctx, "test-rogue").Return(nil, nil)
 		mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, c *character2.Character) error {
 			// Verify skills were replaced, not accumulated
 			assert.Len(t, c.Proficiencies[rulebook.ProficiencyTypeSkill], 4, "Skills should be replaced, not accumulated")

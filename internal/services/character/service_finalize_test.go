@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
+	mockdraftrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft/mock"
 	mockcharrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -20,11 +21,13 @@ func TestService_FinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T)
 	defer ctrl.Finish()
 
 	mockRepo := mockcharrepo.NewMockRepository(ctrl)
+	mockDraftRepo := mockdraftrepo.NewMockRepository(ctrl)
 	mockDNDClient := mockdnd5e.NewMockClient(ctrl)
 
 	svc := character.NewService(&character.ServiceConfig{
-		DNDClient:  mockDNDClient,
-		Repository: mockRepo,
+		DNDClient:       mockDNDClient,
+		Repository:      mockRepo,
+		DraftRepository: mockDraftRepo,
 	})
 
 	ctx := context.Background()
@@ -72,6 +75,7 @@ func TestService_FinalizeDraftCharacter_ConvertsAbilityAssignments(t *testing.T)
 
 	// Mock repository calls
 	mockRepo.EXPECT().Get(ctx, characterID).Return(draftChar, nil)
+	mockDraftRepo.EXPECT().GetByCharacterID(ctx, characterID).Return(nil, nil)
 
 	// Expect update with converted attributes
 	mockRepo.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(ctx context.Context, char *character2.Character) error {
@@ -117,11 +121,13 @@ func TestService_FinalizeDraftCharacter_PreservesExistingAttributes(t *testing.T
 	defer ctrl.Finish()
 
 	mockRepo := mockcharrepo.NewMockRepository(ctrl)
+	mockDraftRepo := mockdraftrepo.NewMockRepository(ctrl)
 	mockDNDClient := mockdnd5e.NewMockClient(ctrl)
 
 	svc := character.NewService(&character.ServiceConfig{
-		DNDClient:  mockDNDClient,
-		Repository: mockRepo,
+		DNDClient:       mockDNDClient,
+		Repository:      mockRepo,
+		DraftRepository: mockDraftRepo,
 	})
 
 	ctx := context.Background()
@@ -155,6 +161,7 @@ func TestService_FinalizeDraftCharacter_PreservesExistingAttributes(t *testing.T
 
 	// Mock repository calls
 	mockRepo.EXPECT().Get(ctx, characterID).Return(draftChar, nil)
+	mockDraftRepo.EXPECT().GetByCharacterID(ctx, characterID).Return(nil, nil)
 
 	// Mock GetClassFeatures call (happens during finalization)
 

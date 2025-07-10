@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/dice/mock"
+	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/encounters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/gamesessions"
@@ -28,8 +29,10 @@ func TestCombatEndIntegration_MonstersDefeatPlayer(t *testing.T) {
 
 	// Create services
 	charRepo := characters.NewInMemoryRepository()
+	draftRepo := character_draft.NewInMemoryRepository()
 	charService := character.NewService(&character.ServiceConfig{
-		Repository: charRepo,
+		Repository:      charRepo,
+		DraftRepository: draftRepo,
 	})
 
 	sessionRepo := gamesessions.NewInMemoryRepository()
@@ -173,8 +176,10 @@ func TestCombatEndIntegration_PlayerDefeatsLastMonster(t *testing.T) {
 
 		// Create services
 		charRepo := characters.NewInMemoryRepository()
+		draftRepo := character_draft.NewInMemoryRepository()
 		charService := character.NewService(&character.ServiceConfig{
-			Repository: charRepo,
+			Repository:      charRepo,
+			DraftRepository: draftRepo,
 		})
 
 		sessionRepo := gamesessions.NewInMemoryRepository()

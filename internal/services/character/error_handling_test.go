@@ -8,6 +8,7 @@ import (
 
 	mockdnd5e "github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e/mock"
 	dnderr "github.com/KirkDiggler/dnd-bot-discord/internal/errors"
+	mockdraftrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft/mock"
 	mockrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters/mock"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/suite"
@@ -17,22 +18,25 @@ import (
 // ErrorHandlingTestSuite tests error handling and propagation
 type ErrorHandlingTestSuite struct {
 	suite.Suite
-	ctrl           *gomock.Controller
-	mockDNDClient  *mockdnd5e.MockClient
-	mockRepository *mockrepo.MockRepository
-	service        character.Service
-	ctx            context.Context
+	ctrl                *gomock.Controller
+	mockDNDClient       *mockdnd5e.MockClient
+	mockRepository      *mockrepo.MockRepository
+	mockDraftRepository *mockdraftrepo.MockRepository
+	service             character.Service
+	ctx                 context.Context
 }
 
 func (s *ErrorHandlingTestSuite) SetupTest() {
 	s.ctrl = gomock.NewController(s.T())
 	s.mockDNDClient = mockdnd5e.NewMockClient(s.ctrl)
 	s.mockRepository = mockrepo.NewMockRepository(s.ctrl)
+	s.mockDraftRepository = mockdraftrepo.NewMockRepository(s.ctrl)
 	s.ctx = context.Background()
 
 	s.service = character.NewService(&character.ServiceConfig{
-		DNDClient:  s.mockDNDClient,
-		Repository: s.mockRepository,
+		DNDClient:       s.mockDNDClient,
+		Repository:      s.mockRepository,
+		DraftRepository: s.mockDraftRepository,
 	})
 }
 
