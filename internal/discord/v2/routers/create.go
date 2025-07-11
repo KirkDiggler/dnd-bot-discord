@@ -135,6 +135,8 @@ func (r *CreateRouter) registerRoutes() {
 	r.router.ComponentFunc("select_spell", r.creationHandler.HandleSpellToggle)
 	r.router.ComponentFunc("confirm_spell_selection", r.creationHandler.HandleConfirmSpellSelection)
 	r.router.ComponentFunc("cancel_spell_selection", r.creationHandler.HandleCancelSpellSelection)
+	r.router.ComponentFunc("spell_details", r.creationHandler.HandleSpellDetails)
+	r.router.ComponentFunc("continue", r.creationHandler.HandleStepSelection)
 
 	// Future: /dnd create encounter, /dnd create item, etc.
 	// r.router.ActionFunc("encounter", r.handleCreateEncounter)

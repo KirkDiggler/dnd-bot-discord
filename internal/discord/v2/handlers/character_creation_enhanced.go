@@ -2909,6 +2909,77 @@ func (h *CharacterCreationHandler) HandleSpellToggle(ctx *core.InteractionContex
 	return h.HandleOpenSpellSelection(ctx)
 }
 
+// HandleSpellDetails shows detailed information about selected spells
+func (h *CharacterCreationHandler) HandleSpellDetails(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get character: %w", err)
+	}
+
+	// Validate inputs - never assume, always verify to prevent panics
+	if char == nil {
+		return &core.HandlerResult{
+			Response: core.NewResponse("Error: Character data is missing").AsEphemeral(),
+		}, nil
+	}
+
+	// Build detailed spell information
+	embed := builders.NewEmbed().
+		Title("🔍 Selected Spell Details").
+		Color(0x9146FF) // Purple for magic
+
+	if char.Spells == nil {
+		embed.Description("No spells selected yet.")
+	} else {
+		var details []string
+
+		// Show cantrips if any
+		if len(char.Spells.Cantrips) > 0 {
+			details = append(details, fmt.Sprintf("**Cantrips (%d):**", len(char.Spells.Cantrips)))
+			for _, cantripKey := range char.Spells.Cantrips {
+				details = append(details, fmt.Sprintf("• %s", cantripKey))
+			}
+			details = append(details, "")
+		}
+
+		// Show known spells if any
+		if len(char.Spells.KnownSpells) > 0 {
+			details = append(details, fmt.Sprintf("**Known Spells (%d):**", len(char.Spells.KnownSpells)))
+			for _, spellKey := range char.Spells.KnownSpells {
+				details = append(details, fmt.Sprintf("• %s", spellKey))
+			}
+		}
+
+		if len(details) > 0 {
+			embed.Description(strings.Join(details, "\n"))
+		} else {
+			embed.Description("No spells selected yet.")
+		}
+	}
+
+	// Add back button
+	components := builders.NewComponentBuilder(h.customIDBuilder)
+	components.SecondaryButton("⬅️ Back to Selection", "open_spell_selection", char.ID)
+
+	response := core.NewResponse("").
+		AsUpdate().
+		WithEmbeds(embed.Build()).
+		WithComponents(components.Build()...)
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
 // HandleConfirmSpellSelection confirms and saves spell selection
 func (h *CharacterCreationHandler) HandleConfirmSpellSelection(ctx *core.InteractionContext) (*core.HandlerResult, error) {
 	// Parse custom ID
