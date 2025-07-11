@@ -257,12 +257,22 @@ func (b *FlowBuilderImpl) buildClassSpecificSteps(ctx context.Context, char *cha
 	var steps []character.CreationStep
 
 	switch char.Class.Key {
+	case "bard":
+		steps = append(steps, b.buildBardSteps(ctx, char)...)
 	case "cleric":
 		steps = append(steps, b.buildClericSteps(ctx, char)...)
+	case "druid":
+		steps = append(steps, b.buildDruidSteps(ctx, char)...)
 	case "fighter":
 		steps = append(steps, b.buildFighterSteps(ctx, char)...)
 	case "ranger":
 		steps = append(steps, b.buildRangerSteps(ctx, char)...)
+	case "rogue":
+		steps = append(steps, b.buildRogueSteps(ctx, char)...)
+	case "sorcerer":
+		steps = append(steps, b.buildSorcererSteps(ctx, char)...)
+	case "warlock":
+		steps = append(steps, b.buildWarlockSteps(ctx, char)...)
 	case "wizard":
 		steps = append(steps, b.buildWizardSteps(ctx, char)...)
 		// Add other classes as needed

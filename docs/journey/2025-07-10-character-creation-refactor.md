@@ -1,6 +1,6 @@
 # Character Creation Flow Refactor Journey
 
-## January 2025
+## July 10 2025
 
 ### The Problem
 We were trying to implement a clean character creation flow that could:

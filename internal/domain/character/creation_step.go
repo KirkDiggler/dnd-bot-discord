@@ -28,6 +28,10 @@ const (
 	StepTypeSubclassSelection        CreationStepType = "subclass_selection"
 	StepTypePatronSelection          CreationStepType = "patron_selection"
 	StepTypeSorcerousOriginSelection CreationStepType = "sorcerous_origin_selection"
+
+	// Class-specific skill steps
+	StepTypeExpertiseSelection   CreationStepType = "expertise_selection"
+	StepTypeSpellsKnownSelection CreationStepType = "spells_known_selection"
 )
 
 // CreationStep represents a single step in character creation
@@ -60,13 +64,14 @@ type CreationStepResult struct {
 
 // StepUIHints provides UI customization hints for a step
 type StepUIHints struct {
-	Actions         []StepAction `json:"actions,omitempty"`         // Available actions
-	Layout          string       `json:"layout,omitempty"`          // Layout style: "default", "grid", "list"
-	Color           int          `json:"color,omitempty"`           // Discord color
-	ShowProgress    bool         `json:"show_progress"`             // Show progress indicator
-	ProgressFormat  string       `json:"progress_format,omitempty"` // Custom progress format
-	AllowSkip       bool         `json:"allow_skip"`                // Can skip this step
-	ShowRecommended bool         `json:"show_recommended"`          // Show recommended choices
+	Actions            []StepAction `json:"actions,omitempty"`         // Available actions
+	Layout             string       `json:"layout,omitempty"`          // Layout style: "default", "grid", "list"
+	Color              int          `json:"color,omitempty"`           // Discord color
+	ShowProgress       bool         `json:"show_progress"`             // Show progress indicator
+	ProgressFormat     string       `json:"progress_format,omitempty"` // Custom progress format
+	AllowSkip          bool         `json:"allow_skip"`                // Can skip this step
+	ShowRecommended    bool         `json:"show_recommended"`          // Show recommended choices
+	RequiresPagination bool         `json:"requires_pagination"`       // Too many options for single select menu
 }
 
 // StepAction represents an action available on a step

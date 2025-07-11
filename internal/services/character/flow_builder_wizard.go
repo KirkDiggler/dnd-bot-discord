@@ -22,8 +22,8 @@ func (b *FlowBuilderImpl) buildWizardSteps(ctx context.Context, char *character.
 			UIHints: &character.StepUIHints{
 				Actions: []character.StepAction{
 					{
-						ID:    "select_cantrips",
-						Label: "Choose Cantrips",
+						ID:    "open_spell_selection",
+						Label: "Browse Cantrips",
 						Style: "primary",
 						Icon:  "✨",
 					},
@@ -50,8 +50,8 @@ func (b *FlowBuilderImpl) buildWizardSteps(ctx context.Context, char *character.
 			UIHints: &character.StepUIHints{
 				Actions: []character.StepAction{
 					{
-						ID:    "select_spells",
-						Label: "Choose Spells",
+						ID:    "open_spell_selection",
+						Label: "Browse Spell List",
 						Style: "primary",
 						Icon:  "📜",
 					},

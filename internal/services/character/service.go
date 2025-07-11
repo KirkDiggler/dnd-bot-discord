@@ -104,6 +104,16 @@ type Service interface {
 
 	// StartFreshCharacterCreation gets or creates a draft and clears ability rolls
 	StartFreshCharacterCreation(ctx context.Context, userID, realmID string) (*charDomain.Character, error)
+
+	// Spell-related methods
+	// GetSpell retrieves spell information
+	GetSpell(ctx context.Context, spellKey string) (*rulebook.Spell, error)
+
+	// ListSpellsByClass retrieves all spells available to a class
+	ListSpellsByClass(ctx context.Context, classKey string) ([]*rulebook.SpellReference, error)
+
+	// ListSpellsByClassAndLevel retrieves spells available to a class at a specific level
+	ListSpellsByClassAndLevel(ctx context.Context, classKey string, level int) ([]*rulebook.SpellReference, error)
 }
 
 // CreateCharacterInput contains all data needed to create a character
@@ -1322,4 +1332,53 @@ func contains(slice []string, item string) bool {
 		}
 	}
 	return false
+}
+
+// GetSpell retrieves spell information
+func (s *service) GetSpell(ctx context.Context, spellKey string) (*rulebook.Spell, error) {
+	if spellKey == "" {
+		return nil, dnderr.InvalidArgument("spell key is required")
+	}
+
+	spell, err := s.dndClient.GetSpell(spellKey)
+	if err != nil {
+		return nil, dnderr.Wrapf(err, "failed to get spell '%s'", spellKey).
+			WithMeta("spell_key", spellKey)
+	}
+
+	return spell, nil
+}
+
+// ListSpellsByClass retrieves all spells available to a class
+func (s *service) ListSpellsByClass(ctx context.Context, classKey string) ([]*rulebook.SpellReference, error) {
+	if classKey == "" {
+		return nil, dnderr.InvalidArgument("class key is required")
+	}
+
+	spells, err := s.dndClient.ListSpellsByClass(classKey)
+	if err != nil {
+		return nil, dnderr.Wrapf(err, "failed to list spells for class '%s'", classKey).
+			WithMeta("class_key", classKey)
+	}
+
+	return spells, nil
+}
+
+// ListSpellsByClassAndLevel retrieves spells available to a class at a specific level
+func (s *service) ListSpellsByClassAndLevel(ctx context.Context, classKey string, level int) ([]*rulebook.SpellReference, error) {
+	if classKey == "" {
+		return nil, dnderr.InvalidArgument("class key is required")
+	}
+	if level < 0 || level > 9 {
+		return nil, dnderr.InvalidArgument("spell level must be between 0 and 9")
+	}
+
+	spells, err := s.dndClient.ListSpellsByClassAndLevel(classKey, level)
+	if err != nil {
+		return nil, dnderr.Wrapf(err, "failed to list level %d spells for class '%s'", level, classKey).
+			WithMeta("class_key", classKey).
+			WithMeta("spell_level", level)
+	}
+
+	return spells, nil
 }
