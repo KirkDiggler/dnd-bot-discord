@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/discord/v2/builders"
@@ -2646,11 +2647,13 @@ func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter
 
 	// Build embed
 	title := fmt.Sprintf("📜 Select Level %d Spells - Page %d/%d", spellLevel, page+1, totalPages)
-	description := fmt.Sprintf("Choose spells for your %s. You can prepare %d spells.", char.Class.Name, h.calculatePreparedSpells(char))
+	maxSpells := h.getMaxSpells(char)
+	description := fmt.Sprintf("Choose spells for your %s. You can select up to %d spells.", char.Class.Name, maxSpells)
 
 	if spellLevel == 0 {
 		title = fmt.Sprintf("✨ Select Cantrips - Page %d/%d", page+1, totalPages)
-		description = fmt.Sprintf("Choose cantrips for your %s. Cantrips can be cast at will without using spell slots.", char.Class.Name)
+		maxCantrips := h.getMaxCantrips(char)
+		description = fmt.Sprintf("Choose cantrips for your %s. You can select up to %d cantrips. Cantrips can be cast at will without using spell slots.", char.Class.Name, maxCantrips)
 	}
 
 	embed := builders.NewEmbed().
@@ -2671,12 +2674,16 @@ func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter
 	}
 
 	// Add selected spells tracker
+	selectedCount := 0
+	maxAllowed := 0
 	selectedDisplay := "*None selected yet*"
 
 	// Check if character already has cantrips/spells selected
 	// Validate Spells field exists before accessing - prevent panic
 	if char.Spells != nil {
 		if spellLevel == 0 && char.Spells.Cantrips != nil && len(char.Spells.Cantrips) > 0 {
+			selectedCount = len(char.Spells.Cantrips)
+			maxAllowed = h.getMaxCantrips(char)
 			var selected []string
 			for _, cantripKey := range char.Spells.Cantrips {
 				// Find the cantrip name
@@ -2691,6 +2698,8 @@ func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter
 				selectedDisplay = strings.Join(selected, ", ")
 			}
 		} else if spellLevel > 0 && char.Spells.KnownSpells != nil && len(char.Spells.KnownSpells) > 0 {
+			selectedCount = len(char.Spells.KnownSpells)
+			maxAllowed = h.getMaxSpells(char)
 			var selected []string
 			for _, spellKey := range char.Spells.KnownSpells {
 				// Find the spell name
@@ -2704,10 +2713,19 @@ func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter
 			if len(selected) > 0 {
 				selectedDisplay = strings.Join(selected, ", ")
 			}
+		} else {
+			// No spells selected yet, get max allowed
+			if spellLevel == 0 {
+				maxAllowed = h.getMaxCantrips(char)
+			} else {
+				maxAllowed = h.getMaxSpells(char)
+			}
 		}
 	}
 
-	embed.AddField("Selected Spells", selectedDisplay, false)
+	// Add field with count
+	fieldTitle := fmt.Sprintf("Selected Spells (%d/%d)", selectedCount, maxAllowed)
+	embed.AddField(fieldTitle, selectedDisplay, false)
 
 	// Build components
 	components := builders.NewComponentBuilder(h.customIDBuilder)
@@ -2747,14 +2765,38 @@ func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter
 			options = append(options, option)
 		}
 
-		components.SelectMenuWithTarget(
-			"Select spells...",
+		// Calculate max selections based on spell type and class
+		var maxSelections int
+
+		if spellLevel == 0 {
+			// Cantrips - limit to class cantrips known
+			maxSelections = h.getMaxCantrips(char)
+		} else {
+			// Spells - limit to spells known/prepared
+			maxSelections = h.getMaxSpells(char)
+		}
+
+		// Don't exceed the number of spells on this page
+		if maxSelections > len(pageSpells) {
+			maxSelections = len(pageSpells)
+		}
+
+		// Create select menu with proper custom ID including page number
+		placeholder := "Select spells..."
+		if spellLevel == 0 {
+			placeholder = "Select cantrips..."
+		}
+
+		// Use the new method that supports args for page number
+		components.SelectMenuWithTargetAndArgs(
+			placeholder,
 			"select_spell",
 			char.ID,
+			[]string{fmt.Sprintf("%d", page)},
 			options,
 			builders.SelectConfig{
 				MinValues: 0,
-				MaxValues: len(pageSpells),
+				MaxValues: maxSelections,
 			},
 		)
 	}
@@ -2887,12 +2929,66 @@ func (h *CharacterCreationHandler) HandleSpellToggle(ctx *core.InteractionContex
 		return nil, fmt.Errorf("failed to get current step: %w", err)
 	}
 
+	// Parse page number from custom ID if available
+	page := 0
+	if len(customID.Args) > 0 {
+		if p, parseErr := strconv.Atoi(customID.Args[0]); parseErr == nil {
+			page = p
+		}
+	}
+
+	// Get all spells for the class to find spell names and current page spells
+	spellLevel := 1 // Default to level 1 spells
+	if step.Type == domainCharacter.StepTypeCantripsSelection {
+		spellLevel = 0
+	}
+
+	allSpells, err := h.service.ListSpellsByClassAndLevel(ctx.Context, char.Class.Key, spellLevel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get spell list: %w", err)
+	}
+
+	// Build a map of spells on the current page
+	const spellsPerPage = 10
+	startIdx := page * spellsPerPage
+	endIdx := startIdx + spellsPerPage
+	if endIdx > len(allSpells) {
+		endIdx = len(allSpells)
+	}
+
+	currentPageSpellKeys := make(map[string]bool)
+	for i := startIdx; i < endIdx; i++ {
+		currentPageSpellKeys[allSpells[i].Key] = true
+	}
+
 	// Update character spell selection based on step type
 	switch step.Type {
 	case domainCharacter.StepTypeCantripsSelection:
-		char.Spells.Cantrips = selectedSpells
+		// Remove any deselected spells from the current page
+		newCantrips := []string{}
+		for _, existing := range char.Spells.Cantrips {
+			// Keep spells from other pages
+			if !currentPageSpellKeys[existing] {
+				newCantrips = append(newCantrips, existing)
+			}
+		}
+		// Add the newly selected spells from this page
+		newCantrips = append(newCantrips, selectedSpells...)
+		char.Spells.Cantrips = newCantrips
+
 	case domainCharacter.StepTypeSpellbookSelection, domainCharacter.StepTypeSpellSelection:
-		char.Spells.KnownSpells = selectedSpells
+		// Remove any deselected spells from the current page
+		newSpells := []string{}
+		for _, existing := range char.Spells.KnownSpells {
+			// Keep spells from other pages
+			if !currentPageSpellKeys[existing] {
+				newSpells = append(newSpells, existing)
+			}
+		}
+		// Add the newly selected spells from this page
+		newSpells = append(newSpells, selectedSpells...)
+		char.Spells.KnownSpells = newSpells
+
 	default:
 		return nil, core.NewValidationError("Invalid step for spell selection")
 	}
@@ -2905,8 +3001,26 @@ func (h *CharacterCreationHandler) HandleSpellToggle(ctx *core.InteractionContex
 		return nil, fmt.Errorf("failed to save character: %w", err)
 	}
 
-	// Return to the spell selection page with updated selection
-	return h.HandleOpenSpellSelection(ctx)
+	// Return to the same page of spell selection with updated selection
+	// Extract page from the custom ID if present
+	currentPage := 0
+	if len(customID.Args) > 0 {
+		if p, parseErr := strconv.Atoi(customID.Args[0]); parseErr == nil {
+			currentPage = p
+		}
+	}
+
+	// Get spell refs to rebuild the page
+	spellRefs, err := h.service.ListSpellsByClassAndLevel(ctx.Context, char.Class.Key, spellLevel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get spells: %w", err)
+	}
+
+	// Build and return the updated page
+	response := h.buildSpellSelectionPage(char, spellRefs, spellLevel, currentPage, 10)
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
 }
 
 // HandleSpellDetails shows detailed information about selected spells
@@ -3046,6 +3160,57 @@ func (h *CharacterCreationHandler) HandleConfirmSpellSelection(ctx *core.Interac
 	return &core.HandlerResult{
 		Response: response,
 	}, nil
+}
+
+// getMaxCantrips returns the maximum number of cantrips for the character's class
+func (h *CharacterCreationHandler) getMaxCantrips(char *domainCharacter.Character) int {
+	if char.Class == nil {
+		return 0
+	}
+
+	// Get cantrips known for this class at level 1
+	switch char.Class.Key {
+	case "wizard":
+		return 3
+	case "cleric":
+		return 3
+	case "druid":
+		return 2
+	case "bard":
+		return 2
+	case "sorcerer":
+		return 4
+	case "warlock":
+		return 2
+	default:
+		return 0
+	}
+}
+
+// getMaxSpells returns the maximum number of spells for the character's class
+func (h *CharacterCreationHandler) getMaxSpells(char *domainCharacter.Character) int {
+	if char.Class == nil {
+		return 0
+	}
+
+	// Get spells known for this class at level 1
+	switch char.Class.Key {
+	case "wizard":
+		return 6 // Wizards start with 6 spells in spellbook
+	case "sorcerer":
+		return 2 // Sorcerers know 2 spells at level 1
+	case "bard":
+		return 4 // Bards know 4 spells at level 1
+	case "ranger":
+		return 0 // Rangers don't get spells until level 2
+	case "warlock":
+		return 2 // Warlocks know 2 spells at level 1
+	case "cleric", "druid", "paladin":
+		// These classes prepare spells - use prepared spell calculation
+		return h.calculatePreparedSpells(char)
+	default:
+		return 0
+	}
 }
 
 // calculatePreparedSpells calculates how many spells a character can prepare

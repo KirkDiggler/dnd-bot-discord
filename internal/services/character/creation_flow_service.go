@@ -344,15 +344,84 @@ func (s *CreationFlowServiceImpl) hasUserSelectedEquipment(char *character.Chara
 }
 
 func (s *CreationFlowServiceImpl) hasSelectedCantrips(char *character.Character) bool {
-	// TODO: Implement when we have spell tracking
-	// For now, return false to show the step
-	return false
+	// Check if character has selected required cantrips
+	if char.Spells == nil {
+		return false
+	}
+
+	// Get required number of cantrips for the class/level
+	requiredCantrips := s.getRequiredCantrips(char)
+	if requiredCantrips == 0 {
+		return true // No cantrips required
+	}
+
+	// Check if enough cantrips have been selected
+	return len(char.Spells.Cantrips) >= requiredCantrips
+}
+
+func (s *CreationFlowServiceImpl) getRequiredCantrips(char *character.Character) int {
+	if char.Class == nil {
+		return 0
+	}
+
+	// Get cantrips known for this class at level 1
+	// This should ideally come from the class data
+	switch char.Class.Key {
+	case "wizard":
+		return 3
+	case "cleric":
+		return 3
+	case "druid":
+		return 2
+	case "bard":
+		return 2
+	case "sorcerer":
+		return 4
+	case "warlock":
+		return 2
+	default:
+		return 0
+	}
 }
 
 func (s *CreationFlowServiceImpl) hasSelectedSpells(char *character.Character) bool {
-	// TODO: Implement when we have spell tracking
-	// For now, return false to show the step
-	return false
+	// Check if character has selected required spells
+	if char.Spells == nil {
+		return false
+	}
+
+	// Get required number of spells for the class/level
+	requiredSpells := s.getRequiredSpells(char)
+	if requiredSpells == 0 {
+		return true // No spells required
+	}
+
+	// Check if enough spells have been selected
+	return len(char.Spells.KnownSpells) >= requiredSpells
+}
+
+func (s *CreationFlowServiceImpl) getRequiredSpells(char *character.Character) int {
+	if char.Class == nil {
+		return 0
+	}
+
+	// Get spells known for this class at level 1
+	switch char.Class.Key {
+	case "wizard":
+		return 6 // Wizards start with 6 spells in spellbook
+	case "sorcerer":
+		return 2 // Sorcerers know 2 spells at level 1
+	case "bard":
+		return 4 // Bards know 4 spells at level 1
+	case "ranger":
+		return 0 // Rangers don't get spells until level 2
+	case "warlock":
+		return 2 // Warlocks know 2 spells at level 1
+	case "cleric", "druid", "paladin":
+		return 0 // These classes prepare spells, not learn them
+	default:
+		return 0
+	}
 }
 
 func (s *CreationFlowServiceImpl) hasSelectedSubclass(char *character.Character) bool {
@@ -377,6 +446,10 @@ func (s *CreationFlowServiceImpl) applyStepResult(ctx context.Context, character
 		return s.applySkillSelection(char, result)
 	case character.StepTypeLanguageSelection:
 		return s.applyLanguageSelection(char, result)
+	case character.StepTypeCantripsSelection:
+		return s.applyCantripSelection(char, result)
+	case character.StepTypeSpellSelection, character.StepTypeSpellbookSelection, character.StepTypeSpellsKnownSelection:
+		return s.applySpellSelection(char, result)
 	// Add other step result handlers as needed
 	default:
 		// For steps handled by existing handlers, we don't need to do anything here
@@ -515,4 +588,53 @@ func isSpellcastingClass(classKey string) bool {
 		"artificer": true,
 	}
 	return spellcastingClasses[classKey]
+}
+
+func (s *CreationFlowServiceImpl) applyCantripSelection(char *character.Character, result *character.CreationStepResult) error {
+	// Get a fresh copy of the character to ensure we have the latest state
+	freshChar, err := s.characterService.GetByID(char.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get character: %w", err)
+	}
+
+	// Initialize spells if needed
+	if freshChar.Spells == nil {
+		freshChar.Spells = &character.SpellList{
+			Cantrips:       []string{},
+			KnownSpells:    []string{},
+			PreparedSpells: []string{},
+		}
+	}
+
+	// Set the selected cantrips
+	freshChar.Spells.Cantrips = result.Selections
+
+	// Save the character
+	return s.characterService.UpdateEquipment(freshChar)
+}
+
+func (s *CreationFlowServiceImpl) applySpellSelection(char *character.Character, result *character.CreationStepResult) error {
+	// Get a fresh copy of the character to ensure we have the latest state
+	freshChar, err := s.characterService.GetByID(char.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get character: %w", err)
+	}
+
+	// Initialize spells if needed
+	if freshChar.Spells == nil {
+		freshChar.Spells = &character.SpellList{
+			Cantrips:       []string{},
+			KnownSpells:    []string{},
+			PreparedSpells: []string{},
+		}
+	}
+
+	// Set the selected spells based on step type
+	switch result.StepType {
+	case character.StepTypeSpellSelection, character.StepTypeSpellbookSelection, character.StepTypeSpellsKnownSelection:
+		freshChar.Spells.KnownSpells = result.Selections
+	}
+
+	// Save the character
+	return s.characterService.UpdateEquipment(freshChar)
 }

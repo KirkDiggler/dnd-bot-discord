@@ -125,6 +125,18 @@ func (b *ComponentBuilder) SelectMenuWithTarget(placeholder, action, target stri
 	return b.selectMenuWithCustomID(placeholder, customID, options, config...)
 }
 
+// SelectMenuWithTargetAndArgs adds a select menu with a target ID and additional arguments
+func (b *ComponentBuilder) SelectMenuWithTargetAndArgs(placeholder, action, target string, args []string, options []SelectOption, config ...SelectConfig) *ComponentBuilder {
+	customID := ""
+	if b.customIDBuilder != nil {
+		customID = b.customIDBuilder.Build(action).WithTarget(target).WithArgs(args...).MustEncode()
+	} else {
+		customID = core.NewCustomID("default", action).WithTarget(target).WithArgs(args...).MustEncode()
+	}
+
+	return b.selectMenuWithCustomID(placeholder, customID, options, config...)
+}
+
 // selectMenuWithCustomID is the internal method that builds the select menu
 func (b *ComponentBuilder) selectMenuWithCustomID(placeholder, customID string, options []SelectOption, config ...SelectConfig) *ComponentBuilder {
 	// Convert options
