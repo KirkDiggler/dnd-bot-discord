@@ -163,6 +163,7 @@ type UpdateDraftInput struct {
 	Proficiencies      []string
 	Equipment          []string
 	Name               *string
+	Spells             *charDomain.SpellList // Spell selection for spellcasters
 }
 
 // SimplifiedChoice represents a choice in a UI-friendly format
@@ -820,6 +821,11 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 		// Recalculate AC in case equipment affects it
 		char.AC = s.acCalculator.Calculate(char)
 
+	}
+
+	// Update spells if provided
+	if updates.Spells != nil {
+		char.Spells = updates.Spells
 	}
 
 	// Save changes

@@ -2843,10 +2843,70 @@ func (h *CharacterCreationHandler) HandleSpellPageChange(ctx *core.InteractionCo
 
 // HandleSpellToggle handles spell selection/deselection
 func (h *CharacterCreationHandler) HandleSpellToggle(ctx *core.InteractionContext) (*core.HandlerResult, error) {
-	// For now, just acknowledge the selection
-	return &core.HandlerResult{
-		Response: core.NewResponse("Spell selection noted! (Not yet implemented)").AsUpdate(),
-	}, nil
+	// Parse custom ID to get character ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get character: %w", err)
+	}
+
+	// Validate inputs - never assume, always verify to prevent panics
+	if char == nil {
+		return &core.HandlerResult{
+			Response: core.NewResponse("Error: Character data is missing").AsEphemeral(),
+		}, nil
+	}
+
+	// Ensure character has spell list initialized
+	if char.Spells == nil {
+		char.Spells = &domainCharacter.SpellList{
+			Cantrips:       []string{},
+			KnownSpells:    []string{},
+			PreparedSpells: []string{},
+		}
+	}
+
+	// Get selected spell keys from the select menu
+	interaction := ctx.Interaction
+	if interaction.MessageComponentData().ComponentType != discordgo.SelectMenuComponent {
+		return nil, core.NewValidationError("Invalid component type")
+	}
+
+	selectedSpells := interaction.MessageComponentData().Values
+
+	// Determine if we're selecting cantrips or spells based on current step
+	step, err := h.flowService.GetCurrentStep(ctx.Context, char.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current step: %w", err)
+	}
+
+	// Update character spell selection based on step type
+	switch step.Type {
+	case domainCharacter.StepTypeCantripsSelection:
+		char.Spells.Cantrips = selectedSpells
+	case domainCharacter.StepTypeSpellbookSelection, domainCharacter.StepTypeSpellSelection:
+		char.Spells.KnownSpells = selectedSpells
+	default:
+		return nil, core.NewValidationError("Invalid step for spell selection")
+	}
+
+	// Save the character with updated spell selection using UpdateDraftCharacter
+	_, err = h.service.UpdateDraftCharacter(ctx.Context, char.ID, &characterService.UpdateDraftInput{
+		Spells: char.Spells,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to save character: %w", err)
+	}
+
+	// Return to the spell selection page with updated selection
+	return h.HandleOpenSpellSelection(ctx)
 }
 
 // HandleConfirmSpellSelection confirms and saves spell selection
