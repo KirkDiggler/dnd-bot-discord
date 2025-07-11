@@ -128,6 +128,25 @@ Implement Option 1 with these benefits:
 
 Maybe someday: Call of Cthulhu, Gamma World, or other systems. But not today.
 
+## The Bigger Picture: Bot as Prototype
+
+**Late Night Realization**: This bot is actually a prototype for the rpg-toolkit in more ways than one.
+
+> "We're building a D&D 5e bot, not a universal RPG framework" ... "we are implementing an rpg-toolkit aspiring to be universal. you remember that right?"
+
+The architecture we're discovering here matters because:
+
+1. **Clean Boundaries Enable Extraction** - If our rulebook layer has a clean interface and single concern, it can be broken out into the toolkit
+2. **Discord Bot = Test Bed** - We're not just building a bot, we're prototyping the patterns that will power a universal RPG toolkit
+3. **Prove It Works First** - Get D&D 5e working perfectly in Discord, then extract the universal patterns
+
+This changes the stakes: The step handler registry pattern isn't just about organizing Discord code. It's about discovering the right abstractions between:
+- Universal character creation concepts (what the toolkit will provide)
+- Rulebook-specific steps (what each game system defines)
+- UI-specific rendering (what each platform implements)
+
+The bot is our laboratory for finding these boundaries.
+
 ## Next Steps
 
 1. Implement step handler registry pattern
