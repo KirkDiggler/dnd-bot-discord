@@ -2506,38 +2506,24 @@ func (h *CharacterCreationHandler) buildUIHintsResponse(
 		}
 
 		// Build button with appropriate style
+		// Prepare parameters: char.ID + any action-specific parameters from flow service
+		buttonArgs := []string{char.ID}
+		buttonArgs = append(buttonArgs, action.Parameters...)
+
+		buttonLabel := fmt.Sprintf("%s %s", action.Icon, action.Label)
+
 		switch action.Style {
 		case "primary":
-			components.PrimaryButton(
-				fmt.Sprintf("%s %s", action.Icon, action.Label),
-				action.ID,
-				char.ID,
-			)
+			components.PrimaryButton(buttonLabel, action.ID, buttonArgs...)
 		case "secondary":
-			components.SecondaryButton(
-				fmt.Sprintf("%s %s", action.Icon, action.Label),
-				action.ID,
-				char.ID,
-			)
+			components.SecondaryButton(buttonLabel, action.ID, buttonArgs...)
 		case "success":
-			components.SuccessButton(
-				fmt.Sprintf("%s %s", action.Icon, action.Label),
-				action.ID,
-				char.ID,
-			)
+			components.SuccessButton(buttonLabel, action.ID, buttonArgs...)
 		case "danger":
-			components.DangerButton(
-				fmt.Sprintf("%s %s", action.Icon, action.Label),
-				action.ID,
-				char.ID,
-			)
+			components.DangerButton(buttonLabel, action.ID, buttonArgs...)
 		default:
 			// Default to secondary
-			components.SecondaryButton(
-				fmt.Sprintf("%s %s", action.Icon, action.Label),
-				action.ID,
-				char.ID,
-			)
+			components.SecondaryButton(buttonLabel, action.ID, buttonArgs...)
 		}
 	}
 
