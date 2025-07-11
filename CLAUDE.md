@@ -129,6 +129,56 @@
 - Event-Driven: Would emit "AttackComplete" event, Martial Arts feature listens and enables bonus action
 - Document the friction points and benefits we discover
 
+## Architecture Insights
+
+### Character Creation Step Registry (ADR-001)
+The flow service defines WHAT steps exist, Discord defines HOW to render them:
+```go
+// Rulebook declares step types
+var dnd5e.CreationStepTypes = []character.CreationStepType{
+    character.StepTypeRaceSelection,
+    character.StepTypeClassSelection,
+    // ... etc
+}
+
+// Discord validates complete coverage at startup
+for _, stepType := range dnd5e.CreationStepTypes {
+    if _, ok := h.stepHandlers[stepType]; !ok {
+        return nil, fmt.Errorf("no handler for step type: %s", stepType)
+    }
+}
+```
+
+### V2 Handler System
+- Domain-based routing: `/dnd create character` → "create" domain → CharacterCreationHandler
+- Custom ID format: `domain:action:target:args...`
+- Modular handlers registered in routers
+- See `/internal/discord/v2/README.md` for details
+
+### RPG Toolkit Vision
+This bot is a prototype for a universal rpg-toolkit:
+- Clean boundaries enable future extraction
+- Discord bot serves as test bed for patterns
+- Architecture decisions have higher stakes
+- Located at `/internal/adapters/rpgtoolkit`
+
+### Pagination Pattern for Discord's 25-Option Limit
+When step options exceed Discord's select menu limit:
+```go
+// Step declares it needs pagination
+UIHints: &character.StepUIHints{
+    RequiresPagination: true,
+    Actions: []character.StepAction{{
+        ID:    "open_spell_selection",
+        Label: "Browse Spells",
+        Style: "primary",
+    }},
+}
+
+// Handler implements paginated UI
+const itemsPerPage = 10
+response := h.buildSpellSelectionPage(char, spells, page, itemsPerPage)
+```
 ### Known Issues (Fix as we touch the code)
 - ~10 unchecked errors (errcheck)
 - Shadow variable declarations
