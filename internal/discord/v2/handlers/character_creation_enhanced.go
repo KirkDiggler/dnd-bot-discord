@@ -2580,6 +2580,18 @@ func (h *CharacterCreationHandler) HandleOpenSpellSelection(ctx *core.Interactio
 		return nil, core.NewValidationError("No class selected")
 	}
 
+	// Ensure Spells field is initialized for spellcasting classes
+	// This handles characters created before SpellList initialization was added
+	if char.Spells == nil && isSpellcastingClass(char.Class.Key) {
+		char.Spells = &domainCharacter.SpellList{
+			Cantrips:       []string{},
+			KnownSpells:    []string{},
+			PreparedSpells: []string{},
+		}
+		// Note: This is a temporary fix for existing characters
+		// New characters should have Spells initialized during class selection
+	}
+
 	// Determine spell level based on the current step
 	spellLevel := 1
 
@@ -2880,4 +2892,20 @@ func (h *CharacterCreationHandler) calculatePreparedSpells(char *domainCharacter
 	}
 
 	return prepared
+}
+
+// isSpellcastingClass returns true if the given class key represents a spellcasting class
+func isSpellcastingClass(classKey string) bool {
+	spellcastingClasses := map[string]bool{
+		"wizard":    true,
+		"cleric":    true,
+		"sorcerer":  true,
+		"warlock":   true,
+		"bard":      true,
+		"druid":     true,
+		"paladin":   true,
+		"ranger":    true,
+		"artificer": true,
+	}
+	return spellcastingClasses[classKey]
 }
