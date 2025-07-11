@@ -2990,19 +2990,58 @@ func (h *CharacterCreationHandler) HandleConfirmSpellSelection(ctx *core.Interac
 
 	characterID := customID.Target
 
-	// For now, just continue with character creation
-	// In the future, this will save the selected spells
+	// Get character to check current step
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get character: %w", err)
+	}
 
-	// Build a response that triggers the continue action
-	response := core.NewResponse("Spell selection saved! Continuing character creation...").
-		AsUpdate()
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
 
-	// Add a continue button to navigate back
-	components := builders.NewComponentBuilder(h.customIDBuilder)
-	components.NewRow()
-	components.PrimaryButton("Continue", "continue", characterID)
+	// Get current step to determine spell type
+	currentStep, err := h.flowService.GetCurrentStep(ctx.Context, char.ID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
 
-	response.WithComponents(components.Build()...)
+	// Create step result based on the current step type
+	result := &domainCharacter.CreationStepResult{
+		StepType: currentStep.Type,
+	}
+
+	// Add the spell selections as metadata
+	if char.Spells != nil {
+		switch currentStep.Type {
+		case domainCharacter.StepTypeCantripsSelection:
+			result.Selections = char.Spells.Cantrips
+		case domainCharacter.StepTypeSpellbookSelection, domainCharacter.StepTypeSpellSelection:
+			result.Selections = char.Spells.KnownSpells
+		}
+	}
+
+	// Process the step result to advance to next step
+	nextStep, err := h.flowService.ProcessStepResult(ctx.Context, char.ID, result)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Re-fetch character to get updated state
+	char, err = h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Build the response for the next step
+	response, err := h.buildEnhancedStepResponse(char, nextStep)
+	if err != nil {
+		return nil, err
+	}
+
+	response.Ephemeral = true
+	response.Update = true
 
 	return &core.HandlerResult{
 		Response: response,
