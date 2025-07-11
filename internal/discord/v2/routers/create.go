@@ -123,6 +123,12 @@ func (r *CreateRouter) registerRoutes() {
 	r.router.ComponentFunc("quick_build", r.creationHandler.HandleStepSelection)
 	r.router.ComponentFunc("select_tradition", r.creationHandler.HandleStepSelection)
 
+	// Spell selection handlers (paginated)
+	r.router.ComponentFunc("open_spell_selection", r.creationHandler.HandleOpenSpellSelection)
+	r.router.ComponentFunc("spell_page", r.creationHandler.HandleSpellPageChange)
+	r.router.ComponentFunc("select_spell", r.creationHandler.HandleSpellToggle)
+	r.router.ComponentFunc("confirm_spell_selection", r.creationHandler.HandleConfirmSpellSelection)
+
 	// Future: /dnd create encounter, /dnd create item, etc.
 	// r.router.ActionFunc("encounter", r.handleCreateEncounter)
 	// r.router.ActionFunc("item", r.handleCreateItem)

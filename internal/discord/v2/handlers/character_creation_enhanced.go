@@ -2554,3 +2554,252 @@ func (h *CharacterCreationHandler) buildUIHintsResponse(
 
 	return response, nil
 }
+
+// HandleOpenSpellSelection opens the paginated spell selection interface
+func (h *CharacterCreationHandler) HandleOpenSpellSelection(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character to determine class
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get character: %w", err)
+	}
+
+	if char.Class == nil {
+		return nil, core.NewValidationError("No class selected")
+	}
+
+	// Determine spell level based on the current step
+	// For now, assume level 1 spells (we'll enhance this later)
+	spellLevel := 1
+
+	// Get spells for the class and level
+	spellRefs, err := h.service.ListSpellsByClassAndLevel(ctx.Context, char.Class.Key, spellLevel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get spells: %w", err)
+	}
+
+	// Build paginated spell list
+	const spellsPerPage = 10
+	page := 0
+
+	response := h.buildSpellSelectionPage(char, spellRefs, spellLevel, page, spellsPerPage)
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
+// buildSpellSelectionPage builds a page of the spell selection interface
+func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter.Character, spells []*rulebook.SpellReference, spellLevel, page, perPage int) *core.Response {
+	// Calculate pagination
+	totalSpells := len(spells)
+	totalPages := (totalSpells + perPage - 1) / perPage
+	startIdx := page * perPage
+	endIdx := startIdx + perPage
+	if endIdx > totalSpells {
+		endIdx = totalSpells
+	}
+
+	// Build embed
+	embed := builders.NewEmbed().
+		Title(fmt.Sprintf("📜 Select Level %d Spells - Page %d/%d", spellLevel, page+1, totalPages)).
+		Description(fmt.Sprintf("Choose spells for your %s. You can prepare %d spells.", char.Class.Name, h.calculatePreparedSpells(char))).
+		Color(0x9146FF) // Purple for magic
+
+	// Add spell list
+	var spellList []string
+	pageSpells := spells[startIdx:endIdx]
+	for i, spell := range pageSpells {
+		num := startIdx + i + 1
+		spellList = append(spellList, fmt.Sprintf("**%d.** %s", num, spell.Name))
+	}
+
+	if len(spellList) > 0 {
+		embed.AddField("Available Spells", strings.Join(spellList, "\n"), false)
+	}
+
+	// Add selected spells tracker (placeholder for now)
+	embed.AddField("Selected Spells", "*None selected yet*", false)
+
+	// Build components
+	components := builders.NewComponentBuilder(h.customIDBuilder)
+
+	// Spell selection menu
+	if len(pageSpells) > 0 {
+		components.NewRow()
+
+		var options []builders.SelectOption
+		for i, spell := range pageSpells {
+			num := startIdx + i + 1
+			options = append(options, builders.SelectOption{
+				Label:       spell.Name,
+				Value:       spell.Key,
+				Description: fmt.Sprintf("#%d", num),
+			})
+		}
+
+		components.SelectMenuWithTarget(
+			"Select spells...",
+			"select_spell",
+			char.ID,
+			options,
+			builders.SelectConfig{
+				MinValues: 0,
+				MaxValues: len(pageSpells),
+			},
+		)
+	}
+
+	// Navigation buttons
+	components.NewRow()
+
+	// Previous button
+	if page > 0 {
+		components.PrimaryButton("⬅️ Previous", "spell_page", char.ID, fmt.Sprintf("%d", page-1))
+	} else {
+		components.DisabledButton("⬅️ Previous", discordgo.SecondaryButton)
+	}
+
+	// Page indicator
+	components.DisabledButton(fmt.Sprintf("Page %d/%d", page+1, totalPages), discordgo.SecondaryButton)
+
+	// Next button
+	if page < totalPages-1 {
+		components.PrimaryButton("➡️ Next", "spell_page", char.ID, fmt.Sprintf("%d", page+1))
+	} else {
+		components.DisabledButton("➡️ Next", discordgo.SecondaryButton)
+	}
+
+	// Action buttons
+	components.NewRow()
+	components.SecondaryButton("🔍 View Details", "spell_details", char.ID)
+	components.SuccessButton("✅ Confirm Selection", "confirm_spell_selection", char.ID)
+
+	// Back to character creation
+	components.NewRow()
+	components.DangerButton("❌ Cancel", "continue", char.ID)
+
+	return core.NewResponse("").
+		WithEmbeds(embed.Build()).
+		WithComponents(components.Build()...).
+		AsUpdate()
+}
+
+// HandleSpellPageChange handles pagination
+func (h *CharacterCreationHandler) HandleSpellPageChange(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+	pageStr := ""
+	if len(customID.Args) > 0 {
+		pageStr = customID.Args[0]
+	}
+
+	page := 0
+	if pageStr != "" {
+		if _, scanErr := fmt.Sscanf(pageStr, "%d", &page); scanErr != nil {
+			// Default to page 0 on parse error
+			page = 0
+		}
+	}
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get character: %w", err)
+	}
+
+	// Get spells (hardcoded level 1 for now)
+	spellLevel := 1
+	spellRefs, err := h.service.ListSpellsByClassAndLevel(ctx.Context, char.Class.Key, spellLevel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get spells: %w", err)
+	}
+
+	response := h.buildSpellSelectionPage(char, spellRefs, spellLevel, page, 10)
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
+// HandleSpellToggle handles spell selection/deselection
+func (h *CharacterCreationHandler) HandleSpellToggle(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// For now, just acknowledge the selection
+	return &core.HandlerResult{
+		Response: core.NewResponse("Spell selection noted! (Not yet implemented)").AsUpdate(),
+	}, nil
+}
+
+// HandleConfirmSpellSelection confirms and saves spell selection
+func (h *CharacterCreationHandler) HandleConfirmSpellSelection(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// For now, just continue with character creation
+	// In the future, this will save the selected spells
+
+	// Build a response that triggers the continue action
+	response := core.NewResponse("Spell selection saved! Continuing character creation...").
+		AsUpdate()
+
+	// Add a continue button to navigate back
+	components := builders.NewComponentBuilder(h.customIDBuilder)
+	components.NewRow()
+	components.PrimaryButton("Continue", "continue", characterID)
+
+	response.WithComponents(components.Build()...)
+
+	return &core.HandlerResult{
+		Response: response,
+	}, nil
+}
+
+// calculatePreparedSpells calculates how many spells a character can prepare
+func (h *CharacterCreationHandler) calculatePreparedSpells(char *domainCharacter.Character) int {
+	if char.Class == nil {
+		return 0
+	}
+
+	// Base calculation for most classes: casting ability modifier + level
+	// For now, use a simplified version
+	level := 1
+	if char.Level > 0 {
+		level = char.Level
+	}
+
+	// Get the primary ability modifier
+	modifier := 0
+	switch char.Class.Key {
+	case "wizard", "artificer":
+		if intScore, ok := char.Attributes[shared.AttributeIntelligence]; ok {
+			modifier = (intScore.Score - 10) / 2
+		}
+	case "cleric", "druid", "ranger":
+		if wisScore, ok := char.Attributes[shared.AttributeWisdom]; ok {
+			modifier = (wisScore.Score - 10) / 2
+		}
+	}
+
+	// Minimum 1 spell
+	prepared := modifier + level
+	if prepared < 1 {
+		prepared = 1
+	}
+
+	return prepared
+}
