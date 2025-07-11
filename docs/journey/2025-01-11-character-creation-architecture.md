@@ -21,32 +21,38 @@ The flow service should be pure domain logic: "these are the D&D 5e character cr
 
 ### Option 1: Step Type Registry Pattern (Pragmatic Winner ✅)
 ```go
+// In internal/domain/rulebook/dnd5e/creation_steps.go
+package dnd5e
+
 // Each rulebook declares its step types
-var DnD5eStepTypes = []StepType{
-    StepTypeRaceSelection,
-    StepTypeClassSelection,
-    StepTypeAbilityScoreGeneration,
-    StepTypeCantripsSelection,
-    StepTypeSpellbookSelection,
+var CreationStepTypes = []character.CreationStepType{
+    character.StepTypeRaceSelection,
+    character.StepTypeClassSelection,
+    character.StepTypeAbilityScoreGeneration,
+    character.StepTypeCantripsSelection,
+    character.StepTypeSpellbookSelection,
 }
+
+// In internal/discord/v2/handlers/character_creation_enhanced.go
+import "github.com/KirkDiggler/dnd-bot-discord/internal/domain/rulebook/dnd5e"
 
 // Discord handler validates coverage at startup
 type CharacterCreationHandler struct {
-    stepHandlers map[StepType]StepHandlerFunc
+    stepHandlers map[character.CreationStepType]StepHandlerFunc
 }
 
 func NewCharacterCreationHandler(cfg *Config) (*CharacterCreationHandler, error) {
     h := &CharacterCreationHandler{
-        stepHandlers: make(map[StepType]StepHandlerFunc),
+        stepHandlers: make(map[character.CreationStepType]StepHandlerFunc),
     }
     
     // Register all handlers explicitly
-    h.stepHandlers[StepTypeRaceSelection] = h.handleRaceSelection
-    h.stepHandlers[StepTypeClassSelection] = h.handleClassSelection
-    h.stepHandlers[StepTypeCantripsSelection] = h.handleSpellSelection
+    h.stepHandlers[character.StepTypeRaceSelection] = h.handleRaceSelection
+    h.stepHandlers[character.StepTypeClassSelection] = h.handleClassSelection
+    h.stepHandlers[character.StepTypeCantripsSelection] = h.handleSpellSelection
     
-    // Validate we have handlers for all step types
-    for _, stepType := range DnD5eStepTypes {
+    // Validate we have handlers for all D&D 5e step types
+    for _, stepType := range dnd5e.CreationStepTypes {
         if _, ok := h.stepHandlers[stepType]; !ok {
             return nil, fmt.Errorf("no handler registered for step type: %s", stepType)
         }
