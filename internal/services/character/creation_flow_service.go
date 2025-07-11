@@ -474,5 +474,45 @@ func (s *CreationFlowServiceImpl) applyClassSelection(ctx context.Context, char 
 		return fmt.Errorf("failed to update character class: %w", err)
 	}
 
+	// Initialize Spells field for spellcasting classes
+	if isSpellcastingClass(classKey) {
+		// Get the updated character
+		updatedChar, err := s.characterService.GetByID(char.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get updated character: %w", err)
+		}
+
+		// Initialize Spells field if not already present
+		if updatedChar.Spells == nil {
+			updatedChar.Spells = &character.SpellList{
+				Cantrips:       []string{},
+				KnownSpells:    []string{},
+				PreparedSpells: []string{},
+			}
+
+			// Save the updated character with initialized Spells
+			err = s.characterService.UpdateEquipment(updatedChar)
+			if err != nil {
+				return fmt.Errorf("failed to initialize spells for character: %w", err)
+			}
+		}
+	}
+
 	return nil
+}
+
+// isSpellcastingClass returns true if the given class key represents a spellcasting class
+func isSpellcastingClass(classKey string) bool {
+	spellcastingClasses := map[string]bool{
+		"wizard":    true,
+		"cleric":    true,
+		"sorcerer":  true,
+		"warlock":   true,
+		"bard":      true,
+		"druid":     true,
+		"paladin":   true,
+		"ranger":    true,
+		"artificer": true,
+	}
+	return spellcastingClasses[classKey]
 }
