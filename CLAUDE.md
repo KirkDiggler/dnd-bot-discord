@@ -131,7 +131,7 @@
 
 ## Architecture Insights
 
-### Character Creation Step Registry (ADR-001)
+### Character Creation Step Registry (ADR-002)
 The flow service defines WHAT steps exist, Discord defines HOW to render them:
 ```go
 // Rulebook declares step types
