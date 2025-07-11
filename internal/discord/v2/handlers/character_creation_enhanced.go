@@ -47,7 +47,7 @@ func (h *CharacterCreationHandler) buildEnhancedStepResponse(char *domainCharact
 		return h.buildUIHintsResponse(char, step, embed, components)
 	}
 
-	// Otherwise fall back to hardcoded UI
+	// Build UI based on step type
 	switch step.Type {
 	case domainCharacter.StepTypeRaceSelection:
 		embed.Description("Choose your character's race. Each race provides unique bonuses and traits that will shape your character's abilities.")
@@ -106,7 +106,7 @@ func (h *CharacterCreationHandler) buildEnhancedStepResponse(char *domainCharact
 			components.NewRow()
 			components.SelectMenuWithTarget(
 				"Select a class...",
-				"select",
+				"preview_class",
 				char.ID,
 				options,
 			)
@@ -171,6 +171,7 @@ func (h *CharacterCreationHandler) buildEnhancedStepResponse(char *domainCharact
 
 	default:
 		// Handle any custom step types
+		embed.Description(fmt.Sprintf("Step type %s is not yet implemented", step.Type))
 		h.buildDefaultStepComponents(components, step, char)
 	}
 
@@ -185,9 +186,9 @@ func (h *CharacterCreationHandler) buildEnhancedStepResponse(char *domainCharact
 
 	response := core.NewResponse("").
 		WithEmbeds(embed.Build()).
-		WithComponents(components.Build()...).
-		AsEphemeral()
+		WithComponents(components.Build()...)
 
+	// Don't set ephemeral/update here - let the caller decide
 	return response, nil
 }
 
@@ -464,6 +465,9 @@ func (h *CharacterCreationHandler) buildDynamicProgressTracker(char *domainChara
 		{domainCharacter.StepTypeNaturalExplorerSelection, "Explorer", "🏔️", []string{"ranger"}},
 		{domainCharacter.StepTypeSkillSelection, "Skills", "🎯", []string{"wizard", "rogue", "bard"}},
 		{domainCharacter.StepTypeLanguageSelection, "Languages", "📚", []string{"wizard", "cleric"}},
+		{domainCharacter.StepTypeCantripsSelection, "Cantrips", "✨", []string{"wizard", "cleric", "sorcerer", "warlock", "bard", "druid"}},
+		{domainCharacter.StepTypeSpellbookSelection, "Spellbook", "📖", []string{"wizard"}},
+		{domainCharacter.StepTypeSpellsKnownSelection, "Spells", "🌟", []string{"sorcerer", "bard", "warlock"}},
 		{domainCharacter.StepTypeProficiencySelection, "Proficiencies", "🛠️", nil},
 		{domainCharacter.StepTypeEquipmentSelection, "Equipment", "🎒", nil},
 		{domainCharacter.StepTypeCharacterDetails, "Details", "📝", nil},
@@ -2640,8 +2644,41 @@ func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter
 		embed.AddField("Available Spells", strings.Join(spellList, "\n"), false)
 	}
 
-	// Add selected spells tracker (placeholder for now)
-	embed.AddField("Selected Spells", "*None selected yet*", false)
+	// Add selected spells tracker
+	selectedDisplay := "*None selected yet*"
+
+	// Check if character already has cantrips/spells selected
+	if spellLevel == 0 && len(char.Spells.Cantrips) > 0 {
+		var selected []string
+		for _, cantripKey := range char.Spells.Cantrips {
+			// Find the cantrip name
+			for _, spell := range spells {
+				if spell.Key == cantripKey {
+					selected = append(selected, spell.Name)
+					break
+				}
+			}
+		}
+		if len(selected) > 0 {
+			selectedDisplay = strings.Join(selected, ", ")
+		}
+	} else if spellLevel > 0 && len(char.Spells.KnownSpells) > 0 {
+		var selected []string
+		for _, spellKey := range char.Spells.KnownSpells {
+			// Find the spell name
+			for _, spell := range spells {
+				if spell.Key == spellKey {
+					selected = append(selected, spell.Name)
+					break
+				}
+			}
+		}
+		if len(selected) > 0 {
+			selectedDisplay = strings.Join(selected, ", ")
+		}
+	}
+
+	embed.AddField("Selected Spells", selectedDisplay, false)
 
 	// Build components
 	components := builders.NewComponentBuilder(h.customIDBuilder)
@@ -2653,11 +2690,30 @@ func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter
 		var options []builders.SelectOption
 		for i, spell := range pageSpells {
 			num := startIdx + i + 1
-			options = append(options, builders.SelectOption{
+			option := builders.SelectOption{
 				Label:       spell.Name,
 				Value:       spell.Key,
 				Description: fmt.Sprintf("#%d", num),
-			})
+			}
+
+			// Check if this spell is already selected
+			if spellLevel == 0 {
+				for _, selected := range char.Spells.Cantrips {
+					if selected == spell.Key {
+						option.Default = true
+						break
+					}
+				}
+			} else {
+				for _, selected := range char.Spells.KnownSpells {
+					if selected == spell.Key {
+						option.Default = true
+						break
+					}
+				}
+			}
+
+			options = append(options, option)
 		}
 
 		components.SelectMenuWithTarget(
@@ -2699,7 +2755,7 @@ func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter
 
 	// Back to character creation
 	components.NewRow()
-	components.DangerButton("❌ Cancel", "continue", char.ID)
+	components.DangerButton("❌ Cancel", "cancel_spell_selection", char.ID)
 
 	return core.NewResponse("").
 		WithEmbeds(embed.Build()).

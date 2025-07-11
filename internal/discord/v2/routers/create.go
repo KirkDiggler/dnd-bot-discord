@@ -93,6 +93,12 @@ func (r *CreateRouter) registerRoutes() {
 	r.router.ComponentFunc("preview_race", r.creationHandler.HandleRacePreview)
 	r.router.ComponentFunc("confirm_race", r.creationHandler.HandleConfirmRace)
 
+	// Class selection handlers
+	r.router.ComponentFunc("class_overview", r.creationHandler.HandleClassOverview)
+	r.router.ComponentFunc("class_random", r.creationHandler.HandleRandomClass)
+	r.router.ComponentFunc("preview_class", r.creationHandler.HandleClassPreview)
+	r.router.ComponentFunc("confirm_class", r.creationHandler.HandleConfirmClass)
+
 	// Ability scores handlers
 	r.router.ComponentFunc("roll", r.creationHandler.HandleRollAbilityScores)
 	r.router.ComponentFunc("standard", r.creationHandler.HandleStandardArray)
@@ -128,6 +134,7 @@ func (r *CreateRouter) registerRoutes() {
 	r.router.ComponentFunc("spell_page", r.creationHandler.HandleSpellPageChange)
 	r.router.ComponentFunc("select_spell", r.creationHandler.HandleSpellToggle)
 	r.router.ComponentFunc("confirm_spell_selection", r.creationHandler.HandleConfirmSpellSelection)
+	r.router.ComponentFunc("cancel_spell_selection", r.creationHandler.HandleCancelSpellSelection)
 
 	// Future: /dnd create encounter, /dnd create item, etc.
 	// r.router.ActionFunc("encounter", r.handleCreateEncounter)

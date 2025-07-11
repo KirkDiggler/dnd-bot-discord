@@ -78,8 +78,14 @@ func (r *DiscordResponder) Respond(response *Response) error {
 
 	data := r.buildResponseData(response)
 
+	// Choose response type based on Update flag
+	responseType := discordgo.InteractionResponseChannelMessageWithSource
+	if response.Update {
+		responseType = discordgo.InteractionResponseUpdateMessage
+	}
+
 	err := r.session.InteractionRespond(r.interaction.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Type: responseType,
 		Data: data,
 	})
 
