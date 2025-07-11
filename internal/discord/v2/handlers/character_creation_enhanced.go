@@ -2576,20 +2576,37 @@ func (h *CharacterCreationHandler) HandleOpenSpellSelection(ctx *core.Interactio
 		return nil, fmt.Errorf("failed to get character: %w", err)
 	}
 
+	// Validate character has required fields - never assume, always verify
+	if char == nil {
+		return nil, core.NewValidationError("Character not found")
+	}
 	if char.Class == nil {
 		return nil, core.NewValidationError("No class selected")
+	}
+	if char.Class.Key == "" {
+		return nil, core.NewValidationError("Invalid class data")
 	}
 
 	// Ensure Spells field is initialized for spellcasting classes
 	// This handles characters created before SpellList initialization was added
-	if char.Spells == nil && isSpellcastingClass(char.Class.Key) {
-		char.Spells = &domainCharacter.SpellList{
-			Cantrips:       []string{},
-			KnownSpells:    []string{},
-			PreparedSpells: []string{},
+	if isSpellcastingClass(char.Class.Key) {
+		if char.Spells == nil {
+			char.Spells = &domainCharacter.SpellList{
+				Cantrips:       []string{},
+				KnownSpells:    []string{},
+				PreparedSpells: []string{},
+			}
 		}
-		// Note: This is a temporary fix for existing characters
-		// New characters should have Spells initialized during class selection
+		// Ensure nested fields are initialized - never assume they exist
+		if char.Spells.Cantrips == nil {
+			char.Spells.Cantrips = []string{}
+		}
+		if char.Spells.KnownSpells == nil {
+			char.Spells.KnownSpells = []string{}
+		}
+		if char.Spells.PreparedSpells == nil {
+			char.Spells.PreparedSpells = []string{}
+		}
 	}
 
 	// Determine spell level based on the current step
@@ -2621,6 +2638,17 @@ func (h *CharacterCreationHandler) HandleOpenSpellSelection(ctx *core.Interactio
 
 // buildSpellSelectionPage builds a page of the spell selection interface
 func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter.Character, spells []*rulebook.SpellReference, spellLevel, page, perPage int) *core.Response {
+	// Validate inputs - never assume, always verify to prevent panics
+	if char == nil {
+		return core.NewResponse("Error: Character data is missing").AsEphemeral()
+	}
+	if char.Class == nil {
+		return core.NewResponse("Error: Character class is not set").AsEphemeral()
+	}
+	if char.Class.Name == "" {
+		return core.NewResponse("Error: Character class name is missing").AsEphemeral()
+	}
+
 	// Calculate pagination
 	totalSpells := len(spells)
 	totalPages := (totalSpells + perPage - 1) / perPage
@@ -2660,33 +2688,36 @@ func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter
 	selectedDisplay := "*None selected yet*"
 
 	// Check if character already has cantrips/spells selected
-	if spellLevel == 0 && len(char.Spells.Cantrips) > 0 {
-		var selected []string
-		for _, cantripKey := range char.Spells.Cantrips {
-			// Find the cantrip name
-			for _, spell := range spells {
-				if spell.Key == cantripKey {
-					selected = append(selected, spell.Name)
-					break
+	// Validate Spells field exists before accessing - prevent panic
+	if char.Spells != nil {
+		if spellLevel == 0 && char.Spells.Cantrips != nil && len(char.Spells.Cantrips) > 0 {
+			var selected []string
+			for _, cantripKey := range char.Spells.Cantrips {
+				// Find the cantrip name
+				for _, spell := range spells {
+					if spell.Key == cantripKey {
+						selected = append(selected, spell.Name)
+						break
+					}
 				}
 			}
-		}
-		if len(selected) > 0 {
-			selectedDisplay = strings.Join(selected, ", ")
-		}
-	} else if spellLevel > 0 && len(char.Spells.KnownSpells) > 0 {
-		var selected []string
-		for _, spellKey := range char.Spells.KnownSpells {
-			// Find the spell name
-			for _, spell := range spells {
-				if spell.Key == spellKey {
-					selected = append(selected, spell.Name)
-					break
+			if len(selected) > 0 {
+				selectedDisplay = strings.Join(selected, ", ")
+			}
+		} else if spellLevel > 0 && char.Spells.KnownSpells != nil && len(char.Spells.KnownSpells) > 0 {
+			var selected []string
+			for _, spellKey := range char.Spells.KnownSpells {
+				// Find the spell name
+				for _, spell := range spells {
+					if spell.Key == spellKey {
+						selected = append(selected, spell.Name)
+						break
+					}
 				}
 			}
-		}
-		if len(selected) > 0 {
-			selectedDisplay = strings.Join(selected, ", ")
+			if len(selected) > 0 {
+				selectedDisplay = strings.Join(selected, ", ")
+			}
 		}
 	}
 
