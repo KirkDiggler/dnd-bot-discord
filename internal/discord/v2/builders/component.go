@@ -87,10 +87,13 @@ func (b *ComponentBuilder) EmojiButton(label, emoji string, style discordgo.Butt
 
 // DisabledButton adds a disabled button
 func (b *ComponentBuilder) DisabledButton(label string, style discordgo.ButtonStyle) *ComponentBuilder {
+	// Generate unique custom ID for disabled buttons to prevent Discord duplicate ID errors
+	uniqueID := fmt.Sprintf("disabled_%d_%d", len(b.rows), len(b.currentRow))
+
 	button := discordgo.Button{
 		Label:    label,
 		Style:    style,
-		CustomID: "disabled",
+		CustomID: uniqueID,
 		Disabled: true,
 	}
 
