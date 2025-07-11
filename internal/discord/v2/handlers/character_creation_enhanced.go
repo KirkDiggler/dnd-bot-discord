@@ -2739,19 +2739,21 @@ func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter
 				Description: fmt.Sprintf("#%d", num),
 			}
 
-			// Check if this spell is already selected
-			if spellLevel == 0 {
-				for _, selected := range char.Spells.Cantrips {
-					if selected == spell.Key {
-						option.Default = true
-						break
+			// Check if this spell is already selected - validate before accessing
+			if char.Spells != nil {
+				if spellLevel == 0 && char.Spells.Cantrips != nil {
+					for _, selected := range char.Spells.Cantrips {
+						if selected == spell.Key {
+							option.Default = true
+							break
+						}
 					}
-				}
-			} else {
-				for _, selected := range char.Spells.KnownSpells {
-					if selected == spell.Key {
-						option.Default = true
-						break
+				} else if spellLevel > 0 && char.Spells.KnownSpells != nil {
+					for _, selected := range char.Spells.KnownSpells {
+						if selected == spell.Key {
+							option.Default = true
+							break
+						}
 					}
 				}
 			}
