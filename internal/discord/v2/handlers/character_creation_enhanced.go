@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -2576,8 +2577,15 @@ func (h *CharacterCreationHandler) HandleOpenSpellSelection(ctx *core.Interactio
 	}
 
 	// Determine spell level based on the current step
-	// For now, assume level 1 spells (we'll enhance this later)
 	spellLevel := 1
+
+	// Check if we're selecting cantrips by getting the current step
+	ctx2 := context.Background()
+	if currentStep, stepErr := h.flowService.GetCurrentStep(ctx2, characterID); stepErr == nil {
+		if currentStep.Type == domainCharacter.StepTypeCantripsSelection {
+			spellLevel = 0 // Cantrips are level 0
+		}
+	}
 
 	// Get spells for the class and level
 	spellRefs, err := h.service.ListSpellsByClassAndLevel(ctx.Context, char.Class.Key, spellLevel)
@@ -2607,9 +2615,17 @@ func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter
 	}
 
 	// Build embed
+	title := fmt.Sprintf("📜 Select Level %d Spells - Page %d/%d", spellLevel, page+1, totalPages)
+	description := fmt.Sprintf("Choose spells for your %s. You can prepare %d spells.", char.Class.Name, h.calculatePreparedSpells(char))
+
+	if spellLevel == 0 {
+		title = fmt.Sprintf("✨ Select Cantrips - Page %d/%d", page+1, totalPages)
+		description = fmt.Sprintf("Choose cantrips for your %s. Cantrips can be cast at will without using spell slots.", char.Class.Name)
+	}
+
 	embed := builders.NewEmbed().
-		Title(fmt.Sprintf("📜 Select Level %d Spells - Page %d/%d", spellLevel, page+1, totalPages)).
-		Description(fmt.Sprintf("Choose spells for your %s. You can prepare %d spells.", char.Class.Name, h.calculatePreparedSpells(char))).
+		Title(title).
+		Description(description).
 		Color(0x9146FF) // Purple for magic
 
 	// Add spell list
@@ -2719,8 +2735,14 @@ func (h *CharacterCreationHandler) HandleSpellPageChange(ctx *core.InteractionCo
 		return nil, fmt.Errorf("failed to get character: %w", err)
 	}
 
-	// Get spells (hardcoded level 1 for now)
+	// Determine spell level based on current step
 	spellLevel := 1
+	ctx2 := context.Background()
+	if currentStep, stepErr := h.flowService.GetCurrentStep(ctx2, characterID); stepErr == nil {
+		if currentStep.Type == domainCharacter.StepTypeCantripsSelection {
+			spellLevel = 0 // Cantrips are level 0
+		}
+	}
 	spellRefs, err := h.service.ListSpellsByClassAndLevel(ctx.Context, char.Class.Key, spellLevel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get spells: %w", err)
