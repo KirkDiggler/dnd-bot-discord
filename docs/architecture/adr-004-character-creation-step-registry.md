@@ -1,6 +1,6 @@
 # ADR 004: Character Creation Step Handler Registry
 
-Date: 2025-01-11
+Date: 2024-07-10
 
 ## Status
 
