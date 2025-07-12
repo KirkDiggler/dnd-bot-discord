@@ -66,13 +66,24 @@ func (h *CharacterCreationHandler) HandleOpenNameModal(ctx *core.InteractionCont
 
 // HandleSubmitName processes the submitted character name from the modal
 func (h *CharacterCreationHandler) HandleSubmitName(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	log.Printf("[HandleSubmitName] Starting - IsModal: %v, InteractionType: %v", ctx.IsModal(), ctx.Interaction.Type)
+
+	// Defer the response immediately to prevent timeout
+	responder := core.NewDiscordResponder(ctx.Session, ctx.Interaction)
+	if err := responder.Defer(true); err != nil {
+		log.Printf("[HandleSubmitName] Failed to defer response: %v", err)
+		return nil, core.NewInternalError(err)
+	}
+
 	// Parse custom ID to get character ID
 	customID, err := core.ParseCustomID(ctx.GetCustomID())
 	if err != nil {
+		log.Printf("[HandleSubmitName] Failed to parse custom ID: %v", err)
 		return nil, core.NewValidationError("Invalid submission")
 	}
 
 	characterID := customID.Target
+	log.Printf("[HandleSubmitName] Character ID: %s", characterID)
 
 	// Get character
 	char, err := h.service.GetCharacter(ctx.Context, characterID)
@@ -126,7 +137,26 @@ func (h *CharacterCreationHandler) HandleSubmitName(ctx *core.InteractionContext
 		return nil, core.NewInternalError(err)
 	}
 
-	// Return completion response
-	// Note: completeCreation will handle finalizing the character
-	return h.completeCreation(ctx, updatedChar)
+	// Complete creation and get the response
+	result, err := h.completeCreation(ctx, updatedChar)
+	if err != nil {
+		// Edit the deferred response with an error message
+		errorResponse := core.NewEphemeralResponse("Failed to finalize character: " + err.Error())
+		editErr := responder.Edit(errorResponse)
+		if editErr != nil {
+			log.Printf("[HandleSubmitName] Failed to edit response with error: %v", editErr)
+		}
+		return nil, err
+	}
+
+	// Edit the deferred response with the completion result
+	if result != nil && result.Response != nil {
+		if err := responder.Edit(result.Response); err != nil {
+			log.Printf("[HandleSubmitName] Failed to edit response: %v", err)
+			return nil, core.NewInternalError(err)
+		}
+	}
+
+	// Return empty result since we've already handled the response
+	return &core.HandlerResult{}, nil
 }
