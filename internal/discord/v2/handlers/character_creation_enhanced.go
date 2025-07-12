@@ -197,6 +197,11 @@ func (h *CharacterCreationHandler) buildEnhancedStepResponse(char *domainCharact
 		embed.Description(step.Description)
 		h.buildSelectMenuFromOptions(components, step, char.ID, "subclass")
 
+	case domainCharacter.StepTypeCantripsSelection, domainCharacter.StepTypeSpellSelection, domainCharacter.StepTypeSpellbookSelection, domainCharacter.StepTypeSpellsKnownSelection:
+		// These require pagination due to large number of options
+		embed.Description(step.Description)
+		components.PrimaryButton("📜 Browse Spell List", "open_spell_selection", char.ID)
+
 	default:
 		// Handle any custom step types
 		embed.Description(fmt.Sprintf("Step type %s is not yet implemented", step.Type))
