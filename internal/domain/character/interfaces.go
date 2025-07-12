@@ -4,6 +4,13 @@ import (
 	"context"
 )
 
+// Entity is the base interface from rpg-toolkit that all game objects must implement
+// This ensures compatibility with the toolkit's event system and entity management
+type Entity interface {
+	GetID() string
+	GetType() string
+}
+
 // Entity Interfaces - These allow character domain to work with any rulebook implementation
 
 // Race represents a character race from any rulebook
