@@ -78,20 +78,6 @@ func (h *CharacterCreationHandler) registerStepHandlers() {
 	h.stepHandlers[domainCharacter.StepTypeEquipmentSelection] = h.handleEquipmentSelection
 	h.stepHandlers[domainCharacter.StepTypeCharacterDetails] = h.handleCharacterDetails
 
-	// Class-specific steps
-	h.stepHandlers[domainCharacter.StepTypeSkillSelection] = h.handleGenericSelection
-	h.stepHandlers[domainCharacter.StepTypeLanguageSelection] = h.handleGenericSelection
-	h.stepHandlers[domainCharacter.StepTypeFightingStyleSelection] = h.handleGenericSelection
-	h.stepHandlers[domainCharacter.StepTypeDivineDomainSelection] = h.handleGenericSelection
-	h.stepHandlers[domainCharacter.StepTypeFavoredEnemySelection] = h.handleGenericSelection
-	h.stepHandlers[domainCharacter.StepTypeNaturalExplorerSelection] = h.handleGenericSelection
-
-	// Spellcaster steps
-	h.stepHandlers[domainCharacter.StepTypeCantripsSelection] = h.handleSpellSelection
-	h.stepHandlers[domainCharacter.StepTypeSpellSelection] = h.handleSpellSelection
-	h.stepHandlers[domainCharacter.StepTypeSpellbookSelection] = h.handleSpellSelection
-	h.stepHandlers[domainCharacter.StepTypeSpellsKnownSelection] = h.handleSpellSelection
-
 	// Class specialization steps
 	h.stepHandlers[domainCharacter.StepTypeExpertiseSelection] = h.handleGenericSelection
 	h.stepHandlers[domainCharacter.StepTypeSubclassSelection] = h.handleGenericSelection
@@ -109,6 +95,8 @@ func (h *CharacterCreationHandler) registerStepHandlers() {
 	// Spellcaster steps
 	h.stepHandlers[domainCharacter.StepTypeCantripsSelection] = h.handleSpellSelection
 	h.stepHandlers[domainCharacter.StepTypeSpellSelection] = h.handleSpellSelection
+	h.stepHandlers[domainCharacter.StepTypeSpellbookSelection] = h.handleSpellSelection
+	h.stepHandlers[domainCharacter.StepTypeSpellsKnownSelection] = h.handleSpellSelection
 
 	// Final step
 	h.stepHandlers[domainCharacter.StepTypeComplete] = h.handleComplete
