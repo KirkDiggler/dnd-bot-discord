@@ -13,11 +13,21 @@ type Entity interface {
 
 // Entity Interfaces - These allow character domain to work with any rulebook implementation
 
+// AbilityScoreIncrease represents ability score modifiers in a type-safe way
+type AbilityScoreIncrease struct {
+	Strength     int
+	Dexterity    int
+	Constitution int
+	Intelligence int
+	Wisdom       int
+	Charisma     int
+}
+
 // Race represents a character race from any rulebook
 type Race interface {
 	GetID() string
 	GetName() string
-	GetAbilityScoreIncrease() map[string]int
+	GetAbilityScoreIncrease() AbilityScoreIncrease
 	GetSize() string
 	GetSpeed() int
 }
@@ -115,7 +125,7 @@ type CharacterCreationService interface {
 	GetCurrentStep(session CreationSession) Step
 
 	// CompleteStep processes data for the current step and advances to the next
-	CompleteStep(ctx context.Context, session CreationSession, stepData interface{}) error
+	CompleteStep(ctx context.Context, session CreationSession, stepData any) error
 
 	// FinishCreation completes the creation process and returns the finished character
 	FinishCreation(ctx context.Context, session CreationSession) (*Character, error)
@@ -128,7 +138,7 @@ type CreationSession interface {
 	GetCharacterName() string
 	GetCurrentStepID() string
 	GetCompletedSteps() []string
-	GetStepData(stepID string) interface{}
+	GetStepData(stepID string) any
 	IsComplete() bool
 }
 
