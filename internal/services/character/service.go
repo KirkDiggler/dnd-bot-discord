@@ -114,6 +114,9 @@ type Service interface {
 
 	// ListSpellsByClassAndLevel retrieves spells available to a class at a specific level
 	ListSpellsByClassAndLevel(ctx context.Context, classKey string, level int) ([]*rulebook.SpellReference, error)
+
+	// GetChoiceResolver returns the service's choice resolver for use by other services
+	GetChoiceResolver() ChoiceResolver
 }
 
 // CreateCharacterInput contains all data needed to create a character
@@ -163,6 +166,7 @@ type UpdateDraftInput struct {
 	Proficiencies      []string
 	Equipment          []string
 	Name               *string
+	Spells             *charDomain.SpellList // Spell selection for spellcasters
 }
 
 // SimplifiedChoice represents a choice in a UI-friendly format
@@ -822,6 +826,11 @@ func (s *service) UpdateDraftCharacter(ctx context.Context, characterID string, 
 
 	}
 
+	// Update spells if provided
+	if updates.Spells != nil {
+		char.Spells = updates.Spells
+	}
+
 	// Save changes
 	if err := s.repository.Update(ctx, char); err != nil {
 		return nil, dnderr.Wrap(err, "failed to update character").
@@ -1381,4 +1390,9 @@ func (s *service) ListSpellsByClassAndLevel(ctx context.Context, classKey string
 	}
 
 	return spells, nil
+}
+
+// GetChoiceResolver returns the service's choice resolver
+func (s *service) GetChoiceResolver() ChoiceResolver {
+	return s.choiceResolver
 }

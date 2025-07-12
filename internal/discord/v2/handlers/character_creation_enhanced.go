@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/discord/v2/builders"
@@ -47,7 +48,7 @@ func (h *CharacterCreationHandler) buildEnhancedStepResponse(char *domainCharact
 		return h.buildUIHintsResponse(char, step, embed, components)
 	}
 
-	// Otherwise fall back to hardcoded UI
+	// Build UI based on step type
 	switch step.Type {
 	case domainCharacter.StepTypeRaceSelection:
 		embed.Description("Choose your character's race. Each race provides unique bonuses and traits that will shape your character's abilities.")
@@ -106,7 +107,7 @@ func (h *CharacterCreationHandler) buildEnhancedStepResponse(char *domainCharact
 			components.NewRow()
 			components.SelectMenuWithTarget(
 				"Select a class...",
-				"select",
+				"preview_class",
 				char.ID,
 				options,
 			)
@@ -171,6 +172,7 @@ func (h *CharacterCreationHandler) buildEnhancedStepResponse(char *domainCharact
 
 	default:
 		// Handle any custom step types
+		embed.Description(fmt.Sprintf("Step type %s is not yet implemented", step.Type))
 		h.buildDefaultStepComponents(components, step, char)
 	}
 
@@ -185,9 +187,9 @@ func (h *CharacterCreationHandler) buildEnhancedStepResponse(char *domainCharact
 
 	response := core.NewResponse("").
 		WithEmbeds(embed.Build()).
-		WithComponents(components.Build()...).
-		AsEphemeral()
+		WithComponents(components.Build()...)
 
+	// Don't set ephemeral/update here - let the caller decide
 	return response, nil
 }
 
@@ -245,8 +247,9 @@ func (h *CharacterCreationHandler) buildProgressSummary(char *domainCharacter.Ch
 
 	// Class Section
 	if char.Class != nil {
+		classEmoji := getClassEmoji(char.Class.Key)
 		classDetails := []string{
-			fmt.Sprintf("**⚔️ Class:** %s", char.Class.Name),
+			fmt.Sprintf("**%s Class:** %s", classEmoji, char.Class.Name),
 			fmt.Sprintf("• **Hit Die:** d%d", char.Class.HitDie),
 			fmt.Sprintf("• **Primary Ability:** %s", char.Class.GetPrimaryAbility()),
 		}
@@ -454,19 +457,22 @@ func (h *CharacterCreationHandler) buildDynamicProgressTracker(char *domainChara
 		emoji    string
 		classes  []string // empty means universal step
 	}{
-		{domainCharacter.StepTypeRaceSelection, "Race", "🎭", nil},
+		{domainCharacter.StepTypeRaceSelection, "Race", "👤", nil},
 		{domainCharacter.StepTypeClassSelection, "Class", "⚔️", nil},
 		{domainCharacter.StepTypeAbilityScores, "Abilities", "🎲", nil},
 		{domainCharacter.StepTypeAbilityAssignment, "Assign", "📊", nil},
 		{domainCharacter.StepTypeDivineDomainSelection, "Domain", "⛪", []string{"cleric"}},
-		{domainCharacter.StepTypeFightingStyleSelection, "Fighting", "🛡️", []string{"fighter", "ranger", "paladin"}},
-		{domainCharacter.StepTypeFavoredEnemySelection, "Enemy", "🎯", []string{"ranger"}},
-		{domainCharacter.StepTypeNaturalExplorerSelection, "Explorer", "🏔️", []string{"ranger"}},
+		{domainCharacter.StepTypeFightingStyleSelection, "Fighting Style", "🛡️", []string{"fighter", "ranger", "paladin"}},
+		{domainCharacter.StepTypeFavoredEnemySelection, "Favored Enemy", "🎯", []string{"ranger"}},
+		{domainCharacter.StepTypeNaturalExplorerSelection, "Natural Explorer", "🏔️", []string{"ranger"}},
 		{domainCharacter.StepTypeSkillSelection, "Skills", "🎯", []string{"wizard", "rogue", "bard"}},
 		{domainCharacter.StepTypeLanguageSelection, "Languages", "📚", []string{"wizard", "cleric"}},
+		{domainCharacter.StepTypeCantripsSelection, "Cantrips", "✨", []string{"wizard", "cleric", "sorcerer", "warlock", "bard", "druid"}},
+		{domainCharacter.StepTypeSpellbookSelection, "Spells", "📖", []string{"wizard"}},
+		{domainCharacter.StepTypeSpellsKnownSelection, "Spells", "🌟", []string{"sorcerer", "bard", "warlock"}},
 		{domainCharacter.StepTypeProficiencySelection, "Proficiencies", "🛠️", nil},
 		{domainCharacter.StepTypeEquipmentSelection, "Equipment", "🎒", nil},
-		{domainCharacter.StepTypeCharacterDetails, "Details", "📝", nil},
+		{domainCharacter.StepTypeCharacterDetails, "Name & Finalize", "📝", nil},
 	}
 
 	// Track completed steps
@@ -528,41 +534,82 @@ func (h *CharacterCreationHandler) buildDynamicProgressTracker(char *domainChara
 		}{step.stepType, step.name, step.emoji, status})
 	}
 
-	// Build inline progress tracker
+	// Build inline progress tracker with cleaner visualization
 	var parts []string
 	completedCount := 0
 
 	for i, step := range applicableSteps {
 		var stepDisplay string
+
 		switch step.status {
 		case "completed":
-			stepDisplay = fmt.Sprintf("%s %s ✅", step.emoji, step.name)
 			completedCount++
+			// Show actual selection instead of generic step name
+			switch step.stepType {
+			case domainCharacter.StepTypeRaceSelection:
+				if char.Race != nil {
+					raceEmoji := getRaceEmoji(char.Race.Key)
+					stepDisplay = fmt.Sprintf("%s %s", raceEmoji, char.Race.Name)
+				}
+			case domainCharacter.StepTypeClassSelection:
+				if char.Class != nil {
+					classEmoji := getClassEmoji(char.Class.Key)
+					stepDisplay = fmt.Sprintf("%s %s", classEmoji, char.Class.Name)
+				}
+			case domainCharacter.StepTypeAbilityScores:
+				stepDisplay = "🎲 Rolled"
+			case domainCharacter.StepTypeAbilityAssignment:
+				stepDisplay = "📊 Assigned"
+			case domainCharacter.StepTypeCantripsSelection:
+				if char.Spells != nil && len(char.Spells.Cantrips) > 0 {
+					stepDisplay = fmt.Sprintf("✨ %d Cantrips", len(char.Spells.Cantrips))
+				} else {
+					stepDisplay = "✨ Cantrips"
+				}
+			case domainCharacter.StepTypeSpellbookSelection, domainCharacter.StepTypeSpellsKnownSelection:
+				if char.Spells != nil && len(char.Spells.KnownSpells) > 0 {
+					stepDisplay = fmt.Sprintf("📖 %d Spells", len(char.Spells.KnownSpells))
+				} else {
+					stepDisplay = step.emoji + " " + step.name
+				}
+			default:
+				stepDisplay = step.emoji + " " + step.name
+			}
+
 		case "current":
-			stepDisplay = fmt.Sprintf("**%s %s** ▶️", step.emoji, step.name)
+			// Highlight current step prominently
+			stepDisplay = fmt.Sprintf("**→ %s %s**", step.emoji, step.name)
+
 		case "pending":
-			stepDisplay = fmt.Sprintf("%s %s ⬜", step.emoji, step.name)
+			// Show pending steps more subtly
+			stepDisplay = step.name
 		}
 
 		parts = append(parts, stepDisplay)
 
-		// Add arrow between steps (except for the last one)
+		// Add separator between steps
 		if i < len(applicableSteps)-1 {
-			parts = append(parts, "→")
+			if step.status == "completed" && applicableSteps[i+1].status == "completed" {
+				parts = append(parts, "•") // Dot between completed steps
+			} else if step.status == "completed" && applicableSteps[i+1].status == "current" {
+				parts = append(parts, " ") // Space before current
+			} else if step.status == "current" {
+				parts = append(parts, " ") // Space after current
+			} else {
+				parts = append(parts, "·") // Light separator for pending steps
+			}
 		}
 	}
 
-	// Build the result with step counter and inline progress
+	// Build the result with cleaner formatting
 	totalSteps := len(applicableSteps)
-	result := fmt.Sprintf("**Step %d of %d**\n\n", completedCount+1, totalSteps)
-	result += strings.Join(parts, " ")
+	currentStepNum := completedCount + 1
 
-	// Add estimated time remaining on a new line
-	stepsRemaining := totalSteps - completedCount
-	if stepsRemaining > 0 {
-		minutesRemaining := stepsRemaining * 2 // Estimate 2 minutes per step
-		result += fmt.Sprintf("\n\n⏱️ *Estimated time: ~%d minutes*", minutesRemaining)
-	}
+	// Create the progress line
+	result := strings.Join(parts, " ")
+
+	// Add step counter below for clarity
+	result += fmt.Sprintf("\n*Step %d of %d*", currentStepNum, totalSteps)
 
 	return result
 }
@@ -578,10 +625,38 @@ func (h *CharacterCreationHandler) isStepComplete(char *domainCharacter.Characte
 		return char.Class != nil
 	case domainCharacter.StepTypeAbilityScores, domainCharacter.StepTypeAbilityAssignment:
 		return len(char.Attributes) == 6
+	case domainCharacter.StepTypeCantripsSelection:
+		// Check for confirmation marker
+		for _, feature := range char.Features {
+			if feature.Key == "cantrips_selection_confirmed" {
+				return true
+			}
+		}
+		return false
+	case domainCharacter.StepTypeSpellSelection, domainCharacter.StepTypeSpellbookSelection:
+		// Check for confirmation marker
+		for _, feature := range char.Features {
+			if feature.Key == "spells_selection_confirmed" {
+				return true
+			}
+		}
+		return false
 	case domainCharacter.StepTypeProficiencySelection:
-		return len(char.Proficiencies) > 0
+		// Check for confirmation marker
+		for _, feature := range char.Features {
+			if feature.Key == "proficiency_selection_complete" {
+				return true
+			}
+		}
+		return false
 	case domainCharacter.StepTypeEquipmentSelection:
-		return len(char.EquippedSlots) > 0
+		// Check for confirmation marker
+		for _, feature := range char.Features {
+			if feature.Key == "equipment_selection_complete" {
+				return true
+			}
+		}
+		return false
 	case domainCharacter.StepTypeCharacterDetails:
 		return char.Name != "" && char.Name != "Draft Character"
 	default:
@@ -711,7 +786,7 @@ func (h *CharacterCreationHandler) HandleRandomRace(ctx *core.InteractionContext
 		return nil, err
 	}
 
-	response.Ephemeral = true
+	response.AsUpdate()
 
 	return &core.HandlerResult{
 		Response: response,
@@ -936,7 +1011,7 @@ func getRaceEmoji(raceKey string) string {
 		"dragonborn": "🐲",
 		"dwarf":      "⛏️",
 		"elf":        "🧝",
-		"gnome":      "🧙",
+		"gnome":      "🧚", // Changed from wizard emoji to fairy/gnome emoji
 		"half-elf":   "🌗",
 		"halfling":   "🍄",
 		"half-orc":   "💪",
@@ -2502,38 +2577,24 @@ func (h *CharacterCreationHandler) buildUIHintsResponse(
 		}
 
 		// Build button with appropriate style
+		// Prepare parameters: char.ID + any action-specific parameters from flow service
+		buttonArgs := []string{char.ID}
+		buttonArgs = append(buttonArgs, action.Parameters...)
+
+		buttonLabel := fmt.Sprintf("%s %s", action.Icon, action.Label)
+
 		switch action.Style {
 		case "primary":
-			components.PrimaryButton(
-				fmt.Sprintf("%s %s", action.Icon, action.Label),
-				action.ID,
-				char.ID,
-			)
+			components.PrimaryButton(buttonLabel, action.ID, buttonArgs...)
 		case "secondary":
-			components.SecondaryButton(
-				fmt.Sprintf("%s %s", action.Icon, action.Label),
-				action.ID,
-				char.ID,
-			)
+			components.SecondaryButton(buttonLabel, action.ID, buttonArgs...)
 		case "success":
-			components.SuccessButton(
-				fmt.Sprintf("%s %s", action.Icon, action.Label),
-				action.ID,
-				char.ID,
-			)
+			components.SuccessButton(buttonLabel, action.ID, buttonArgs...)
 		case "danger":
-			components.DangerButton(
-				fmt.Sprintf("%s %s", action.Icon, action.Label),
-				action.ID,
-				char.ID,
-			)
+			components.DangerButton(buttonLabel, action.ID, buttonArgs...)
 		default:
 			// Default to secondary
-			components.SecondaryButton(
-				fmt.Sprintf("%s %s", action.Icon, action.Label),
-				action.ID,
-				char.ID,
-			)
+			components.SecondaryButton(buttonLabel, action.ID, buttonArgs...)
 		}
 	}
 
@@ -2572,8 +2633,37 @@ func (h *CharacterCreationHandler) HandleOpenSpellSelection(ctx *core.Interactio
 		return nil, fmt.Errorf("failed to get character: %w", err)
 	}
 
+	// Validate character has required fields - never assume, always verify
+	if char == nil {
+		return nil, core.NewValidationError("Character not found")
+	}
 	if char.Class == nil {
 		return nil, core.NewValidationError("No class selected")
+	}
+	if char.Class.Key == "" {
+		return nil, core.NewValidationError("Invalid class data")
+	}
+
+	// Ensure Spells field is initialized for spellcasting classes
+	// This handles characters created before SpellList initialization was added
+	if isSpellcastingClass(char.Class.Key) {
+		if char.Spells == nil {
+			char.Spells = &domainCharacter.SpellList{
+				Cantrips:       []string{},
+				KnownSpells:    []string{},
+				PreparedSpells: []string{},
+			}
+		}
+		// Ensure nested fields are initialized - never assume they exist
+		if char.Spells.Cantrips == nil {
+			char.Spells.Cantrips = []string{}
+		}
+		if char.Spells.KnownSpells == nil {
+			char.Spells.KnownSpells = []string{}
+		}
+		if char.Spells.PreparedSpells == nil {
+			char.Spells.PreparedSpells = []string{}
+		}
 	}
 
 	// Determine spell level based on the current step
@@ -2597,14 +2687,25 @@ func (h *CharacterCreationHandler) HandleOpenSpellSelection(ctx *core.Interactio
 	const spellsPerPage = 10
 	page := 0
 
-	response := h.buildSpellSelectionPage(char, spellRefs, spellLevel, page, spellsPerPage)
+	response := h.buildSpellSelectionPage(ctx.Context, char, spellRefs, spellLevel, page, spellsPerPage)
 	return &core.HandlerResult{
 		Response: response,
 	}, nil
 }
 
 // buildSpellSelectionPage builds a page of the spell selection interface
-func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter.Character, spells []*rulebook.SpellReference, spellLevel, page, perPage int) *core.Response {
+func (h *CharacterCreationHandler) buildSpellSelectionPage(ctx context.Context, char *domainCharacter.Character, spells []*rulebook.SpellReference, spellLevel, page, perPage int) *core.Response {
+	// Validate inputs - never assume, always verify to prevent panics
+	if char == nil {
+		return core.NewResponse("Error: Character data is missing").AsEphemeral()
+	}
+	if char.Class == nil {
+		return core.NewResponse("Error: Character class is not set").AsEphemeral()
+	}
+	if char.Class.Name == "" {
+		return core.NewResponse("Error: Character class name is missing").AsEphemeral()
+	}
+
 	// Calculate pagination
 	totalSpells := len(spells)
 	totalPages := (totalSpells + perPage - 1) / perPage
@@ -2616,32 +2717,135 @@ func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter
 
 	// Build embed
 	title := fmt.Sprintf("📜 Select Level %d Spells - Page %d/%d", spellLevel, page+1, totalPages)
-	description := fmt.Sprintf("Choose spells for your %s. You can prepare %d spells.", char.Class.Name, h.calculatePreparedSpells(char))
+	maxSpells := h.getMaxSpells(char)
+	description := fmt.Sprintf("Choose spells for your %s. You can select up to %d spells.", char.Class.Name, maxSpells)
 
 	if spellLevel == 0 {
 		title = fmt.Sprintf("✨ Select Cantrips - Page %d/%d", page+1, totalPages)
-		description = fmt.Sprintf("Choose cantrips for your %s. Cantrips can be cast at will without using spell slots.", char.Class.Name)
+		maxCantrips := h.getMaxCantrips(char)
+		description = fmt.Sprintf("Choose cantrips for your %s. You can select up to %d cantrips. Cantrips can be cast at will without using spell slots.", char.Class.Name, maxCantrips)
 	}
+
+	// Add total spell count to description
+	description += fmt.Sprintf("\n\n📚 **Total Available: %d spells across %d pages**", totalSpells, totalPages)
 
 	embed := builders.NewEmbed().
 		Title(title).
 		Description(description).
 		Color(0x9146FF) // Purple for magic
 
-	// Add spell list
+	// Add spell list for current page with descriptions
 	var spellList []string
 	pageSpells := spells[startIdx:endIdx]
-	for i, spell := range pageSpells {
+	for i, spellRef := range pageSpells {
 		num := startIdx + i + 1
-		spellList = append(spellList, fmt.Sprintf("**%d.** %s", num, spell.Name))
+
+		// Fetch full spell details to get description
+		spell, err := h.service.GetSpell(ctx, spellRef.Key)
+		if err != nil || spell == nil {
+			// Fallback to just name if API call fails
+			spellList = append(spellList, fmt.Sprintf("**%d.** %s", num, spellRef.Name))
+			continue
+		}
+
+		// Truncate description for selection page (keep it concise)
+		desc := spell.Description
+		if len(desc) > 100 {
+			desc = desc[:97] + "..."
+		}
+
+		spellEntry := fmt.Sprintf("**%d.** %s\n*%s*", num, spell.Name, desc)
+		spellList = append(spellList, spellEntry)
 	}
 
 	if len(spellList) > 0 {
-		embed.AddField("Available Spells", strings.Join(spellList, "\n"), false)
+		currentPageTitle := fmt.Sprintf("📖 This Page (%d-%d)", startIdx+1, endIdx)
+		embed.AddField(currentPageTitle, strings.Join(spellList, "\n"), false)
 	}
 
-	// Add selected spells tracker (placeholder for now)
-	embed.AddField("Selected Spells", "*None selected yet*", false)
+	// Add preview of what's on other pages
+	if totalPages > 1 && page < totalPages-1 {
+		// Show a preview of next page
+		nextPageStart := (page + 1) * perPage
+		nextPageEnd := nextPageStart + 3 // Show first 3 of next page
+		if nextPageEnd > totalSpells {
+			nextPageEnd = totalSpells
+		}
+
+		var nextPagePreview []string
+		for i := nextPageStart; i < nextPageEnd && i < len(spells); i++ {
+			nextPagePreview = append(nextPagePreview, spells[i].Name)
+		}
+
+		if len(nextPagePreview) > 0 {
+			remaining := 0
+			nextPageActualEnd := (page + 2) * perPage
+			if nextPageActualEnd > totalSpells {
+				nextPageActualEnd = totalSpells
+			}
+			remaining = nextPageActualEnd - nextPageStart - len(nextPagePreview)
+
+			previewText := strings.Join(nextPagePreview, ", ")
+			if remaining > 0 {
+				previewText += fmt.Sprintf(" ... +%d more", remaining)
+			}
+			embed.AddField("📑 Next Page Preview", previewText, false)
+		}
+	}
+
+	// Add selected spells tracker
+	selectedCount := 0
+	maxAllowed := 0
+	selectedDisplay := "*None selected yet*"
+
+	// Check if character already has cantrips/spells selected
+	// Validate Spells field exists before accessing - prevent panic
+	if char.Spells != nil {
+		if spellLevel == 0 && char.Spells.Cantrips != nil && len(char.Spells.Cantrips) > 0 {
+			selectedCount = len(char.Spells.Cantrips)
+			maxAllowed = h.getMaxCantrips(char)
+			var selected []string
+			for _, cantripKey := range char.Spells.Cantrips {
+				// Find the cantrip name
+				for _, spell := range spells {
+					if spell.Key == cantripKey {
+						selected = append(selected, spell.Name)
+						break
+					}
+				}
+			}
+			if len(selected) > 0 {
+				selectedDisplay = strings.Join(selected, ", ")
+			}
+		} else if spellLevel > 0 && char.Spells.KnownSpells != nil && len(char.Spells.KnownSpells) > 0 {
+			selectedCount = len(char.Spells.KnownSpells)
+			maxAllowed = h.getMaxSpells(char)
+			var selected []string
+			for _, spellKey := range char.Spells.KnownSpells {
+				// Find the spell name
+				for _, spell := range spells {
+					if spell.Key == spellKey {
+						selected = append(selected, spell.Name)
+						break
+					}
+				}
+			}
+			if len(selected) > 0 {
+				selectedDisplay = strings.Join(selected, ", ")
+			}
+		} else {
+			// No spells selected yet, get max allowed
+			if spellLevel == 0 {
+				maxAllowed = h.getMaxCantrips(char)
+			} else {
+				maxAllowed = h.getMaxSpells(char)
+			}
+		}
+	}
+
+	// Add field with count
+	fieldTitle := fmt.Sprintf("Selected Spells (%d/%d)", selectedCount, maxAllowed)
+	embed.AddField(fieldTitle, selectedDisplay, false)
 
 	// Build components
 	components := builders.NewComponentBuilder(h.customIDBuilder)
@@ -2653,21 +2857,66 @@ func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter
 		var options []builders.SelectOption
 		for i, spell := range pageSpells {
 			num := startIdx + i + 1
-			options = append(options, builders.SelectOption{
+			option := builders.SelectOption{
 				Label:       spell.Name,
 				Value:       spell.Key,
 				Description: fmt.Sprintf("#%d", num),
-			})
+			}
+
+			// Check if this spell is already selected - validate before accessing
+			if char.Spells != nil {
+				if spellLevel == 0 && char.Spells.Cantrips != nil {
+					for _, selected := range char.Spells.Cantrips {
+						if selected == spell.Key {
+							option.Default = true
+							break
+						}
+					}
+				} else if spellLevel > 0 && char.Spells.KnownSpells != nil {
+					for _, selected := range char.Spells.KnownSpells {
+						if selected == spell.Key {
+							option.Default = true
+							break
+						}
+					}
+				}
+			}
+
+			options = append(options, option)
 		}
 
-		components.SelectMenuWithTarget(
-			"Select spells...",
+		// Calculate max selections based on spell type and class
+		var maxSelections int
+
+		if spellLevel == 0 {
+			// Cantrips - limit to class cantrips known
+			maxSelections = h.getMaxCantrips(char)
+		} else {
+			// Spells - limit to spells known/prepared
+			maxSelections = h.getMaxSpells(char)
+		}
+
+		// Don't exceed the number of spells on this page
+		if maxSelections > len(pageSpells) {
+			maxSelections = len(pageSpells)
+		}
+
+		// Create select menu with proper custom ID including page number
+		placeholder := "Select spells..."
+		if spellLevel == 0 {
+			placeholder = "Select cantrips..."
+		}
+
+		// Use the new method that supports args for page number
+		components.SelectMenuWithTargetAndArgs(
+			placeholder,
 			"select_spell",
 			char.ID,
+			[]string{fmt.Sprintf("%d", page)},
 			options,
 			builders.SelectConfig{
 				MinValues: 0,
-				MaxValues: len(pageSpells),
+				MaxValues: maxSelections,
 			},
 		)
 	}
@@ -2699,7 +2948,7 @@ func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter
 
 	// Back to character creation
 	components.NewRow()
-	components.DangerButton("❌ Cancel", "continue", char.ID)
+	components.DangerButton("❌ Cancel", "cancel_spell_selection", char.ID)
 
 	return core.NewResponse("").
 		WithEmbeds(embed.Build()).
@@ -2748,7 +2997,7 @@ func (h *CharacterCreationHandler) HandleSpellPageChange(ctx *core.InteractionCo
 		return nil, fmt.Errorf("failed to get spells: %w", err)
 	}
 
-	response := h.buildSpellSelectionPage(char, spellRefs, spellLevel, page, 10)
+	response := h.buildSpellSelectionPage(ctx.Context, char, spellRefs, spellLevel, page, 10)
 	return &core.HandlerResult{
 		Response: response,
 	}, nil
@@ -2756,9 +3005,254 @@ func (h *CharacterCreationHandler) HandleSpellPageChange(ctx *core.InteractionCo
 
 // HandleSpellToggle handles spell selection/deselection
 func (h *CharacterCreationHandler) HandleSpellToggle(ctx *core.InteractionContext) (*core.HandlerResult, error) {
-	// For now, just acknowledge the selection
+	// Parse custom ID to get character ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get character: %w", err)
+	}
+
+	// Validate inputs - never assume, always verify to prevent panics
+	if char == nil {
+		return &core.HandlerResult{
+			Response: core.NewResponse("Error: Character data is missing").AsEphemeral(),
+		}, nil
+	}
+
+	// Ensure character has spell list initialized
+	if char.Spells == nil {
+		char.Spells = &domainCharacter.SpellList{
+			Cantrips:       []string{},
+			KnownSpells:    []string{},
+			PreparedSpells: []string{},
+		}
+	}
+
+	// Get selected spell keys from the select menu
+	interaction := ctx.Interaction
+	if interaction.MessageComponentData().ComponentType != discordgo.SelectMenuComponent {
+		return nil, core.NewValidationError("Invalid component type")
+	}
+
+	selectedSpells := interaction.MessageComponentData().Values
+
+	// Determine if we're selecting cantrips or spells based on current step
+	step, err := h.flowService.GetCurrentStep(ctx.Context, char.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current step: %w", err)
+	}
+
+	// Parse page number from custom ID if available
+	page := 0
+	if len(customID.Args) > 0 {
+		if p, parseErr := strconv.Atoi(customID.Args[0]); parseErr == nil {
+			page = p
+		}
+	}
+
+	// Get all spells for the class to find spell names and current page spells
+	spellLevel := 1 // Default to level 1 spells
+	if step.Type == domainCharacter.StepTypeCantripsSelection {
+		spellLevel = 0
+	}
+
+	allSpells, err := h.service.ListSpellsByClassAndLevel(ctx.Context, char.Class.Key, spellLevel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get spell list: %w", err)
+	}
+
+	// Build a map of spells on the current page
+	const spellsPerPage = 10
+	startIdx := page * spellsPerPage
+	endIdx := startIdx + spellsPerPage
+	if endIdx > len(allSpells) {
+		endIdx = len(allSpells)
+	}
+
+	currentPageSpellKeys := make(map[string]bool)
+	for i := startIdx; i < endIdx; i++ {
+		currentPageSpellKeys[allSpells[i].Key] = true
+	}
+
+	// Update character spell selection based on step type
+	switch step.Type {
+	case domainCharacter.StepTypeCantripsSelection:
+		// Remove any deselected spells from the current page
+		newCantrips := []string{}
+		for _, existing := range char.Spells.Cantrips {
+			// Keep spells from other pages
+			if !currentPageSpellKeys[existing] {
+				newCantrips = append(newCantrips, existing)
+			}
+		}
+		// Add the newly selected spells from this page
+		newCantrips = append(newCantrips, selectedSpells...)
+		char.Spells.Cantrips = newCantrips
+
+	case domainCharacter.StepTypeSpellbookSelection, domainCharacter.StepTypeSpellSelection:
+		// Remove any deselected spells from the current page
+		newSpells := []string{}
+		for _, existing := range char.Spells.KnownSpells {
+			// Keep spells from other pages
+			if !currentPageSpellKeys[existing] {
+				newSpells = append(newSpells, existing)
+			}
+		}
+		// Add the newly selected spells from this page
+		newSpells = append(newSpells, selectedSpells...)
+		char.Spells.KnownSpells = newSpells
+
+	default:
+		return nil, core.NewValidationError("Invalid step for spell selection")
+	}
+
+	// Save the character with updated spell selection using UpdateDraftCharacter
+	_, err = h.service.UpdateDraftCharacter(ctx.Context, char.ID, &characterService.UpdateDraftInput{
+		Spells: char.Spells,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to save character: %w", err)
+	}
+
+	// Return to the same page of spell selection with updated selection
+	// Extract page from the custom ID if present
+	currentPage := 0
+	if len(customID.Args) > 0 {
+		if p, parseErr := strconv.Atoi(customID.Args[0]); parseErr == nil {
+			currentPage = p
+		}
+	}
+
+	// Get spell refs to rebuild the page
+	spellRefs, err := h.service.ListSpellsByClassAndLevel(ctx.Context, char.Class.Key, spellLevel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get spells: %w", err)
+	}
+
+	// Build and return the updated page
+	response := h.buildSpellSelectionPage(ctx.Context, char, spellRefs, spellLevel, currentPage, 10)
 	return &core.HandlerResult{
-		Response: core.NewResponse("Spell selection noted! (Not yet implemented)").AsUpdate(),
+		Response: response,
+	}, nil
+}
+
+// HandleSpellDetails shows detailed information about selected spells
+func (h *CharacterCreationHandler) HandleSpellDetails(ctx *core.InteractionContext) (*core.HandlerResult, error) {
+	// Parse custom ID to get character ID
+	customID, err := core.ParseCustomID(ctx.GetCustomID())
+	if err != nil {
+		return nil, core.NewValidationError("Invalid selection")
+	}
+
+	characterID := customID.Target
+
+	// Get character
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get character: %w", err)
+	}
+
+	// Validate inputs - never assume, always verify to prevent panics
+	if char == nil {
+		return &core.HandlerResult{
+			Response: core.NewResponse("Error: Character data is missing").AsEphemeral(),
+		}, nil
+	}
+
+	// Build detailed spell information
+	embed := builders.NewEmbed().
+		Title("🔍 Selected Spell Details").
+		Color(0x9146FF) // Purple for magic
+
+	if char.Spells == nil || (len(char.Spells.Cantrips) == 0 && len(char.Spells.KnownSpells) == 0) {
+		embed.Description("No spells selected yet.")
+	} else {
+		// Fetch spell details from API
+		cantripDetails := make(map[string]*rulebook.Spell)
+		spellDetails := make(map[string]*rulebook.Spell)
+
+		// Fetch cantrip details
+		for _, cantripKey := range char.Spells.Cantrips {
+			spell, err := h.service.GetSpell(ctx.Context, cantripKey)
+			if err == nil && spell != nil {
+				cantripDetails[cantripKey] = spell
+			}
+		}
+
+		// Fetch spell details
+		for _, spellKey := range char.Spells.KnownSpells {
+			spell, err := h.service.GetSpell(ctx.Context, spellKey)
+			if err == nil && spell != nil {
+				spellDetails[spellKey] = spell
+			}
+		}
+
+		// Show cantrips with details
+		if len(char.Spells.Cantrips) > 0 {
+			embed.AddField(fmt.Sprintf("✨ Cantrips (%d)", len(char.Spells.Cantrips)), "", false)
+
+			for _, cantripKey := range char.Spells.Cantrips {
+				if spell, ok := cantripDetails[cantripKey]; ok {
+					// Format spell info
+					spellInfo := fmt.Sprintf("**School:** %s\n", spell.School)
+					spellInfo += fmt.Sprintf("**Casting Time:** %s\n", spell.CastingTime)
+					spellInfo += fmt.Sprintf("**Range:** %s\n", spell.Range)
+
+					spellInfo += fmt.Sprintf("**Description:** %s", spell.Description)
+
+					embed.AddField(fmt.Sprintf("📜 %s", spell.Name), spellInfo, false)
+				} else {
+					// Fallback if API call failed
+					embed.AddField(fmt.Sprintf("📜 %s", cantripKey), "*Details unavailable*", false)
+				}
+			}
+		}
+
+		// Show known spells with details
+		if len(char.Spells.KnownSpells) > 0 {
+			embed.AddField(fmt.Sprintf("📖 Spells (%d)", len(char.Spells.KnownSpells)), "", false)
+
+			for _, spellKey := range char.Spells.KnownSpells {
+				if spell, ok := spellDetails[spellKey]; ok {
+					// Format spell info
+					spellInfo := fmt.Sprintf("**Level:** %d | **School:** %s\n", spell.Level, spell.School)
+					spellInfo += fmt.Sprintf("**Casting Time:** %s | **Duration:** %s\n", spell.CastingTime, spell.Duration)
+					spellInfo += fmt.Sprintf("**Range:** %s | **Components:** %s\n", spell.Range, spell.Components)
+
+					spellInfo += fmt.Sprintf("**Effect:** %s", spell.Description)
+
+					embed.AddField(fmt.Sprintf("🌟 %s", spell.Name), spellInfo, false)
+				} else {
+					// Fallback if API call failed
+					embed.AddField(fmt.Sprintf("🌟 %s", spellKey), "*Details unavailable*", false)
+				}
+			}
+		}
+
+		// Add note about spell slots if applicable
+		if len(char.Spells.KnownSpells) > 0 {
+			embed.Footer("💡 Spell slots determine how many spells you can cast per day")
+		}
+	}
+
+	// Add back button
+	components := builders.NewComponentBuilder(h.customIDBuilder)
+	components.SecondaryButton("⬅️ Back to Selection", "open_spell_selection", char.ID)
+
+	response := core.NewResponse("").
+		AsUpdate().
+		WithEmbeds(embed.Build()).
+		WithComponents(components.Build()...)
+
+	return &core.HandlerResult{
+		Response: response,
 	}, nil
 }
 
@@ -2772,23 +3266,112 @@ func (h *CharacterCreationHandler) HandleConfirmSpellSelection(ctx *core.Interac
 
 	characterID := customID.Target
 
-	// For now, just continue with character creation
-	// In the future, this will save the selected spells
+	// Get character to check current step
+	char, err := h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get character: %w", err)
+	}
 
-	// Build a response that triggers the continue action
-	response := core.NewResponse("Spell selection saved! Continuing character creation...").
-		AsUpdate()
+	// Verify ownership
+	if char.OwnerID != ctx.UserID {
+		return nil, core.NewForbiddenError("You can only edit your own characters")
+	}
 
-	// Add a continue button to navigate back
-	components := builders.NewComponentBuilder(h.customIDBuilder)
-	components.NewRow()
-	components.PrimaryButton("Continue", "continue", characterID)
+	// Get current step to determine spell type
+	currentStep, err := h.flowService.GetCurrentStep(ctx.Context, char.ID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
 
-	response.WithComponents(components.Build()...)
+	// Create step result based on the current step type
+	result := &domainCharacter.CreationStepResult{
+		StepType: currentStep.Type,
+	}
+
+	// Add the spell selections as metadata
+	if char.Spells != nil {
+		switch currentStep.Type {
+		case domainCharacter.StepTypeCantripsSelection:
+			result.Selections = char.Spells.Cantrips
+		case domainCharacter.StepTypeSpellbookSelection, domainCharacter.StepTypeSpellSelection:
+			result.Selections = char.Spells.KnownSpells
+		}
+	}
+
+	// Process the step result to advance to next step
+	nextStep, err := h.flowService.ProcessStepResult(ctx.Context, char.ID, result)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Re-fetch character to get updated state
+	char, err = h.service.GetCharacter(ctx.Context, characterID)
+	if err != nil {
+		return nil, core.NewInternalError(err)
+	}
+
+	// Build the response for the next step
+	response, err := h.buildEnhancedStepResponse(char, nextStep)
+	if err != nil {
+		return nil, err
+	}
+
+	response.AsUpdate()
 
 	return &core.HandlerResult{
 		Response: response,
 	}, nil
+}
+
+// getMaxCantrips returns the maximum number of cantrips for the character's class
+func (h *CharacterCreationHandler) getMaxCantrips(char *domainCharacter.Character) int {
+	if char.Class == nil {
+		return 0
+	}
+
+	// Get cantrips known for this class at level 1
+	switch char.Class.Key {
+	case "wizard":
+		return 3
+	case "cleric":
+		return 3
+	case "druid":
+		return 2
+	case "bard":
+		return 2
+	case "sorcerer":
+		return 4
+	case "warlock":
+		return 2
+	default:
+		return 0
+	}
+}
+
+// getMaxSpells returns the maximum number of spells for the character's class
+func (h *CharacterCreationHandler) getMaxSpells(char *domainCharacter.Character) int {
+	if char.Class == nil {
+		return 0
+	}
+
+	// Get spells known for this class at level 1
+	switch char.Class.Key {
+	case "wizard":
+		return 6 // Wizards start with 6 spells in spellbook
+	case "sorcerer":
+		return 2 // Sorcerers know 2 spells at level 1
+	case "bard":
+		return 4 // Bards know 4 spells at level 1
+	case "ranger":
+		return 0 // Rangers don't get spells until level 2
+	case "warlock":
+		return 2 // Warlocks know 2 spells at level 1
+	case "cleric", "druid", "paladin":
+		// These classes prepare spells - use prepared spell calculation
+		return h.calculatePreparedSpells(char)
+	default:
+		return 0
+	}
 }
 
 // calculatePreparedSpells calculates how many spells a character can prepare
@@ -2824,4 +3407,20 @@ func (h *CharacterCreationHandler) calculatePreparedSpells(char *domainCharacter
 	}
 
 	return prepared
+}
+
+// isSpellcastingClass returns true if the given class key represents a spellcasting class
+func isSpellcastingClass(classKey string) bool {
+	spellcastingClasses := map[string]bool{
+		"wizard":    true,
+		"cleric":    true,
+		"sorcerer":  true,
+		"warlock":   true,
+		"bard":      true,
+		"druid":     true,
+		"paladin":   true,
+		"ranger":    true,
+		"artificer": true,
+	}
+	return spellcastingClasses[classKey]
 }

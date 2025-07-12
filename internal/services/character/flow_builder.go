@@ -13,13 +13,23 @@ import (
 
 // FlowBuilderImpl implements the FlowBuilder interface
 type FlowBuilderImpl struct {
-	dndClient dnd5e.Client
+	dndClient      dnd5e.Client
+	choiceResolver ChoiceResolver
 }
 
 // NewFlowBuilder creates a new flow builder
 func NewFlowBuilder(dndClient dnd5e.Client) character.FlowBuilder {
 	return &FlowBuilderImpl{
-		dndClient: dndClient,
+		dndClient:      dndClient,
+		choiceResolver: NewChoiceResolver(dndClient), // Create default resolver
+	}
+}
+
+// NewFlowBuilderWithResolver creates a new flow builder with custom choice resolver
+func NewFlowBuilderWithResolver(dndClient dnd5e.Client, choiceResolver ChoiceResolver) character.FlowBuilder {
+	return &FlowBuilderImpl{
+		dndClient:      dndClient,
+		choiceResolver: choiceResolver,
 	}
 }
 
@@ -221,21 +231,37 @@ func (b *FlowBuilderImpl) BuildFlow(ctx context.Context, char *character.Charact
 
 		// Final steps - only add if character has race, class, and abilities
 		if len(char.Attributes) > 0 {
-			steps = append(steps,
-				// 6. Proficiency Selection
-				character.CreationStep{
+			// 6. Proficiency Selection (with actual choices from API)
+			proficiencyStep, err := b.buildProficiencyStep(ctx, char)
+			if err != nil {
+				// Log warning but continue - proficiencies can still be auto-applied
+				fmt.Printf("Warning: Failed to build proficiency choices: %v\n", err)
+				proficiencyStep = character.CreationStep{
 					Type:        character.StepTypeProficiencySelection,
 					Title:       "Choose Proficiencies",
 					Description: "Select your character's skill and tool proficiencies.",
 					Required:    true,
-				},
-				// 7. Equipment Selection
-				character.CreationStep{
-					Type:        character.StepTypeEquipmentSelection,
-					Title:       "Choose Equipment",
-					Description: "Select your starting equipment and gear.",
-					Required:    true,
-				},
+				}
+			}
+
+			// 7. Equipment Selection (with actual choices from API)
+			equipmentSteps, err := b.buildEquipmentSteps(ctx, char)
+			if err != nil {
+				// Log warning but continue - equipment can still be auto-applied
+				fmt.Printf("Warning: Failed to build equipment choices: %v\n", err)
+				equipmentSteps = []character.CreationStep{
+					{
+						Type:        character.StepTypeEquipmentSelection,
+						Title:       "Choose Equipment",
+						Description: "Select your starting equipment and gear.",
+						Required:    true,
+					},
+				}
+			}
+
+			steps = append(steps, proficiencyStep)
+			steps = append(steps, equipmentSteps...)
+			steps = append(steps,
 				// 8. Character Details
 				character.CreationStep{
 					Type:        character.StepTypeCharacterDetails,
@@ -491,4 +517,123 @@ func (b *FlowBuilderImpl) getClassFeaturesPreview(classKey string) string {
 	default:
 		return ""
 	}
+}
+
+// buildProficiencyStep creates the proficiency selection step with actual choices from the API
+func (b *FlowBuilderImpl) buildProficiencyStep(ctx context.Context, char *character.Character) (character.CreationStep, error) {
+	// Get simplified choices from the choice resolver
+	simplifiedChoices, err := b.choiceResolver.ResolveProficiencyChoices(ctx, char.Race, char.Class)
+	if err != nil {
+		return character.CreationStep{}, fmt.Errorf("failed to resolve proficiency choices: %w", err)
+	}
+
+	// Convert simplified choices to creation options
+	var allOptions []character.CreationOption
+	choiceCount := 0
+
+	for _, choice := range simplifiedChoices {
+		choiceCount += choice.Choose
+		for _, option := range choice.Options {
+			allOptions = append(allOptions, character.CreationOption{
+				Key:         option.Key,
+				Name:        option.Name,
+				Description: option.Description,
+				Metadata: map[string]any{
+					"choice_id":   choice.ID,
+					"choice_type": choice.Type,
+				},
+			})
+		}
+	}
+
+	description := "Select your character's skill and tool proficiencies."
+	if choiceCount > 0 {
+		description = fmt.Sprintf("Choose %d proficienc%s from the available options.",
+			choiceCount, func() string {
+				if choiceCount == 1 {
+					return "y"
+				} else {
+					return "ies"
+				}
+			}())
+	}
+
+	return character.CreationStep{
+		Type:        character.StepTypeProficiencySelection,
+		Title:       "Choose Proficiencies",
+		Description: description,
+		Options:     allOptions,
+		MinChoices:  choiceCount,
+		MaxChoices:  choiceCount,
+		Required:    choiceCount > 0,
+		Context: map[string]any{
+			"simplified_choices": simplifiedChoices, // Store for validation later
+		},
+	}, nil
+}
+
+// buildEquipmentSteps creates multiple equipment selection steps, one for each equipment choice
+func (b *FlowBuilderImpl) buildEquipmentSteps(ctx context.Context, char *character.Character) ([]character.CreationStep, error) {
+	// Get simplified choices from the choice resolver
+	simplifiedChoices, err := b.choiceResolver.ResolveEquipmentChoices(ctx, char.Class)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve equipment choices: %w", err)
+	}
+
+	var steps []character.CreationStep
+
+	// Create a separate step for each equipment choice
+	for i, choice := range simplifiedChoices {
+		var options []character.CreationOption
+		for _, option := range choice.Options {
+			options = append(options, character.CreationOption{
+				Key:         option.Key,
+				Name:        option.Name,
+				Description: option.Description,
+				Metadata: map[string]any{
+					"choice_id":    choice.ID,
+					"choice_type":  choice.Type,
+					"bundle_items": option.BundleItems, // For equipment bundles
+				},
+			})
+		}
+
+		// Create a descriptive title for each equipment choice
+		title := fmt.Sprintf("Equipment Choice %d", i+1)
+		if choice.Name != "" {
+			// Use the choice name if available (e.g., "(a) a quarterstaff or (b) a dagger")
+			title = choice.Name
+		}
+
+		step := character.CreationStep{
+			Type:        character.StepTypeEquipmentSelection,
+			Title:       title,
+			Description: choice.Description,
+			Options:     options,
+			MinChoices:  choice.Choose,
+			MaxChoices:  choice.Choose,
+			Required:    true,
+			Context: map[string]any{
+				"choice_id":     choice.ID,
+				"choice_index":  i,
+				"total_choices": len(simplifiedChoices),
+			},
+		}
+
+		steps = append(steps, step)
+	}
+
+	// If no equipment choices, return a single step indicating auto-applied equipment
+	if len(steps) == 0 {
+		steps = append(steps, character.CreationStep{
+			Type:        character.StepTypeEquipmentSelection,
+			Title:       "Starting Equipment",
+			Description: "Your starting equipment is automatically provided based on your class.",
+			Required:    false,
+			MinChoices:  0,
+			MaxChoices:  0,
+		})
+	}
+
+	return steps, nil
 }

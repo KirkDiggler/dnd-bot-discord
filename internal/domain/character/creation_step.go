@@ -76,12 +76,13 @@ type StepUIHints struct {
 
 // StepAction represents an action available on a step
 type StepAction struct {
-	ID          string `json:"id"`                    // Action identifier
-	Label       string `json:"label"`                 // Display label
-	Description string `json:"description,omitempty"` // Optional description
-	Style       string `json:"style"`                 // Button style: "primary", "secondary", "success", "danger"
-	Icon        string `json:"icon,omitempty"`        // Optional emoji/icon
-	Handler     string `json:"handler,omitempty"`     // Handler identifier
+	ID          string   `json:"id"`                    // Action identifier (e.g., "confirm_class", "preview_class")
+	Label       string   `json:"label"`                 // Display label
+	Description string   `json:"description,omitempty"` // Optional description
+	Style       string   `json:"style"`                 // Button style: "primary", "secondary", "success", "danger"
+	Icon        string   `json:"icon,omitempty"`        // Optional emoji/icon
+	Handler     string   `json:"handler,omitempty"`     // Handler identifier
+	Parameters  []string `json:"parameters,omitempty"`  // Parameters for custom ID (e.g., ["wizard"])
 }
 
 // IsComplete returns true if the step has been completed

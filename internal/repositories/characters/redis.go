@@ -48,6 +48,7 @@ type CharacterData struct {
 	Inventory          map[equipment.EquipmentType][]EquipmentData          `json:"inventory"`
 	EquippedSlots      map[shared.Slot]EquipmentData                        `json:"equipped_slots"`
 	Resources          *character.CharacterResources                        `json:"resources"`
+	Spells             *character.SpellList                                 `json:"spells"`
 	CreatedAt          time.Time                                            `json:"created_at"`
 	UpdatedAt          time.Time                                            `json:"updated_at"`
 }
@@ -492,6 +493,7 @@ func (r *redisRepo) toCharacterData(char *character.Character) (*CharacterData, 
 		Inventory:          inventory,
 		EquippedSlots:      equippedSlots,
 		Resources:          char.Resources,
+		Spells:             char.Spells,
 	}, nil
 }
 
@@ -545,5 +547,6 @@ func (r *redisRepo) fromCharacterData(data *CharacterData) (*character.Character
 		Inventory:          inventory,
 		EquippedSlots:      equippedSlots,
 		Resources:          data.Resources,
+		Spells:             data.Spells,
 	}, nil
 }

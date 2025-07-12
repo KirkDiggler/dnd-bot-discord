@@ -268,11 +268,25 @@ func (h *routerHandler) extractPattern(ctx *InteractionContext) string {
 
 	if ctx.IsModal() {
 		// Parse custom ID
-		customID, err := ParseCustomID(ctx.GetCustomID())
-		if err != nil || customID.Domain != h.domain {
+		rawCustomID := ctx.GetCustomID()
+		log.Printf("[Router %s] Parsing modal customID: %s", h.domain, rawCustomID)
+
+		customID, err := ParseCustomID(rawCustomID)
+		if err != nil {
+			log.Printf("[Router %s] Failed to parse modal customID: %v", h.domain, err)
 			return ""
 		}
-		return fmt.Sprintf("modal:%s", customID.Action)
+
+		log.Printf("[Router %s] Modal parsed - Domain: %s, Action: %s", h.domain, customID.Domain, customID.Action)
+
+		if customID.Domain != h.domain {
+			log.Printf("[Router %s] Modal domain mismatch (want %s, got %s)", h.domain, h.domain, customID.Domain)
+			return ""
+		}
+
+		pattern := fmt.Sprintf("modal:%s", customID.Action)
+		log.Printf("[Router %s] Returning modal pattern: %s", h.domain, pattern)
+		return pattern
 	}
 
 	return ""

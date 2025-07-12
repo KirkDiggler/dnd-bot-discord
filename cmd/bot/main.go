@@ -256,5 +256,17 @@ func shouldUseV2(i *discordgo.InteractionCreate) bool {
 		}
 	}
 
+	// Check if this is a modal submission
+	if i.Type == discordgo.InteractionModalSubmit {
+		customID := i.ModalSubmitData().CustomID
+		log.Printf("[V2 Router] Modal submission with customID: %s", customID)
+
+		// Route create domain modals to v2
+		if strings.HasPrefix(customID, "create:") {
+			log.Printf("[V2 Router] Routing modal to V2: %s", customID)
+			return true
+		}
+	}
+
 	return false
 }

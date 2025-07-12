@@ -87,10 +87,13 @@ func (b *ComponentBuilder) EmojiButton(label, emoji string, style discordgo.Butt
 
 // DisabledButton adds a disabled button
 func (b *ComponentBuilder) DisabledButton(label string, style discordgo.ButtonStyle) *ComponentBuilder {
+	// Generate unique custom ID for disabled buttons to prevent Discord duplicate ID errors
+	uniqueID := fmt.Sprintf("disabled_%d_%d", len(b.rows), len(b.currentRow))
+
 	button := discordgo.Button{
 		Label:    label,
 		Style:    style,
-		CustomID: "disabled",
+		CustomID: uniqueID,
 		Disabled: true,
 	}
 
@@ -117,6 +120,18 @@ func (b *ComponentBuilder) SelectMenuWithTarget(placeholder, action, target stri
 		customID = b.customIDBuilder.Build(action).WithTarget(target).MustEncode()
 	} else {
 		customID = core.NewCustomID("default", action).WithTarget(target).MustEncode()
+	}
+
+	return b.selectMenuWithCustomID(placeholder, customID, options, config...)
+}
+
+// SelectMenuWithTargetAndArgs adds a select menu with a target ID and additional arguments
+func (b *ComponentBuilder) SelectMenuWithTargetAndArgs(placeholder, action, target string, args []string, options []SelectOption, config ...SelectConfig) *ComponentBuilder {
+	customID := ""
+	if b.customIDBuilder != nil {
+		customID = b.customIDBuilder.Build(action).WithTarget(target).WithArgs(args...).MustEncode()
+	} else {
+		customID = core.NewCustomID("default", action).WithTarget(target).WithArgs(args...).MustEncode()
 	}
 
 	return b.selectMenuWithCustomID(placeholder, customID, options, config...)

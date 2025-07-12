@@ -1,5 +1,7 @@
 package character
 
+//go:generate mockgen -destination=../../services/character/mock/mock_creation_flow_service.go -package=mockcharacters -source=creation_flow.go CreationFlowService
+
 import (
 	"context"
 )

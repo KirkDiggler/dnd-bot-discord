@@ -90,7 +90,7 @@ func NewProvider(cfg *ProviderConfig) *Provider {
 	})
 
 	// Create flow builder and creation flow service
-	flowBuilder := characterService.NewFlowBuilder(cfg.DNDClient)
+	flowBuilder := characterService.NewFlowBuilderWithResolver(cfg.DNDClient, charService.GetChoiceResolver())
 	creationFlowService := characterService.NewCreationFlowService(charService, flowBuilder)
 
 	// Create session service

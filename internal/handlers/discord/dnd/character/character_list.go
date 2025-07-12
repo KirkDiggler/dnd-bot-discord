@@ -133,6 +133,21 @@ func (h *ListHandler) Handle(req *ListRequest) error {
 			if len(char.Attributes) > 0 {
 				progress += "✓ Abilities "
 			}
+			// Check for spell-related confirmations
+			for _, feature := range char.Features {
+				if feature.Key == "cantrips_selection_confirmed" {
+					progress += "✓ Cantrips "
+				}
+				if feature.Key == "spells_selection_confirmed" {
+					progress += "✓ Spells "
+				}
+				if feature.Key == "proficiency_selection_complete" {
+					progress += "✓ Proficiencies "
+				}
+				if feature.Key == "equipment_selection_complete" {
+					progress += "✓ Equipment "
+				}
+			}
 			if char.Name != "" {
 				progress += "✓ Name"
 			}

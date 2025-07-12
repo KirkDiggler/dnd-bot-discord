@@ -58,8 +58,8 @@ func (b *FlowBuilderImpl) buildBardSteps(ctx context.Context, char *character.Ch
 		}
 	}
 
-	// Add both cantrip and spell steps
-	steps = append(steps, cantripStep, character.CreationStep{
+	// Spell selection step
+	spellStep := character.CreationStep{
 		Type:        character.StepTypeSpellsKnownSelection,
 		Title:       "Choose Your Spells",
 		Description: "Bards know a limited number of spells. Choose 4 1st-level spells from the bard spell list.",
@@ -88,7 +88,21 @@ func (b *FlowBuilderImpl) buildBardSteps(ctx context.Context, char *character.Ch
 			ShowRecommended: true,
 			Color:           0xA855F7,
 		},
-	})
+	}
+
+	// Populate spell options from D&D API
+	if spells, err := b.dndClient.ListSpellsByClassAndLevel("bard", 1); err == nil {
+		for _, spell := range spells {
+			spellStep.Options = append(spellStep.Options, character.CreationOption{
+				Key:         spell.Key,
+				Name:        spell.Name,
+				Description: "1st level spell",
+			})
+		}
+	}
+
+	// Add both cantrip and spell steps
+	steps = append(steps, cantripStep, spellStep)
 
 	return steps
 }
@@ -215,8 +229,8 @@ func (b *FlowBuilderImpl) buildSorcererSteps(ctx context.Context, char *characte
 		}
 	}
 
-	// Add both cantrip and spell steps
-	steps = append(steps, sorcererCantripStep, character.CreationStep{
+	// Spell selection step
+	sorcererSpellStep := character.CreationStep{
 		Type:        character.StepTypeSpellsKnownSelection,
 		Title:       "Choose Your Spells",
 		Description: "Sorcerers know a limited number of spells. Choose 2 1st-level spells from the sorcerer spell list.",
@@ -238,7 +252,21 @@ func (b *FlowBuilderImpl) buildSorcererSteps(ctx context.Context, char *characte
 			ShowRecommended: true,
 			Color:           0xDC2626,
 		},
-	})
+	}
+
+	// Populate spell options from D&D API
+	if spells, err := b.dndClient.ListSpellsByClassAndLevel("sorcerer", 1); err == nil {
+		for _, spell := range spells {
+			sorcererSpellStep.Options = append(sorcererSpellStep.Options, character.CreationOption{
+				Key:         spell.Key,
+				Name:        spell.Name,
+				Description: "1st level spell",
+			})
+		}
+	}
+
+	// Add both cantrip and spell steps
+	steps = append(steps, sorcererCantripStep, sorcererSpellStep)
 
 	return steps
 }
@@ -295,8 +323,8 @@ func (b *FlowBuilderImpl) buildWarlockSteps(ctx context.Context, char *character
 		}
 	}
 
-	// Add both cantrip and spell steps
-	steps = append(steps, warlockCantripStep, character.CreationStep{
+	// Spell selection step
+	warlockSpellStep := character.CreationStep{
 		Type:        character.StepTypeSpellsKnownSelection,
 		Title:       "Choose Your Spells",
 		Description: "Warlocks know a limited number of spells but cast them through Pact Magic. Choose 2 1st-level spells from the warlock spell list.",
@@ -318,7 +346,21 @@ func (b *FlowBuilderImpl) buildWarlockSteps(ctx context.Context, char *character
 			ShowRecommended: true,
 			Color:           0x7C3AED,
 		},
-	})
+	}
+
+	// Populate spell options from D&D API
+	if spells, err := b.dndClient.ListSpellsByClassAndLevel("warlock", 1); err == nil {
+		for _, spell := range spells {
+			warlockSpellStep.Options = append(warlockSpellStep.Options, character.CreationOption{
+				Key:         spell.Key,
+				Name:        spell.Name,
+				Description: "1st level spell",
+			})
+		}
+	}
+
+	// Add both cantrip and spell steps
+	steps = append(steps, warlockCantripStep, warlockSpellStep)
 
 	return steps
 }

@@ -82,9 +82,10 @@ func (r *CreateRouter) registerRoutes() {
 	r.router.ComponentFunc("select", r.creationHandler.HandleStepSelection)
 	r.router.ComponentFunc("back", r.creationHandler.HandleStepSelection)
 	r.router.ComponentFunc("assign", r.creationHandler.HandleStepSelection)
-	r.router.ComponentFunc("proficiencies", r.creationHandler.HandleStepSelection)
-	r.router.ComponentFunc("equipment", r.creationHandler.HandleStepSelection)
-	r.router.ComponentFunc("name", r.creationHandler.HandleStepSelection)
+	r.router.ComponentFunc("proficiencies", r.creationHandler.HandleOpenProficiencySelection)
+	r.router.ComponentFunc("equipment", r.creationHandler.HandleOpenEquipmentSelection)
+	r.router.ComponentFunc("name", r.creationHandler.HandleOpenNameModal)
+	r.router.ModalFunc("submit_name", r.creationHandler.HandleSubmitName)
 	r.router.ComponentFunc("option", r.creationHandler.HandleStepSelection)
 
 	// Enhanced UI handlers
@@ -92,6 +93,12 @@ func (r *CreateRouter) registerRoutes() {
 	r.router.ComponentFunc("race_random", r.creationHandler.HandleRandomRace)
 	r.router.ComponentFunc("preview_race", r.creationHandler.HandleRacePreview)
 	r.router.ComponentFunc("confirm_race", r.creationHandler.HandleConfirmRace)
+
+	// Class selection handlers
+	r.router.ComponentFunc("class_overview", r.creationHandler.HandleClassOverview)
+	r.router.ComponentFunc("class_random", r.creationHandler.HandleRandomClass)
+	r.router.ComponentFunc("preview_class", r.creationHandler.HandleClassPreview)
+	r.router.ComponentFunc("confirm_class", r.creationHandler.HandleConfirmClass)
 
 	// Ability scores handlers
 	r.router.ComponentFunc("roll", r.creationHandler.HandleRollAbilityScores)
@@ -128,6 +135,15 @@ func (r *CreateRouter) registerRoutes() {
 	r.router.ComponentFunc("spell_page", r.creationHandler.HandleSpellPageChange)
 	r.router.ComponentFunc("select_spell", r.creationHandler.HandleSpellToggle)
 	r.router.ComponentFunc("confirm_spell_selection", r.creationHandler.HandleConfirmSpellSelection)
+	r.router.ComponentFunc("cancel_spell_selection", r.creationHandler.HandleCancelSpellSelection)
+	r.router.ComponentFunc("spell_details", r.creationHandler.HandleSpellDetails)
+	r.router.ComponentFunc("continue", r.creationHandler.HandleStepSelection)
+
+	// Proficiency and Equipment selection handlers
+	r.router.ComponentFunc("select_proficiency", r.creationHandler.HandleSelectProficiency)
+	r.router.ComponentFunc("confirm_proficiency_selection", r.creationHandler.HandleConfirmProficiencySelection)
+	r.router.ComponentFunc("select_equipment", r.creationHandler.HandleSelectEquipment)
+	r.router.ComponentFunc("confirm_equipment_selection", r.creationHandler.HandleConfirmEquipmentSelection)
 
 	// Future: /dnd create encounter, /dnd create item, etc.
 	// r.router.ActionFunc("encounter", r.handleCreateEncounter)

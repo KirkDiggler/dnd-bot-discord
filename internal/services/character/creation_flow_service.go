@@ -332,26 +332,78 @@ func (s *CreationFlowServiceImpl) hasSelectedNaturalExplorer(char *character.Cha
 }
 
 func (s *CreationFlowServiceImpl) hasUserSelectedProficiencies(char *character.Character) bool {
-	// For now, return false to ensure the step is shown
-	// In the future, track which proficiencies are from user choices vs automatic
+	// Check if the character has made proficiency selections
+	// For now, we'll consider this step complete if the character has been marked
+	// as having completed proficiency selection in their metadata or features
+
+	// Check if there's a flag in character features indicating proficiency selection is done
+	for _, feature := range char.Features {
+		if feature.Key == "proficiency_selection_complete" {
+			return true
+		}
+	}
+
+	// For classes that don't require proficiency selection beyond automatic ones,
+	// we should skip this step. For now, return true if we have any proficiencies
+	// from class/race (meaning the flow has progressed past initial setup)
+	if char.Class != nil && char.Race != nil && len(char.Proficiencies) > 0 {
+		// TODO: In the future, check if there are actual choices to be made
+		// For now, assume if we have basic proficiencies, we can move on
+		return true
+	}
+
 	return false
 }
 
 func (s *CreationFlowServiceImpl) hasUserSelectedEquipment(char *character.Character) bool {
-	// For now, return false to ensure the step is shown
-	// In the future, track which equipment is from user choices vs starting equipment
+	// Check if the character has made equipment selections
+	// For now, we'll consider this step complete if the character has been marked
+	// as having completed equipment selection in their features
+
+	// Check if there's a flag in character features indicating equipment selection is done
+	for _, feature := range char.Features {
+		if feature.Key == "equipment_selection_complete" {
+			return true
+		}
+	}
+
+	// For classes that get starting equipment automatically,
+	// we should skip this step. For now, return true if we have any equipment
+	// from class (meaning the flow has progressed past initial setup)
+	if char.Class != nil && len(char.Inventory) > 0 {
+		// TODO: In the future, check if there are actual choices to be made
+		// For now, assume if we have starting equipment, we can move on
+		return true
+	}
+
 	return false
 }
 
 func (s *CreationFlowServiceImpl) hasSelectedCantrips(char *character.Character) bool {
-	// TODO: Implement when we have spell tracking
-	// For now, return false to show the step
+	// Check if character has selected required cantrips AND confirmed them
+	// Look for a marker feature that indicates the user clicked confirm
+	for _, feature := range char.Features {
+		if feature.Key == "cantrips_selection_confirmed" {
+			return true
+		}
+	}
+
+	// Without the confirmation marker, the step is not complete
+	// even if they have selected the right number
 	return false
 }
 
 func (s *CreationFlowServiceImpl) hasSelectedSpells(char *character.Character) bool {
-	// TODO: Implement when we have spell tracking
-	// For now, return false to show the step
+	// Check if character has selected required spells AND confirmed them
+	// Look for a marker feature that indicates the user clicked confirm
+	for _, feature := range char.Features {
+		if feature.Key == "spells_selection_confirmed" {
+			return true
+		}
+	}
+
+	// Without the confirmation marker, the step is not complete
+	// even if they have selected the right number
 	return false
 }
 
@@ -377,6 +429,14 @@ func (s *CreationFlowServiceImpl) applyStepResult(ctx context.Context, character
 		return s.applySkillSelection(char, result)
 	case character.StepTypeLanguageSelection:
 		return s.applyLanguageSelection(char, result)
+	case character.StepTypeCantripsSelection:
+		return s.applyCantripSelection(char, result)
+	case character.StepTypeSpellSelection, character.StepTypeSpellbookSelection, character.StepTypeSpellsKnownSelection:
+		return s.applySpellSelection(char, result)
+	case character.StepTypeProficiencySelection:
+		return s.applyProficiencySelection(char, result)
+	case character.StepTypeEquipmentSelection:
+		return s.applyEquipmentSelection(char, result)
 	// Add other step result handlers as needed
 	default:
 		// For steps handled by existing handlers, we don't need to do anything here
@@ -474,5 +534,168 @@ func (s *CreationFlowServiceImpl) applyClassSelection(ctx context.Context, char 
 		return fmt.Errorf("failed to update character class: %w", err)
 	}
 
+	// Initialize Spells field for spellcasting classes
+	if isSpellcastingClass(classKey) {
+		// Get the updated character
+		updatedChar, err := s.characterService.GetByID(char.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get updated character: %w", err)
+		}
+
+		// Initialize Spells field if not already present
+		if updatedChar.Spells == nil {
+			updatedChar.Spells = &character.SpellList{
+				Cantrips:       []string{},
+				KnownSpells:    []string{},
+				PreparedSpells: []string{},
+			}
+
+			// Save the updated character with initialized Spells
+			err = s.characterService.UpdateEquipment(updatedChar)
+			if err != nil {
+				return fmt.Errorf("failed to initialize spells for character: %w", err)
+			}
+		}
+	}
+
 	return nil
+}
+
+// isSpellcastingClass returns true if the given class key represents a spellcasting class
+func isSpellcastingClass(classKey string) bool {
+	spellcastingClasses := map[string]bool{
+		"wizard":    true,
+		"cleric":    true,
+		"sorcerer":  true,
+		"warlock":   true,
+		"bard":      true,
+		"druid":     true,
+		"paladin":   true,
+		"ranger":    true,
+		"artificer": true,
+	}
+	return spellcastingClasses[classKey]
+}
+
+func (s *CreationFlowServiceImpl) applyCantripSelection(char *character.Character, result *character.CreationStepResult) error {
+	// Get a fresh copy of the character to ensure we have the latest state
+	freshChar, err := s.characterService.GetByID(char.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get character: %w", err)
+	}
+
+	// Initialize spells if needed
+	if freshChar.Spells == nil {
+		freshChar.Spells = &character.SpellList{
+			Cantrips:       []string{},
+			KnownSpells:    []string{},
+			PreparedSpells: []string{},
+		}
+	}
+
+	// Set the selected cantrips
+	freshChar.Spells.Cantrips = result.Selections
+
+	// Add confirmation marker
+	confirmationFeature := &rulebook.CharacterFeature{
+		Key:         "cantrips_selection_confirmed",
+		Name:        "Cantrips Selection Confirmed",
+		Description: "Character has confirmed their cantrip selection",
+		Source:      "character_creation",
+		Level:       1,
+		Type:        "marker",
+	}
+	freshChar.Features = append(freshChar.Features, confirmationFeature)
+
+	// Save the character
+	return s.characterService.UpdateEquipment(freshChar)
+}
+
+func (s *CreationFlowServiceImpl) applySpellSelection(char *character.Character, result *character.CreationStepResult) error {
+	// Get a fresh copy of the character to ensure we have the latest state
+	freshChar, err := s.characterService.GetByID(char.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get character: %w", err)
+	}
+
+	// Initialize spells if needed
+	if freshChar.Spells == nil {
+		freshChar.Spells = &character.SpellList{
+			Cantrips:       []string{},
+			KnownSpells:    []string{},
+			PreparedSpells: []string{},
+		}
+	}
+
+	// Set the selected spells based on step type
+	switch result.StepType {
+	case character.StepTypeSpellSelection, character.StepTypeSpellbookSelection, character.StepTypeSpellsKnownSelection:
+		freshChar.Spells.KnownSpells = result.Selections
+	}
+
+	// Add confirmation marker
+	confirmationFeature := &rulebook.CharacterFeature{
+		Key:         "spells_selection_confirmed",
+		Name:        "Spells Selection Confirmed",
+		Description: "Character has confirmed their spell selection",
+		Source:      "character_creation",
+		Level:       1,
+		Type:        "marker",
+	}
+	freshChar.Features = append(freshChar.Features, confirmationFeature)
+
+	// Save the character
+	return s.characterService.UpdateEquipment(freshChar)
+}
+
+func (s *CreationFlowServiceImpl) applyProficiencySelection(char *character.Character, result *character.CreationStepResult) error {
+	// Get a fresh copy of the character to ensure we have the latest state
+	freshChar, err := s.characterService.GetByID(char.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get character: %w", err)
+	}
+
+	// Apply selected proficiencies
+	// TODO: In the future, this should add the selected proficiencies to the character
+	// For now, we'll just mark the step as complete by adding a feature flag
+
+	// Add a marker feature to indicate proficiency selection is complete
+	proficiencyFeature := &rulebook.CharacterFeature{
+		Key:         "proficiency_selection_complete",
+		Name:        "Proficiency Selection Complete",
+		Description: "Character has completed proficiency selection",
+		Source:      "character_creation",
+		Level:       1,
+		Type:        "marker",
+	}
+	freshChar.Features = append(freshChar.Features, proficiencyFeature)
+
+	// Save the character
+	return s.characterService.UpdateEquipment(freshChar)
+}
+
+func (s *CreationFlowServiceImpl) applyEquipmentSelection(char *character.Character, result *character.CreationStepResult) error {
+	// Get a fresh copy of the character to ensure we have the latest state
+	freshChar, err := s.characterService.GetByID(char.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get character: %w", err)
+	}
+
+	// Apply selected equipment
+	// TODO: In the future, this should add the selected equipment to the character's inventory
+	// For now, we'll just mark the step as complete by adding a feature flag
+
+	// Add a marker feature to indicate equipment selection is complete
+	equipmentFeature := &rulebook.CharacterFeature{
+		Key:         "equipment_selection_complete",
+		Name:        "Equipment Selection Complete",
+		Description: "Character has completed equipment selection",
+		Source:      "character_creation",
+		Level:       1,
+		Type:        "marker",
+	}
+	freshChar.Features = append(freshChar.Features, equipmentFeature)
+
+	// Save the character
+	return s.characterService.UpdateEquipment(freshChar)
 }

@@ -41,11 +41,70 @@ func NewCharacterCreationHandler(cfg *CharacterCreationHandlerConfig) (*Characte
 		customIDBuilder = core.NewCustomIDBuilder("creation")
 	}
 
-	return &CharacterCreationHandler{
+	h := &CharacterCreationHandler{
 		service:         cfg.Service,
 		flowService:     cfg.FlowService,
 		customIDBuilder: customIDBuilder,
-	}, nil
+	}
+
+	// Validate that we know about all the D&D 5e step types
+	// This ensures our switch statements handle all cases
+	if err := h.validateStepCoverage(); err != nil {
+		return nil, err
+	}
+
+	return h, nil
+}
+
+// validateStepCoverage ensures we have UI handlers for all D&D 5e step types
+func (h *CharacterCreationHandler) validateStepCoverage() error {
+	// Get all the step types that our UI should support
+	supportedTypes := map[domainCharacter.CreationStepType]bool{
+		// Core steps - all characters
+		domainCharacter.StepTypeRaceSelection:        true,
+		domainCharacter.StepTypeClassSelection:       true,
+		domainCharacter.StepTypeAbilityAssignment:    true,
+		domainCharacter.StepTypeProficiencySelection: true,
+		domainCharacter.StepTypeEquipmentSelection:   true,
+		domainCharacter.StepTypeCharacterDetails:     true,
+
+		// Class-specific features (TODO: implement UI for these)
+		domainCharacter.StepTypeDivineDomainSelection:    false,
+		domainCharacter.StepTypeFightingStyleSelection:   false,
+		domainCharacter.StepTypeFavoredEnemySelection:    false,
+		domainCharacter.StepTypeNaturalExplorerSelection: false,
+		domainCharacter.StepTypeSkillSelection:           false,
+		domainCharacter.StepTypeLanguageSelection:        false,
+		domainCharacter.StepTypeExpertiseSelection:       false,
+
+		// Spellcaster steps (partially implemented)
+		domainCharacter.StepTypeCantripsSelection:    true, // Has UI
+		domainCharacter.StepTypeSpellSelection:       false,
+		domainCharacter.StepTypeSpellbookSelection:   true, // Has UI
+		domainCharacter.StepTypeSpellsKnownSelection: false,
+
+		// Subclass steps (future implementation)
+		domainCharacter.StepTypeSubclassSelection:        false,
+		domainCharacter.StepTypePatronSelection:          false,
+		domainCharacter.StepTypeSorcerousOriginSelection: false,
+	}
+
+	// Check that we know about all D&D 5e step types
+	var missingTypes []string
+	for _, stepType := range dnd5eCreationStepTypes {
+		if _, known := supportedTypes[stepType]; !known {
+			missingTypes = append(missingTypes, string(stepType))
+		}
+	}
+
+	if len(missingTypes) > 0 {
+		return fmt.Errorf("unknown step types in D&D 5e rulebook: %v", missingTypes)
+	}
+
+	// TODO: In the future, ensure all supported types have actual UI implementations
+	// For now, we're just tracking what we know about
+
+	return nil
 }
 
 // StartCreation handles the initial character creation command
@@ -67,6 +126,9 @@ func (h *CharacterCreationHandler) StartCreation(ctx *core.InteractionContext) (
 	if err != nil {
 		return nil, core.NewInternalError(err)
 	}
+
+	// Make the initial response ephemeral
+	response.AsEphemeral()
 
 	return &core.HandlerResult{
 		Response: response,

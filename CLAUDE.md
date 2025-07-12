@@ -11,6 +11,26 @@
   - "What specific message should be updating?"
   - "Is this about X or Y?"
 
+### Never Allow Panics - Validate All Assumptions
+- **Panics indicate unvalidated assumptions** - Every panic means we assumed something without verification
+- **When making assumptions, always verify them** - Check for nil, empty strings, array bounds, etc.
+- **Input validation is required** - Never trust that data exists in the expected format
+- **Return user-friendly errors instead of panicking** - Users should never see stack traces
+
+**Example assumptions that must be validated:**
+```go
+// ❌ BAD: Assuming fields exist
+description := char.Class.Name
+
+// ✅ GOOD: Validate before accessing
+if char == nil || char.Class == nil || char.Class.Name == "" {
+    return core.NewValidationError("Invalid character data")
+}
+description := char.Class.Name
+```
+
+**Key lesson: When data can exist in multiple states (legacy vs new), handle both creation-time initialization AND access-time validation.**
+
 ## Session Summary - June 17, 2025
 
 ### Recent Major Fixes
