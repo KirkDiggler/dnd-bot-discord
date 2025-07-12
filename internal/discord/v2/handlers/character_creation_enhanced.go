@@ -456,22 +456,22 @@ func (h *CharacterCreationHandler) buildDynamicProgressTracker(char *domainChara
 		emoji    string
 		classes  []string // empty means universal step
 	}{
-		{domainCharacter.StepTypeRaceSelection, "Race", "🎭", nil},
+		{domainCharacter.StepTypeRaceSelection, "Race", "👤", nil},
 		{domainCharacter.StepTypeClassSelection, "Class", "⚔️", nil},
 		{domainCharacter.StepTypeAbilityScores, "Abilities", "🎲", nil},
 		{domainCharacter.StepTypeAbilityAssignment, "Assign", "📊", nil},
 		{domainCharacter.StepTypeDivineDomainSelection, "Domain", "⛪", []string{"cleric"}},
-		{domainCharacter.StepTypeFightingStyleSelection, "Fighting", "🛡️", []string{"fighter", "ranger", "paladin"}},
-		{domainCharacter.StepTypeFavoredEnemySelection, "Enemy", "🎯", []string{"ranger"}},
-		{domainCharacter.StepTypeNaturalExplorerSelection, "Explorer", "🏔️", []string{"ranger"}},
+		{domainCharacter.StepTypeFightingStyleSelection, "Fighting Style", "🛡️", []string{"fighter", "ranger", "paladin"}},
+		{domainCharacter.StepTypeFavoredEnemySelection, "Favored Enemy", "🎯", []string{"ranger"}},
+		{domainCharacter.StepTypeNaturalExplorerSelection, "Natural Explorer", "🏔️", []string{"ranger"}},
 		{domainCharacter.StepTypeSkillSelection, "Skills", "🎯", []string{"wizard", "rogue", "bard"}},
 		{domainCharacter.StepTypeLanguageSelection, "Languages", "📚", []string{"wizard", "cleric"}},
 		{domainCharacter.StepTypeCantripsSelection, "Cantrips", "✨", []string{"wizard", "cleric", "sorcerer", "warlock", "bard", "druid"}},
-		{domainCharacter.StepTypeSpellbookSelection, "Spellbook", "📖", []string{"wizard"}},
+		{domainCharacter.StepTypeSpellbookSelection, "Spells", "📖", []string{"wizard"}},
 		{domainCharacter.StepTypeSpellsKnownSelection, "Spells", "🌟", []string{"sorcerer", "bard", "warlock"}},
 		{domainCharacter.StepTypeProficiencySelection, "Proficiencies", "🛠️", nil},
 		{domainCharacter.StepTypeEquipmentSelection, "Equipment", "🎒", nil},
-		{domainCharacter.StepTypeCharacterDetails, "Details", "📝", nil},
+		{domainCharacter.StepTypeCharacterDetails, "Name & Finalize", "📝", nil},
 	}
 
 	// Track completed steps
@@ -533,41 +533,82 @@ func (h *CharacterCreationHandler) buildDynamicProgressTracker(char *domainChara
 		}{step.stepType, step.name, step.emoji, status})
 	}
 
-	// Build inline progress tracker
+	// Build inline progress tracker with cleaner visualization
 	var parts []string
 	completedCount := 0
 
 	for i, step := range applicableSteps {
 		var stepDisplay string
+
 		switch step.status {
 		case "completed":
-			stepDisplay = fmt.Sprintf("%s %s ✅", step.emoji, step.name)
 			completedCount++
+			// Show actual selection instead of generic step name
+			switch step.stepType {
+			case domainCharacter.StepTypeRaceSelection:
+				if char.Race != nil {
+					raceEmoji := getRaceEmoji(char.Race.Key)
+					stepDisplay = fmt.Sprintf("%s %s", raceEmoji, char.Race.Name)
+				}
+			case domainCharacter.StepTypeClassSelection:
+				if char.Class != nil {
+					classEmoji := getClassEmoji(char.Class.Key)
+					stepDisplay = fmt.Sprintf("%s %s", classEmoji, char.Class.Name)
+				}
+			case domainCharacter.StepTypeAbilityScores:
+				stepDisplay = "🎲 Rolled"
+			case domainCharacter.StepTypeAbilityAssignment:
+				stepDisplay = "📊 Assigned"
+			case domainCharacter.StepTypeCantripsSelection:
+				if char.Spells != nil && len(char.Spells.Cantrips) > 0 {
+					stepDisplay = fmt.Sprintf("✨ %d Cantrips", len(char.Spells.Cantrips))
+				} else {
+					stepDisplay = "✨ Cantrips"
+				}
+			case domainCharacter.StepTypeSpellbookSelection, domainCharacter.StepTypeSpellsKnownSelection:
+				if char.Spells != nil && len(char.Spells.KnownSpells) > 0 {
+					stepDisplay = fmt.Sprintf("📖 %d Spells", len(char.Spells.KnownSpells))
+				} else {
+					stepDisplay = step.emoji + " " + step.name
+				}
+			default:
+				stepDisplay = step.emoji + " " + step.name
+			}
+
 		case "current":
-			stepDisplay = fmt.Sprintf("**%s %s** ▶️", step.emoji, step.name)
+			// Highlight current step prominently
+			stepDisplay = fmt.Sprintf("**→ %s %s**", step.emoji, step.name)
+
 		case "pending":
-			stepDisplay = fmt.Sprintf("%s %s ⬜", step.emoji, step.name)
+			// Show pending steps more subtly
+			stepDisplay = step.name
 		}
 
 		parts = append(parts, stepDisplay)
 
-		// Add arrow between steps (except for the last one)
+		// Add separator between steps
 		if i < len(applicableSteps)-1 {
-			parts = append(parts, "→")
+			if step.status == "completed" && applicableSteps[i+1].status == "completed" {
+				parts = append(parts, "•") // Dot between completed steps
+			} else if step.status == "completed" && applicableSteps[i+1].status == "current" {
+				parts = append(parts, " ") // Space before current
+			} else if step.status == "current" {
+				parts = append(parts, " ") // Space after current
+			} else {
+				parts = append(parts, "·") // Light separator for pending steps
+			}
 		}
 	}
 
-	// Build the result with step counter and inline progress
+	// Build the result with cleaner formatting
 	totalSteps := len(applicableSteps)
-	result := fmt.Sprintf("**Step %d of %d**\n\n", completedCount+1, totalSteps)
-	result += strings.Join(parts, " ")
+	currentStepNum := completedCount + 1
 
-	// Add estimated time remaining on a new line
-	stepsRemaining := totalSteps - completedCount
-	if stepsRemaining > 0 {
-		minutesRemaining := stepsRemaining * 2 // Estimate 2 minutes per step
-		result += fmt.Sprintf("\n\n⏱️ *Estimated time: ~%d minutes*", minutesRemaining)
-	}
+	// Create the progress line
+	result := strings.Join(parts, " ")
+
+	// Add step counter below for clarity
+	result += fmt.Sprintf("\n*Step %d of %d*", currentStepNum, totalSteps)
 
 	return result
 }
@@ -2656,12 +2697,15 @@ func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter
 		description = fmt.Sprintf("Choose cantrips for your %s. You can select up to %d cantrips. Cantrips can be cast at will without using spell slots.", char.Class.Name, maxCantrips)
 	}
 
+	// Add total spell count to description
+	description += fmt.Sprintf("\n\n📚 **Total Available: %d spells across %d pages**", totalSpells, totalPages)
+
 	embed := builders.NewEmbed().
 		Title(title).
 		Description(description).
 		Color(0x9146FF) // Purple for magic
 
-	// Add spell list
+	// Add spell list for current page
 	var spellList []string
 	pageSpells := spells[startIdx:endIdx]
 	for i, spell := range pageSpells {
@@ -2670,7 +2714,38 @@ func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter
 	}
 
 	if len(spellList) > 0 {
-		embed.AddField("Available Spells", strings.Join(spellList, "\n"), false)
+		currentPageTitle := fmt.Sprintf("📖 This Page (%d-%d)", startIdx+1, endIdx)
+		embed.AddField(currentPageTitle, strings.Join(spellList, "\n"), false)
+	}
+
+	// Add preview of what's on other pages
+	if totalPages > 1 && page < totalPages-1 {
+		// Show a preview of next page
+		nextPageStart := (page + 1) * perPage
+		nextPageEnd := nextPageStart + 3 // Show first 3 of next page
+		if nextPageEnd > totalSpells {
+			nextPageEnd = totalSpells
+		}
+
+		var nextPagePreview []string
+		for i := nextPageStart; i < nextPageEnd && i < len(spells); i++ {
+			nextPagePreview = append(nextPagePreview, spells[i].Name)
+		}
+
+		if len(nextPagePreview) > 0 {
+			remaining := 0
+			nextPageActualEnd := (page + 2) * perPage
+			if nextPageActualEnd > totalSpells {
+				nextPageActualEnd = totalSpells
+			}
+			remaining = nextPageActualEnd - nextPageStart - len(nextPagePreview)
+
+			previewText := strings.Join(nextPagePreview, ", ")
+			if remaining > 0 {
+				previewText += fmt.Sprintf(" ... +%d more", remaining)
+			}
+			embed.AddField("📑 Next Page Preview", previewText, false)
+		}
 	}
 
 	// Add selected spells tracker
@@ -3051,32 +3126,84 @@ func (h *CharacterCreationHandler) HandleSpellDetails(ctx *core.InteractionConte
 		Title("🔍 Selected Spell Details").
 		Color(0x9146FF) // Purple for magic
 
-	if char.Spells == nil {
+	if char.Spells == nil || (len(char.Spells.Cantrips) == 0 && len(char.Spells.KnownSpells) == 0) {
 		embed.Description("No spells selected yet.")
 	} else {
-		var details []string
+		// Fetch spell details from API
+		cantripDetails := make(map[string]*rulebook.Spell)
+		spellDetails := make(map[string]*rulebook.Spell)
 
-		// Show cantrips if any
+		// Fetch cantrip details
+		for _, cantripKey := range char.Spells.Cantrips {
+			spell, err := h.service.GetSpell(ctx.Context, cantripKey)
+			if err == nil && spell != nil {
+				cantripDetails[cantripKey] = spell
+			}
+		}
+
+		// Fetch spell details
+		for _, spellKey := range char.Spells.KnownSpells {
+			spell, err := h.service.GetSpell(ctx.Context, spellKey)
+			if err == nil && spell != nil {
+				spellDetails[spellKey] = spell
+			}
+		}
+
+		// Show cantrips with details
 		if len(char.Spells.Cantrips) > 0 {
-			details = append(details, fmt.Sprintf("**Cantrips (%d):**", len(char.Spells.Cantrips)))
+			embed.AddField(fmt.Sprintf("✨ Cantrips (%d)", len(char.Spells.Cantrips)), "", false)
+
 			for _, cantripKey := range char.Spells.Cantrips {
-				details = append(details, fmt.Sprintf("• %s", cantripKey))
+				if spell, ok := cantripDetails[cantripKey]; ok {
+					// Format spell info
+					spellInfo := fmt.Sprintf("**School:** %s\n", spell.School)
+					spellInfo += fmt.Sprintf("**Casting Time:** %s\n", spell.CastingTime)
+					spellInfo += fmt.Sprintf("**Range:** %s\n", spell.Range)
+
+					// Truncate description if too long
+					desc := spell.Description
+					if len(desc) > 200 {
+						desc = desc[:197] + "..."
+					}
+					spellInfo += fmt.Sprintf("**Description:** %s", desc)
+
+					embed.AddField(fmt.Sprintf("📜 %s", spell.Name), spellInfo, false)
+				} else {
+					// Fallback if API call failed
+					embed.AddField(fmt.Sprintf("📜 %s", cantripKey), "*Details unavailable*", false)
+				}
 			}
-			details = append(details, "")
 		}
 
-		// Show known spells if any
+		// Show known spells with details
 		if len(char.Spells.KnownSpells) > 0 {
-			details = append(details, fmt.Sprintf("**Known Spells (%d):**", len(char.Spells.KnownSpells)))
+			embed.AddField(fmt.Sprintf("📖 Spells (%d)", len(char.Spells.KnownSpells)), "", false)
+
 			for _, spellKey := range char.Spells.KnownSpells {
-				details = append(details, fmt.Sprintf("• %s", spellKey))
+				if spell, ok := spellDetails[spellKey]; ok {
+					// Format spell info
+					spellInfo := fmt.Sprintf("**Level:** %d | **School:** %s\n", spell.Level, spell.School)
+					spellInfo += fmt.Sprintf("**Casting Time:** %s | **Duration:** %s\n", spell.CastingTime, spell.Duration)
+					spellInfo += fmt.Sprintf("**Range:** %s | **Components:** %s\n", spell.Range, spell.Components)
+
+					// Truncate description if too long
+					desc := spell.Description
+					if len(desc) > 180 {
+						desc = desc[:177] + "..."
+					}
+					spellInfo += fmt.Sprintf("**Effect:** %s", desc)
+
+					embed.AddField(fmt.Sprintf("🌟 %s", spell.Name), spellInfo, false)
+				} else {
+					// Fallback if API call failed
+					embed.AddField(fmt.Sprintf("🌟 %s", spellKey), "*Details unavailable*", false)
+				}
 			}
 		}
 
-		if len(details) > 0 {
-			embed.Description(strings.Join(details, "\n"))
-		} else {
-			embed.Description("No spells selected yet.")
+		// Add note about spell slots if applicable
+		if len(char.Spells.KnownSpells) > 0 {
+			embed.Footer("💡 Spell slots determine how many spells you can cast per day")
 		}
 	}
 
