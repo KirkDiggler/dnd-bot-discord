@@ -284,8 +284,17 @@ func (h *CharacterCreationHandler) completeCreation(ctx *core.InteractionContext
 		Build()
 
 	response := core.NewResponse("").
-		WithEmbeds(embed).
-		AsUpdate()
+		WithEmbeds(embed)
+
+	// For modal submissions, we need to check if we should update or create new response
+	if ctx.IsModal() {
+		// Modal submissions should create a new response, not update
+		// The modal closes the interaction, so we can't update the original message
+		response.Ephemeral = true
+	} else {
+		// For regular button interactions, update the existing message
+		response.AsUpdate()
+	}
 
 	return &core.HandlerResult{
 		Response: response,
