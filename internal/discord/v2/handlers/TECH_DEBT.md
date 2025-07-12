@@ -36,3 +36,11 @@
 ## ADR-002 Reference
 The flow service should define WHAT steps exist, not HOW to render them.
 Discord handlers own the UI implementation details.
+
+## Discord Interaction Patterns
+
+### Modal Submissions
+Modal submissions cannot update the original message that triggered them.
+- Use ephemeral response for modal submissions
+- Regular button interactions can update messages
+- This is a Discord API limitation, not a bug
