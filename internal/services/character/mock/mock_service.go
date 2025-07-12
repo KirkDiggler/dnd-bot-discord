@@ -179,6 +179,20 @@ func (mr *MockServiceMockRecorder) GetCharacterFromSession(ctx, sessionID any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCharacterFromSession", reflect.TypeOf((*MockService)(nil).GetCharacterFromSession), ctx, sessionID)
 }
 
+// GetChoiceResolver mocks base method.
+func (m *MockService) GetChoiceResolver() character0.ChoiceResolver {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetChoiceResolver")
+	ret0, _ := ret[0].(character0.ChoiceResolver)
+	return ret0
+}
+
+// GetChoiceResolver indicates an expected call of GetChoiceResolver.
+func (mr *MockServiceMockRecorder) GetChoiceResolver() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChoiceResolver", reflect.TypeOf((*MockService)(nil).GetChoiceResolver))
+}
+
 // GetClass mocks base method.
 func (m *MockService) GetClass(ctx context.Context, classKey string) (*rulebook.Class, error) {
 	m.ctrl.T.Helper()

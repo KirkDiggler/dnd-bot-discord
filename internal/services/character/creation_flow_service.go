@@ -380,84 +380,31 @@ func (s *CreationFlowServiceImpl) hasUserSelectedEquipment(char *character.Chara
 }
 
 func (s *CreationFlowServiceImpl) hasSelectedCantrips(char *character.Character) bool {
-	// Check if character has selected required cantrips
-	if char.Spells == nil {
-		return false
+	// Check if character has selected required cantrips AND confirmed them
+	// Look for a marker feature that indicates the user clicked confirm
+	for _, feature := range char.Features {
+		if feature.Key == "cantrips_selection_confirmed" {
+			return true
+		}
 	}
 
-	// Get required number of cantrips for the class/level
-	requiredCantrips := s.getRequiredCantrips(char)
-	if requiredCantrips == 0 {
-		return true // No cantrips required
-	}
-
-	// Check if enough cantrips have been selected
-	return len(char.Spells.Cantrips) >= requiredCantrips
-}
-
-func (s *CreationFlowServiceImpl) getRequiredCantrips(char *character.Character) int {
-	if char.Class == nil {
-		return 0
-	}
-
-	// Get cantrips known for this class at level 1
-	// This should ideally come from the class data
-	switch char.Class.Key {
-	case "wizard":
-		return 3
-	case "cleric":
-		return 3
-	case "druid":
-		return 2
-	case "bard":
-		return 2
-	case "sorcerer":
-		return 4
-	case "warlock":
-		return 2
-	default:
-		return 0
-	}
+	// Without the confirmation marker, the step is not complete
+	// even if they have selected the right number
+	return false
 }
 
 func (s *CreationFlowServiceImpl) hasSelectedSpells(char *character.Character) bool {
-	// Check if character has selected required spells
-	if char.Spells == nil {
-		return false
+	// Check if character has selected required spells AND confirmed them
+	// Look for a marker feature that indicates the user clicked confirm
+	for _, feature := range char.Features {
+		if feature.Key == "spells_selection_confirmed" {
+			return true
+		}
 	}
 
-	// Get required number of spells for the class/level
-	requiredSpells := s.getRequiredSpells(char)
-	if requiredSpells == 0 {
-		return true // No spells required
-	}
-
-	// Check if enough spells have been selected
-	return len(char.Spells.KnownSpells) >= requiredSpells
-}
-
-func (s *CreationFlowServiceImpl) getRequiredSpells(char *character.Character) int {
-	if char.Class == nil {
-		return 0
-	}
-
-	// Get spells known for this class at level 1
-	switch char.Class.Key {
-	case "wizard":
-		return 6 // Wizards start with 6 spells in spellbook
-	case "sorcerer":
-		return 2 // Sorcerers know 2 spells at level 1
-	case "bard":
-		return 4 // Bards know 4 spells at level 1
-	case "ranger":
-		return 0 // Rangers don't get spells until level 2
-	case "warlock":
-		return 2 // Warlocks know 2 spells at level 1
-	case "cleric", "druid", "paladin":
-		return 0 // These classes prepare spells, not learn them
-	default:
-		return 0
-	}
+	// Without the confirmation marker, the step is not complete
+	// even if they have selected the right number
+	return false
 }
 
 func (s *CreationFlowServiceImpl) hasSelectedSubclass(char *character.Character) bool {
@@ -649,6 +596,17 @@ func (s *CreationFlowServiceImpl) applyCantripSelection(char *character.Characte
 	// Set the selected cantrips
 	freshChar.Spells.Cantrips = result.Selections
 
+	// Add confirmation marker
+	confirmationFeature := &rulebook.CharacterFeature{
+		Key:         "cantrips_selection_confirmed",
+		Name:        "Cantrips Selection Confirmed",
+		Description: "Character has confirmed their cantrip selection",
+		Source:      "character_creation",
+		Level:       1,
+		Type:        "marker",
+	}
+	freshChar.Features = append(freshChar.Features, confirmationFeature)
+
 	// Save the character
 	return s.characterService.UpdateEquipment(freshChar)
 }
@@ -674,6 +632,17 @@ func (s *CreationFlowServiceImpl) applySpellSelection(char *character.Character,
 	case character.StepTypeSpellSelection, character.StepTypeSpellbookSelection, character.StepTypeSpellsKnownSelection:
 		freshChar.Spells.KnownSpells = result.Selections
 	}
+
+	// Add confirmation marker
+	confirmationFeature := &rulebook.CharacterFeature{
+		Key:         "spells_selection_confirmed",
+		Name:        "Spells Selection Confirmed",
+		Description: "Character has confirmed their spell selection",
+		Source:      "character_creation",
+		Level:       1,
+		Type:        "marker",
+	}
+	freshChar.Features = append(freshChar.Features, confirmationFeature)
 
 	// Save the character
 	return s.characterService.UpdateEquipment(freshChar)

@@ -247,8 +247,9 @@ func (h *CharacterCreationHandler) buildProgressSummary(char *domainCharacter.Ch
 
 	// Class Section
 	if char.Class != nil {
+		classEmoji := getClassEmoji(char.Class.Key)
 		classDetails := []string{
-			fmt.Sprintf("**⚔️ Class:** %s", char.Class.Name),
+			fmt.Sprintf("**%s Class:** %s", classEmoji, char.Class.Name),
 			fmt.Sprintf("• **Hit Die:** d%d", char.Class.HitDie),
 			fmt.Sprintf("• **Primary Ability:** %s", char.Class.GetPrimaryAbility()),
 		}
@@ -624,10 +625,38 @@ func (h *CharacterCreationHandler) isStepComplete(char *domainCharacter.Characte
 		return char.Class != nil
 	case domainCharacter.StepTypeAbilityScores, domainCharacter.StepTypeAbilityAssignment:
 		return len(char.Attributes) == 6
+	case domainCharacter.StepTypeCantripsSelection:
+		// Check for confirmation marker
+		for _, feature := range char.Features {
+			if feature.Key == "cantrips_selection_confirmed" {
+				return true
+			}
+		}
+		return false
+	case domainCharacter.StepTypeSpellSelection, domainCharacter.StepTypeSpellbookSelection:
+		// Check for confirmation marker
+		for _, feature := range char.Features {
+			if feature.Key == "spells_selection_confirmed" {
+				return true
+			}
+		}
+		return false
 	case domainCharacter.StepTypeProficiencySelection:
-		return len(char.Proficiencies) > 0
+		// Check for confirmation marker
+		for _, feature := range char.Features {
+			if feature.Key == "proficiency_selection_complete" {
+				return true
+			}
+		}
+		return false
 	case domainCharacter.StepTypeEquipmentSelection:
-		return len(char.EquippedSlots) > 0
+		// Check for confirmation marker
+		for _, feature := range char.Features {
+			if feature.Key == "equipment_selection_complete" {
+				return true
+			}
+		}
+		return false
 	case domainCharacter.StepTypeCharacterDetails:
 		return char.Name != "" && char.Name != "Draft Character"
 	default:
@@ -757,7 +786,7 @@ func (h *CharacterCreationHandler) HandleRandomRace(ctx *core.InteractionContext
 		return nil, err
 	}
 
-	response.Ephemeral = true
+	response.AsUpdate()
 
 	return &core.HandlerResult{
 		Response: response,
@@ -982,7 +1011,7 @@ func getRaceEmoji(raceKey string) string {
 		"dragonborn": "🐲",
 		"dwarf":      "⛏️",
 		"elf":        "🧝",
-		"gnome":      "🧙",
+		"gnome":      "🧚", // Changed from wizard emoji to fairy/gnome emoji
 		"half-elf":   "🌗",
 		"halfling":   "🍄",
 		"half-orc":   "💪",
@@ -2658,14 +2687,14 @@ func (h *CharacterCreationHandler) HandleOpenSpellSelection(ctx *core.Interactio
 	const spellsPerPage = 10
 	page := 0
 
-	response := h.buildSpellSelectionPage(char, spellRefs, spellLevel, page, spellsPerPage)
+	response := h.buildSpellSelectionPage(ctx.Context, char, spellRefs, spellLevel, page, spellsPerPage)
 	return &core.HandlerResult{
 		Response: response,
 	}, nil
 }
 
 // buildSpellSelectionPage builds a page of the spell selection interface
-func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter.Character, spells []*rulebook.SpellReference, spellLevel, page, perPage int) *core.Response {
+func (h *CharacterCreationHandler) buildSpellSelectionPage(ctx context.Context, char *domainCharacter.Character, spells []*rulebook.SpellReference, spellLevel, page, perPage int) *core.Response {
 	// Validate inputs - never assume, always verify to prevent panics
 	if char == nil {
 		return core.NewResponse("Error: Character data is missing").AsEphemeral()
@@ -2705,12 +2734,28 @@ func (h *CharacterCreationHandler) buildSpellSelectionPage(char *domainCharacter
 		Description(description).
 		Color(0x9146FF) // Purple for magic
 
-	// Add spell list for current page
+	// Add spell list for current page with descriptions
 	var spellList []string
 	pageSpells := spells[startIdx:endIdx]
-	for i, spell := range pageSpells {
+	for i, spellRef := range pageSpells {
 		num := startIdx + i + 1
-		spellList = append(spellList, fmt.Sprintf("**%d.** %s", num, spell.Name))
+
+		// Fetch full spell details to get description
+		spell, err := h.service.GetSpell(ctx, spellRef.Key)
+		if err != nil || spell == nil {
+			// Fallback to just name if API call fails
+			spellList = append(spellList, fmt.Sprintf("**%d.** %s", num, spellRef.Name))
+			continue
+		}
+
+		// Truncate description for selection page (keep it concise)
+		desc := spell.Description
+		if len(desc) > 100 {
+			desc = desc[:97] + "..."
+		}
+
+		spellEntry := fmt.Sprintf("**%d.** %s\n*%s*", num, spell.Name, desc)
+		spellList = append(spellList, spellEntry)
 	}
 
 	if len(spellList) > 0 {
@@ -2952,7 +2997,7 @@ func (h *CharacterCreationHandler) HandleSpellPageChange(ctx *core.InteractionCo
 		return nil, fmt.Errorf("failed to get spells: %w", err)
 	}
 
-	response := h.buildSpellSelectionPage(char, spellRefs, spellLevel, page, 10)
+	response := h.buildSpellSelectionPage(ctx.Context, char, spellRefs, spellLevel, page, 10)
 	return &core.HandlerResult{
 		Response: response,
 	}, nil
@@ -3092,7 +3137,7 @@ func (h *CharacterCreationHandler) HandleSpellToggle(ctx *core.InteractionContex
 	}
 
 	// Build and return the updated page
-	response := h.buildSpellSelectionPage(char, spellRefs, spellLevel, currentPage, 10)
+	response := h.buildSpellSelectionPage(ctx.Context, char, spellRefs, spellLevel, currentPage, 10)
 	return &core.HandlerResult{
 		Response: response,
 	}, nil
@@ -3160,12 +3205,7 @@ func (h *CharacterCreationHandler) HandleSpellDetails(ctx *core.InteractionConte
 					spellInfo += fmt.Sprintf("**Casting Time:** %s\n", spell.CastingTime)
 					spellInfo += fmt.Sprintf("**Range:** %s\n", spell.Range)
 
-					// Truncate description if too long
-					desc := spell.Description
-					if len(desc) > 200 {
-						desc = desc[:197] + "..."
-					}
-					spellInfo += fmt.Sprintf("**Description:** %s", desc)
+					spellInfo += fmt.Sprintf("**Description:** %s", spell.Description)
 
 					embed.AddField(fmt.Sprintf("📜 %s", spell.Name), spellInfo, false)
 				} else {
@@ -3186,12 +3226,7 @@ func (h *CharacterCreationHandler) HandleSpellDetails(ctx *core.InteractionConte
 					spellInfo += fmt.Sprintf("**Casting Time:** %s | **Duration:** %s\n", spell.CastingTime, spell.Duration)
 					spellInfo += fmt.Sprintf("**Range:** %s | **Components:** %s\n", spell.Range, spell.Components)
 
-					// Truncate description if too long
-					desc := spell.Description
-					if len(desc) > 180 {
-						desc = desc[:177] + "..."
-					}
-					spellInfo += fmt.Sprintf("**Effect:** %s", desc)
+					spellInfo += fmt.Sprintf("**Effect:** %s", spell.Description)
 
 					embed.AddField(fmt.Sprintf("🌟 %s", spell.Name), spellInfo, false)
 				} else {
@@ -3281,8 +3316,7 @@ func (h *CharacterCreationHandler) HandleConfirmSpellSelection(ctx *core.Interac
 		return nil, err
 	}
 
-	response.Ephemeral = true
-	response.Update = true
+	response.AsUpdate()
 
 	return &core.HandlerResult{
 		Response: response,

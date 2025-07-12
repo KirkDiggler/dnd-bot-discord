@@ -114,6 +114,9 @@ type Service interface {
 
 	// ListSpellsByClassAndLevel retrieves spells available to a class at a specific level
 	ListSpellsByClassAndLevel(ctx context.Context, classKey string, level int) ([]*rulebook.SpellReference, error)
+
+	// GetChoiceResolver returns the service's choice resolver for use by other services
+	GetChoiceResolver() ChoiceResolver
 }
 
 // CreateCharacterInput contains all data needed to create a character
@@ -1387,4 +1390,9 @@ func (s *service) ListSpellsByClassAndLevel(ctx context.Context, classKey string
 	}
 
 	return spells, nil
+}
+
+// GetChoiceResolver returns the service's choice resolver
+func (s *service) GetChoiceResolver() ChoiceResolver {
+	return s.choiceResolver
 }
