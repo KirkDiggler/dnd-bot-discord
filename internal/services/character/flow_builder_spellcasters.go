@@ -17,19 +17,6 @@ func (b *FlowBuilderImpl) buildBardSteps(ctx context.Context, char *character.Ch
 		MinChoices:  2,
 		MaxChoices:  2,
 		Required:    true,
-		UIHints: &character.StepUIHints{
-			Actions: []character.StepAction{
-				{
-					ID:    "select_expertise",
-					Label: "Choose Skills",
-					Style: "primary",
-					Icon:  "⭐",
-				},
-			},
-			Layout:       "list",
-			ShowProgress: true,
-			Color:        0xA855F7, // Purple for bards
-		},
 	})
 
 	// Cantrip selection (2 cantrips)
@@ -40,11 +27,6 @@ func (b *FlowBuilderImpl) buildBardSteps(ctx context.Context, char *character.Ch
 		MinChoices:  2,
 		MaxChoices:  2,
 		Required:    true,
-		UIHints: &character.StepUIHints{
-			Layout:          "grid",
-			ShowRecommended: true,
-			Color:           0xA855F7,
-		},
 	}
 
 	// Populate cantrips options from D&D API
@@ -66,28 +48,6 @@ func (b *FlowBuilderImpl) buildBardSteps(ctx context.Context, char *character.Ch
 		MinChoices:  4,
 		MaxChoices:  4,
 		Required:    true,
-		UIHints: &character.StepUIHints{
-			Actions: []character.StepAction{
-				{
-					ID:    "select_spells",
-					Label: "Choose Spells",
-					Style: "primary",
-					Icon:  "🎵",
-				},
-				{
-					ID:          "quick_build",
-					Label:       "Suggested Spells",
-					Style:       "secondary",
-					Icon:        "💡",
-					Description: "Popular bard spell choices",
-				},
-			},
-			Layout:          "list",
-			ShowProgress:    true,
-			ProgressFormat:  "%d/%d spells selected",
-			ShowRecommended: true,
-			Color:           0xA855F7,
-		},
 	}
 
 	// Populate spell options from D&D API
@@ -119,11 +79,6 @@ func (b *FlowBuilderImpl) buildDruidSteps(ctx context.Context, char *character.C
 		MinChoices:  2,
 		MaxChoices:  2,
 		Required:    true,
-		UIHints: &character.StepUIHints{
-			Layout:          "grid",
-			ShowRecommended: true,
-			Color:           0x10B981, // Green for druids
-		},
 	}
 
 	// Populate cantrips options from D&D API
@@ -157,19 +112,6 @@ func (b *FlowBuilderImpl) buildRogueSteps(ctx context.Context, char *character.C
 		MinChoices:  2,
 		MaxChoices:  2,
 		Required:    true,
-		UIHints: &character.StepUIHints{
-			Actions: []character.StepAction{
-				{
-					ID:    "select_expertise",
-					Label: "Choose Skills",
-					Style: "primary",
-					Icon:  "🗡️",
-				},
-			},
-			Layout:       "list",
-			ShowProgress: true,
-			Color:        0x64748B, // Gray for rogues
-		},
 	})
 
 	// Thieves' Cant is automatic, no choice needed
@@ -189,18 +131,6 @@ func (b *FlowBuilderImpl) buildSorcererSteps(ctx context.Context, char *characte
 		MinChoices:  1,
 		MaxChoices:  1,
 		Required:    true,
-		UIHints: &character.StepUIHints{
-			Actions: []character.StepAction{
-				{
-					ID:    "select_origin",
-					Label: "Choose Origin",
-					Style: "primary",
-					Icon:  "🔥",
-				},
-			},
-			Layout: "grid",
-			Color:  0xDC2626, // Red for sorcerers
-		},
 	})
 
 	// Cantrip selection (4 cantrips)
@@ -211,11 +141,6 @@ func (b *FlowBuilderImpl) buildSorcererSteps(ctx context.Context, char *characte
 		MinChoices:  4,
 		MaxChoices:  4,
 		Required:    true,
-		UIHints: &character.StepUIHints{
-			Layout:          "grid",
-			ShowRecommended: true,
-			Color:           0xDC2626,
-		},
 	}
 
 	// Populate cantrips options from D&D API
@@ -237,21 +162,6 @@ func (b *FlowBuilderImpl) buildSorcererSteps(ctx context.Context, char *characte
 		MinChoices:  2,
 		MaxChoices:  2,
 		Required:    true,
-		UIHints: &character.StepUIHints{
-			Actions: []character.StepAction{
-				{
-					ID:    "select_spells",
-					Label: "Choose Spells",
-					Style: "primary",
-					Icon:  "🔮",
-				},
-			},
-			Layout:          "list",
-			ShowProgress:    true,
-			ProgressFormat:  "%d/%d spells selected",
-			ShowRecommended: true,
-			Color:           0xDC2626,
-		},
 	}
 
 	// Populate spell options from D&D API
@@ -283,18 +193,6 @@ func (b *FlowBuilderImpl) buildWarlockSteps(ctx context.Context, char *character
 		MinChoices:  1,
 		MaxChoices:  1,
 		Required:    true,
-		UIHints: &character.StepUIHints{
-			Actions: []character.StepAction{
-				{
-					ID:    "select_patron",
-					Label: "Choose Patron",
-					Style: "primary",
-					Icon:  "👁️",
-				},
-			},
-			Layout: "grid",
-			Color:  0x7C3AED, // Dark purple for warlocks
-		},
 	})
 
 	// Cantrip selection (2 cantrips)
@@ -305,11 +203,6 @@ func (b *FlowBuilderImpl) buildWarlockSteps(ctx context.Context, char *character
 		MinChoices:  2,
 		MaxChoices:  2,
 		Required:    true,
-		UIHints: &character.StepUIHints{
-			Layout:          "grid",
-			ShowRecommended: true,
-			Color:           0x7C3AED,
-		},
 	}
 
 	// Populate cantrips options from D&D API
@@ -331,21 +224,6 @@ func (b *FlowBuilderImpl) buildWarlockSteps(ctx context.Context, char *character
 		MinChoices:  2,
 		MaxChoices:  2,
 		Required:    true,
-		UIHints: &character.StepUIHints{
-			Actions: []character.StepAction{
-				{
-					ID:    "select_spells",
-					Label: "Choose Spells",
-					Style: "primary",
-					Icon:  "📜",
-				},
-			},
-			Layout:          "list",
-			ShowProgress:    true,
-			ProgressFormat:  "%d/%d spells selected",
-			ShowRecommended: true,
-			Color:           0x7C3AED,
-		},
 	}
 
 	// Populate spell options from D&D API

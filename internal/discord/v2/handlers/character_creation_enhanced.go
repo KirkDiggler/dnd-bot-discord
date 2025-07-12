@@ -43,11 +43,6 @@ func (h *CharacterCreationHandler) buildEnhancedStepResponse(char *domainCharact
 	// Build components based on step type
 	components := builders.NewComponentBuilder(h.customIDBuilder)
 
-	// Check if step has UI hints - if so, use them
-	if step.UIHints != nil {
-		return h.buildUIHintsResponse(char, step, embed, components)
-	}
-
 	// Build UI based on step type
 	switch step.Type {
 	case domainCharacter.StepTypeRaceSelection:
@@ -169,6 +164,38 @@ func (h *CharacterCreationHandler) buildEnhancedStepResponse(char *domainCharact
 	case domainCharacter.StepTypeCharacterDetails:
 		embed.Description("Almost done! Give your character a name and finalize their details.")
 		components.PrimaryButton("✏️ Set Character Name", "name", char.ID)
+
+	case domainCharacter.StepTypeSkillSelection:
+		embed.Description(step.Description)
+		h.buildSelectMenuFromOptions(components, step, char.ID, "skill")
+
+	case domainCharacter.StepTypeLanguageSelection:
+		embed.Description(step.Description)
+		h.buildSelectMenuFromOptions(components, step, char.ID, "language")
+
+	case domainCharacter.StepTypeFightingStyleSelection:
+		embed.Description(step.Description)
+		h.buildSelectMenuFromOptions(components, step, char.ID, "fighting_style")
+
+	case domainCharacter.StepTypeDivineDomainSelection:
+		embed.Description(step.Description)
+		h.buildSelectMenuFromOptions(components, step, char.ID, "divine_domain")
+
+	case domainCharacter.StepTypeFavoredEnemySelection:
+		embed.Description(step.Description)
+		h.buildSelectMenuFromOptions(components, step, char.ID, "favored_enemy")
+
+	case domainCharacter.StepTypeNaturalExplorerSelection:
+		embed.Description(step.Description)
+		h.buildSelectMenuFromOptions(components, step, char.ID, "natural_explorer")
+
+	case domainCharacter.StepTypeExpertiseSelection:
+		embed.Description(step.Description)
+		h.buildSelectMenuFromOptions(components, step, char.ID, "expertise")
+
+	case domainCharacter.StepTypeSubclassSelection:
+		embed.Description(step.Description)
+		h.buildSelectMenuFromOptions(components, step, char.ID, "subclass")
 
 	default:
 		// Handle any custom step types
@@ -2545,78 +2572,6 @@ func (h *CharacterCreationHandler) buildRollingUI(ctx *core.InteractionContext, 
 	}, nil
 }
 
-// buildUIHintsResponse builds a dynamic response based on UI hints
-func (h *CharacterCreationHandler) buildUIHintsResponse(
-	char *domainCharacter.Character,
-	step *domainCharacter.CreationStep,
-	embed *builders.EmbedBuilder,
-	components *builders.ComponentBuilder,
-) (*core.Response, error) {
-	// Apply UI hints to embed
-	if step.UIHints.Color > 0 {
-		embed.Color(step.UIHints.Color)
-	}
-
-	// Add description if not already set
-	if step.Description != "" {
-		embed.Description(step.Description)
-	}
-
-	// Add progress indicator if requested
-	if step.UIHints.ShowProgress && step.UIHints.ProgressFormat != "" {
-		// TODO: Get actual progress from character state
-		progressText := fmt.Sprintf(step.UIHints.ProgressFormat, 0, step.MaxChoices)
-		embed.AddField("📊 Progress", progressText, false)
-	}
-
-	// Build action buttons from UI hints
-	for i, action := range step.UIHints.Actions {
-		// Start new row every 5 buttons (Discord limit)
-		if i > 0 && i%5 == 0 {
-			components.NewRow()
-		}
-
-		// Build button with appropriate style
-		// Prepare parameters: char.ID + any action-specific parameters from flow service
-		buttonArgs := []string{char.ID}
-		buttonArgs = append(buttonArgs, action.Parameters...)
-
-		buttonLabel := fmt.Sprintf("%s %s", action.Icon, action.Label)
-
-		switch action.Style {
-		case "primary":
-			components.PrimaryButton(buttonLabel, action.ID, buttonArgs...)
-		case "secondary":
-			components.SecondaryButton(buttonLabel, action.ID, buttonArgs...)
-		case "success":
-			components.SuccessButton(buttonLabel, action.ID, buttonArgs...)
-		case "danger":
-			components.DangerButton(buttonLabel, action.ID, buttonArgs...)
-		default:
-			// Default to secondary
-			components.SecondaryButton(buttonLabel, action.ID, buttonArgs...)
-		}
-	}
-
-	// Add skip button if allowed
-	if step.UIHints.AllowSkip {
-		components.NewRow()
-		components.SecondaryButton("⏭️ Skip", "skip_step", char.ID)
-	}
-
-	// Add back button
-	components.NewRow()
-	components.SecondaryButton("⬅️ Back", "back", char.ID)
-
-	// Build and return response
-	response := core.NewResponse("").
-		WithEmbeds(embed.Build()).
-		WithComponents(components.Build()...).
-		AsUpdate()
-
-	return response, nil
-}
-
 // HandleOpenSpellSelection opens the paginated spell selection interface
 func (h *CharacterCreationHandler) HandleOpenSpellSelection(ctx *core.InteractionContext) (*core.HandlerResult, error) {
 	// Parse custom ID
@@ -3407,6 +3362,30 @@ func (h *CharacterCreationHandler) calculatePreparedSpells(char *domainCharacter
 	}
 
 	return prepared
+}
+
+// buildSelectMenuFromOptions creates a select menu for simple single-choice steps
+func (h *CharacterCreationHandler) buildSelectMenuFromOptions(components *builders.ComponentBuilder, step *domainCharacter.CreationStep, characterID, targetType string) {
+	if len(step.Options) == 0 {
+		components.DangerButton("No options available", "error", characterID)
+		return
+	}
+
+	options := make([]builders.SelectOption, 0, len(step.Options))
+	for _, opt := range step.Options {
+		options = append(options, builders.SelectOption{
+			Label:       opt.Name,
+			Value:       opt.Key,
+			Description: opt.Description,
+		})
+	}
+
+	components.SelectMenuWithTarget(
+		fmt.Sprintf("Choose %s...", step.Title),
+		targetType,
+		characterID,
+		options,
+	)
 }
 
 // isSpellcastingClass returns true if the given class key represents a spellcasting class

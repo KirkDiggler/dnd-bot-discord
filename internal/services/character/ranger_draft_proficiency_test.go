@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/KirkDiggler/dnd-bot-discord/internal/clients/dnd5e"
+	draftrepo "github.com/KirkDiggler/dnd-bot-discord/internal/repositories/character_draft"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/repositories/characters"
 	"github.com/KirkDiggler/dnd-bot-discord/internal/services/character"
 	"github.com/stretchr/testify/assert"
@@ -32,10 +33,14 @@ func TestRangerDraftFinalization_MissingProficiencies(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	// Create draft repository
+	draftRepo := draftrepo.NewInMemoryRepository()
+
 	// Create service
 	svc := character.NewService(&character.ServiceConfig{
-		DNDClient:  client,
-		Repository: repo,
+		DNDClient:       client,
+		Repository:      repo,
+		DraftRepository: draftRepo,
 	})
 
 	// Simulate the draft creation flow
