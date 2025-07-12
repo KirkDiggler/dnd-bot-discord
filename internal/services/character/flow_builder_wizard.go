@@ -17,25 +17,6 @@ func (b *FlowBuilderImpl) buildWizardSteps(ctx context.Context, char *character.
 		MinChoices:  3,
 		MaxChoices:  3,
 		Required:    true,
-		UIHints: &character.StepUIHints{
-			Actions: []character.StepAction{
-				{
-					ID:    "open_spell_selection",
-					Label: "Browse Cantrips",
-					Style: "primary",
-					Icon:  "✨",
-				},
-				{
-					ID:    "suggested_cantrips",
-					Label: "Use Suggested",
-					Style: "secondary",
-					Icon:  "💡",
-				},
-			},
-			Layout:          "grid",
-			ShowRecommended: true,
-			Color:           0x6B46C1, // Purple for arcane
-		},
 	}
 
 	// Fetch wizard cantrips from D&D API
@@ -62,28 +43,6 @@ func (b *FlowBuilderImpl) buildWizardSteps(ctx context.Context, char *character.
 		MinChoices:  6,
 		MaxChoices:  6,
 		Required:    true,
-		UIHints: &character.StepUIHints{
-			Actions: []character.StepAction{
-				{
-					ID:    "open_spell_selection",
-					Label: "Browse Spell List",
-					Style: "primary",
-					Icon:  "📜",
-				},
-				{
-					ID:          "quick_build",
-					Label:       "Quick Build",
-					Style:       "secondary",
-					Icon:        "⚡",
-					Description: "Recommended spell selection",
-				},
-			},
-			Layout:          "list",
-			ShowProgress:    true,
-			ProgressFormat:  "%d/%d spells selected",
-			ShowRecommended: true,
-			Color:           0x6B46C1,
-		},
 	}
 
 	// Fetch wizard 1st level spells from D&D API
@@ -113,18 +72,6 @@ func (b *FlowBuilderImpl) buildWizardSteps(ctx context.Context, char *character.
 			MinChoices:  1,
 			MaxChoices:  1,
 			Required:    true,
-			UIHints: &character.StepUIHints{
-				Actions: []character.StepAction{
-					{
-						ID:    "select_tradition",
-						Label: "Choose Tradition",
-						Style: "primary",
-						Icon:  "🔮",
-					},
-				},
-				Layout: "grid",
-				Color:  0x6B46C1,
-			},
 		})
 	}
 

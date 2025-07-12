@@ -78,6 +78,10 @@ func (h *CharacterCreationHandler) registerStepHandlers() {
 	h.stepHandlers[domainCharacter.StepTypeEquipmentSelection] = h.handleEquipmentSelection
 	h.stepHandlers[domainCharacter.StepTypeCharacterDetails] = h.handleCharacterDetails
 
+	// Class specialization steps
+	h.stepHandlers[domainCharacter.StepTypeExpertiseSelection] = h.handleGenericSelection
+	h.stepHandlers[domainCharacter.StepTypeSubclassSelection] = h.handleGenericSelection
+
 	// Class-specific steps
 	h.stepHandlers[domainCharacter.StepTypeFightingStyleSelection] = h.handleFightingStyleSelection
 	h.stepHandlers[domainCharacter.StepTypeDivineDomainSelection] = h.handleDivineDomainSelection
@@ -91,6 +95,8 @@ func (h *CharacterCreationHandler) registerStepHandlers() {
 	// Spellcaster steps
 	h.stepHandlers[domainCharacter.StepTypeCantripsSelection] = h.handleSpellSelection
 	h.stepHandlers[domainCharacter.StepTypeSpellSelection] = h.handleSpellSelection
+	h.stepHandlers[domainCharacter.StepTypeSpellbookSelection] = h.handleSpellSelection
+	h.stepHandlers[domainCharacter.StepTypeSpellsKnownSelection] = h.handleSpellSelection
 
 	// Final step
 	h.stepHandlers[domainCharacter.StepTypeComplete] = h.handleComplete
@@ -162,6 +168,12 @@ func (h *CharacterCreationHandler) handleSkillSelection(char *domainCharacter.Ch
 func (h *CharacterCreationHandler) handleLanguageSelection(char *domainCharacter.Character, step *domainCharacter.CreationStep) (*core.Response, error) {
 	// TODO: Implement language selection UI
 	return nil, fmt.Errorf("language selection UI not implemented")
+}
+
+func (h *CharacterCreationHandler) handleGenericSelection(char *domainCharacter.Character, step *domainCharacter.CreationStep) (*core.Response, error) {
+	// Generic handler for simple selection steps
+	// The enhanced handler will provide the actual UI
+	return h.buildEnhancedStepResponse(char, step)
 }
 
 func (h *CharacterCreationHandler) handleSpellSelection(char *domainCharacter.Character, step *domainCharacter.CreationStep) (*core.Response, error) {

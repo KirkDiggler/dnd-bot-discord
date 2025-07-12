@@ -24,6 +24,12 @@ var CharacterCreationSteps = []string{
 	// Spellcaster steps
 	"cantrips_selection",
 	"spell_selection",
+	"spellbook_selection",
+	"spells_known_selection",
+
+	// Class specialization steps
+	"expertise_selection",
+	"subclass_selection",
 
 	// Final step
 	"complete",

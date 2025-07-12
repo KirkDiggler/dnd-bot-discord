@@ -145,6 +145,16 @@ func (r *CreateRouter) registerRoutes() {
 	r.router.ComponentFunc("select_equipment", r.creationHandler.HandleSelectEquipment)
 	r.router.ComponentFunc("confirm_equipment_selection", r.creationHandler.HandleConfirmEquipmentSelection)
 
+	// Class-specific selection handlers
+	r.router.ComponentFunc("skill", r.creationHandler.HandleStepSelection)
+	r.router.ComponentFunc("language", r.creationHandler.HandleStepSelection)
+	r.router.ComponentFunc("fighting_style", r.creationHandler.HandleStepSelection)
+	r.router.ComponentFunc("divine_domain", r.creationHandler.HandleStepSelection)
+	r.router.ComponentFunc("favored_enemy", r.creationHandler.HandleStepSelection)
+	r.router.ComponentFunc("natural_explorer", r.creationHandler.HandleStepSelection)
+	r.router.ComponentFunc("expertise", r.creationHandler.HandleStepSelection)
+	r.router.ComponentFunc("subclass", r.creationHandler.HandleStepSelection)
+
 	// Future: /dnd create encounter, /dnd create item, etc.
 	// r.router.ActionFunc("encounter", r.handleCreateEncounter)
 	// r.router.ActionFunc("item", r.handleCreateItem)
