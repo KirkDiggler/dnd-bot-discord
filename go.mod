@@ -3,16 +3,16 @@ module github.com/KirkDiggler/dnd-bot-discord
 go 1.24.1
 
 require (
-	github.com/KirkDiggler/rpg-toolkit/core v0.1.1-0.20250704020020-1ad05ac94e2b
-	github.com/KirkDiggler/rpg-toolkit/events v0.1.2-0.20250704020020-1ad05ac94e2b
+	github.com/KirkDiggler/rpg-toolkit/core v0.8.0
+	github.com/KirkDiggler/rpg-toolkit/events v0.5.0
 	github.com/bwmarrin/discordgo v0.29.0
 	github.com/fadedpez/dnd5e-api v0.0.0-20250702035924-9fa22aaeef04
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
-	github.com/redis/go-redis/v9 v9.11.0
+	github.com/redis/go-redis/v9 v9.12.1
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/mock v0.5.2
-	golang.org/x/text v0.26.0
+	golang.org/x/text v0.28.0
 )
 
 require (
