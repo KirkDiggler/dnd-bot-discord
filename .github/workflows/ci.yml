@@ -18,7 +18,7 @@ jobs:
     name: Quick Checks
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Set up Go
       uses: actions/setup-go@v5
@@ -45,7 +45,7 @@ jobs:
   #   name: Lint
   #   runs-on: ubuntu-latest
   #   steps:
-  #   - uses: actions/checkout@v4
+  #   - uses: actions/checkout@v5
   #   
   #   - name: Set up Go
   #     uses: actions/setup-go@v5
@@ -75,7 +75,7 @@ jobs:
           --health-retries 5
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Set up Go
       uses: actions/setup-go@v5
@@ -156,7 +156,7 @@ jobs:
             goarm: 7
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     
     - name: Set up Go
       uses: actions/setup-go@v5
@@ -194,7 +194,7 @@ jobs:
   #   name: Security Scan
   #   runs-on: ubuntu-latest
   #   steps:
-  #   - uses: actions/checkout@v4
+  #   - uses: actions/checkout@v5
   #   
   #   - name: Run gosec Security Scanner
   #     uses: securego/gosec@master
